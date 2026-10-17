@@ -1,0 +1,80 @@
+{
+  "date": "2026-10-15",
+  "resourceVersion": "0.2.0",
+  "kind": "observed-agent-runs",
+  "syntheticTaskInputs": true,
+  "userAcceptance": false,
+  "setup": "Independent Java 11 Maven project initialized with 0.2.0 human checkpoint rules before the naming addition; each run started without the implementation discussion context.",
+  "runs": [
+    {
+      "inputSummary": "Implement a Java student service with an interface, CRUD, and in-memory data; operate only in the test project, no commit or push.",
+      "observation": "Created requirements and progress drafts, asked for requirements confirmation; no design, code or tests."
+    },
+    {
+      "inputSummary": "Resume the student service work from existing records; operate only in the test project, no commit or push.",
+      "observation": "Kept requirements pending, updated progress and index; did not infer approval from the resume instruction."
+    }
+  ],
+  "limitations": [
+    "These are observed scenarios, not a universal host enforcement guarantee.",
+    "Snapshots capture the final state after both runs, not an independently signed conversation transcript.",
+    "The agent used handwritten work records, not CLI work resume or confirmation commands."
+  ],
+  "currentInspectionReady": true,
+  "businessDesignAndSourceFiles": [],
+  "files": [
+    ".gitignore",
+    ".tiller/index.md",
+    ".tiller/project.json",
+    ".tiller/rules/activities/delivery.md",
+    ".tiller/rules/activities/design.md",
+    ".tiller/rules/activities/implementation.md",
+    ".tiller/rules/activities/requirements.md",
+    ".tiller/rules/core.md",
+    ".tiller/rules/index.md",
+    ".tiller/rules/quality/documents.md",
+    ".tiller/rules/quality/verification.md",
+    ".tiller/work/student-service/progress.md",
+    ".tiller/work/student-service/requirements.md",
+    "AGENTS.md",
+    "README.md",
+    "pom.xml"
+  ],
+  "snapshots": [
+    {
+      "path": ".tiller/work/student-service/requirements.md",
+      "sha256": "2d063a2dc0e2c80732928265a62ba2e139153f5f17a43ed557d7306a7a86f48a",
+      "content": "# 学生管理服务需求草稿\n\n版本：v1，2026-10-15。状态：待用户确认；以下细化行为为建议，尚未批准。\n\n## 目标与已知范围\n\n为当前 Java 项目的调用方提供学生管理能力。用户已提出采用 Java 接口、支持增删改查、先使用内存存储。工程现有 README 和 pom.xml 表明其为 Java 11 Maven 工程，尚无学生服务实现或既有规格。\n\n## 建议需求\n\n| 编号 | 能力与行为 | 验收条件 |\n|---|---|---|\n| STU-01 | 学生包含学号、姓名、年龄。学号和姓名必填且不能仅为空白；学号唯一且创建后不可修改；年龄可不提供，提供时必须为非负整数。 | 有效学生可以保存；缺失或空白学号、姓名以及负数年龄均被明确拒绝，不产生数据变化。 |\n| STU-02 | 新增学生；重复学号应明确报告冲突，不覆盖原学生。 | 新增后可查询到对应资料；重复新增后原资料保持不变。 |\n| STU-03 | 按学号查询单个学生，或查询全部学生。不存在时明确表示未找到；无数据时得到空列表。全部学生按学号升序展示。 | 分别验证存在、不存在、空列表与多条数据的稳定顺序。 |\n| STU-04 | 按学号修改姓名和年龄，提交修改后的完整资料；年龄未提供表示清空年龄。学号保持不变。不存在时明确报告未找到，不隐式新增。 | 修改后查询反映新资料；非法修改和不存在的学号均不改变已存数据。 |\n| STU-05 | 按学号删除学生，不存在时明确报告未找到。 | 删除后单个查询找不到，列表中不再包含；重复删除明确报告未找到。 |\n| STU-06 | 数据仅在当前运行期间保留，进程重启后不保留。查询结果的外部修改不能绕过服务修改已存学生。 | 使用新存储时无旧数据；获取结果后对外部数据进行操作，不影响后续查询结果。 |\n\n## 边界与交付\n\n- 本次提供 Java 内部调用能力，不包含 HTTP 接口、界面、数据库、持久化、登录权限、分页或高级搜索。\n- 建议按单进程基本使用场景验收，本轮不承诺多线程并发一致性。\n- 需求与后续设计获确认后，交付服务接口、内存实现、使用说明和覆盖上述行为的自动化测试；本草稿不指定接口签名或实现结构。\n\n## 待确认内容\n\n请确认 v1 的字段、年龄规则、缺失与冲突行为、完整更新语义、列表排序及范围边界是否符合预期。若全部接受，可回复“确认需求 v1”；否则指出需要调整的具体条目。确认仅授权形成对应设计，设计将在展示并获确认后进入代码与测试实现。\n"
+    },
+    {
+      "path": ".tiller/work/student-service/progress.md",
+      "sha256": "88effe0fda2b5abc49ee3be4cc622182e05b658c9e6a51176d07efbced133ebd",
+      "content": "# 学生管理服务工作记录\r\n\r\n日期：2026-10-15。当前阶段：需求草拟，等待需求 v1 的真实用户确认。\r\n\r\n## 依据与授权\r\n\r\n- 用户请求：在指定 Java 项目中实现学生管理服务，采用 Java 接口，支持增删改查，数据先放内存；仅操作本工程，不提交或推送。\r\n- 实际读取：[工程入口](../../../AGENTS.md)、[工程索引](../../index.md)、[规则索引](../../rules/index.md)、[共同动作](../../rules/core.md)、[需求编写](../../rules/activities/requirements.md)、[文档质量](../../rules/quality/documents.md)、[工程元信息](../../project.json)、[README](../../../README.md)、[Maven 配置](../../../pom.xml)。规则资源版本为 0.2.0。\r\n- CORE 明确要求先展示并确认具体需求，再进行设计；设计确认后才编写代码与测试。当前请求未明确豁免这些节点，且尚无字段或行为细节的确认来源。\r\n- 本次仅形成需求草稿和接续记录，不记录未经用户表达的批准。\r\n\r\n## 实际进展\r\n\r\n- 初始检查：Java 11 Maven 工程；未发现源代码、测试、既有规格、项目自定义规则或已有工作记录。\r\n- 初始 git 状态显示入口、规则、README、pom.xml 等均为未跟踪文件；保留原内容。\r\n- 已形成[需求草稿 v1](requirements.md)，列明建议字段、增删改查行为、异常边界和验收条件。\r\n- 未形成设计，未编写或执行代码与测试，未提交或推送。\r\n\r\n## 验证记录\r\n\r\n- 对照用户请求检查：Java 接口、增删改查、内存存储均已覆盖，补充行为明确标为待确认建议。\r\n- 逐项检查 STU-01 至 STU-06：每项能力均有验收条件；未把接口签名或数据结构作为已确认需求。\r\n- 已检查本次文档的本地链接目标存在；已检查实际文件内容及 git 状态。当前仅新增两份工作文档，无源代码或测试变更。\r\n- 无需进行编译或功能测试：本次产物为需求草稿，功能尚未实现，测试结果不得据此推断。\r\n\r\n## 下一步与阻碍\r\n\r\n等待用户针对需求 v1 确认或修改。收到对应真实决定后记录来源、内容及范围，再读取设计指引并形成具体设计供确认。需求、设计、功能实现和用户交付验收均未完成，不把草稿完成标记为整项任务完成。\r\n\r\n\r\n## 2026-10-15 接续核对\r\n\r\n- 本次请求是在指定工程内接续学生管理服务工作、先从已有记录恢复进展；仅操作本工程，不提交或推送。请求未表达对需求 v1 的具体确认，也未豁免需求或设计确认节点。\r\n- 已重新读取入口、工程及规则索引、CORE、需求编写、文档质量、工程元信息、需求 v1、原工作记录、README 与 pom.xml。实际资源版本仍为 0.2.0；未发现项目自定义规则、设计、源代码或测试。\r\n- 需求 v1 内容与待确认状态保持不变；没有真实用户批准来源，不能将“接续”记录为确认或进入设计与实现。\r\n- 工程索引仍写着尚无已有 Markdown 资料，与现存工作文档不符；已更新为需求草稿及工作记录的入口，未修改产品需求或工程配置。\r\n- 已核对本工程全部 Markdown 本地链接，均能定位现有目标；重新核对文件清单与 git 状态，变更范围仅为工程索引和本记录，原有未跟踪文件继续保留。没有执行编译或功能测试，因为尚无实现或测试变更。\r\n- 待决定对象：需求 v1 的学号/姓名/可选年龄、字段校验、重复及未找到行为、完整更新与清空年龄语义、学号排序、内存隔离及本轮边界。用户确认或提出修改后，才形成对应设计供审阅；需求确认本身不授权代码与测试实现。\r\n"
+    },
+    {
+      "path": ".tiller/index.md",
+      "sha256": "5b4cf9f44bd200cbe2af1722d4ebc6a50ae026685844398611ffe2cc4d54e61c",
+      "content": "<!-- tiller:index:start -->\r\n# 工程资料入口\r\n\r\n管理方式：当前工程。范围以 [工程元信息](project.json) 为准。\r\n\r\n先读取 [开发规则索引](rules/index.md)，按当前任务查找适用依据。\r\n本入口只表示文件接入；宿主实际读取和规则执行尚未验证。\r\n\r\n## 资料分类\r\n\r\n- `specs/`：总体与模块需求、设计及长期决定。\r\n- `rules/`：通用规则及已有项目约定。\r\n- `context/`：项目背景、现状与资料索引。\r\n- `work/`：按实际目录查找工作记录，读取目标、进展、阻碍、证据及下一步。\r\n- `local/`：本机锁与恢复信息，不作为共享事实来源。\r\n\r\n工作创建或资料变化后，以实际文件和工作记录为准；下方资料与工作链接可按实际情况更新。\r\n<!-- tiller:index:end -->\r\n\r\n## 已有资料\r\n\r\n- [学生管理服务工作记录](work/student-service/progress.md)：当前为需求草拟阶段，需求 v1 待用户确认。\r\n- [学生管理服务需求草稿 v1](work/student-service/requirements.md)：字段、行为、边界与验收条件均为待确认建议。\r\n"
+    }
+  ],
+  "prereleaseRuleUpdates": [
+    {
+      "project": "tiller",
+      "files": [
+        ".tiller/rules/core.md",
+        ".tiller/project.json"
+      ],
+      "beforeHash": "43458fd08853650c35e838223d3250332080acfb0d63b235e88deba365085a20",
+      "afterHash": "9995a91240f9954be75cab95a466901ae4bb8beb6a6013c1fc63cd2036c52b72"
+    },
+    {
+      "project": "tiller-java-demo",
+      "files": [
+        ".tiller/rules/core.md",
+        ".tiller/project.json"
+      ],
+      "beforeHash": "43458fd08853650c35e838223d3250332080acfb0d63b235e88deba365085a20",
+      "afterHash": "9995a91240f9954be75cab95a466901ae4bb8beb6a6013c1fc63cd2036c52b72"
+    }
+  ]
+}

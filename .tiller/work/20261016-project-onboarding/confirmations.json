@@ -1,0 +1,79 @@
+{
+  "schemaVersion": 2,
+  "workId": "20261016-project-onboarding",
+  "requests": [
+    {
+      "requestId": "onboarding-requirements",
+      "gate": "requirements",
+      "scope": {
+        "repositories": [
+          "."
+        ],
+        "targets": [
+          "20261016-project-onboarding"
+        ]
+      },
+      "subjects": [
+        {
+          "repository": ".",
+          "path": ".tiller/work/20261016-project-onboarding/requirements.md"
+        }
+      ],
+      "upstream": [],
+      "reviewSummary": "落实已向用户展示并由“请优化”授权的已有项目接手与新项目规范建立范围；新增文件承载已讨论内容，不追认历史规格。",
+      "openIssues": [],
+      "nextAction": "将已讨论流程落实到设计、规则和兼容资源更新",
+      "createdAt": "2026-10-16T10:16:11.768Z",
+      "files": [
+        {
+          "repository": ".",
+          "path": ".tiller/work/20261016-project-onboarding/requirements.md",
+          "sha256": "a10b32cc44ec140f0efc2c0d8a84f73085b8ba9a783677d660f9c062f9851b68",
+          "snapshot": ".tiller/work/20261016-project-onboarding/reviews/request-onboarding-requirements/0.json"
+        }
+      ],
+      "exceptionFiles": [],
+      "dependencies": []
+    }
+  ],
+  "decisions": [
+    {
+      "decisionId": "onboarding-requirements-approved",
+      "requestId": "onboarding-requirements",
+      "outcome": "approved",
+      "conditions": [],
+      "source": {
+        "kind": "conversation",
+        "reference": {
+          "repository": ".",
+          "path": ".tiller/work/20261016-project-onboarding/user-source.md"
+        },
+        "quote": "请优化",
+        "presentation": {
+          "repository": ".",
+          "path": ".tiller/work/20261016-project-onboarding/reviews/request-onboarding-requirements/presentation.md"
+        }
+      },
+      "sourceReview": {
+        "reviewer": "执行者",
+        "rationale": "核对用户在完整流程与资料方案展示后明确要求优化，记录只覆盖这些已展示行为；不将后写文档的技术细节或历史规格冒称逐字批准，也不记录交付验收。",
+        "reviewedAt": "2026-10-16T10:16:12.643Z"
+      },
+      "recordedAt": "2026-10-16T10:16:14.636Z",
+      "files": [
+        {
+          "repository": ".",
+          "path": ".tiller/work/20261016-project-onboarding/user-source.md",
+          "sha256": "5bf2ee9592b65cf7d4bd4b36beb16dda7df93998ee2e79a62d6db37a88188e25",
+          "snapshot": ".tiller/work/20261016-project-onboarding/reviews/decision-onboarding-requirements-approved/0.json"
+        },
+        {
+          "repository": ".",
+          "path": ".tiller/work/20261016-project-onboarding/reviews/request-onboarding-requirements/presentation.md",
+          "sha256": "43f9fd01e1fd9956fb2c94405a8cd07cc730538637acf4ad5e65035ecb52771f",
+          "snapshot": ".tiller/work/20261016-project-onboarding/reviews/decision-onboarding-requirements-approved/1.json"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,4 @@
+{
+  "encoding": "utf8",
+  "content": "export type ProjectMode = 'project' | 'workspace';\n\nexport interface ProjectMetadata {\n  schemaVersion: 1;\n  resourceVersion: '0.1.0' | '0.2.0' | '0.2.1' | '0.2.2' | '0.3.0' | '0.3.1';\n  mode: ProjectMode;\n  repositories: string[];\n  repositoryPaths?: Record<string, string>;\n  managedFiles: Record<string, string>;\n  createdAt: string;\n}\n\nexport interface ProjectInspection {\n  root: string;\n  initialized: boolean;\n  ready: boolean;\n  metadata: ProjectMetadata | null;\n  issues: string[];\n  hostVerification: 'not-verified';\n  compatibility: 'read-write' | 'read-only' | 'unsupported';\n}\n\nexport interface InitializeOptions {\n  root: string;\n  mode?: ProjectMode;\n  repositories?: string[];\n}\n\nexport interface FileChange {\n  path: string;\n  before: string | null;\n  after: string;\n}\n"
+}

@@ -1,0 +1,172 @@
+{
+  "requestId": "acceptance-020",
+  "gate": "acceptance",
+  "scope": {
+    "repositories": [
+      "."
+    ],
+    "targets": [
+      "human-confirmation",
+      "dated-work-names",
+      "known-resource-upgrade"
+    ]
+  },
+  "subjects": [
+    {
+      "repository": ".",
+      "path": ".tiller/work/human-confirmation/host-evidence.json"
+    },
+    {
+      "repository": ".",
+      "path": ".tiller/work/human-confirmation/implementation.md"
+    },
+    {
+      "repository": ".",
+      "path": ".tiller/work/human-confirmation/verification.md"
+    },
+    {
+      "repository": ".",
+      "path": "package-lock.json"
+    },
+    {
+      "repository": ".",
+      "path": "package.json"
+    },
+    {
+      "repository": ".",
+      "path": "README.md"
+    },
+    {
+      "repository": ".",
+      "path": "resources/baselines/0.1.0.json"
+    },
+    {
+      "repository": ".",
+      "path": "resources/entry.md"
+    },
+    {
+      "repository": ".",
+      "path": "resources/rules/activities/delivery.md"
+    },
+    {
+      "repository": ".",
+      "path": "resources/rules/activities/design.md"
+    },
+    {
+      "repository": ".",
+      "path": "resources/rules/activities/implementation.md"
+    },
+    {
+      "repository": ".",
+      "path": "resources/rules/activities/requirements.md"
+    },
+    {
+      "repository": ".",
+      "path": "resources/rules/core.md"
+    },
+    {
+      "repository": ".",
+      "path": "resources/rules/index.md"
+    },
+    {
+      "repository": ".",
+      "path": "resources/rules/quality/documents.md"
+    },
+    {
+      "repository": ".",
+      "path": "resources/rules/quality/verification.md"
+    },
+    {
+      "repository": ".",
+      "path": "resources/templates/change-design.md"
+    },
+    {
+      "repository": ".",
+      "path": "resources/templates/change-requirements.md"
+    },
+    {
+      "repository": ".",
+      "path": "resources/templates/module-design.md"
+    },
+    {
+      "repository": ".",
+      "path": "resources/templates/module-requirements.md"
+    },
+    {
+      "repository": ".",
+      "path": "resources/templates/product-design.md"
+    },
+    {
+      "repository": ".",
+      "path": "resources/templates/product-requirements.md"
+    },
+    {
+      "repository": ".",
+      "path": "scripts/lint.mjs"
+    },
+    {
+      "repository": ".",
+      "path": "scripts/package-smoke.mjs"
+    },
+    {
+      "repository": ".",
+      "path": "src/cli.ts"
+    },
+    {
+      "repository": ".",
+      "path": "src/confirmations.ts"
+    },
+    {
+      "repository": ".",
+      "path": "src/core.ts"
+    },
+    {
+      "repository": ".",
+      "path": "src/files.ts"
+    },
+    {
+      "repository": ".",
+      "path": "src/types.ts"
+    },
+    {
+      "repository": ".",
+      "path": "src/upgrade.ts"
+    },
+    {
+      "repository": ".",
+      "path": "src/work.ts"
+    },
+    {
+      "repository": ".",
+      "path": "test/cli.test.mjs"
+    },
+    {
+      "repository": ".",
+      "path": "test/confirmations.test.mjs"
+    },
+    {
+      "repository": ".",
+      "path": "test/core.test.mjs"
+    },
+    {
+      "repository": ".",
+      "path": "test/helpers.mjs"
+    },
+    {
+      "repository": ".",
+      "path": "test/rules.test.mjs"
+    },
+    {
+      "repository": ".",
+      "path": "test/upgrade.test.mjs"
+    },
+    {
+      "repository": ".",
+      "path": "tsconfig.json"
+    }
+  ],
+  "upstream": [],
+  "reviewSummary": "请验收0.2.0本次实现：四类确认记录与受控检查、人工验收后的文档完成、0.1.0显式升级、日期前缀工作标识及对应规则。63项自动测试与隔离安装通过，学生服务两次独立试用停在需求待确认。Windows已验证，其他平台未验证；来源依赖执行者核对，不能阻止宿主直接写入。",
+  "openIssues": [],
+  "nextAction": "仅将用户明确接受的本次交付范围记录为已验收，不提交、推送或发布。"
+}

@@ -1,0 +1,79 @@
+{
+  "schemaVersion": 2,
+  "workId": "20261016-functional-planning",
+  "requests": [
+    {
+      "requestId": "functional-requirements",
+      "gate": "requirements",
+      "scope": {
+        "repositories": [
+          "."
+        ],
+        "targets": [
+          "20261016-functional-planning"
+        ]
+      },
+      "subjects": [
+        {
+          "repository": ".",
+          "path": ".tiller/work/20261016-functional-planning/requirements.md"
+        }
+      ],
+      "upstream": [],
+      "reviewSummary": "对应前述功能分块与空项目骨架方案及用户开始优化调整指令。",
+      "openIssues": [],
+      "nextAction": "细化规则落地方案并执行已授权调整。",
+      "createdAt": "2026-10-16T06:55:28.584Z",
+      "files": [
+        {
+          "repository": ".",
+          "path": ".tiller/work/20261016-functional-planning/requirements.md",
+          "sha256": "641c165fa0a8e279906833547343dbc6f7baa0e9aae4337e935ae40ef95e075d",
+          "snapshot": ".tiller/work/20261016-functional-planning/reviews/request-functional-requirements/0.json"
+        }
+      ],
+      "exceptionFiles": [],
+      "dependencies": []
+    }
+  ],
+  "decisions": [
+    {
+      "decisionId": "functional-requirements-approved",
+      "requestId": "functional-requirements",
+      "outcome": "approved",
+      "conditions": [],
+      "source": {
+        "kind": "conversation",
+        "reference": {
+          "repository": ".",
+          "path": ".tiller/work/20261016-functional-planning/user-source.md"
+        },
+        "quote": "嗯，开始优化调整",
+        "presentation": {
+          "repository": ".",
+          "path": ".tiller/work/20261016-functional-planning/reviews/request-functional-requirements/presentation.md"
+        }
+      },
+      "sourceReview": {
+        "reviewer": "执行者",
+        "rationale": "用户明确回应已展示的分块、骨架、依赖与确认边界并要求调整；仅复用该具体范围。",
+        "reviewedAt": "2026-10-16T06:55:24.032Z"
+      },
+      "recordedAt": "2026-10-16T06:55:41.255Z",
+      "files": [
+        {
+          "repository": ".",
+          "path": ".tiller/work/20261016-functional-planning/user-source.md",
+          "sha256": "290c0139053f8c9c2871c77279e82f97e479a4f8b1b3ea8c59ae5172392589a9",
+          "snapshot": ".tiller/work/20261016-functional-planning/reviews/decision-functional-requirements-approved/0.json"
+        },
+        {
+          "repository": ".",
+          "path": ".tiller/work/20261016-functional-planning/reviews/request-functional-requirements/presentation.md",
+          "sha256": "f263d51724a90fce7521dc9561c8643a87acbea5bbab362c8e5aea4753cdfeb7",
+          "snapshot": ".tiller/work/20261016-functional-planning/reviews/decision-functional-requirements-approved/1.json"
+        }
+      ]
+    }
+  ]
+}

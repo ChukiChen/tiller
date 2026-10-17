@@ -1,0 +1,4 @@
+{
+  "encoding": "utf8",
+  "content": "{\n  \"name\": \"tiller\",\n  \"version\": \"0.3.0\",\n  \"description\": \"File-based AI software engineering workflow and project initialization\",\n  \"type\": \"module\",\n  \"bin\": {\n    \"tiller\": \"dist/cli.js\"\n  },\n  \"files\": [\n    \"dist/\",\n    \"resources/\",\n    \"README.md\"\n  ],\n  \"engines\": {\n    \"node\": \">=22\"\n  },\n  \"scripts\": {\n    \"build\": \"tsc\",\n    \"typecheck\": \"tsc --noEmit\",\n    \"lint\": \"node scripts/lint.mjs\",\n    \"test\": \"npm run build && node --test test/*.test.mjs\",\n    \"check\": \"npm run lint && npm run typecheck && npm test\",\n    \"test:package\": \"npm run build && node scripts/package-smoke.mjs\",\n    \"prepack\": \"npm run build\"\n  },\n  \"devDependencies\": {\n    \"@types/node\": \"22.20.5\",\n    \"typescript\": \"7.0.2\"\n  }\n}\n"
+}

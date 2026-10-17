@@ -1,0 +1,39 @@
+{
+  "schemaVersion": 2,
+  "id": "20261016-functional-planning",
+  "title": "功能分块与项目骨架推进",
+  "createdAt": "2026-10-16T06:54:26.445Z",
+  "level": "change",
+  "scope": {
+    "repositories": [
+      "."
+    ],
+    "targets": [
+      "20261016-functional-planning"
+    ]
+  },
+  "artifacts": {
+    "requirements": {
+      "type": "change-requirements",
+      "source": {
+        "repository": ".",
+        "path": ".tiller/work/20261016-functional-planning/requirements.md"
+      },
+      "origin": "generated",
+      "status": "draft"
+    },
+    "design": {
+      "type": "change-design",
+      "source": {
+        "repository": ".",
+        "path": ".tiller/work/20261016-functional-planning/design.md"
+      },
+      "origin": "generated",
+      "status": "draft",
+      "requirementsBasis": {
+        "workId": "20261016-functional-planning",
+        "requestId": "functional-requirements"
+      }
+    }
+  }
+}

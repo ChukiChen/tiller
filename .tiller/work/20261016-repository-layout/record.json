@@ -1,0 +1,39 @@
+{
+  "schemaVersion": 2,
+  "id": "20261016-repository-layout",
+  "title": "独立管理工程的仓库分组布局",
+  "createdAt": "2026-10-16T03:56:18.065Z",
+  "level": "change",
+  "scope": {
+    "repositories": [
+      "."
+    ],
+    "targets": [
+      "20261016-repository-layout"
+    ]
+  },
+  "artifacts": {
+    "requirements": {
+      "type": "change-requirements",
+      "source": {
+        "repository": ".",
+        "path": ".tiller/work/20261016-repository-layout/requirements.md"
+      },
+      "origin": "generated",
+      "status": "draft"
+    },
+    "design": {
+      "type": "change-design",
+      "source": {
+        "repository": ".",
+        "path": ".tiller/work/20261016-repository-layout/design.md"
+      },
+      "origin": "generated",
+      "status": "draft",
+      "requirementsBasis": {
+        "workId": "20261016-repository-layout",
+        "requestId": "requirements-repository-layout"
+      }
+    }
+  }
+}

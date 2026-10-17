@@ -1,0 +1,16 @@
+{
+  "title": "工作记录约定与阶段产物",
+  "level": "module",
+  "scope": { "repositories": ["."], "targets": ["20261015-work-artifacts"] },
+  "entry": { "repository": ".", "path": ".tiller/work/20261015-work-artifacts/work.md" },
+  "artifacts": {
+    "requirements": {
+      "type": "module-requirements",
+      "source": { "repository": ".", "path": ".tiller/specs/modules/workflow/requirements.md" }
+    },
+    "design": {
+      "type": "module-design",
+      "source": { "repository": ".", "path": ".tiller/specs/modules/workflow/design.md" }
+    }
+  }
+}

@@ -1,0 +1,39 @@
+{
+  "schemaVersion": 2,
+  "id": "20261016-usage-entry",
+  "title": "使用入口与本机命令定位",
+  "createdAt": "2026-10-16T04:40:48.354Z",
+  "level": "change",
+  "scope": {
+    "repositories": [
+      "."
+    ],
+    "targets": [
+      "20261016-usage-entry"
+    ]
+  },
+  "artifacts": {
+    "requirements": {
+      "type": "change-requirements",
+      "source": {
+        "repository": ".",
+        "path": ".tiller/work/20261016-usage-entry/requirements.md"
+      },
+      "origin": "generated",
+      "status": "draft"
+    },
+    "design": {
+      "type": "change-design",
+      "source": {
+        "repository": ".",
+        "path": ".tiller/work/20261016-usage-entry/design.md"
+      },
+      "origin": "generated",
+      "status": "draft",
+      "requirementsBasis": {
+        "workId": "20261016-usage-entry",
+        "requestId": "requirements-usage-entry"
+      }
+    }
+  }
+}

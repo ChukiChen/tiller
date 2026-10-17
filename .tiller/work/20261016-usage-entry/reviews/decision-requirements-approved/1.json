@@ -1,0 +1,4 @@
+{
+  "encoding": "utf8",
+  "content": "# 确认请求 requirements-usage-entry\n\n请审阅以下具体范围、对象、未决事项和下一步。批准只适用于本请求。\n\n```json\n{\n  \"requestId\": \"requirements-usage-entry\",\n  \"gate\": \"requirements\",\n  \"scope\": {\n    \"repositories\": [\n      \".\"\n    ],\n    \"targets\": [\n      \"20261016-usage-entry\"\n    ]\n  },\n  \"reviewSummary\": \"按已展示的四项需求及用户更名和实现指令记录范围。\",\n  \"openIssues\": [],\n  \"nextAction\": \"细化使用入口并按用户要求实现。\",\n  \"subjects\": [\n    {\n      \"repository\": \".\",\n      \"path\": \".tiller/work/20261016-usage-entry/requirements.md\",\n      \"sha256\": \"13cf5bfbf777e27c5059cb175b2b93cef8a4c8d68e9b50fedebfa0e8f628c1eb\",\n      \"snapshot\": \".tiller/work/20261016-usage-entry/reviews/request-requirements-usage-entry/0.json\"\n    }\n  ],\n  \"upstream\": [],\n  \"exception\": null\n}\n```\n"
+}

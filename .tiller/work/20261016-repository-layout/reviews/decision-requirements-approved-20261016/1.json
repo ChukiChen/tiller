@@ -1,0 +1,4 @@
+{
+  "encoding": "utf8",
+  "content": "# 确认请求 requirements-repository-layout\n\n请审阅以下具体范围、对象、未决事项和下一步。批准只适用于本请求。\n\n```json\n{\n  \"requestId\": \"requirements-repository-layout\",\n  \"gate\": \"requirements\",\n  \"scope\": {\n    \"repositories\": [\n      \".\"\n    ],\n    \"targets\": [\n      \"20261016-repository-layout\"\n    ]\n  },\n  \"reviewSummary\": \"落实用户已审阅的 repositories 分组及标识路径分离方案。\",\n  \"openIssues\": [],\n  \"nextAction\": \"记录对应设计及兼容安排\",\n  \"subjects\": [\n    {\n      \"repository\": \".\",\n      \"path\": \".tiller/work/20261016-repository-layout/requirements.md\",\n      \"sha256\": \"1d46530df7d3bd8ffc4cfe2b6f94b3218f55461d0218bf88d2278e67614a98a0\",\n      \"snapshot\": \".tiller/work/20261016-repository-layout/reviews/request-requirements-repository-layout/0.json\"\n    }\n  ],\n  \"upstream\": [],\n  \"exception\": null\n}\n```\n"
+}

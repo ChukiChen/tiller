@@ -1,0 +1,39 @@
+{
+  "schemaVersion": 2,
+  "id": "20261016-project-onboarding",
+  "title": "项目接手与开发规范建立",
+  "createdAt": "2026-10-16T10:13:26.493Z",
+  "level": "change",
+  "scope": {
+    "repositories": [
+      "."
+    ],
+    "targets": [
+      "20261016-project-onboarding"
+    ]
+  },
+  "artifacts": {
+    "requirements": {
+      "type": "change-requirements",
+      "source": {
+        "repository": ".",
+        "path": ".tiller/work/20261016-project-onboarding/requirements.md"
+      },
+      "origin": "generated",
+      "status": "draft"
+    },
+    "design": {
+      "type": "change-design",
+      "source": {
+        "repository": ".",
+        "path": ".tiller/work/20261016-project-onboarding/design.md"
+      },
+      "origin": "generated",
+      "status": "draft",
+      "requirementsBasis": {
+        "workId": "20261016-project-onboarding",
+        "requestId": "onboarding-requirements"
+      }
+    }
+  }
+}

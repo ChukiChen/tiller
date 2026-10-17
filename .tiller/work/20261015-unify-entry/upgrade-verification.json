@@ -1,0 +1,41 @@
+{
+  "version": "0.2.1",
+  "date": "2026-10-15",
+  "upgrades": [
+    {
+      "project": "tiller",
+      "from": "0.2.0",
+      "to": "0.2.1",
+      "ready": true,
+      "changedFiles": [
+        ".tiller/rules/core.md",
+        ".tiller/rules/quality/documents.md",
+        "AGENTS.md",
+        ".tiller/project.json"
+      ]
+    },
+    {
+      "project": "tiller-java-demo",
+      "from": "0.2.0",
+      "to": "0.2.1",
+      "ready": true,
+      "changedFiles": [
+        ".tiller/rules/core.md",
+        ".tiller/rules/quality/documents.md",
+        "AGENTS.md",
+        ".tiller/project.json"
+      ]
+    }
+  ],
+  "entryMatchesSingleSource": true,
+  "entrySha256": "06d9fee52112bd9825ec6c4172ec1891805d9e5df5639e4c5ae6034470eb71a6",
+  "demoBeforeFiles": 26,
+  "demoAfterFiles": 26,
+  "demoChangedFiles": [
+    ".tiller/project.json",
+    ".tiller/rules/core.md",
+    ".tiller/rules/quality/documents.md",
+    "AGENTS.md"
+  ],
+  "demoBusinessAndHistoryPreserved": true
+}
