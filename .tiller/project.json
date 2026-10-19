@@ -1,22 +1,22 @@
 {
   "schemaVersion": 1,
-  "resourceVersion": "0.3.4",
+  "resourceVersion": "0.3.5",
   "mode": "project",
   "repositories": [],
   "managedFiles": {
     ".gitignore": "be3b4c440af6f29b4dd5418e67a251ea1afb32edb5d7b81aaa9957998de7eba9",
     ".tiller/index.md": "6b9489b37713344ccebba6ad1d7a1456df69ad9c91bf1f5adf55896c41592c5f",
-    ".tiller/rules/activities/delivery.md": "62c2d1f3931d76a185cad593f0c6c6a74c4bc165f62897a94b3b8ea879218a5c",
-    ".tiller/rules/activities/design.md": "3e843d24cd9866074e7d8e79d5b8436593f161e395d48913d2f1922bc69ca415",
-    ".tiller/rules/activities/implementation.md": "dcc76d4245131ea095070b588c2604096753da857efe03cdc42b3b02fab0032c",
-    ".tiller/rules/activities/requirements.md": "96eadb5f39ac4fec8d9268baac76e8c618c1e0443ee90d5bae3ab5c074b50f5a",
-    ".tiller/rules/core.md": "705dea4d6ede0ad59d40ae4e45e84ddd3c71f384e3a1887f0816364e7dfc824b",
-    ".tiller/rules/index.md": "6883d528a5497e45775db8c55c6a202cacff7c36502a3f7e6da2090baf32bcaf",
-    ".tiller/rules/quality/documents.md": "1037963697399c1ecdfd9e3dfd8e1d52cb70f3d154f2688978853820a13a6d8a",
-    ".tiller/rules/quality/verification.md": "e0bd7e2f78025a5728d028491836ab1638032d546032f87851349aaba3c779a1",
+    ".tiller/rules/activities/delivery.md": "59e2f4796a37ccf78b92d4747f9b89a6445ebe17ddf6f9dd7cbb12504c96ffd2",
+    ".tiller/rules/activities/design.md": "5f340755fb7c4490fd37ab696926ad70f38b39c14ec019d0c98446d8b9b64c6d",
+    ".tiller/rules/activities/implementation.md": "74b8a795a4697c8dc02d56389fb58c18dd204cbd4b51bc57dca82845a6cc2ff7",
+    ".tiller/rules/activities/requirements.md": "883fb0f024821cb9530544848a8a49d002fb54322cba2cddc49c8850ac15eaf2",
+    ".tiller/rules/core.md": "d02ab05635d98320699d968fc50af248382b5802b6196b3c3ff4f0d4bca00c03",
+    ".tiller/rules/index.md": "94d5f3a8e2fef3ba49fb40f0f8449c9c7ed394887d38618c6ca35fa6eacae14e",
+    ".tiller/rules/quality/documents.md": "f1dced2fe437be2e373853496233f39eda858be58699cec8fa653cf6f0d5279a",
+    ".tiller/rules/quality/verification.md": "8eb345099d1fff005f472bde70121127cffa7bfbd6695f5041d2fe3bcc351c0b",
     ".tiller/run.cjs": "f8477c0292d5a2311d74ba66c4e57e98f6a6049a4da788575830fbd19bc751bb",
-    ".tiller/usage.md": "205ea9e23aeaf07e218d778247eb4a7faf0662d4a6f7554a3f5ef8da1180c7e9",
-    "AGENTS.md": "1318394571a043a0ef05e956a704e66b69bf2863bf49aae36597f56e564d4043"
+    ".tiller/usage.md": "fd9fe2a9d2cca0c8804157038b05cdb865ab465c4bcfa94a87d0ebdc5bf498a1",
+    "AGENTS.md": "358fa28983c8ea7cab05709ee9591dab9310858e8d47aa9e2c9714791f2e6e71"
   },
   "createdAt": "2026-10-14T11:03:37.128Z",
   "repositoryPaths": {}

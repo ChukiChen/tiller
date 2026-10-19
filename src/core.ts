@@ -14,7 +14,7 @@ import { repositoryPath, validateRepositoryMappings } from './repository-paths.j
 export type { InitializeOptions, ProjectInspection, ProjectMetadata, ProjectMode } from './types.js';
 
 export const SCHEMA_VERSION = 1;
-export const RESOURCE_VERSION = '0.3.4';
+export const RESOURCE_VERSION = '0.3.5';
 export const ENTRY_START = '<!-- tiller:entry:start -->';
 export const ENTRY_END = '<!-- tiller:entry:end -->';
 export const INDEX_START = '<!-- tiller:index:start -->';
@@ -112,7 +112,7 @@ export function parseMetadata(text: string): ProjectMetadata {
   try { value = JSON.parse(text); } catch { throw new Error('工程元信息不是有效 JSON。'); }
   if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('工程元信息格式无效。');
   const data = value as Record<string, unknown>;
-  if (data.schemaVersion !== SCHEMA_VERSION || !['0.1.0', '0.2.0', '0.2.1', '0.2.2', '0.3.0', '0.3.1', '0.3.2', '0.3.3', RESOURCE_VERSION].includes(String(data.resourceVersion))) {
+  if (data.schemaVersion !== SCHEMA_VERSION || !['0.1.0', '0.2.0', '0.2.1', '0.2.2', '0.3.0', '0.3.1', '0.3.2', '0.3.3', '0.3.4', RESOURCE_VERSION].includes(String(data.resourceVersion))) {
     throw new Error('工程格式或资源版本不受支持；保留现状，请使用兼容版本或显式迁移方案。');
   }
   if (data.mode !== 'project' && data.mode !== 'workspace') throw new Error('工程管理方式无效。');
@@ -125,7 +125,7 @@ export function parseMetadata(text: string): ProjectMetadata {
     throw new Error('受管文件依据缺失。');
   }
   const managed = data.managedFiles as Record<string, unknown>;
-  const requiredManaged = ['0.3.2', '0.3.3', RESOURCE_VERSION].includes(String(data.resourceVersion)) ? REQUIRED_MANAGED : LEGACY_MANAGED;
+  const requiredManaged = ['0.3.2', '0.3.3', '0.3.4', RESOURCE_VERSION].includes(String(data.resourceVersion)) ? REQUIRED_MANAGED : LEGACY_MANAGED;
   if (Object.keys(managed).length !== requiredManaged.length ||
       requiredManaged.some(name => !Object.hasOwn(managed, name) || typeof managed[name] !== 'string' ||
         !/^[0-9a-f]{64}$/u.test(managed[name] as string))) throw new Error('受管文件依据不完整或含不支持的文件。');

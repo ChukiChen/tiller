@@ -13,7 +13,7 @@ import { applyDeliveryAction, deliveryDocumentsVersion, planDeliveryAction } fro
 import { applyUpgrade, planUpgrade } from './upgrade.js';
 import { readTextIfExists } from './files.js';
 
-const HELP = `tiller 0.3.4 — 工程使用入口与命令定位\n\n用法：
+const HELP = `tiller 0.3.5 — 工程使用入口与命令定位\n\n用法：
   tiller init [path] [--mode project|workspace] [--repo <repository-path> ...]
   tiller status [path]
   tiller recover [path]
@@ -97,7 +97,7 @@ try {
   if (values.help || rawArgs.length === 0) {
     if (wantsJson) output({ ok: true, help: HELP }); else process.stdout.write(HELP);
   } else if (values.version) {
-    if (wantsJson) output({ ok: true, version: '0.3.4' }); else process.stdout.write('0.3.4\n');
+    if (wantsJson) output({ ok: true, version: '0.3.5' }); else process.stdout.write('0.3.5\n');
   } else {
     const [command, second, id] = positionals;
     const allowed = command === 'init' ? ['mode', 'repo']

@@ -19,6 +19,7 @@
 
 ## 已有资料
 
+- [实施规划与任务拆分流程完善](work/20261017-implementation-planning/work.md)
 - [已有项目接手与项目开发规范建立](work/20261016-project-onboarding/work.md)
 - [实现进度记录：需求对应、验证边界与下一步](work/20261016-implementation-progress/work.md)
 - [功能分块与项目骨架推进](work/20261016-functional-planning/work.md)

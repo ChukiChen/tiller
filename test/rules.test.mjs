@@ -29,6 +29,21 @@ test('guidance covers the student-service shortcut and distinguishes acceptance 
   assert.match(read('rules/quality/verification.md'), /不能自行写一个来源文件冒充批准/);
 });
 
+test('shipped guidance separates planning approval from task execution and historical evidence', () => {
+  const core = read('rules/core.md');
+  assert.match(core, /总体设计确认 → 实施规划确认 → 逐任务细化必要需求与设计/);
+  assert.match(core, /骨架.*首个任务.*不作为独立流程阶段/);
+  assert.match(core, /总体设计确认不能自动代替实施规划确认/);
+  assert.match(core, /必要验证失败或缺项.*不进入依赖它的任务/);
+  assert.match(core, /最终成品的测试.*不能倒填/);
+  assert.match(core, /每任务技术验证不默认增加人工批准/);
+  assert.match(core, /当前 CLI 尚无实施规划确认类型、任务状态机或依赖调度/);
+  assert.match(read('entry.md'), /取得规划确认.*逐任务/);
+  assert.match(read('rules/activities/implementation.md'), /并行改串行.*重新核对当前任务与依赖/);
+  assert.match(read('rules/activities/delivery.md'), /必要任务未验证.*不能报告整体技术检查已完成/);
+  assert.match(read('templates/product-design.md'), /展示并取得规划确认后逐任务推进/);
+});
+
 test('initialization preserves the guidance reading chain and ships no preapproved templates', (t) => {
   const root = fixture(t);
   success(cli(root, 'init'));
@@ -44,7 +59,7 @@ test('initialization preserves the guidance reading chain and ships no preapprov
     }
     for (const match of text.matchAll(/\[[^\]]*\]\(([^)]+)\)/g)) {
       const [relative, anchor] = match[1].split('#');
-      const target = resolve(root, dirname(file), relative);
+      const target = relative ? resolve(root, dirname(file), relative) : resolve(root, file);
       assert.ok(existsSync(target), `${file}: broken reading link ${match[1]}`);
       if (anchor) {
         const headings = [...readFileSync(target, 'utf8').matchAll(/^#+ (.+)$/gm)].map(heading => heading[1].trim());
