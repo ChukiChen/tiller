@@ -6,6 +6,7 @@ import { META, requireReadyProject, sha256 } from './core.js';
 import { applyChanges, assertSafePath, readTextIfExists, validateRelativePath, withProjectLock } from './files.js';
 import { git } from './delivery-git.js';
 import { repositoryPath } from './repository-paths.js';
+import { parseWorkRecord } from './work.js';
 import {
   bindingPath, gitIdentity, locateDelivery, parseDeliveryLocation,
   runWithDeliveryBinding, samePath, validateWorkId, withoutDeliveryBinding,
@@ -132,7 +133,10 @@ async function checkDesign(root: string, id: string, requestId: string, reposito
   const request = registry.requests.find(item => item.requestId === requestId);
   if (!request || repositories.some(repo => !request.scope.repositories.includes(repo))) throw new Error('设计确认未覆盖准备仓库范围。');
   const workText = await readTextIfExists(root, `.tiller/work/${id}/record.json`);
-  const targets = workText ? (JSON.parse(workText) as { scope?: { targets?: unknown } }).scope?.targets : [id];
+  if (!workText) throw Object.assign(new Error('交付需要当前格式的工作登记；请先创建新工作。'), { code: 'WORK_NOT_FOUND' });
+  const work = parseWorkRecord(workText, id);
+  if (repositories.some(repo => !work.scope.repositories.includes(repo))) throw new Error('交付仓库超出登记工作范围。');
+  const targets = work.scope.targets;
   if (!Array.isArray(targets) || !targets.length || targets.some(target => typeof target !== 'string' || !request.scope.targets.includes(target))) throw new Error('设计确认未覆盖登记工作的目标范围。');
 }
 
@@ -356,15 +360,17 @@ export async function applyDeliveryPreparation(rootInput: string, id: string, va
         await requireReadyProject(plan.recordRoot);
         await checkDesign(plan.recordRoot, id, input.designRequest, input.repositories.map(item => item.id));
       });
-      const record: DeliveryRecord = { schemaVersion: 1, workId: id, mode: plan.mode, designRequest: input.designRequest,
+      const record: DeliveryRecord = { schemaVersion: 2, workId: id, mode: plan.mode, designRequest: input.designRequest,
         createdAt: new Date().toISOString(), repositories: plan.repositories.map(repo => ({ id: repo.id, role: repo.role, base: repo.base, branch: repo.branch, target: repo.target, ...(repo.remote ? { remote: repo.remote } : {}) })),
         events: [{ id: '1', action: 'prepare', state: 'succeeded', at: new Date().toISOString(), details: { planId, inputDigest: plan.inputDigest, transferManifest: plan.repositories.map(repo => ({ repository: repo.id, files: repo.transfers })) } }] };
-      const context: DeliveryContext = { anchorRoot: root, recordRoot: plan.recordRoot, workId: id, record, bindings: location.bindings };
+      const context: DeliveryContext = { anchorRoot: root, recordRoot: plan.recordRoot, workId: id, record, recordText: null, bindings: location.bindings };
       const priorRecord = await readTextIfExists(plan.recordRoot, `.tiller/work/${id}/delivery.json`);
       if (priorRecord) {
         const prior = JSON.parse(priorRecord) as DeliveryRecord;
+        if (prior.schemaVersion !== 2) throw Object.assign(new Error('交付记录仅支持版本 2；请创建新工作，不支持迁移旧记录。'), { code: 'UNSUPPORTED_RECORD_VERSION' });
         if (prior.events?.[0]?.details.planId !== planId) throw new Error('交接目标已有其他交付记录。');
         context.record = prior;
+        context.recordText = priorRecord;
       } else await saveDeliveryRecord(context, record);
       // Shared handoff evidence precedes the local activation pointer.
       for (const repo of plan.repositories) {
@@ -395,25 +401,39 @@ export async function applyDeliveryPreparation(rootInput: string, id: string, va
 export async function loadDeliveryContext(root: string, id: string): Promise<DeliveryContext> {
   const location = await locateDelivery(root, id);
   if (!location) throw new Error('尚未准备隔离交付环境，或本机定位尚未恢复。');
+  const workText = await readTextIfExists(location.recordRoot, `.tiller/work/${id}/record.json`);
+  if (!workText) throw Object.assign(new Error('交付需要当前格式的工作登记。'), { code: 'WORK_NOT_FOUND' });
+  const work = parseWorkRecord(workText, id);
   const text = await readTextIfExists(location.recordRoot, `.tiller/work/${id}/delivery.json`);
   if (!text) throw new Error('活动交付记录缺失，不能生成第二份历史。');
   const record = JSON.parse(text) as DeliveryRecord;
-  if (record.schemaVersion !== 1 || record.workId !== id || record.mode !== location.mode || !Array.isArray(record.repositories) || !Array.isArray(record.events)) throw new Error('交付记录格式不支持或身份不一致。');
+  if (record.schemaVersion !== 2) throw Object.assign(new Error('交付记录仅支持版本 2；请创建新工作，不支持迁移旧记录。'), { code: 'UNSUPPORTED_RECORD_VERSION' });
+  if (Object.keys(record).some(key => !['schemaVersion', 'workId', 'mode', 'designRequest', 'createdAt', 'repositories', 'events'].includes(key))) throw new Error('交付记录包含未知字段。');
+  if (record.schemaVersion !== 2 || record.workId !== id || record.mode !== location.mode || !Array.isArray(record.repositories) || !Array.isArray(record.events)) throw new Error('交付记录格式不支持或身份不一致。');
   for (const repo of record.repositories) {
+    if (!work.scope.repositories.includes(repo.id)) throw new Error('交付仓库超出登记工作范围。');
     const binding = location.bindings[repo.id];
     if (!binding) throw new Error('交付仓库缺少本机定位。');
     if (binding.root !== binding.sourceRoot && (await git(binding.root, ['symbolic-ref', '--short', 'HEAD'])).trim() !== repo.branch) throw new Error('活动仓库分支已变化。');
   }
-  return { anchorRoot: location.anchorRoot, recordRoot: location.recordRoot, workId: id, record, bindings: location.bindings };
+  return { anchorRoot: location.anchorRoot, recordRoot: location.recordRoot, workId: id, record, recordText: text, bindings: location.bindings };
 }
 
 /** Caller holds the anchor lock; shared record uses the existing recoverable transaction writer. */
 export async function saveDeliveryRecord(context: DeliveryContext, record: DeliveryRecord): Promise<void> {
-  if (record.schemaVersion !== 1 || record.workId !== context.workId) throw new Error('交付记录身份无效。');
+  if (record.schemaVersion !== 2 || record.workId !== context.workId) throw new Error('交付记录身份无效。');
+  const workText = await readTextIfExists(context.recordRoot, `.tiller/work/${context.workId}/record.json`);
+  if (!workText) throw Object.assign(new Error('交付需要当前格式的工作登记。'), { code: 'WORK_NOT_FOUND' });
+  const work = parseWorkRecord(workText, context.workId);
+  if (record.repositories.some(repo => !work.scope.repositories.includes(repo.id))) throw new Error('交付仓库超出登记工作范围。');
   const filename = `.tiller/work/${context.workId}/delivery.json`;
   const before = await readTextIfExists(context.recordRoot, filename);
-  await applyChanges(context.recordRoot, [{ path: filename, before, after: JSON.stringify(record, null, 2) + '\n' }]);
+  if (before !== null && JSON.parse(before).schemaVersion !== 2) throw Object.assign(new Error('交付记录版本不支持；保留原文件，不迁移。'), { code: 'UNSUPPORTED_RECORD_VERSION' });
+  if (before !== context.recordText) throw Object.assign(new Error('交付记录在读取后发生变化，重新核对再操作。'), { code: 'CONTENT_CHANGED' });
+  const after = JSON.stringify(record, null, 2) + '\n';
+  await applyChanges(context.recordRoot, [{ path: filename, before, after }]);
   context.record = record;
+  context.recordText = after;
 }
 
 export async function withDeliveryLock<T>(root: string, id: string, callback: (context: DeliveryContext) => Promise<T>): Promise<T> {

@@ -1,0 +1,27 @@
+{
+  "label": "15-foundation-start-apply",
+  "command": [
+    "node",
+    ".tiller/run.cjs",
+    "work",
+    "task",
+    "start",
+    "20261019-t6-selfboot",
+    "--task",
+    "foundation",
+    "--input",
+    "inputs/start-foundation.json",
+    "--apply",
+    "59c4fea8121a16d3b86a549b68919aa656a09c3babdd3883219c405244d0c3bf",
+    "--json"
+  ],
+  "startedAt": "2026-10-19T14:10:37.858Z",
+  "finishedAt": "2026-10-19T14:12:46.927Z",
+  "durationMs": 129066,
+  "exitCode": 0,
+  "signal": null,
+  "error": null,
+  "stdout": "{\"ok\":true,\"operationId\":\"start-foundation\",\"inputDigest\":\"cfe289bdcdede8aaf06e38f6405fbaff3931b2ae168903f81d57ab74d4121318\",\"kind\":\"task-start\",\"revision\":3,\"planningRevision\":\"t6-one\",\"basisDigest\":\"59c4fea8121a16d3b86a549b68919aa656a09c3babdd3883219c405244d0c3bf\",\"operationAllowed\":true,\"technicalReady\":false,\"blockingReasons\":[],\"taskId\":\"foundation\",\"attemptId\":\"attempt-4652445baafba54321c25bf7\",\"eventSequence\":2,\"technicalBasisDigest\":\"da2a82cc0e6de97b27e25f73a0bec860c8d634dac06b44dbc1cf8a624bf3b125\",\"exceptions\":[],\"failureReasons\":[],\"status\":\"allowed\",\"changed\":true,\"historical\":false}\n",
+  "stderr": "",
+  "pathNormalization": "Local root paths normalized; exact original retained in local observations."
+}

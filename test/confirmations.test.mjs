@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync, symlinkSync } from 'node:fs';
 import { join } from 'node:path';
 import { initialize } from '../dist/core.js';
-import { requestConfirmation, recordDecision, checkGate, inspectConfirmations, assertAcceptance } from '../dist/confirmations.js';
+import { requestConfirmation, recordDecision, checkGate, inspectConfirmations, assertAcceptance, readConfirmation } from '../dist/confirmations.js';
 import { fixture, put, gitRepository } from './helpers.mjs';
 
 const workId = 'student-service';
@@ -181,4 +181,102 @@ test('explicit exception requires source, review and exactly scoped action inste
   await assert.rejects(requestConfirmation(root, workId, request('wrong-action', 'design', { exception: { ...exception, allowedAction: '发布全部服务' } })), /下一步完全对应/u);
   put(root, reference.path, '原例外来源已变化。');
   assert.equal((await checkGate(root, workId, 'candidate')).status, 'needs-review');
+});
+
+async function approveDesign(root) {
+  await requestConfirmation(root, workId, request('requirements'));
+  await recordDecision(root, workId, decision(root, 'requirements', 'approve-requirements'));
+  await requestConfirmation(root, workId, request('design', 'design', { upstream: ['requirements'] }));
+  await recordDecision(root, workId, decision(root, 'design', 'approve-design'));
+}
+
+test('planning requires a current covering design and never approves task specifications or checkpoints automatically', async t => {
+  const root = await setup(t);
+  await assert.rejects(requestConfirmation(root, workId, request('planning', 'planning')), /design/u);
+  await assert.rejects(requestConfirmation(root, workId, request('planning', 'planning', { exception: {} })), /内嵌例外/u);
+  await approveDesign(root);
+  await assert.rejects(requestConfirmation(root, workId, request('planning', 'planning', { upstream: ['design'], scope: { repositories: ['.'], targets: ['billing'] } })), /覆盖当前范围/u);
+  const planning = request('planning', 'planning', { upstream: ['design'] });
+  assert.equal((await requestConfirmation(root, workId, planning)).confirmed, false);
+  const checkpoint = request('review-start', 'checkpoint', {
+    upstream: ['planning'], checkpointBinding: { ownerWorkId: workId, taskId: 'skeleton', checkpointId: 'start-review', operation: 'start', definitionDigest: 'a'.repeat(64) },
+  });
+  await assert.rejects(requestConfirmation(root, workId, checkpoint), /上游确认未满足/u);
+  assert.equal((await recordDecision(root, workId, decision(root, 'planning', 'approve-planning'))).confirmed, true);
+  assert.equal((await requestConfirmation(root, workId, checkpoint)).status, 'pending');
+  assert.equal((await checkGate(root, workId, 'review-start')).confirmed, false);
+  await recordDecision(root, workId, decision(root, 'review-start', 'approve-start'));
+  assert.equal((await checkGate(root, workId, 'review-start')).confirmed, true);
+  await recordDecision(root, workId, decision(root, 'design', 'revoke-design', 'revoked'));
+  assert.equal((await checkGate(root, workId, 'planning')).confirmed, false);
+  assert.equal((await checkGate(root, workId, 'review-start')).confirmed, false);
+  assert.equal(JSON.parse(readFileSync(join(root, directory, 'confirmations.json'), 'utf8')).schemaVersion, 3);
+});
+
+test('new checkpoint and exception nodes require exact operation identities, bounded conditions and predecessors', async t => {
+  const root = await setup(t);
+  const checkpointBinding = { ownerWorkId: workId, taskId: 'skeleton', checkpointId: 'verify-review', operation: 'verify', definitionDigest: 'a'.repeat(64) };
+  const checkpoint = request('checkpoint', 'checkpoint', { checkpointBinding });
+  await assert.rejects(requestConfirmation(root, workId, checkpoint), /planning/u);
+  await assert.rejects(requestConfirmation(root, workId, request('checkpoint', 'checkpoint')), /人工检查绑定/u);
+  for (const binding of [
+    { ...checkpointBinding, definitionDigest: undefined },
+    { ...checkpointBinding, definitionDigest: 'invalid' },
+    { ...checkpointBinding, taskId: undefined },
+    { ...checkpointBinding, operation: 'skip-all' },
+    { ...checkpointBinding, operation: 'delivery-ready' },
+    { ...checkpointBinding, ownerWorkId: 'other-work' },
+    { ...checkpointBinding, approved: true },
+  ]) await assert.rejects(requestConfirmation(root, workId, { ...checkpoint, checkpointBinding: binding }));
+  const exceptionBinding = {
+    ownerWorkId: workId, taskId: 'skeleton', operation: 'verify', conditionIds: ['runtime-evidence'],
+    basisDigest: 'a'.repeat(64), reason: '模拟测试允许暂缺运行证据。', allowedAction: '继续当前交付', endCondition: '本次对象内容变化即失效。',
+  };
+  const exception = request('exception', 'exception', { exceptionBinding });
+  await assert.rejects(requestConfirmation(root, workId, exception), /design/u);
+  await assert.rejects(requestConfirmation(root, workId, request('exception', 'exception')), /例外绑定/u);
+  await approveDesign(root);
+  for (const binding of [
+    { ...exceptionBinding, conditionIds: [] },
+    { ...exceptionBinding, conditionIds: ['runtime-evidence', 'runtime-evidence'] },
+    { ...exceptionBinding, basisDigest: 'unknown' },
+    { ...exceptionBinding, allowedAction: '发布全部服务' },
+    { ...exceptionBinding, ownerWorkId: 'other-work' },
+    { ...exceptionBinding, force: true },
+  ]) await assert.rejects(requestConfirmation(root, workId, { ...exception, upstream: ['design'], exceptionBinding: binding }));
+  assert.equal((await requestConfirmation(root, workId, { ...exception, upstream: ['design'] })).status, 'pending');
+  assert.equal((await recordDecision(root, workId, decision(root, 'exception', 'conditional-exception', 'conditional'))).confirmed, false);
+  const approval = await recordDecision(root, workId, decision(root, 'exception', 'approve-exception'));
+  assert.equal(approval.confirmed, true);
+  assert.equal(approval.automaticTransition, false);
+  assert.match(readFileSync(join(root, directory, 'reviews/request-exception/presentation.md'), 'utf8'), /runtime-evidence/u);
+  await assert.rejects(requestConfirmation(root, workId, request('unknown', ['requirements'])), /节点无效/u);
+  await assert.rejects(requestConfirmation(root, workId, request('wrong-binding', 'requirements', { exceptionBinding })), /只有 exception/u);
+});
+
+test('read-only explicit confirmation references preserve identity and expose current invalidation without granting approval', async t => {
+  const root = await setup(t);
+  await requestConfirmation(root, workId, request('requirements'));
+  await assert.rejects(readConfirmation(root, { workId, requestId: 'requirements', decisionId: 'missing' }), /当前决定/u);
+  await recordDecision(root, workId, decision(root, 'requirements', 'approve'));
+  const reference = { workId, requestId: 'requirements', decisionId: 'approve' };
+  const registry = readFileSync(join(root, directory, 'confirmations.json'), 'utf8');
+  const current = await readConfirmation(root, reference);
+  assert.equal(current.check.confirmed, true);
+  assert.deepEqual(current.reference, reference);
+  assert.deepEqual(current.request.scope, { repositories: ['.'], targets: ['student-service'] });
+  assert.deepEqual(current.request.subjects, [subject]);
+  assert.equal(current.decision.outcome, 'approved');
+  assert.match(current.requestFingerprint, /^[a-f0-9]{64}$/u);
+  assert.match(current.decisionFingerprint, /^[a-f0-9]{64}$/u);
+  assert.throws(() => current.request.scope.targets.push('billing'), TypeError);
+  assert.throws(() => { current.check.confirmed = false; }, TypeError);
+  assert.equal(readFileSync(join(root, directory, 'confirmations.json'), 'utf8'), registry);
+  await assert.rejects(readConfirmation(root, { ...reference, requestId: 'unknown' }), /请求不存在/u);
+  await assert.rejects(readConfirmation(root, { ...reference, confirmed: true }), /不支持的字段/u);
+  put(root, subject.path, '# Changed requirements\n\nNew scope.\n');
+  assert.equal((await readConfirmation(root, reference)).check.confirmed, false);
+  await recordDecision(root, workId, decision(root, 'requirements', 'withdraw', 'revoked'));
+  await assert.rejects(readConfirmation(root, reference), /当前决定/u);
+  assert.equal((await readConfirmation(root, { ...reference, decisionId: 'withdraw' })).check.status, 'invalidated');
 });

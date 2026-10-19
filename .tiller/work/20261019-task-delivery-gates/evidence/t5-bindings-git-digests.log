@@ -1,0 +1,15 @@
+
+Algorithm Hash                                                             Path
+--------- ----                                                             ----
+SHA256    89A705E67877E22544B0156D272F7102C588401DFC94E2200BE9878266484F94 D:\dev_projects_ai\tiller-clean\.tiller\local\worktrees\testing-verification\src\confirmations.ts
+SHA256    07CB08473C023723B5F6D7EDDD714E893D6E8C01B7FE5E9F2AE1BE23318FA39D D:\dev_projects_ai\tiller-clean\.tiller\local\worktrees\testing-verification\src\delivery-actions.ts
+SHA256    8058ACEF9728EDF6EF9EF3640442E877D882E6200C865CE6A0B244BF3CBBA044 D:\dev_projects_ai\tiller-clean\.tiller\local\worktrees\testing-verification\src\overall-delivery.ts
+SHA256    53DC2C0D97E4B8279955D5C516161234E560AA32F5517B5D42C61207211E60D0 D:\dev_projects_ai\tiller-clean\.tiller\local\worktrees\testing-verification\dist\confirmations.js
+SHA256    43E40B787AA807EB1FAFE6B1C647BAABED00287F8F373A191B91AA84659DC422 D:\dev_projects_ai\tiller-clean\.tiller\local\worktrees\testing-verification\dist\delivery-actions.js
+SHA256    4A59E3A8B502009DB5BA8C62F46AD28A147579FCE1FD3F6C7FBE53FC0A3FE1C5 D:\dev_projects_ai\tiller-clean\.tiller\local\worktrees\testing-verification\dist\overall-delivery.js
+SHA256    89968F78C710926D3C1E9E501C3B3EE35844E799AE1A1DF0AD3CBF32450EAD34 D:\dev_projects_ai\tiller-clean\.tiller\local\worktrees\testing-verification\test\delivery-gate-bindings.test.mjs
+SHA256    83115B913E670CAFBF4DD4C351C9E3FC8BDCCE344B6CD353CF3B934302C28ED4 D:\dev_projects_ai\tiller-clean\.tiller\local\worktrees\testing-verification\test\delivery-actions.test.mjs
+SHA256    96C0D72FB8BD4D0A22C73013F5D8B1FCB25727A550A43C53099709A06CDD1E2E D:\dev_projects_ai\tiller-clean\.tiller\local\worktrees\testing-verification\test\confirmations.test.mjs
+SHA256    C4B6CB7ABA7BA24BC3E821CA64B23E30B778A1F4CB0F3F0CDF0A0A4E501E9885 D:\dev_projects_ai\tiller-clean\.tiller\local\worktrees\testing-verification\test\merge-confirmations.test.mjs
+
+

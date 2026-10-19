@@ -1,0 +1,22 @@
+TAP version 13
+# Subtest: overall delivery requires completed tasks, combination evidence and checkpoints while keeping immutable receipts separate from acceptance
+ok 1 - overall delivery requires completed tasks, combination evidence and checkpoints while keeping immutable receipts separate from acceptance
+  ---
+  duration_ms: 653581.6328
+  type: 'test'
+  ...
+# Subtest: workspace delivery uses registered repository objects and explicit exceptions without changing technical readiness
+ok 2 - workspace delivery uses registered repository objects and explicit exceptions without changing technical readiness
+  ---
+  duration_ms: 544713.834
+  type: 'test'
+  ...
+1..2
+# tests 2
+# suites 0
+# pass 2
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 1198647.0387

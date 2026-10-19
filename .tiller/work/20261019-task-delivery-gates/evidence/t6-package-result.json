@@ -1,0 +1,51 @@
+{
+  "package": "C:\\Users\\Administrator\\AppData\\Local\\Temp\\tiller-package-snapshot-929e0e61522c4e6897db205de400b0e1\\.tiller\\local\\package-validation\\tiller-0.4.0.tgz",
+  "integrity": "sha512-YoOKmGPyMSwUIOhNbH0cIm2ax7J9/QO6EzVwZ86XmIoerZ0rhyJx4x6ouaXBVwbrYhzHNBJbqJyrM7UAZGcmXw==",
+  "root": "C:\\Users\\ADMINI~1\\AppData\\Local\\Temp\\tiller-package-OaDgET",
+  "install": "C:\\Users\\ADMINI~1\\AppData\\Local\\Temp\\tiller-package-OaDgET\\installed",
+  "target": "C:\\Users\\ADMINI~1\\AppData\\Local\\Temp\\tiller-package-OaDgET\\中文 工程",
+  "cli": "C:\\Users\\ADMINI~1\\AppData\\Local\\Temp\\tiller-package-OaDgET\\installed\\node_modules\\tiller\\dist\\cli.js",
+  "version": "0.4.0",
+  "checks": [
+    "package contents and upgrade baselines",
+    "isolated install",
+    "npm bin execution",
+    "Chinese and spaced paths",
+    "single bundled entry and rules",
+    "dated work creation",
+    "read-only resume",
+    "pending confirmation blocks design",
+    "same-work design after synthetic approval",
+    "structure inspection",
+    "repeat basis binding",
+    "unsupported confirmation records rejected without changes",
+    "0.2.0 upgrade and multi-artifact resume",
+    "upgrade preview",
+    "grouped workspace initialization and repeat detection",
+    "generated launcher and runtime status",
+    "upgraded launcher remains usable",
+    "verification commands and empty applicability in both modes",
+    "0.4.0 gate modules and installed launcher help",
+    "old work and confirmation records rejected byte-for-byte",
+    "unplanned task and delivery checks reject without writes in both modes",
+    "installed CLI planning, activation, task start, actual execution, task verification and delivery ready with explicit synthetic approvals"
+  ],
+  "gates": {
+    "project": {
+      "synthetic": true,
+      "workId": "20261019-package-gates",
+      "unplannedReads": "rejected-without-writes",
+      "commandCount": 30,
+      "receiptId": "package-ready",
+      "basisDigest": "589c9e13d7176e7e880a5754427e90ce817a390593ab2ceff05daebaad4bc59e",
+      "technicalReady": true,
+      "acceptance": "not-requested"
+    },
+    "workspace": {
+      "synthetic": true,
+      "workId": "20261019-package-gates",
+      "unplannedReads": "rejected-without-writes",
+      "commandCount": 3
+    }
+  }
+}

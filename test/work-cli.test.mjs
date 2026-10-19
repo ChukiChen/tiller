@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import test from 'node:test';
 import { cli, confirmFixture, failure, fixture, put, snapshot, success } from './helpers.mjs';
@@ -27,37 +27,20 @@ test('CLI creates references and adds design to the same work only after matchin
   assert.deepEqual(snapshot(root), stable);
 });
 
-test('CLI inspects and adopts historical material with explicit input and stale-plan protection', (t) => {
-  const root = fixture(t);
-  success(cli(root, 'init'));
+test('CLI rejects removed adoption and migration commands without modifying old files', t => {
+  const root = fixture(t); success(cli(root, 'init'));
   const id = 'history';
-  put(root, '.tiller/work/history/README.md', '# Process\nOriginal process notes are retained.\n');
-  put(root, '.tiller/work/history/needs.md', '# Requirements\nKeep existing notes.\n');
-  const original = snapshot(root);
+  put(root, '.tiller/work/history/work.md', '# Historical process\nKeep original notes.\n');
+  put(root, '.tiller/work/history/record.json', JSON.stringify({ schemaVersion: 2, id }));
+  const before = snapshot(root);
+  for (const command of ['adopt', 'migrate-confirmations']) {
+    assert.equal(failure(cli(root, 'work', command, id)).error.code, 'INVALID_ARGUMENT');
+  }
   const inspected = failure(cli(root, 'work', 'inspect', id));
-  assert.match(JSON.stringify(inspected), /work\.md/);
-  assert.deepEqual(snapshot(root), original);
-  const checked = failure(cli(root, 'work', 'check', id));
-  assert.match(JSON.stringify(checked), /work\.md/);
-  const input = {
-    title: 'History', level: 'change', scope: { repositories: ['.'], targets: [id] },
-    entry: { repository: '.', path: '.tiller/work/history/README.md' },
-    artifacts: { requirements: { type: 'change-requirements', source: { repository: '.', path: '.tiller/work/history/needs.md' } } },
-  };
-  put(root, 'adoption.json', JSON.stringify(input));
-  const plan = success(cli(root, 'work', 'adopt', id, '--input', 'adoption.json', '--plan'));
-  put(root, 'adoption.json', JSON.stringify(input, null, 2));
-  const stale = snapshot(root);
-  failure(cli(root, 'work', 'adopt', id, '--input', 'adoption.json', '--apply', plan.planId));
-  assert.deepEqual(snapshot(root), stale);
-  const fresh = success(cli(root, 'work', 'adopt', id, '--input', 'adoption.json', '--plan'));
-  success(cli(root, 'work', 'adopt', id, '--input', 'adoption.json', '--apply', fresh.planId));
-  success(cli(root, 'work', 'inspect', id));
-  assert.equal(readFileSync(join(root, '.tiller/work/history/README.md')).toString('base64'), original['.tiller/work/history/README.md']);
-  const stable = snapshot(root);
-  const duplicate = failure(cli(root, 'work', 'adopt', id, '--input', 'adoption.json', '--plan'));
-  assert.ok(duplicate.conflicts.length);
-  assert.deepEqual(snapshot(root), stable);
+  assert.equal(inspected.works[0].registration, 'unsupported');
+  assert.match(inspected.issues.join(' '), /版本 2.*版本 3/);
+  assert.equal(failure(cli(root, 'work', 'resume', id)).error.code, 'UNSUPPORTED_RECORD_VERSION');
+  assert.deepEqual(snapshot(root), before);
 });
 
 test('CLI rejects ambiguous artifact options without writing', (t) => {

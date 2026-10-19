@@ -1,0 +1,818 @@
+{
+  "schemaVersion": 1,
+  "modules": [
+    {
+      "id": "verification",
+      "design": {
+        "repository": ".",
+        "path": ".tiller/specs/modules/verification/design.md"
+      }
+    },
+    {
+      "id": "workflow",
+      "design": {
+        "repository": ".",
+        "path": ".tiller/specs/modules/workflow/design.md"
+      }
+    },
+    {
+      "id": "initialization",
+      "design": {
+        "repository": ".",
+        "path": ".tiller/specs/modules/initialization/design.md"
+      }
+    }
+  ],
+  "requirements": [
+    {
+      "id": "VERIFY-01",
+      "source": {
+        "repository": ".",
+        "path": ".tiller/specs/modules/verification/requirements.md"
+      }
+    },
+    {
+      "id": "VERIFY-02",
+      "source": {
+        "repository": ".",
+        "path": ".tiller/specs/modules/verification/requirements.md"
+      }
+    },
+    {
+      "id": "VERIFY-03",
+      "source": {
+        "repository": ".",
+        "path": ".tiller/specs/modules/verification/requirements.md"
+      }
+    },
+    {
+      "id": "VERIFY-04",
+      "source": {
+        "repository": ".",
+        "path": ".tiller/specs/modules/verification/requirements.md"
+      }
+    },
+    {
+      "id": "VERIFY-05",
+      "source": {
+        "repository": ".",
+        "path": ".tiller/specs/modules/verification/requirements.md"
+      }
+    },
+    {
+      "id": "VERIFY-06",
+      "source": {
+        "repository": ".",
+        "path": ".tiller/specs/modules/verification/requirements.md"
+      }
+    },
+    {
+      "id": "VERIFY-07",
+      "source": {
+        "repository": ".",
+        "path": ".tiller/specs/modules/verification/requirements.md"
+      }
+    },
+    {
+      "id": "VERIFY-08",
+      "source": {
+        "repository": ".",
+        "path": ".tiller/specs/modules/verification/requirements.md"
+      }
+    },
+    {
+      "id": "VERIFY-09",
+      "source": {
+        "repository": ".",
+        "path": ".tiller/specs/modules/verification/requirements.md"
+      }
+    }
+  ],
+  "categories": {
+    "unit": {
+      "applicability": "applicable",
+      "reason": "YAML 解析和严格字段契约由原生测试断言。"
+    },
+    "interface": {
+      "applicability": "applicable",
+      "reason": "CLI 参数与目录关联返回值；范围仅为已登记用例。"
+    },
+    "integration": {
+      "applicability": "applicable",
+      "reason": "文件、Git 范围及工作记录的组合行为。"
+    },
+    "scenario": {
+      "applicability": "applicable",
+      "reason": "CLI 完整流程及单独待验证的真实 AI 工作场景。"
+    },
+    "performance": {
+      "applicability": "pending",
+      "reason": "尚未确认规模、延迟和资源阈值；不能用测试耗时替代性能达标。"
+    },
+    "security": {
+      "applicability": "applicable",
+      "reason": "本增量检查路径边界、忽略文件和自证引用，不代表完整安全审计。"
+    },
+    "reliability": {
+      "applicability": "applicable",
+      "reason": "失败、超时、输入变化及记录可复用性。"
+    },
+    "compatibility": {
+      "applicability": "applicable",
+      "reason": "Windows 上 Node.js/Python 原生入口和旧版升级；其他操作系统尚未验证。"
+    },
+    "usability": {
+      "applicability": "pending",
+      "reason": "命令说明及错误信息仍需真实使用者验证，未将自动化通过视为易用性验收。"
+    }
+  },
+  "suites": [
+    {
+      "id": "catalog",
+      "repository": ".",
+      "command": "node",
+      "args": [
+        "--test",
+        "test/verification-cases.test.mjs"
+      ],
+      "cwd": ".",
+      "timeoutMs": 600000,
+      "inputs": [
+        {
+          "repository": ".",
+          "path": "src/cli.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/confirmations.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/core.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/delivery-actions.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/delivery-environment.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/delivery-git.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/delivery-location.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/delivery-types.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/files.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/repository-paths.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/review-adapters.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/runtime.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/types.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/upgrade.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/verification-cases.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/verification-runs.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/verification-yaml.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/work-history.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/work.ts"
+        },
+        {
+          "repository": ".",
+          "path": "resources/baselines/0.1.0.json"
+        },
+        {
+          "repository": ".",
+          "path": "resources/baselines/0.2.0.json"
+        },
+        {
+          "repository": ".",
+          "path": "resources/baselines/0.2.1.json"
+        },
+        {
+          "repository": ".",
+          "path": "resources/baselines/0.2.2.json"
+        },
+        {
+          "repository": ".",
+          "path": "resources/baselines/0.3.0.json"
+        },
+        {
+          "repository": ".",
+          "path": "resources/baselines/0.3.1.json"
+        },
+        {
+          "repository": ".",
+          "path": "resources/baselines/0.3.2.json"
+        },
+        {
+          "repository": ".",
+          "path": "resources/baselines/0.3.3.json"
+        },
+        {
+          "repository": ".",
+          "path": "resources/baselines/0.3.4.json"
+        },
+        {
+          "repository": ".",
+          "path": "resources/baselines/0.3.5.json"
+        },
+        {
+          "repository": ".",
+          "path": "resources/entry.md"
+        },
+        {
+          "repository": ".",
+          "path": "resources/rules/activities/delivery.md"
+        },
+        {
+          "repository": ".",
+          "path": "resources/rules/activities/design.md"
+        },
+        {
+          "repository": ".",
+          "path": "resources/rules/activities/implementation.md"
+        },
+        {
+          "repository": ".",
+          "path": "resources/rules/activities/requirements.md"
+        },
+        {
+          "repository": ".",
+          "path": "resources/rules/core.md"
+        },
+        {
+          "repository": ".",
+          "path": "resources/rules/index.md"
+        },
+        {
+          "repository": ".",
+          "path": "resources/rules/quality/documents.md"
+        },
+        {
+          "repository": ".",
+          "path": "resources/rules/quality/verification.md"
+        },
+        {
+          "repository": ".",
+          "path": "resources/run.cjs"
+        },
+        {
+          "repository": ".",
+          "path": "resources/templates/change-design.md"
+        },
+        {
+          "repository": ".",
+          "path": "resources/templates/change-requirements.md"
+        },
+        {
+          "repository": ".",
+          "path": "resources/templates/module-design.md"
+        },
+        {
+          "repository": ".",
+          "path": "resources/templates/module-requirements.md"
+        },
+        {
+          "repository": ".",
+          "path": "resources/templates/product-design.md"
+        },
+        {
+          "repository": ".",
+          "path": "resources/templates/product-requirements.md"
+        },
+        {
+          "repository": ".",
+          "path": "resources/usage.md"
+        },
+        {
+          "repository": ".",
+          "path": "package.json"
+        },
+        {
+          "repository": ".",
+          "path": "package-lock.json"
+        },
+        {
+          "repository": ".",
+          "path": "tsconfig.json"
+        },
+        {
+          "repository": ".",
+          "path": ".tiller/rules/testing.md"
+        },
+        {
+          "repository": ".",
+          "path": "test/helpers.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/verification-cases.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/verification-runs.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/verification-cli.test.mjs"
+        }
+      ]
+    },
+    {
+      "id": "execution",
+      "repository": ".",
+      "command": "node",
+      "args": [
+        "--test",
+        "test/verification-runs.test.mjs"
+      ],
+      "cwd": ".",
+      "timeoutMs": 600000,
+      "inputs": [
+        {
+          "repository": ".",
+          "path": "src/cli.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/confirmations.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/core.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/delivery-actions.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/delivery-environment.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/delivery-git.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/delivery-location.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/delivery-types.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/files.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/repository-paths.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/review-adapters.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/runtime.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/types.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/upgrade.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/verification-cases.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/verification-runs.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/verification-yaml.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/work-history.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/work.ts"
+        },
+        {
+          "repository": ".",
+          "path": "resources/baselines/0.1.0.json"
+        },
+        {
+          "repository": ".",
+          "path": "resources/baselines/0.2.0.json"
+        },
+        {
+          "repository": ".",
+          "path": "resources/baselines/0.2.1.json"
+        },
+        {
+          "repository": ".",
+          "path": "resources/baselines/0.2.2.json"
+        },
+        {
+          "repository": ".",
+          "path": "resources/baselines/0.3.0.json"
+        },
+        {
+          "repository": ".",
+          "path": "resources/baselines/0.3.1.json"
+        },
+        {
+          "repository": ".",
+          "path": "resources/baselines/0.3.2.json"
+        },
+        {
+          "repository": ".",
+          "path": "resources/baselines/0.3.3.json"
+        },
+        {
+          "repository": ".",
+          "path": "resources/baselines/0.3.4.json"
+        },
+        {
+          "repository": ".",
+          "path": "resources/baselines/0.3.5.json"
+        },
+        {
+          "repository": ".",
+          "path": "resources/entry.md"
+        },
+        {
+          "repository": ".",
+          "path": "resources/rules/activities/delivery.md"
+        },
+        {
+          "repository": ".",
+          "path": "resources/rules/activities/design.md"
+        },
+        {
+          "repository": ".",
+          "path": "resources/rules/activities/implementation.md"
+        },
+        {
+          "repository": ".",
+          "path": "resources/rules/activities/requirements.md"
+        },
+        {
+          "repository": ".",
+          "path": "resources/rules/core.md"
+        },
+        {
+          "repository": ".",
+          "path": "resources/rules/index.md"
+        },
+        {
+          "repository": ".",
+          "path": "resources/rules/quality/documents.md"
+        },
+        {
+          "repository": ".",
+          "path": "resources/rules/quality/verification.md"
+        },
+        {
+          "repository": ".",
+          "path": "resources/run.cjs"
+        },
+        {
+          "repository": ".",
+          "path": "resources/templates/change-design.md"
+        },
+        {
+          "repository": ".",
+          "path": "resources/templates/change-requirements.md"
+        },
+        {
+          "repository": ".",
+          "path": "resources/templates/module-design.md"
+        },
+        {
+          "repository": ".",
+          "path": "resources/templates/module-requirements.md"
+        },
+        {
+          "repository": ".",
+          "path": "resources/templates/product-design.md"
+        },
+        {
+          "repository": ".",
+          "path": "resources/templates/product-requirements.md"
+        },
+        {
+          "repository": ".",
+          "path": "resources/usage.md"
+        },
+        {
+          "repository": ".",
+          "path": "package.json"
+        },
+        {
+          "repository": ".",
+          "path": "package-lock.json"
+        },
+        {
+          "repository": ".",
+          "path": "tsconfig.json"
+        },
+        {
+          "repository": ".",
+          "path": ".tiller/rules/testing.md"
+        },
+        {
+          "repository": ".",
+          "path": "test/helpers.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/verification-cases.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/verification-runs.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/verification-cli.test.mjs"
+        }
+      ]
+    },
+    {
+      "id": "cli",
+      "repository": ".",
+      "command": "node",
+      "args": [
+        "--test",
+        "test/verification-cli.test.mjs"
+      ],
+      "cwd": ".",
+      "timeoutMs": 600000,
+      "inputs": [
+        {
+          "repository": ".",
+          "path": "src/cli.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/confirmations.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/core.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/delivery-actions.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/delivery-environment.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/delivery-git.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/delivery-location.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/delivery-types.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/files.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/repository-paths.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/review-adapters.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/runtime.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/types.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/upgrade.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/verification-cases.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/verification-runs.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/verification-yaml.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/work-history.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/work.ts"
+        },
+        {
+          "repository": ".",
+          "path": "resources/baselines/0.1.0.json"
+        },
+        {
+          "repository": ".",
+          "path": "resources/baselines/0.2.0.json"
+        },
+        {
+          "repository": ".",
+          "path": "resources/baselines/0.2.1.json"
+        },
+        {
+          "repository": ".",
+          "path": "resources/baselines/0.2.2.json"
+        },
+        {
+          "repository": ".",
+          "path": "resources/baselines/0.3.0.json"
+        },
+        {
+          "repository": ".",
+          "path": "resources/baselines/0.3.1.json"
+        },
+        {
+          "repository": ".",
+          "path": "resources/baselines/0.3.2.json"
+        },
+        {
+          "repository": ".",
+          "path": "resources/baselines/0.3.3.json"
+        },
+        {
+          "repository": ".",
+          "path": "resources/baselines/0.3.4.json"
+        },
+        {
+          "repository": ".",
+          "path": "resources/baselines/0.3.5.json"
+        },
+        {
+          "repository": ".",
+          "path": "resources/entry.md"
+        },
+        {
+          "repository": ".",
+          "path": "resources/rules/activities/delivery.md"
+        },
+        {
+          "repository": ".",
+          "path": "resources/rules/activities/design.md"
+        },
+        {
+          "repository": ".",
+          "path": "resources/rules/activities/implementation.md"
+        },
+        {
+          "repository": ".",
+          "path": "resources/rules/activities/requirements.md"
+        },
+        {
+          "repository": ".",
+          "path": "resources/rules/core.md"
+        },
+        {
+          "repository": ".",
+          "path": "resources/rules/index.md"
+        },
+        {
+          "repository": ".",
+          "path": "resources/rules/quality/documents.md"
+        },
+        {
+          "repository": ".",
+          "path": "resources/rules/quality/verification.md"
+        },
+        {
+          "repository": ".",
+          "path": "resources/run.cjs"
+        },
+        {
+          "repository": ".",
+          "path": "resources/templates/change-design.md"
+        },
+        {
+          "repository": ".",
+          "path": "resources/templates/change-requirements.md"
+        },
+        {
+          "repository": ".",
+          "path": "resources/templates/module-design.md"
+        },
+        {
+          "repository": ".",
+          "path": "resources/templates/module-requirements.md"
+        },
+        {
+          "repository": ".",
+          "path": "resources/templates/product-design.md"
+        },
+        {
+          "repository": ".",
+          "path": "resources/templates/product-requirements.md"
+        },
+        {
+          "repository": ".",
+          "path": "resources/usage.md"
+        },
+        {
+          "repository": ".",
+          "path": "package.json"
+        },
+        {
+          "repository": ".",
+          "path": "package-lock.json"
+        },
+        {
+          "repository": ".",
+          "path": "tsconfig.json"
+        },
+        {
+          "repository": ".",
+          "path": ".tiller/rules/testing.md"
+        },
+        {
+          "repository": ".",
+          "path": "test/helpers.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/verification-cases.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/verification-runs.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/verification-cli.test.mjs"
+        }
+      ]
+    }
+  ]
+}

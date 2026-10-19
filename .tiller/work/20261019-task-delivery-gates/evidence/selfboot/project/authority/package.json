@@ -1,0 +1,9 @@
+{
+  "name": "tiller",
+  "version": "0.4.0",
+  "integrity": "sha512-YoOKmGPyMSwUIOhNbH0cIm2ax7J9/QO6EzVwZ86XmIoerZ0rhyJx4x6ouaXBVwbrYhzHNBJbqJyrM7UAZGcmXw==",
+  "sha256": "a3877f6936ad4c7ff0a62e7796e83f736f2693c74110c268be6c1fa45c498110",
+  "source": "Current frozen T6 candidate; copied archive is the package installed under this controlled root.",
+  "buildEvidence": "t6-build.log",
+  "frozenEvidence": "t6-frozen-content.sha256"
+}

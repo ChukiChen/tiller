@@ -16,24 +16,20 @@ export interface WorkScope { repositories: string[]; targets: string[] }
 export interface RequirementsBasis { workId: string; requestId: string }
 export interface Completion {
   documentHash: string; evidence: string; evidenceHash: string; at: string;
-  confirmation?: Awaited<ReturnType<typeof assertAcceptance>>;
+  confirmation: Awaited<ReturnType<typeof assertAcceptance>>;
 }
 export interface WorkArtifact {
-  type: TemplateType; source: FileRef; origin: 'generated' | 'reference' | 'history';
+  type: TemplateType; source: FileRef; origin: 'generated' | 'reference';
   status: 'draft' | 'complete'; requirementsBasis?: RequirementsBasis;
   requirementsBasisHistory?: { at: string; before?: RequirementsBasis; after: RequirementsBasis }[];
   completion?: Completion; completionHistory?: Completion[];
 }
-export interface WorkRecordV2 {
-  schemaVersion: 2; id: string; title: string; createdAt: string;
+export interface WorkRecord {
+  schemaVersion: 3; id: string; title: string; createdAt: string;
   level: 'product' | 'module' | 'change'; scope: WorkScope;
   artifacts: Partial<Record<ArtifactRole, WorkArtifact>>;
 }
-export interface WorkRecordV1 {
-  schemaVersion: 1; id: string; title: string; type: TemplateType; document: string;
-  createdAt: string; status: 'draft' | 'complete'; completion?: Completion;
-  completionHistory?: Completion[]; requirementsBasis?: RequirementsBasis;
-}
+export type WorkRecordV2 = WorkRecord;
 export interface ArtifactInput { type: TemplateType; source?: FileRef; scope?: WorkScope; requirementsBasis?: RequirementsBasis }
 const roles: ArtifactRole[] = ['requirements', 'design'];
 function fail(code: string, message: string): never { throw Object.assign(new Error(message), { code }); }
@@ -51,7 +47,7 @@ function keys(value: Record<string, unknown>, allowed: string[]): void {
 function hash(content: string): string { return createHash('sha256').update(content).digest('hex'); }
 function pathsFor(id: string) { validateWorkId(id); const directory = `.tiller/work/${id}`; return { directory, record: `${directory}/record.json`, notes: `${directory}/work.md` }; }
 function roleOf(type: TemplateType): ArtifactRole { return type.endsWith('design') ? 'design' : 'requirements'; }
-function levelOf(type: TemplateType): WorkRecordV2['level'] { return type.split('-')[0] as WorkRecordV2['level']; }
+function levelOf(type: TemplateType): WorkRecord['level'] { return type.split('-')[0] as WorkRecord['level']; }
 function template(value: unknown): TemplateType {
   if (!templateTypes.includes(value as TemplateType)) fail('INVALID_TEMPLATE', `支持的模板：${templateTypes.join(', ')}`);
   return value as TemplateType;
@@ -100,19 +96,22 @@ function sameScope(a: WorkScope, b: WorkScope): boolean {
 }
 function validateCompletion(value: unknown, source: FileRef, id: string): void {
   const item = object(value, '完成记录');
+  keys(item, ['documentHash', 'evidence', 'evidenceHash', 'at', 'confirmation']);
   if (typeof item.evidence !== 'string' || typeof item.at !== 'string' || typeof item.documentHash !== 'string' || !/^[a-f0-9]{64}$/.test(item.documentHash)
     || typeof item.evidenceHash !== 'string' || !/^[a-f0-9]{64}$/.test(item.evidenceHash)) fail('INVALID_WORK_RECORD', '完成记录缺少证据关联。');
   evidencePath(item.evidence);
   if (sameRef(source, { repository: '.', path: item.evidence }) || item.evidence.toLowerCase() === pathsFor(id).notes.toLowerCase()) fail('INVALID_WORK_RECORD', '产物或工作说明本身不能代替独立评审依据。');
-  if (item.confirmation !== undefined) {
+  {
     const confirmation = object(item.confirmation, '验收关联');
+    keys(confirmation, ['requestId', 'decisionId', 'confirmationBasis', 'requestFingerprint', 'decisionFingerprint']);
     if (typeof confirmation.requestId !== 'string' || typeof confirmation.decisionId !== 'string' || confirmation.confirmationBasis !== 'reported-review'
       || typeof confirmation.requestFingerprint !== 'string' || typeof confirmation.decisionFingerprint !== 'string') fail('INVALID_WORK_RECORD', '人工验收关联无效。');
   }
 }
-function validateArtifact(item: WorkArtifact, id: string, role: ArtifactRole, level: WorkRecordV2['level']): void {
+function validateArtifact(item: WorkArtifact, id: string, role: ArtifactRole, level: WorkRecord['level']): void {
+  keys(object(item, '产物'), ['type', 'source', 'origin', 'status', 'requirementsBasis', 'requirementsBasisHistory', 'completion', 'completionHistory']);
   template(item.type); validateWorkReference(item.source);
-  if (roleOf(item.type) !== role || levelOf(item.type) !== level || !['generated', 'reference', 'history'].includes(item.origin)
+  if (roleOf(item.type) !== role || levelOf(item.type) !== level || !['generated', 'reference'].includes(item.origin)
     || !['draft', 'complete'].includes(item.status)) fail('INVALID_WORK_RECORD', '产物角色、层级或状态无效。');
   if (/^\.tiller\/work\/[^/]+\/work\.md$/i.test(item.source.path)) fail('INVALID_WORK_RECORD', '工作入口不能同时作为需求或设计产物。');
   if (item.origin === 'generated' && !sameRef(item.source, { repository: '.', path: `${pathsFor(id).directory}/${role}.md` })) fail('INVALID_WORK_RECORD', '生成产物位置与工作标识不匹配。');
@@ -126,32 +125,28 @@ function validateArtifact(item: WorkArtifact, id: string, role: ArtifactRole, le
   if (item.requirementsBasisHistory !== undefined) {
     if (role !== 'design' || !Array.isArray(item.requirementsBasisHistory)) fail('INVALID_WORK_RECORD', '需求依据历史无效。');
     for (const entry of item.requirementsBasisHistory) {
+      keys(object(entry, '需求依据历史'), ['at', 'before', 'after']);
       if (!entry || typeof entry.at !== 'string') fail('INVALID_WORK_RECORD', '需求依据变更时间缺失。');
       basisValue(entry.after); if (entry.before !== undefined) basisValue(entry.before);
     }
   }
 }
-export function parseWorkRecord(text: string, id: string): WorkRecordV1 | WorkRecordV2 {
+export function parseWorkRecord(text: string, id: string): WorkRecord {
   validateWorkId(id);
   let raw: unknown; try { raw = JSON.parse(text); } catch { fail('INVALID_WORK_RECORD', '工作记录不是有效 JSON。'); }
   const value = object(raw, '工作记录');
+  if (value.schemaVersion !== 3) fail('UNSUPPORTED_RECORD_VERSION', `工作记录版本 ${String(value.schemaVersion)} 不受支持；需要版本 3。请使用 work create 新建工作，原文件保留且不会迁移。`);
+  keys(value, ['schemaVersion', 'id', 'title', 'createdAt', 'level', 'scope', 'artifacts']);
   if (value.id !== id || typeof value.title !== 'string' || !value.title.trim() || typeof value.createdAt !== 'string') fail('INVALID_WORK_RECORD', '工作记录必要字段无效。');
-  if (value.schemaVersion === 1) {
-    const type = template(value.type);
-    if (value.document !== `${pathsFor(id).directory}/${roleOf(type)}.md`) fail('INVALID_WORK_RECORD', '旧产物位置与工作标识不匹配。');
-    const artifact = { ...value, type, source: { repository: '.', path: value.document }, origin: 'history' } as unknown as WorkArtifact;
-    validateArtifact(artifact, id, roleOf(type), levelOf(type));
-    return value as unknown as WorkRecordV1;
-  }
-  if (value.schemaVersion !== 2 || !['product', 'module', 'change'].includes(value.level as string)) fail('INVALID_WORK_RECORD', '工作记录版本或层级无效。');
+  if (!['product', 'module', 'change'].includes(value.level as string)) fail('INVALID_WORK_RECORD', '工作记录层级无效。');
   validateWorkScope(value.scope);
   const artifacts = object(value.artifacts, '产物登记');
   if (!Object.keys(artifacts).length || Object.keys(artifacts).some(key => !roles.includes(key as ArtifactRole))) fail('INVALID_WORK_RECORD', '只支持一个主需求和一个主设计。');
-  for (const role of roles) if (artifacts[role] !== undefined) validateArtifact(object(artifacts[role], '产物') as unknown as WorkArtifact, id, role, value.level as WorkRecordV2['level']);
+  for (const role of roles) if (artifacts[role] !== undefined) validateArtifact(object(artifacts[role], '产物') as unknown as WorkArtifact, id, role, value.level as WorkRecord['level']);
   const req = artifacts.requirements as WorkArtifact | undefined; const design = artifacts.design as WorkArtifact | undefined;
   if (req && design && sameRef(req.source, design.source)) fail('INVALID_WORK_RECORD', '需求与设计不能指向同一混合文件。');
   for (const artifact of Object.values(artifacts) as WorkArtifact[]) if (!(value.scope as WorkScope).repositories.includes(artifact.source.repository)) fail('INVALID_WORK_RECORD', '产物引用超出工作仓库范围。');
-  return value as unknown as WorkRecordV2;
+  return value as unknown as WorkRecord;
 }
 export async function readWorkReference(root: string, reference: FileRef): Promise<string | null> {
   validateWorkReference(reference);
@@ -169,22 +164,16 @@ export async function loadWorkRecord(root: string, id: string, write = false) {
   const paths = pathsFor(id); await requireReadyProject(root, { write });
   await assertSharedPaths(root, [paths.record, paths.notes]);
   const original = await readTextIfExists(root, paths.record);
-  if (original === null) fail('WORK_NOT_FOUND', `工作 ${id} 尚未登记；请用 work inspect 检查缺口，历史资料通过 work adopt 接入。`);
+  if (original === null) fail('WORK_NOT_FOUND', `工作 ${id} 尚未登记；请用 work inspect 检查缺口，并用 work create 新建工作引用所需资料。`);
   const record = parseWorkRecord(original, id);
-  if (record.schemaVersion === 2) await validateScopeRepositories(root, record.scope);
-  if (write && record.schemaVersion === 1) fail('WORK_MIGRATION_REQUIRED', '旧版工作只读；请先用 work adopt 显式预览并迁移。');
+  await validateScopeRepositories(root, record.scope);
   return { record, original, paths, notes: await readTextIfExists(root, paths.notes) };
-}
-function asV2(record: WorkRecordV1 | WorkRecordV2): WorkRecordV2 {
-  if (record.schemaVersion === 2) return record;
-  const { type, status, requirementsBasis, completion, completionHistory } = record;
-  return { schemaVersion: 2, id: record.id, title: record.title, createdAt: record.createdAt, level: levelOf(type), scope: { repositories: ['.'], targets: [record.id] }, artifacts: { [roleOf(type)]: { type, status, source: { repository: '.', path: record.document }, origin: 'history', requirementsBasis, completion, completionHistory } } };
 }
 async function validateScopeRepositories(root: string, scope: WorkScope): Promise<void> {
   const metadata = await requireReadyProject(root, { write: false });
   if (scope.repositories.some(repo => repo !== '.' && !metadata.repositories.includes(repo))) fail('INVALID_WORK_SCOPE', '工作范围含未登记仓库。');
 }
-async function requireRequirements(root: string, basis: RequirementsBasis | undefined, scope?: WorkScope, adopted?: FileRef) {
+async function requireRequirements(root: string, basis: RequirementsBasis | undefined, scope?: WorkScope, requirementSource?: FileRef) {
   if (!basis) fail('REQUIREMENTS_CONFIRMATION_REQUIRED', '设计需要有效的需求确认依据；请指定 requirements-work 和 requirements-request。');
   basisValue(basis);
   const gate = await checkGate(root, basis.workId, basis.requestId);
@@ -194,7 +183,7 @@ async function requireRequirements(root: string, basis: RequirementsBasis | unde
   const registry = JSON.parse(registryText ?? '{}') as { requests: { requestId: string; scope: WorkScope; subjects: FileRef[]; files: (FileRef & { sha256: string })[] }[] };
   const request = registry.requests.find(item => item.requestId === basis.requestId);
   if (!request) fail('REQUIREMENTS_CONFIRMATION_REQUIRED', '需求请求已变化。');
-  const requirement = adopted ?? asV2((await loadWorkRecord(root, basis.workId)).record).artifacts.requirements?.source;
+  const requirement = requirementSource ?? (await loadWorkRecord(root, basis.workId)).record.artifacts.requirements?.source;
   if (!requirement || !request.subjects.some(ref => sameRef(ref, requirement))) fail('REQUIREMENTS_CONFIRMATION_REQUIRED', '需求请求未包含当前采用的需求产物。');
   const contents = await readWorkReference(root, requirement);
   if (contents === null || !request.files.some(file => sameRef(file, requirement) && file.sha256 === hash(contents))) fail('REQUIREMENTS_CONFIRMATION_REQUIRED', '需求产物与确认快照不匹配。');
@@ -202,7 +191,7 @@ async function requireRequirements(root: string, basis: RequirementsBasis | unde
   if (!effective.repositories.every(repo => request.scope.repositories.includes(repo)) || !effective.targets.every(target => request.scope.targets.includes(target))) fail('REQUIREMENTS_CONFIRMATION_REQUIRED', '需求确认范围不能覆盖当前工作范围。');
   return { scope: validateWorkScope(request.scope), requirement };
 }
-function contentIssues(content: string | null, label: string): string[] {
+export function contentIssues(content: string | null, label: string): string[] {
   if (content === null) return [`${label}不存在。`];
   const issues: string[] = [];
   if (/<!--\s*TODO\b/i.test(content) || /^\s*(?:[-*]\s+)?TODO\b/im.test(content) || /\{\{[^}]+\}\}/.test(content)) issues.push(`${label}仍含未填写占位内容。`);
@@ -215,7 +204,7 @@ function contentIssues(content: string | null, label: string): string[] {
   }
   return issues;
 }
-async function prepareArtifact(root: string, record: WorkRecordV2, input: ArtifactInput) {
+async function prepareArtifact(root: string, record: WorkRecord, input: ArtifactInput) {
   const role = roleOf(input.type);
   if (levelOf(input.type) !== record.level) fail('ARTIFACT_CONFLICT', '产物模板层级与工作不一致。');
   if (input.scope && !sameScope(input.scope, record.scope)) fail('ARTIFACT_CONFLICT', '补充产物不能改变已有工作范围。');
@@ -237,7 +226,7 @@ async function prepareArtifact(root: string, record: WorkRecordV2, input: Artifa
     if (content === null || !content.trim()) fail('ARTIFACT_MISSING', '引用的共享产物不存在或为空。');
     return { role, artifact, changes: [] as FileChange[], changed: true, content };
   }
-  if (content !== null) fail('ARTIFACT_CONFLICT', '目标文件已经存在，请明确引用或通过历史接入，不覆盖正文。');
+  if (content !== null) fail('ARTIFACT_CONFLICT', '目标文件已经存在，请明确引用，不覆盖正文。');
   const templateContent = await readFile(new URL(`../resources/templates/${input.type}.md`, import.meta.url), 'utf8');
   return { role, artifact, changes: [{ path: source.path, before: null, after: templateContent.replaceAll('{{title}}', record.title) }], changed: true, content: null };
 }
@@ -245,7 +234,7 @@ export async function workReferenceLink(root: string, id: string, reference: Fil
   const repositoryRoot = await resolveRepositoryRoot(root, reference.repository, id);
   return relative(resolve(root, pathsFor(id).directory), resolve(repositoryRoot, reference.path)).split(sep).join('/');
 }
-async function notesContent(root: string, record: WorkRecordV2): Promise<string> {
+async function notesContent(root: string, record: WorkRecord): Promise<string> {
   const links = (await Promise.all(Object.entries(record.artifacts).map(async ([role, artifact]) =>
     `- [${role}](<${await workReferenceLink(root, record.id, artifact.source)}>)`))).join('\n');
   return `# ${record.title}\n\n## 目标与授权\n\n建立文档工作；登记或草稿不代表内容已确认或获准实现。按实际用户授权补充范围。\n\n## 依据与产物\n\n- [项目规则索引](../../rules/index.md)\n${links}\n\n## 进展\n\n已建立工作入口。登记保存在 record.json；逐步补充需求与设计，保留实际用户决定。\n\n## 下一步\n\n读取项目依据并补充必要信息，完成后记录针对实际产物的独立评审证据。\n`;
@@ -264,13 +253,13 @@ export async function createWork(rootInput: string, id: string, title: string, t
     await requireReadyProject(root); const paths = pathsFor(id);
     try {
       await lstat(await assertSafePath(root, paths.directory));
-      fail('WORK_EXISTS', '工作目录已经存在；请使用 work inspect 检查或 work adopt 显式接入。');
+      fail('WORK_EXISTS', '工作目录已经存在；请使用 work inspect 检查，并用其他标识新建工作引用所需资料。');
     } catch (error) { if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error; }
     await assertSharedPaths(root, [paths.record, paths.notes]);
     for (const path of [paths.record, paths.notes]) if (await readTextIfExists(root, path) !== null) fail('WORK_EXISTS', `工作已经存在：${path}；请使用 resume 或 inspect 接续。`);
     const scope = input.scope ?? (roleOf(input.type) === 'design' ? (await requireRequirements(root, input.requirementsBasis)).scope : { repositories: ['.'], targets: [id] });
     await validateScopeRepositories(root, scope);
-    const record: WorkRecordV2 = { schemaVersion: 2, id, title: title.trim(), createdAt: new Date().toISOString(), level: levelOf(input.type), scope, artifacts: {} };
+    const record: WorkRecord = { schemaVersion: 3, id, title: title.trim(), createdAt: new Date().toISOString(), level: levelOf(input.type), scope, artifacts: {} };
     const prepared = await prepareArtifact(root, record, input); record.artifacts[prepared.role] = prepared.artifact;
     await saveChanges(root, [...prepared.changes, { path: paths.notes, before: null, after: await notesContent(root, record) }, { path: paths.record, before: null, after: JSON.stringify(record, null, 2) + '\n' }], async () => {
       if (roleOf(input.type) === 'design') await requireRequirements(root, input.requirementsBasis, scope);
@@ -282,7 +271,7 @@ export async function createWork(rootInput: string, id: string, title: string, t
 export async function addWork(rootInput: string, id: string, inputValue: unknown, requirementsBasis?: RequirementsBasis) {
   const root = await resolveWorkRoot(rootInput, id); const input = parseArtifactInput(inputValue, requirementsBasis); await requireReadyProject(root);
   return withProjectLock(root, async () => {
-    const data = await loadWorkRecord(root, id, true); const record = data.record as WorkRecordV2;
+    const data = await loadWorkRecord(root, id, true); const record = data.record as WorkRecord;
     if (data.notes === null) fail('WORK_NOT_READY', '工作入口 work.md 不存在。');
     await validateScopeRepositories(root, record.scope);
     const prepared = await prepareArtifact(root, record, input);
@@ -300,7 +289,7 @@ export async function bindWork(rootInput: string, id: string, role: string, basi
   if (role !== 'design') fail('INVALID_ARGUMENT', 'work bind 仅支持 design。');
   const root = await resolveWorkRoot(rootInput, id); basisValue(basis); await requireReadyProject(root);
   return withProjectLock(root, async () => {
-    const data = await loadWorkRecord(root, id, true); const record = data.record as WorkRecordV2;
+    const data = await loadWorkRecord(root, id, true); const record = data.record as WorkRecord;
     const artifact = record.artifacts.design;
     if (!artifact) fail('ARTIFACT_MISSING', '工作尚未登记设计。');
     const content = await readWorkReference(root, artifact.source);
@@ -318,7 +307,7 @@ export async function bindWork(rootInput: string, id: string, role: string, basi
     return { root, id, artifact: role, requirementsBasis: basis, changed: true, automaticTransition: false };
   });
 }
-async function assertAcceptanceScope(root: string, record: WorkRecordV2, artifact: WorkArtifact, requestId: string): Promise<void> {
+async function assertAcceptanceScope(root: string, record: WorkRecord, artifact: WorkArtifact, requestId: string): Promise<void> {
   const latestBinding = artifact.requirementsBasisHistory?.at(-1);
   const text = await readTextIfExists(root, `.tiller/work/${record.id}/confirmations.json`);
   const registry = JSON.parse(text ?? '{}') as { requests?: { requestId: string; createdAt: string; scope: WorkScope }[] };
@@ -326,7 +315,7 @@ async function assertAcceptanceScope(root: string, record: WorkRecordV2, artifac
   if (!request || !record.scope.repositories.every(repo => request.scope.repositories.includes(repo)) || !record.scope.targets.every(target => request.scope.targets.includes(target))) fail('ACCEPTANCE_REQUIRED', '验收请求范围不能覆盖当前工作范围。');
   if (latestBinding && request.createdAt < latestBinding.at) fail('ACCEPTANCE_REQUIRED', '设计需求依据已重新绑定，请取得绑定之后针对当前交付的新验收；旧验收保留为历史。');
 }
-async function evaluateArtifact(root: string, record: WorkRecordV2, artifact: WorkArtifact) {
+async function evaluateArtifact(root: string, record: WorkRecord, artifact: WorkArtifact) {
   const issues: string[] = []; let document: string | null = null; let stale = false; let acceptanceStatus = 'not-recorded';
   try { document = await readWorkReference(root, artifact.source); } catch (error) { issues.push((error as Error).message); }
   issues.push(...contentIssues(document, roleOf(artifact.type)));
@@ -348,18 +337,17 @@ async function evaluateArtifact(root: string, record: WorkRecordV2, artifact: Wo
         if (JSON.stringify(current) !== JSON.stringify(previous.confirmation)) throw new Error('人工验收决定已变化，需要重新核对交付。');
         acceptanceStatus = 'reported-review';
       } catch (error) { stale = true; acceptanceStatus = 'needs-review'; issues.push((error as Error).message); }
-    } else acceptanceStatus = 'unknown-legacy';
+    }
   }
   return { ...artifact, document: artifact.source.path, content: document, status: stale ? 'stale' : artifact.status, ready: issues.length === 0, issues, acceptanceStatus,
-    completionKind: previous && !previous.confirmation ? 'legacy-document-completion' : 'human-review-record' };
+    completionKind: 'human-review-record' };
 }
 export async function resumeWork(rootInput: string, id: string) {
-  const root = await resolveWorkRoot(rootInput, id); const data = await loadWorkRecord(root, id); const record = asV2(data.record);
+  const root = await resolveWorkRoot(rootInput, id); const data = await loadWorkRecord(root, id); const record = data.record;
   const artifacts: Partial<Record<ArtifactRole, Awaited<ReturnType<typeof evaluateArtifact>>>> = {};
   for (const role of roles) if (record.artifacts[role]) artifacts[role] = await evaluateArtifact(root, record, record.artifacts[role]);
   const values = Object.values(artifacts); const only = values.length === 1 ? values[0] : undefined;
   const issues = [...contentIssues(data.notes, '工作说明'), ...values.flatMap(item => item.issues)];
-  if (data.record.schemaVersion === 1) issues.push('旧版工作只读，新增写入须通过 work adopt 显式迁移。');
   let confirmations: Awaited<ReturnType<typeof inspectConfirmations>> | { issues: string[] };
   try { confirmations = await inspectConfirmations(root, id); } catch (error) { confirmations = { issues: [(error as Error).message] }; issues.push((error as Error).message); }
   return { root, id, title: record.title, schemaVersion: data.record.schemaVersion, level: record.level, scope: record.scope, artifacts,
@@ -374,14 +362,14 @@ export async function checkWork(rootInput: string, id: string) {
   const { inspectWork } = await import('./work-history.js');
   const inspection = await inspectWork(rootInput, id);
   if (!inspection.ready) return { ...inspection, id, registration: inspection.works[0]?.registration,
-    limitation: '结构检查未通过；历史资料须明确接入，未知确认不代表批准。' };
+    limitation: '结构检查未通过；请新建当前格式工作引用所需资料，未知确认不代表批准。' };
   const result = await resumeWork(rootInput, id);
   return { ...result, inspection, content: undefined, notes: undefined };
 }
 export async function completeWork(rootInput: string, id: string, evidenceInput: string, acceptanceRequest?: string, roleInput?: string) {
   const root = await resolveWorkRoot(rootInput, id); const evidenceLocation = evidencePath(evidenceInput); await requireReadyProject(root);
   return withProjectLock(root, async () => {
-    const data = await loadWorkRecord(root, id, true); const record = data.record as WorkRecordV2;
+    const data = await loadWorkRecord(root, id, true); const record = data.record as WorkRecord;
     const available = Object.keys(record.artifacts);
     if (roleInput === undefined && available.length !== 1) fail('ARTIFACT_REQUIRED', '存在多个产物，请用 --artifact 明确 requirements 或 design。');
     const role = (roleInput ?? available[0]) as ArtifactRole;

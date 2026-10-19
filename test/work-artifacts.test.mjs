@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { initialize } from '../dist/core.js';
-import { createWork, addWork, bindWork, resumeWork, checkWork, completeWork } from '../dist/work.js';
+import { createWork, addWork, bindWork, resumeWork, checkWork, completeWork, parseWorkRecord } from '../dist/work.js';
 import { requestConfirmation, recordDecision } from '../dist/confirmations.js';
 import { fixture, put, snapshot, gitRepository } from './helpers.mjs';
 
@@ -22,7 +22,7 @@ async function draft(root, id = 'feature') {
   put(root, doc(id), '# Requirements\nProvide a unique student identifier.\n');
 }
 
-test('schema2 adds design to the same work after matching requirements approval, preserving original content', async t => {
+test('schema3 adds design to the same work after matching requirements approval, preserving original content', async t => {
   const root = fixture(t); await draft(root);
   const before = snapshot(root);
   await assert.rejects(addWork(root, 'feature', 'change-design'), /需求/);
@@ -31,7 +31,7 @@ test('schema2 adds design to the same work after matching requirements approval,
   const notes = readFileSync(join(root, '.tiller/work/feature/work.md'), 'utf8');
   const result = await addWork(root, 'feature', 'change-design', { workId: 'feature', requestId: 'req-1' });
   assert.equal(result.changed, true);
-  assert.equal(record(root, 'feature').schemaVersion, 2);
+  assert.equal(record(root, 'feature').schemaVersion, 3);
   assert.deepEqual(Object.keys(record(root, 'feature').artifacts), ['requirements', 'design']);
   assert.equal(readFileSync(join(root, '.tiller/work/feature/work.md'), 'utf8'), notes);
   assert.equal(readFileSync(join(root, doc('feature')), 'utf8'), '# Requirements\nProvide a unique student identifier.\n');
@@ -141,17 +141,23 @@ test('binding imported design requires current requirements, keeps history and i
   assert.deepEqual(snapshot(root), before);
 });
 
-test('schema1 remains read-only and neither check nor failed mutation migrates it', async t => {
-  const root = fixture(t); await draft(root);
-  const old = { schemaVersion: 1, id: 'feature', title: 'Feature', type: 'change-requirements', document: doc('feature'), createdAt: new Date().toISOString(), status: 'draft' };
-  put(root, '.tiller/work/feature/record.json', JSON.stringify(old));
-  const before = snapshot(root);
-  assert.equal((await resumeWork(root, 'feature')).schemaVersion, 1);
-  assert.equal((await checkWork(root, 'feature')).ready, false);
-  await assert.rejects(addWork(root, 'feature', 'change-requirements'), error => error.code === 'WORK_MIGRATION_REQUIRED');
-  await assert.rejects(completeWork(root, 'feature', 'review.md'), error => error.code === 'WORK_MIGRATION_REQUIRED');
-  assert.deepEqual(snapshot(root), before);
-});
+for (const schemaVersion of [1, 2]) {
+  test(`schema ${schemaVersion} rejects reads and mutations without changing historical files`, async t => {
+    const root = fixture(t); await draft(root);
+    const old = schemaVersion === 1
+      ? { schemaVersion, id: 'feature', title: 'Feature', type: 'change-requirements', document: doc('feature'), createdAt: new Date().toISOString(), status: 'draft' }
+      : { ...record(root, 'feature'), schemaVersion };
+    put(root, '.tiller/work/feature/record.json', JSON.stringify(old));
+    const before = snapshot(root);
+    const unsupported = error => error.code === 'UNSUPPORTED_RECORD_VERSION' && error.message.includes('work create');
+    await assert.rejects(resumeWork(root, 'feature'), unsupported);
+    assert.equal((await checkWork(root, 'feature')).ready, false);
+    await assert.rejects(addWork(root, 'feature', 'change-requirements'), unsupported);
+    await assert.rejects(bindWork(root, 'feature', 'design', { workId: 'feature', requestId: 'req-1' }), unsupported);
+    await assert.rejects(completeWork(root, 'feature', 'review.md'), unsupported);
+    assert.deepEqual(snapshot(root), before);
+  });
+}
 
 test('reference inputs reject private paths, process-entry artifacts and unsupported self-declared states', async t => {
   const root = fixture(t); await initialize({ root });
@@ -197,24 +203,51 @@ test('completion and resume reject approval of matching files under an unrelated
   assert.match(resumed.issues.join(' '), /范围/);
 });
 
-test('adopted design without historical approval can bind a new real requirement decision', async t => {
-  const { planWorkAdoption, applyWorkAdoption } = await import('../dist/work-history.js');
+test('new work references old specification text with fresh approval and no inherited state', async t => {
   const root = fixture(t); await initialize({ root });
   put(root, '.tiller/work/history/README.md', '# Old notes\nOriginal process record.\n');
   put(root, '.tiller/specs/old-requirements.md', '# Requirements\nManage student identifiers.\n');
   put(root, '.tiller/specs/old-design.md', '# Design\nUse an identifier map.\n');
-  const input = { title: 'History', level: 'change', scope: { repositories: ['.'], targets: ['history'] }, entry: ref('.tiller/work/history/README.md'), artifacts: {
-    requirements: { type: 'change-requirements', source: ref('.tiller/specs/old-requirements.md') },
-    design: { type: 'change-design', source: ref('.tiller/specs/old-design.md') },
-  } };
-  const plan = await planWorkAdoption(root, 'history', input);
-  await applyWorkAdoption(root, 'history', input, plan.planId);
-  assert.equal(record(root, 'history').artifacts.design.requirementsBasis, undefined);
-  assert.equal((await resumeWork(root, 'history')).ready, false);
-  await approve(root, 'history', [ref('.tiller/specs/old-requirements.md')]);
-  const original = readFileSync(join(root, '.tiller/specs/old-design.md'), 'utf8');
-  await bindWork(root, 'history', 'design', { workId: 'history', requestId: 'req-1' });
-  assert.equal((await resumeWork(root, 'history')).ready, true);
-  assert.equal(record(root, 'history').artifacts.design.status, 'draft');
-  assert.equal(readFileSync(join(root, '.tiller/specs/old-design.md'), 'utf8'), original);
+  const originals = snapshot(root);
+  const source = ref('.tiller/specs/old-requirements.md');
+  await createWork(root, 'fresh', 'Fresh', { type: 'change-requirements', source });
+  const designInput = { type: 'change-design', source: ref('.tiller/specs/old-design.md'), requirementsBasis: { workId: 'fresh', requestId: 'req-1' } };
+  await assert.rejects(addWork(root, 'fresh', designInput), /确认|不存在/);
+  await approve(root, 'fresh', [source]);
+  await addWork(root, 'fresh', designInput);
+  assert.equal((await resumeWork(root, 'fresh')).ready, true);
+  assert.equal(record(root, 'fresh').artifacts.design.status, 'draft');
+  assert.equal(record(root, 'fresh').artifacts.design.completion, undefined);
+  for (const [file, contents] of Object.entries(originals)) assert.equal(snapshot(root)[file], contents);
+});
+
+test('current records reject unknown fields at every nested record boundary', async t => {
+  const root = fixture(t); await draft(root);
+  await approve(root, 'feature', [ref(doc('feature'))]);
+  await addWork(root, 'feature', 'change-design', { workId: 'feature', requestId: 'req-1' });
+  put(root, doc('feature', 'design'), '# Design\nUse a map.\n');
+  const evidence = '.tiller/work/feature/review.md'; put(root, evidence, '# Review\nReviewed design.\n');
+  await approve(root, 'feature', [ref(doc('feature', 'design')), ref(evidence)], 'accept-design', 'acceptance');
+  await completeWork(root, 'feature', evidence, 'accept-design', 'design');
+  await approve(root, 'feature', [ref(doc('feature'))], 'req-2');
+  await bindWork(root, 'feature', 'design', { workId: 'feature', requestId: 'req-2' });
+  const valid = record(root, 'feature');
+  for (const select of [
+    value => value, value => value.scope, value => value.artifacts,
+    value => value.artifacts.design, value => value.artifacts.design.source,
+    value => value.artifacts.design.requirementsBasis,
+    value => value.artifacts.design.requirementsBasisHistory[0],
+    value => value.artifacts.design.requirementsBasisHistory[0].before,
+    value => value.artifacts.design.requirementsBasisHistory[0].after,
+    value => value.artifacts.design.completionHistory[0],
+    value => value.artifacts.design.completionHistory[0].confirmation,
+  ]) {
+    const invalid = structuredClone(valid); select(invalid).unrecognized = true;
+    assert.throws(() => parseWorkRecord(JSON.stringify(invalid), 'feature'), /不支持|只支持/);
+  }
+  const missingApproval = structuredClone(valid);
+  delete missingApproval.artifacts.design.completionHistory[0].confirmation;
+  assert.throws(() => parseWorkRecord(JSON.stringify(missingApproval), 'feature'), /验收关联/);
+  const legacyOrigin = structuredClone(valid); legacyOrigin.artifacts.design.origin = 'history';
+  assert.throws(() => parseWorkRecord(JSON.stringify(legacyOrigin), 'feature'), /角色、层级或状态/);
 });

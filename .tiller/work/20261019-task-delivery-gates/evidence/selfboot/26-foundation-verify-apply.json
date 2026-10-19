@@ -1,0 +1,27 @@
+{
+  "label": "26-foundation-verify-apply",
+  "command": [
+    "node",
+    ".tiller/run.cjs",
+    "work",
+    "task",
+    "verify",
+    "20261019-t6-selfboot",
+    "--task",
+    "foundation",
+    "--input",
+    "inputs/verify-foundation-fixed.json",
+    "--apply",
+    "8741319abc4074dde2e32442b9b310c8bdfffdbcef12447addc8bb37a46df566",
+    "--json"
+  ],
+  "startedAt": "2026-10-19T14:20:49.997Z",
+  "finishedAt": "2026-10-19T14:22:38.589Z",
+  "durationMs": 108589,
+  "exitCode": 0,
+  "signal": null,
+  "error": null,
+  "stdout": "{\"ok\":true,\"operationId\":\"verify-foundation-fixed\",\"inputDigest\":\"d729a88a752a86a116496d0e7035c7d92d4b38e6e33ee0e3ae0e19e4f8b99c87\",\"kind\":\"task-verify\",\"revision\":4,\"planningRevision\":\"t6-one\",\"basisDigest\":\"8741319abc4074dde2e32442b9b310c8bdfffdbcef12447addc8bb37a46df566\",\"operationAllowed\":true,\"technicalReady\":true,\"blockingReasons\":[],\"taskId\":\"foundation\",\"attemptId\":\"attempt-4652445baafba54321c25bf7\",\"eventSequence\":3,\"technicalBasisDigest\":\"4d0dc7184ffd044a6fe573d6154bce9fa6b14a7896331d94120186a8b008f050\",\"exceptions\":[],\"failureReasons\":[],\"status\":\"allowed\",\"changed\":true,\"historical\":false}\n",
+  "stderr": "",
+  "pathNormalization": "Local root paths normalized; exact original retained in local observations."
+}

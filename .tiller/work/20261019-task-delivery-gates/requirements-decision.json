@@ -1,0 +1,23 @@
+{
+  "decisionId": "requirements-gates-approved-1",
+  "requestId": "requirements-gates-1",
+  "outcome": "approved",
+  "conditions": [],
+  "source": {
+    "kind": "conversation",
+    "reference": {
+      "repository": ".",
+      "path": ".tiller/work/20261019-task-delivery-gates/requirements-confirmation-source.md"
+    },
+    "quote": "不需要兼容旧记录",
+    "presentation": {
+      "repository": ".",
+      "path": ".tiller/work/20261019-task-delivery-gates/reviews/request-requirements-gates-1/presentation.md"
+    }
+  },
+  "sourceReview": {
+    "reviewer": "执行助手",
+    "rationale": "核对用户对已展示草案回复“确认”，随后明确“不需要兼容旧记录”。来源记录保留两条原话及原展示/修正内容摘要，当前快照仅实施明确修正。机器展示是决定后登记，不声称此前已展示或独立认证。",
+    "reviewedAt": "2026-10-19T05:10:14.324Z"
+  }
+}

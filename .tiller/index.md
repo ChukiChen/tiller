@@ -19,6 +19,10 @@
 
 ## 已有资料
 
+- [任务推进与交付门禁：技术验证完成、待验收](work/20261019-task-delivery-gates/work.md)
+- [长期测试用例与验证范围](verification/index.md)
+- [测试用例与验证证据管理](work/20261019-testing-verification/work.md)
+- [验证与反馈需求](specs/modules/verification/requirements.md)与[设计](specs/modules/verification/design.md)
 - [实施规划与任务拆分流程完善](work/20261017-implementation-planning/work.md)
 - [已有项目接手与项目开发规范建立](work/20261016-project-onboarding/work.md)
 - [实现进度记录：需求对应、验证边界与下一步](work/20261016-implementation-progress/work.md)

@@ -1,0 +1,184 @@
+TAP version 13
+# Subtest: suite exit zero records execution but never invents individual case passes
+ok 1 - suite exit zero records execution but never invents individual case passes
+  ---
+  duration_ms: 22064.9412
+  type: 'test'
+  ...
+# Subtest: failed command, timeout and output overflow stay nonpassing
+ok 2 - failed command, timeout and output overflow stay nonpassing
+  ---
+  duration_ms: 77766.33
+  type: 'test'
+  ...
+# Subtest: changed inputs invalidate preview before execution and evidence after execution
+ok 3 - changed inputs invalidate preview before execution and evidence after execution
+  ---
+  duration_ms: 48200.727
+  type: 'test'
+  ...
+# Subtest: self-modifying execution preserves its result but is stale immediately
+ok 4 - self-modifying execution preserves its result but is stale immediately
+  ---
+  duration_ms: 23787.5372
+  type: 'test'
+  ...
+# Subtest: reported outcomes update individual cases and bind evidence without erasing history
+ok 5 - reported outcomes update individual cases and bind evidence without erasing history
+  ---
+  duration_ms: 86306.7386
+  type: 'test'
+  ...
+# Subtest: invalid imports and tampered records are rejected rather than counted as passes
+ok 6 - invalid imports and tampered records are rejected rather than counted as passes
+  ---
+  duration_ms: 25783.1381
+  type: 'test'
+  ...
+# Subtest: unsupported run versions block reads, new evidence and execution while preserving shared files
+ok 7 - unsupported run versions block reads, new evidence and execution while preserving shared files
+  ---
+  duration_ms: 19094.3537
+  type: 'test'
+  ...
+# Subtest: unsupported work versions cannot execute or report verification and remain unchanged
+ok 8 - unsupported work versions cannot execute or report verification and remain unchanged
+  ---
+  duration_ms: 5740.3218
+  type: 'test'
+  ...
+# Subtest: environment changes invalidate plan, and inherited Git variables do not reach child
+ok 9 - environment changes invalidate plan, and inherited Git variables do not reach child
+  ---
+  duration_ms: 11342.4864
+  type: 'test'
+  ...
+# Subtest: multi-repository execution resolves registered directory and enforces work scope
+ok 10 - multi-repository execution resolves registered directory and enforces work scope
+  ---
+  duration_ms: 32447.132
+  type: 'test'
+  ...
+# Subtest: pending categories and uncovered requirements prevent complete report
+ok 11 - pending categories and uncovered requirements prevent complete report
+  ---
+  duration_ms: 16320.7753
+  type: 'test'
+  ...
+# Subtest: ignored result directory or individual result cannot be written or trusted
+ok 12 - ignored result directory or individual result cannot be written or trusted
+  ---
+  duration_ms: 26158.7454
+  type: 'test'
+  ...
+# Subtest: passed outcomes require independent evidence rather than definitions or prior machine records
+ok 13 - passed outcomes require independent evidence rather than definitions or prior machine records
+  ---
+  duration_ms: 38766.8153
+  type: 'test'
+  ...
+# Subtest: ignored new JSON result is rejected before executing any command
+ok 14 - ignored new JSON result is rejected before executing any command
+  ---
+  duration_ms: 22143.6452
+  type: 'test'
+  ...
+# Subtest: scoped evaluation ignores unrelated gaps and changes while stable work identity prevents self invalidation
+ok 15 - scoped evaluation ignores unrelated gaps and changes while stable work identity prevents self invalidation
+  ---
+  duration_ms: 32045.5605
+  type: 'test'
+  ...
+# Subtest: a report cannot capture current code retroactively or conceal a newer unexecuted attempt
+ok 16 - a report cannot capture current code retroactively or conceal a newer unexecuted attempt
+  ---
+  duration_ms: 76053.3124
+  type: 'test'
+  ...
+# Subtest: manual document checks require actual inputs, cover current artifacts and reject control self references
+ok 17 - manual document checks require actual inputs, cover current artifacts and reject control self references
+  ---
+  duration_ms: 29538.8097
+  type: 'test'
+  ...
+# Subtest: evidence cannot alias tested inputs through filename case differences
+ok 18 - evidence cannot alias tested inputs through filename case differences
+  ---
+  duration_ms: 13470.4293
+  type: 'test'
+  ...
+# Subtest: execution checks preserve suite versus case distinction and match complete artifact inputs
+ok 19 - execution checks preserve suite versus case distinction and match complete artifact inputs
+  ---
+  duration_ms: 90922.2091
+  type: 'test'
+  ...
+# Subtest: one explicit case result also satisfies its declared artifact check without duplicate outcomes
+ok 20 - one explicit case result also satisfies its declared artifact check without duplicate outcomes
+  ---
+  duration_ms: 48092.1179
+  type: 'test'
+  ...
+# Subtest: binary generated outputs bind actual bytes and shared provenance with source inputs
+ok 21 - binary generated outputs bind actual bytes and shared provenance with source inputs
+  ---
+  duration_ms: 23032.6389
+  type: 'test'
+  ...
+# Subtest: business files with control-like basenames remain valid inputs and independent evidence
+ok 22 - business files with control-like basenames remain valid inputs and independent evidence
+  ---
+  duration_ms: 8439.8576
+  type: 'test'
+  ...
+# Subtest: malformed global configuration and duplicate identities remain fatal for a narrow selection
+ok 23 - malformed global configuration and duplicate identities remain fatal for a narrow selection
+  ---
+  duration_ms: 2402.3388
+  type: 'test'
+  ...
+# Subtest: cross-work evidence must be explicit, scope-matched and the latest result for its origin
+ok 24 - cross-work evidence must be explicit, scope-matched and the latest result for its origin
+  ---
+  duration_ms: 27570.5462
+  type: 'test'
+  ...
+# Subtest: newer check outcomes invalidate case aliases and cannot be overwritten with an older capture
+ok 25 - newer check outcomes invalidate case aliases and cannot be overwritten with an older capture
+  ---
+  duration_ms: 20241.231
+  type: 'test'
+  ...
+# Subtest: actual execution checks cannot be satisfied by a captured manual observation
+ok 26 - actual execution checks cannot be satisfied by a captured manual observation
+  ---
+  duration_ms: 1072.2696
+  type: 'test'
+  ...
+# Subtest: restoring files cannot rehabilitate a run known to have changed its tested inputs
+ok 27 - restoring files cannot rehabilitate a run known to have changed its tested inputs
+  ---
+  duration_ms: 13907.5584
+  type: 'test'
+  ...
+# Subtest: one manual case can bind multiple artifact checks without losing observed inputs
+ok 28 - one manual case can bind multiple artifact checks without losing observed inputs
+  ---
+  duration_ms: 15662.8538
+  type: 'test'
+  ...
+# Subtest: cross-work evidence compares scope membership independently of declaration order
+ok 29 - cross-work evidence compares scope membership independently of declaration order
+  ---
+  duration_ms: 13992.0786
+  type: 'test'
+  ...
+1..29
+# tests 29
+# suites 0
+# pass 29
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 456399.2665

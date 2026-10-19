@@ -221,7 +221,7 @@ test('dated work identifiers survive confirmation, completion and resume without
   assert.deepEqual(snapshot(root), before);
 });
 
-test('technical readiness never bypasses acceptance and legacy completion never becomes approval', (t) => {
+test('technical readiness never bypasses acceptance and incomplete completion records are rejected', (t) => {
   const root = fixture(t);
   success(cli(root, 'init'));
   success(cli(root, 'work', 'create', 'notes', '--title', 'Notes'));
@@ -241,10 +241,9 @@ test('technical readiness never bypasses acceptance and legacy completion never 
   const record = JSON.parse(readFileSync(join(root, recordPath), 'utf8'));
   delete record.artifacts.requirements.completion.confirmation;
   put(root, recordPath, JSON.stringify(record));
-  const legacy = success(cli(root, 'work', 'resume', 'notes'));
-  assert.equal(legacy.completionKind, 'legacy-document-completion');
-  assert.equal(legacy.acceptanceStatus, 'unknown-legacy');
-  assert.equal(legacy.automaticTransition, false);
+  const malformed = snapshot(root);
+  failure(cli(root, 'work', 'resume', 'notes'));
+  assert.deepEqual(snapshot(root), malformed);
 });
 
 test('changing a managed file produces a conflict without overwriting the edit', (t) => {

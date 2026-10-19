@@ -1,0 +1,287 @@
+{
+  "schemaVersion": 3,
+  "workId": "20261019-t6-selfboot",
+  "requests": [
+    {
+      "requestId": "requirements",
+      "gate": "requirements",
+      "scope": {
+        "repositories": [
+          "."
+        ],
+        "targets": [
+          "T6 安装与顺序自举"
+        ]
+      },
+      "subjects": [
+        {
+          "repository": ".",
+          "path": "authority/requirements.md"
+        }
+      ],
+      "upstream": [],
+      "reviewSummary": "登记既有T6受控验证授权所覆盖的原规格；当前机器展示晚于原决定，不声称用户看过本次新展示。",
+      "openIssues": [],
+      "nextAction": "只执行既有T6范围内的安装、失败恢复和接续验证。",
+      "createdAt": "2026-10-19T13:54:27.240Z",
+      "files": [
+        {
+          "repository": ".",
+          "path": "authority/requirements.md",
+          "sha256": "5738ea2a287fa888ba6e1e28f7b29c1c5472669b9592edbe10d78c730d5a4be8",
+          "snapshot": ".tiller/work/20261019-t6-selfboot/reviews/request-requirements/0.json"
+        }
+      ],
+      "exceptionFiles": [],
+      "dependencies": []
+    },
+    {
+      "requestId": "design",
+      "gate": "design",
+      "scope": {
+        "repositories": [
+          "."
+        ],
+        "targets": [
+          "T6 安装与顺序自举"
+        ]
+      },
+      "subjects": [
+        {
+          "repository": ".",
+          "path": "authority/design.md"
+        },
+        {
+          "repository": ".",
+          "path": "authority/selfboot-scope.md"
+        }
+      ],
+      "upstream": [
+        "requirements"
+      ],
+      "reviewSummary": "登记既有T6受控验证授权所覆盖的原规格；当前机器展示晚于原决定，不声称用户看过本次新展示。",
+      "openIssues": [],
+      "nextAction": "只执行既有T6范围内的安装、失败恢复和接续验证。",
+      "createdAt": "2026-10-19T13:55:34.197Z",
+      "files": [
+        {
+          "repository": ".",
+          "path": "authority/design.md",
+          "sha256": "efb54cdb3b1499815e6af5c12960b1142c3bbc36dffd32486083450099717928",
+          "snapshot": ".tiller/work/20261019-t6-selfboot/reviews/request-design/0.json"
+        },
+        {
+          "repository": ".",
+          "path": "authority/selfboot-scope.md",
+          "sha256": "64994e4b643ce636cbb2fec34f95b33c4cca4ea45d63a771f65f49ef94f4f687",
+          "snapshot": ".tiller/work/20261019-t6-selfboot/reviews/request-design/1.json"
+        }
+      ],
+      "exceptionFiles": [],
+      "dependencies": [
+        {
+          "requestId": "requirements",
+          "fingerprint": "798f1876479541972da764c7e0a28174ba5262ae46258591f9c29f6fff9754da",
+          "decisionId": "existing-t6-requirements"
+        }
+      ]
+    },
+    {
+      "requestId": "planning",
+      "gate": "planning",
+      "scope": {
+        "repositories": [
+          "."
+        ],
+        "targets": [
+          "T6 安装与顺序自举"
+        ]
+      },
+      "subjects": [
+        {
+          "repository": ".",
+          "path": ".tiller/work/20261019-t6-selfboot/planning/t6-one/definition.json"
+        },
+        {
+          "repository": ".",
+          "path": ".tiller/work/20261019-t6-selfboot/planning/t6-one/review.md"
+        },
+        {
+          "repository": ".",
+          "path": "authority/design.md"
+        },
+        {
+          "repository": ".",
+          "path": "authority/requirements.md"
+        },
+        {
+          "repository": ".",
+          "path": "authority/selfboot-scope.md"
+        }
+      ],
+      "upstream": [
+        "design"
+      ],
+      "reviewSummary": "细化真实已确认 T6 的受控安装、失败恢复与上下文交接验证。新机器展示晚于既有批准；authority/plan.md 是范围及条件不变的进度快照，不是原批准时的相同字节。",
+      "openIssues": [],
+      "nextAction": "只执行既有T6范围内的安装、失败恢复和接续验证。",
+      "createdAt": "2026-10-19T14:04:52.109Z",
+      "files": [
+        {
+          "repository": ".",
+          "path": ".tiller/work/20261019-t6-selfboot/planning/t6-one/definition.json",
+          "sha256": "932396ee214168f63ca117cf8c8dba9e7d6f1c5c51037b8827eb74ec650930c0",
+          "snapshot": ".tiller/work/20261019-t6-selfboot/reviews/request-planning/0.json"
+        },
+        {
+          "repository": ".",
+          "path": ".tiller/work/20261019-t6-selfboot/planning/t6-one/review.md",
+          "sha256": "e9b8525be1ca428be2ebf4a30787ef6d884d7e894ecc0bb93fa0449a215dfb70",
+          "snapshot": ".tiller/work/20261019-t6-selfboot/reviews/request-planning/1.json"
+        },
+        {
+          "repository": ".",
+          "path": "authority/design.md",
+          "sha256": "efb54cdb3b1499815e6af5c12960b1142c3bbc36dffd32486083450099717928",
+          "snapshot": ".tiller/work/20261019-t6-selfboot/reviews/request-planning/2.json"
+        },
+        {
+          "repository": ".",
+          "path": "authority/requirements.md",
+          "sha256": "5738ea2a287fa888ba6e1e28f7b29c1c5472669b9592edbe10d78c730d5a4be8",
+          "snapshot": ".tiller/work/20261019-t6-selfboot/reviews/request-planning/3.json"
+        },
+        {
+          "repository": ".",
+          "path": "authority/selfboot-scope.md",
+          "sha256": "64994e4b643ce636cbb2fec34f95b33c4cca4ea45d63a771f65f49ef94f4f687",
+          "snapshot": ".tiller/work/20261019-t6-selfboot/reviews/request-planning/4.json"
+        }
+      ],
+      "exceptionFiles": [],
+      "dependencies": [
+        {
+          "requestId": "design",
+          "fingerprint": "54e8342d176fe3c44eb423261b4eb315a1ddd21fb50ac69c7282c4ca29473a56",
+          "decisionId": "existing-t6-design"
+        }
+      ]
+    }
+  ],
+  "decisions": [
+    {
+      "decisionId": "existing-t6-requirements",
+      "requestId": "requirements",
+      "outcome": "approved",
+      "conditions": [],
+      "source": {
+        "kind": "conversation",
+        "reference": {
+          "repository": ".",
+          "path": "authority/requirements-confirmation-source.md"
+        },
+        "quote": "确认",
+        "presentation": {
+          "repository": ".",
+          "path": ".tiller/work/20261019-t6-selfboot/reviews/request-requirements/presentation.md"
+        }
+      },
+      "sourceReview": {
+        "reviewer": "本次受控验证执行者",
+        "rationale": "核对原规格SHA256与真实确认来源一致，并核对planning-confirmation-source及plan的T6明确授权受控临时工程与实际顺序验证；这里只登记既有决定适用于该范围，不声称新用户批准、最终验收或曾展示本次机器请求。",
+        "reviewedAt": "2026-10-19T13:54:42.768Z"
+      },
+      "recordedAt": "2026-10-19T13:54:47.055Z",
+      "files": [
+        {
+          "repository": ".",
+          "path": "authority/requirements-confirmation-source.md",
+          "sha256": "a4a5145b32dbb7590460356f0c10d4b092a3847afbcd404e465403ad69e75e27",
+          "snapshot": ".tiller/work/20261019-t6-selfboot/reviews/decision-existing-t6-requirements/0.json"
+        },
+        {
+          "repository": ".",
+          "path": ".tiller/work/20261019-t6-selfboot/reviews/request-requirements/presentation.md",
+          "sha256": "0982b30c4b967f4d45e4514ffcbc453656a2a3013c9667d1376f7397094ca04f",
+          "snapshot": ".tiller/work/20261019-t6-selfboot/reviews/decision-existing-t6-requirements/1.json"
+        }
+      ]
+    },
+    {
+      "decisionId": "existing-t6-design",
+      "requestId": "design",
+      "outcome": "approved",
+      "conditions": [],
+      "source": {
+        "kind": "conversation",
+        "reference": {
+          "repository": ".",
+          "path": "authority/design-confirmation-source.md"
+        },
+        "quote": "确认",
+        "presentation": {
+          "repository": ".",
+          "path": ".tiller/work/20261019-t6-selfboot/reviews/request-design/presentation.md"
+        }
+      },
+      "sourceReview": {
+        "reviewer": "本次受控验证执行者",
+        "rationale": "核对原规格SHA256与真实确认来源一致，并核对planning-confirmation-source及plan的T6明确授权受控临时工程与实际顺序验证；这里只登记既有决定适用于该范围，不声称新用户批准、最终验收或曾展示本次机器请求。",
+        "reviewedAt": "2026-10-19T14:01:55.697Z"
+      },
+      "recordedAt": "2026-10-19T14:02:11.045Z",
+      "files": [
+        {
+          "repository": ".",
+          "path": "authority/design-confirmation-source.md",
+          "sha256": "1e783bbbb1f1423a8f6e6d1944aa24b0a83d7abf777486c91310f60e66715d2f",
+          "snapshot": ".tiller/work/20261019-t6-selfboot/reviews/decision-existing-t6-design/0.json"
+        },
+        {
+          "repository": ".",
+          "path": ".tiller/work/20261019-t6-selfboot/reviews/request-design/presentation.md",
+          "sha256": "93afc908aeef6c7ec91918e0bef41cdf82b154fe87fd963609a3c5666c77a9d8",
+          "snapshot": ".tiller/work/20261019-t6-selfboot/reviews/decision-existing-t6-design/1.json"
+        }
+      ]
+    },
+    {
+      "decisionId": "existing-t6-planning",
+      "requestId": "planning",
+      "outcome": "approved",
+      "conditions": [],
+      "source": {
+        "kind": "conversation",
+        "reference": {
+          "repository": ".",
+          "path": "authority/planning-confirmation-source.md"
+        },
+        "quote": "确认",
+        "presentation": {
+          "repository": ".",
+          "path": ".tiller/work/20261019-t6-selfboot/reviews/request-planning/presentation.md"
+        }
+      },
+      "sourceReview": {
+        "reviewer": "本次受控验证执行者",
+        "rationale": "已逐项核对本次 definition/review、五项 subjects 的实际 SHA256 与展示一致；foundation 探针失败后修复验证、downstream 依赖及真实上下文交接、整体检查均由原 T6 明确覆盖，没有新增业务要求或人工验收。原批准规划 SHA256 为 4bd19485d12649fc1d66eae09c5e1d68c427fbbd66da56b8d0c37f5cde354828；authority/plan.md 是范围及条件不变的进度快照，不能声称原始字节相同。本次机器展示晚于既有用户确认，只登记该既有授权适用性，不宣称用户看过此次新展示或产生新决定。",
+        "reviewedAt": "2026-10-19T14:05:44.487Z"
+      },
+      "recordedAt": "2026-10-19T14:05:58.430Z",
+      "files": [
+        {
+          "repository": ".",
+          "path": "authority/planning-confirmation-source.md",
+          "sha256": "770ba019a8b3c7f73a772568f88da0e0343f914ebeb1d4e47bf059d2995518c0",
+          "snapshot": ".tiller/work/20261019-t6-selfboot/reviews/decision-existing-t6-planning/0.json"
+        },
+        {
+          "repository": ".",
+          "path": ".tiller/work/20261019-t6-selfboot/reviews/request-planning/presentation.md",
+          "sha256": "ee73ab083c81ccc261fef7b016db04ddc8984cb50811fa9f94d9dc92bb60b95e",
+          "snapshot": ".tiller/work/20261019-t6-selfboot/reviews/decision-existing-t6-planning/1.json"
+        }
+      ]
+    }
+  ]
+}

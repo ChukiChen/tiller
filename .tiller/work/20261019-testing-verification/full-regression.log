@@ -1,0 +1,1378 @@
+TAP version 13
+# Subtest: init preserves existing user entry, ignore rules, project rules and specifications
+ok 1 - init preserves existing user entry, ignore rules, project rules and specifications
+  ---
+  duration_ms: 2621.2919
+  type: 'test'
+  ...
+# Subtest: init supports a target containing Chinese characters and spaces
+ok 2 - init supports a target containing Chinese characters and spaces
+  ---
+  duration_ms: 1591.3138
+  type: 'test'
+  ...
+# Subtest: workspace explicitly registers child Git directories and Git files without changing repositories
+ok 3 - workspace explicitly registers child Git directories and Git files without changing repositories
+  ---
+  duration_ms: 4164.5447
+  type: 'test'
+  ...
+# Subtest: workspace rejects empty, nonexistent, non-Git, outside and nested repository selections before writing
+ok 4 - workspace rejects empty, nonexistent, non-Git, outside and nested repository selections before writing
+  ---
+  duration_ms: 1364.6299
+  type: 'test'
+  ...
+# Subtest: init rejects a symlinked management directory without writing through it
+ok 5 - init rejects a symlinked management directory without writing through it
+  ---
+  duration_ms: 214.0983
+  type: 'test'
+  ...
+# Subtest: workspace rejects symlinked repositories even when they look like direct children
+ok 6 - workspace rejects symlinked repositories even when they look like direct children
+  ---
+  duration_ms: 308.1972
+  type: 'test'
+  ...
+# Subtest: invalid metadata JSON is rejected without overwriting existing project content
+ok 7 - invalid metadata JSON is rejected without overwriting existing project content
+  ---
+  duration_ms: 1545.2376
+  type: 'test'
+  ...
+# Subtest: a future schema version is rejected without implicit migration
+ok 8 - a future schema version is rejected without implicit migration
+  ---
+  duration_ms: 1746.1264
+  type: 'test'
+  ...
+# Subtest: unknown flags and unexpected positional arguments never silently succeed
+ok 9 - unknown flags and unexpected positional arguments never silently succeed
+  ---
+  duration_ms: 881.0283
+  type: 'test'
+  ...
+# Subtest: missing initialization cannot be bypassed by creating work
+ok 10 - missing initialization cannot be bypassed by creating work
+  ---
+  duration_ms: 195.1502
+  type: 'test'
+  ...
+# Subtest: work create produces a draft, resume is read-only and duplicate creation never overwrites
+ok 11 - work create produces a draft, resume is read-only and duplicate creation never overwrites
+  ---
+  duration_ms: 5809.7773
+  type: 'test'
+  ...
+# Subtest: work IDs cannot escape the work directory
+ok 12 - work IDs cannot escape the work directory
+  ---
+  duration_ms: 2628.3756
+  type: 'test'
+  ...
+# Subtest: work complete requires explicit existing evidence and rejects placeholder drafts
+ok 13 - work complete requires explicit existing evidence and rejects placeholder drafts
+  ---
+  duration_ms: 5464.0888
+  type: 'test'
+  ...
+# Subtest: work --path targets the selected project without initializing the caller directory
+ok 14 - work --path targets the selected project without initializing the caller directory
+  ---
+  duration_ms: 5604.8566
+  type: 'test'
+  ...
+# Subtest: design creation requires a current requirements confirmation and preserves its dependency
+ok 15 - design creation requires a current requirements confirmation and preserves its dependency
+  ---
+  duration_ms: 25358.2057
+  type: 'test'
+  ...
+# Subtest: dated work identifiers survive confirmation, completion and resume without renaming
+ok 16 - dated work identifiers survive confirmation, completion and resume without renaming
+  ---
+  duration_ms: 29077.2051
+  type: 'test'
+  ...
+# Subtest: technical readiness never bypasses acceptance and legacy completion never becomes approval
+ok 17 - technical readiness never bypasses acceptance and legacy completion never becomes approval
+  ---
+  duration_ms: 16100.0891
+  type: 'test'
+  ...
+# Subtest: changing a managed file produces a conflict without overwriting the edit
+ok 18 - changing a managed file produces a conflict without overwriting the edit
+  ---
+  duration_ms: 1686.2663
+  type: 'test'
+  ...
+# Subtest: document completion binds evidence to current content and detects subsequent document edits
+ok 19 - document completion binds evidence to current content and detects subsequent document edits
+  ---
+  duration_ms: 30283.9496
+  type: 'test'
+  ...
+# Subtest: changing completion evidence also invalidates the previous conclusion
+ok 20 - changing completion evidence also invalidates the previous conclusion
+  ---
+  duration_ms: 22196.0246
+  type: 'test'
+  ...
+# Subtest: repeating completion is a no-op and re-review preserves the prior completion evidence
+ok 21 - repeating completion is a no-op and re-review preserves the prior completion evidence
+  ---
+  duration_ms: 35104.4167
+  type: 'test'
+  ...
+# Subtest: completion rejects evidence outside the project and evidence linked outside it
+ok 22 - completion rejects evidence outside the project and evidence linked outside it
+  ---
+  duration_ms: 2996.7273
+  type: 'test'
+  ...
+# Subtest: completion rejects self-evidence and local or Git metadata paths regardless of casing
+ok 23 - completion rejects self-evidence and local or Git metadata paths regardless of casing
+  ---
+  duration_ms: 5505.3576
+  type: 'test'
+  ...
+# Subtest: ignored evidence cannot complete work and ignoring existing evidence invalidates readiness
+ok 24 - ignored evidence cannot complete work and ignoring existing evidence invalidates readiness
+  ---
+  duration_ms: 48121.6176
+  type: 'test'
+  ...
+# Subtest: ignored work files cannot be created or silently resumed as shared records
+ok 25 - ignored work files cannot be created or silently resumed as shared records
+  ---
+  duration_ms: 5753.4924
+  type: 'test'
+  ...
+# Subtest: recover rolls back a partial file transaction and permits a clean retry
+ok 26 - recover rolls back a partial file transaction and permits a clean retry
+  ---
+  duration_ms: 3178.5962
+  type: 'test'
+  ...
+# Subtest: recover refuses the entire rollback when a later user edit conflicts
+ok 27 - recover refuses the entire rollback when a later user edit conflicts
+  ---
+  duration_ms: 1290.0502
+  type: 'test'
+  ...
+# Subtest: handwritten work supports pending, reviewed approval, scoped design and acceptance without automatic execution
+ok 28 - handwritten work supports pending, reviewed approval, scoped design and acceptance without automatic execution
+  ---
+  duration_ms: 43580.3667
+  type: 'test'
+  ...
+# Subtest: technical direction cannot bypass requirements and design is never acceptance
+ok 29 - technical direction cannot bypass requirements and design is never acceptance
+  ---
+  duration_ms: 6620.7711
+  type: 'test'
+  ...
+# Subtest: missing review, rejected, conditional and revoked decisions never pass; source identity cannot be self-declared
+ok 30 - missing review, rejected, conditional and revoked decisions never pass; source identity cannot be self-declared
+  ---
+  duration_ms: 16525.3307
+  type: 'test'
+  ...
+# Subtest: changed source, subject, upstream and saved presentation require review rather than retaining approval
+ok 31 - changed source, subject, upstream and saved presentation require review rather than retaining approval
+  ---
+  duration_ms: 17906.9211
+  type: 'test'
+  ...
+# Subtest: acceptance must bind both the delivered document and evidence, and preserve request snapshots
+ok 32 - acceptance must bind both the delivered document and evidence, and preserve request snapshots
+  ---
+  duration_ms: 6513.8254
+  type: 'test'
+  ...
+# Subtest: unsafe, ignored, unregistered and symlinked evidence is rejected
+ok 33 - unsafe, ignored, unregistered and symlinked evidence is rejected
+  ---
+  duration_ms: 2381.9469
+  type: 'test'
+  ...
+# Subtest: managed repository evidence uses its own Git ignore rules and explicit repository identity
+ok 34 - managed repository evidence uses its own Git ignore rules and explicit repository identity
+  ---
+  duration_ms: 4198.1525
+  type: 'test'
+  ...
+# Subtest: editorial re-review preserves original decision and snapshots, while source changes or revocation invalidate reuse
+ok 35 - editorial re-review preserves original decision and snapshots, while source changes or revocation invalidate reuse
+  ---
+  duration_ms: 11916.7893
+  type: 'test'
+  ...
+# Subtest: explicit exception requires source, review and exactly scoped action instead of a self-exemption flag
+ok 36 - explicit exception requires source, review and exactly scoped action instead of a self-exemption flag
+  ---
+  duration_ms: 3941.7139
+  type: 'test'
+  ...
+# Subtest: initialization preserves content and repeated initialization is a no-op
+ok 37 - initialization preserves content and repeated initialization is a no-op
+  ---
+  duration_ms: 870.2289
+  type: 'test'
+  ...
+# Subtest: workspace limits repository scope and never changes repository content
+ok 38 - workspace limits repository scope and never changes repository content
+  ---
+  duration_ms: 1560.0068
+  type: 'test'
+  ...
+# Subtest: workspace groups repositories while keeping stable ids, navigation and ignore rules
+ok 39 - workspace groups repositories while keeping stable ids, navigation and ignore rules
+  ---
+  duration_ms: 2081.0663
+  type: 'test'
+  ...
+# Subtest: workspace refuses ambiguous shorthand and never silently remaps initialized ids
+ok 40 - workspace refuses ambiguous shorthand and never silently remaps initialized ids
+  ---
+  duration_ms: 3552.2247
+  type: 'test'
+  ...
+# Subtest: grouped repository parent symlinks and fabricated metadata mappings are rejected
+ok 41 - grouped repository parent symlinks and fabricated metadata mappings are rejected
+  ---
+  duration_ms: 1000.0858
+  type: 'test'
+  ...
+# Subtest: workspace cannot register a management worktree as an independent business repository
+ok 42 - workspace cannot register a management worktree as an independent business repository
+  ---
+  duration_ms: 1256.45
+  type: 'test'
+  ...
+# Subtest: resource edits and unknown versions are preserved and block writes
+ok 43 - resource edits and unknown versions are preserved and block writes
+  ---
+  duration_ms: 1178.7513
+  type: 'test'
+  ...
+# Subtest: recover validates every before/after before restoring and refuses later edits
+ok 44 - recover validates every before/after before restoring and refuses later edits
+  ---
+  duration_ms: 52.8239
+  type: 'test'
+  ...
+# Subtest: file transactions reject mismatched baselines and serialize writers
+ok 45 - file transactions reject mismatched baselines and serialize writers
+  ---
+  duration_ms: 54.1184
+  type: 'test'
+  ...
+# Subtest: paths reject traversal and symbolic-link escapes
+ok 46 - paths reject traversal and symbolic-link escapes
+  ---
+  duration_ms: 5.9643
+  type: 'test'
+  ...
+# Subtest: git ignore conflicts are detected before shared files are written
+ok 47 - git ignore conflicts are detected before shared files are written
+  ---
+  duration_ms: 350.5708
+  type: 'test'
+  ...
+# Subtest: schema validation refuses missing resource baselines and malicious recovery targets
+ok 48 - schema validation refuses missing resource baselines and malicious recovery targets
+  ---
+  duration_ms: 472.9357
+  type: 'test'
+  ...
+# Subtest: transactions reject local path casing aliases and noncanonical roots before writes
+ok 49 - transactions reject local path casing aliases and noncanonical roots before writes
+  ---
+  duration_ms: 47.2164
+  type: 'test'
+  ...
+# Subtest: workspace verifies actual Git repositories and accepts valid gitdir files
+ok 50 - workspace verifies actual Git repositories and accepts valid gitdir files
+  ---
+  duration_ms: 1390.5037
+  type: 'test'
+  ...
+# Subtest: local ignore negations cannot expose transaction originals before root ignore is installed
+ok 51 - local ignore negations cannot expose transaction originals before root ignore is installed
+  ---
+  duration_ms: 632.7353
+  type: 'test'
+  ...
+# Subtest: shared path checks reject ignored evidence while allowing non-Git projects
+ok 52 - shared path checks reject ignored evidence while allowing non-Git projects
+  ---
+  duration_ms: 550.6182
+  type: 'test'
+  ...
+# Subtest: project index links remain editable without invalidating navigation or work resumption
+ok 53 - project index links remain editable without invalidating navigation or work resumption
+  ---
+  duration_ms: 2905.0104
+  type: 'test'
+  ...
+# Subtest: explicit commit stages only selected file, preserves unrelated changes and normal push verifies remote
+ok 54 - explicit commit stages only selected file, preserves unrelated changes and normal push verifies remote
+  ---
+  duration_ms: 75074.772
+  type: 'test'
+  ...
+# Subtest: changed content and changed authorization invalidate plans without committing
+ok 55 - changed content and changed authorization invalidate plans without committing
+  ---
+  duration_ms: 45691.1654
+  type: 'test'
+  ...
+# Subtest: missing authorization, fake quote and unrelated index prevent commits
+ok 56 - missing authorization, fake quote and unrelated index prevent commits
+  ---
+  duration_ms: 31158.1729
+  type: 'test'
+  ...
+# Subtest: remote identity drift invalidates push plan even if branch OIDs agree
+ok 57 - remote identity drift invalidates push plan even if branch OIDs agree
+  ---
+  duration_ms: 33128.851
+  type: 'test'
+  ...
+# Subtest: multiple push destinations are rejected before any remote write
+ok 58 - multiple push destinations are rejected before any remote write
+  ---
+  duration_ms: 28921.8507
+  type: 'test'
+  ...
+# Subtest: cleanup requires separate authority and refuses dirty or unique records
+ok 59 - cleanup requires separate authority and refuses dirty or unique records
+  ---
+  duration_ms: 28863.4149
+  type: 'test'
+  ...
+# Subtest: cleanup restores only archived controls and preserves exact receipts at durable source
+ok 60 - cleanup restores only archived controls and preserves exact receipts at durable source
+  ---
+  duration_ms: 64945.6539
+  type: 'test'
+  ...
+# Subtest: failed worktree removal preserves archived authority and can reconcile after factual recovery
+ok 61 - failed worktree removal preserves archived authority and can reconcile after factual recovery
+  ---
+  duration_ms: 75827.6694
+  type: 'test'
+  ...
+# Subtest: explicit remote branch deletion is guarded and requires retained target ancestry
+ok 62 - explicit remote branch deletion is guarded and requires retained target ancestry
+  ---
+  duration_ms: 77244.2432
+  type: 'test'
+  ...
+# Subtest: unknown external operation blocks replay until a factual reconciliation
+ok 63 - unknown external operation blocks replay until a factual reconciliation
+  ---
+  duration_ms: 34987.796
+  type: 'test'
+  ...
+# Subtest: document manifest is stable, content based and rejects modified approved design
+ok 64 - document manifest is stable, content based and rejects modified approved design
+  ---
+  duration_ms: 58346.7198
+  type: 'test'
+  ...
+# Subtest: Git-owned approved documents must be in the actual delivery commit
+ok 65 - Git-owned approved documents must be in the actual delivery commit
+  ---
+  duration_ms: 46066.5296
+  type: 'test'
+  ...
+# Subtest: non-Git management documents use verified immutable snapshots without inventing a management commit
+ok 66 - non-Git management documents use verified immutable snapshots without inventing a management commit
+  ---
+  duration_ms: 22557.2234
+  type: 'test'
+  ...
+# Subtest: packaged command routes prepared work, uses caller input and commits only an authorized file
+ok 67 - packaged command routes prepared work, uses caller input and commits only an authorized file
+  ---
+  duration_ms: 75082.3666
+  type: 'test'
+  ...
+# Subtest: delivery CLI rejects ambiguous action flags before creating a working environment
+ok 68 - delivery CLI rejects ambiguous action flags before creating a working environment
+  ---
+  duration_ms: 370.9552
+  type: 'test'
+  ...
+# Subtest: project prepares a worktree, preserves source bytes, redirects records and supports normal commits
+ok 69 - project prepares a worktree, preserves source bytes, redirects records and supports normal commits
+  ---
+  duration_ms: 68006.1766
+  type: 'test'
+  ...
+# Subtest: explicit additions, modifications and deletions preserve a rename without altering the source
+ok 70 - explicit additions, modifications and deletions preserve a rename without altering the source
+  ---
+  duration_ms: 42504.8303
+  type: 'test'
+  ...
+# Subtest: changed source contents invalidate the plan before any worktree exists
+ok 71 - changed source contents invalidate the plan before any worktree exists
+  ---
+  duration_ms: 40166.1675
+  type: 'test'
+  ...
+# Subtest: untracked approval materials must be explicitly handed over
+ok 72 - untracked approval materials must be explicitly handed over
+  ---
+  duration_ms: 58295.4428
+  type: 'test'
+  ...
+# Subtest: design changes, credentials, ignored content and occupied branches are rejected
+ok 73 - design changes, credentials, ignored content and occupied branches are rejected
+  ---
+  duration_ms: 41123.5969
+  type: 'test'
+  ...
+# Subtest: workspace direct repositories retain mode and isolated Git management authority
+ok 74 - workspace direct repositories retain mode and isolated Git management authority
+  ---
+  duration_ms: 60926.3343
+  type: 'test'
+  ...
+# Subtest: workspace direct repositories retain mode and non-Git management authority
+ok 75 - workspace direct repositories retain mode and non-Git management authority
+  ---
+  duration_ms: 23322.4714
+  type: 'test'
+  ...
+# Subtest: workspace grouped repositories retain mode and isolated Git management authority
+ok 76 - workspace grouped repositories retain mode and isolated Git management authority
+  ---
+  duration_ms: 62689.0411
+  type: 'test'
+  ...
+# Subtest: workspace grouped repositories retain mode and non-Git management authority
+ok 77 - workspace grouped repositories retain mode and non-Git management authority
+  ---
+  duration_ms: 28098.8354
+  type: 'test'
+  ...
+# Subtest: merge approval binds exact delivery versions and requires fresh runtime state
+ok 78 - merge approval binds exact delivery versions and requires fresh runtime state
+  ---
+  duration_ms: 23536.012
+  type: 'test'
+  ...
+# Subtest: changed source, target, dependencies, checks, documents and review identity invalidate only merge
+ok 79 - changed source, target, dependencies, checks, documents and review identity invalidate only merge
+  ---
+  duration_ms: 35918.2326
+  type: 'test'
+  ...
+# Subtest: acceptance never implies merge and merge cannot omit scoped design or evidence snapshots
+ok 80 - acceptance never implies merge and merge cannot omit scoped design or evidence snapshots
+  ---
+  duration_ms: 13910.8063
+  type: 'test'
+  ...
+# Subtest: unresolved merge issues and revoked design keep merge blocked
+ok 81 - unresolved merge issues and revoked design keep merge blocked
+  ---
+  duration_ms: 33273.8672
+  type: 'test'
+  ...
+# Subtest: several valid designs may jointly cover merge scope without allowing uncovered targets
+ok 82 - several valid designs may jointly cover merge scope without allowing uncovered targets
+  ---
+  duration_ms: 35710.3918
+  type: 'test'
+  ...
+# Subtest: changed merge versions cannot reuse old approval as nonsemantic differences
+ok 83 - changed merge versions cannot reuse old approval as nonsemantic differences
+  ---
+  duration_ms: 21060.9077
+  type: 'test'
+  ...
+# Subtest: legacy confirmations remain readable and explicitly migrate without altering historical evidence
+ok 84 - legacy confirmations remain readable and explicitly migrate without altering historical evidence
+  ---
+  duration_ms: 23663.6635
+  type: 'test'
+  ...
+# Subtest: migration rejects stale plans and protects an existing original
+ok 85 - migration rejects stale plans and protects an existing original
+  ---
+  duration_ms: 10514.9363
+  type: 'test'
+  ...
+# Subtest: unknown schemas and legacy merge claims cannot be silently migrated
+ok 86 - unknown schemas and legacy merge claims cannot be silently migrated
+  ---
+  duration_ms: 16804.4554
+  type: 'test'
+  ...
+# Subtest: repository resolution uses explicit registration, never interprets paths as logical IDs
+ok 87 - repository resolution uses explicit registration, never interprets paths as logical IDs
+  ---
+  duration_ms: 37.0412
+  type: 'test'
+  ...
+# Subtest: legacy registration without mappings preserves its direct repository location
+ok 88 - legacy registration without mappings preserves its direct repository location
+  ---
+  duration_ms: 12.1623
+  type: 'test'
+  ...
+# Subtest: repository paths separate stable identifiers from grouped paths and preserve legacy fallback
+ok 89 - repository paths separate stable identifiers from grouped paths and preserve legacy fallback
+  ---
+  duration_ms: 1.8299
+  type: 'test'
+  ...
+# Subtest: repository mapping validation rejects ambiguous, escaping, incomplete and reserved mappings
+ok 90 - repository mapping validation rejects ambiguous, escaping, incomplete and reserved mappings
+  ---
+  duration_ms: 0.9474
+  type: 'test'
+  ...
+# Subtest: nested repository work preserves stable references, resolves links, and adds design after confirmation
+ok 91 - nested repository work preserves stable references, resolves links, and adds design after confirmation
+  ---
+  duration_ms: 18139.9639
+  type: 'test'
+  ...
+# Subtest: management references cannot bypass mapped or reserved repository boundaries
+ok 92 - management references cannot bypass mapped or reserved repository boundaries
+  ---
+  duration_ms: 6530.4363
+  type: 'test'
+  ...
+# Subtest: nested repository historical adoption keeps originals and builds actual-path navigation
+ok 93 - nested repository historical adoption keeps originals and builds actual-path navigation
+  ---
+  duration_ms: 5282.3394
+  type: 'test'
+  ...
+# Subtest: merge evidence uses stable repository identity with nested paths
+ok 94 - merge evidence uses stable repository identity with nested paths
+  ---
+  duration_ms: 24146.1677
+  type: 'test'
+  ...
+# Subtest: legacy direct repository references and existing snapshots remain readable without a path map
+ok 95 - legacy direct repository references and existing snapshots remain readable without a path map
+  ---
+  duration_ms: 7089.8459
+  type: 'test'
+  ...
+# Subtest: active management navigation points to sibling business worktrees
+ok 96 - active management navigation points to sibling business worktrees
+  ---
+  duration_ms: 1966.0654
+  type: 'test'
+  ...
+# Subtest: GitHub adapter queries and creates actual review then verifies repository and branch identity
+ok 97 - GitHub adapter queries and creates actual review then verifies repository and branch identity
+  ---
+  duration_ms: 32.8182
+  type: 'test'
+  ...
+# Subtest: GitLab adapter checks project identity and current target OID independently
+ok 98 - GitLab adapter checks project identity and current target OID independently
+  ---
+  duration_ms: 1.6326
+  type: 'test'
+  ...
+# Subtest: adapters reject fork substitution and untrusted review URLs
+ok 99 - adapters reject fork substitution and untrusted review URLs
+  ---
+  duration_ms: 1.2356
+  type: 'test'
+  ...
+# Subtest: provider validation binds project and host and rejects embedded secrets
+ok 100 - provider validation binds project and host and rejects embedded secrets
+  ---
+  duration_ms: 0.7451
+  type: 'test'
+  ...
+# Subtest: platform error response and transport failures do not expose credentials or claim success
+ok 101 - platform error response and transport failures do not expose credentials or claim success
+  ---
+  duration_ms: 2.6569
+  type: 'test'
+  ...
+# Subtest: entry exposes human checkpoints without relying only on a linked rule
+ok 102 - entry exposes human checkpoints without relying only on a linked rule
+  ---
+  duration_ms: 1.7264
+  type: 'test'
+  ...
+# Subtest: guidance covers the student-service shortcut and distinguishes acceptance from approval
+ok 103 - guidance covers the student-service shortcut and distinguishes acceptance from approval
+  ---
+  duration_ms: 1.0059
+  type: 'test'
+  ...
+# Subtest: shipped guidance separates planning approval from task execution and historical evidence
+ok 104 - shipped guidance separates planning approval from task execution and historical evidence
+  ---
+  duration_ms: 1.1545
+  type: 'test'
+  ...
+# Subtest: initialization preserves the guidance reading chain and ships no preapproved templates
+ok 105 - initialization preserves the guidance reading chain and ships no preapproved templates
+  ---
+  duration_ms: 913.2999
+  type: 'test'
+  ...
+# Subtest: entry and reading chain expose work contracts without permitting merged specifications
+ok 106 - entry and reading chain expose work contracts without permitting merged specifications
+  ---
+  duration_ms: 937.8717
+  type: 'test'
+  ...
+# Subtest: tiller uses the same single managed entry as a newly initialized project
+ok 107 - tiller uses the same single managed entry as a newly initialized project
+  ---
+  duration_ms: 1735.4783
+  type: 'test'
+  ...
+# Subtest: registered CLI survives cold launch and preserves argv, stdin, cwd and exit status
+ok 108 - registered CLI survives cold launch and preserves argv, stdin, cwd and exit status
+  ---
+  duration_ms: 1318.4032
+  type: 'test'
+  ...
+# Subtest: local installations are found without binding; stale and missing installations offer recovery
+ok 109 - local installations are found without binding; stale and missing installations offer recovery
+  ---
+  duration_ms: 1103.0803
+  type: 'test'
+  ...
+# Subtest: current resources skip 0.3.2 local installation and use the compatible bound CLI
+ok 110 - current resources skip 0.3.2 local installation and use the compatible bound CLI
+  ---
+  duration_ms: 1312.7836
+  type: 'test'
+  ...
+# Subtest: current resources skip 0.3.3 local installation and use the compatible bound CLI
+ok 111 - current resources skip 0.3.3 local installation and use the compatible bound CLI
+  ---
+  duration_ms: 1215.8416
+  type: 'test'
+  ...
+# Subtest: current resources reject 0.3.2 CLI without changing installation or metadata
+ok 112 - current resources reject 0.3.2 CLI without changing installation or metadata
+  ---
+  duration_ms: 475.7573
+  type: 'test'
+  ...
+# Subtest: current resources reject 0.3.3 CLI without changing installation or metadata
+ok 113 - current resources reject 0.3.3 CLI without changing installation or metadata
+  ---
+  duration_ms: 446.8107
+  type: 'test'
+  ...
+# Subtest: resource version 0.3.2 can still use its 0.3.2 CLI through the current resolver
+ok 114 - resource version 0.3.2 can still use its 0.3.2 CLI through the current resolver
+  ---
+  duration_ms: 900.0982
+  type: 'test'
+  ...
+# Subtest: malformed or foreign binding and link paths are preserved and rejected
+ok 115 - malformed or foreign binding and link paths are preserved and rejected
+  ---
+  duration_ms: 701.0042
+  type: 'test'
+  ...
+# Subtest: real Git worktree resolves the registered main checkout without copied local data
+ok 116 - real Git worktree resolves the registered main checkout without copied local data
+  ---
+  duration_ms: 3476.3968
+  type: 'test'
+  ...
+# Subtest: old resource directories cannot claim shared entry ready
+ok 117 - old resource directories cannot claim shared entry ready
+  ---
+  duration_ms: 676.5786
+  type: 'test'
+  ...
+# Subtest: damaged CLI is not reported ready and rebinding restores stale installation
+ok 118 - damaged CLI is not reported ready and rebinding restores stale installation
+  ---
+  duration_ms: 1554.8608
+  type: 'test'
+  ...
+# Subtest: available project CLI does not require Git for direct use
+ok 119 - available project CLI does not require Git for direct use
+  ---
+  duration_ms: 751.2364
+  type: 'test'
+  ...
+# Subtest: runtime status rejects modified shared launcher using managed metadata
+ok 120 - runtime status rejects modified shared launcher using managed metadata
+  ---
+  duration_ms: 808.4739
+  type: 'test'
+  ...
+# Subtest: binding creates checkout local directory even when delivery lock routes to anchor
+ok 121 - binding creates checkout local directory even when delivery lock routes to anchor
+  ---
+  duration_ms: 947.6129
+  type: 'test'
+  ...
+# Subtest: 0.3.5 testing upgrade preserves existing verification assets (false)
+ok 122 - 0.3.5 testing upgrade preserves existing verification assets (false)
+  ---
+  duration_ms: 1466.9669
+  type: 'test'
+  ...
+# Subtest: 0.3.5 testing upgrade preserves existing verification assets (true)
+ok 123 - 0.3.5 testing upgrade preserves existing verification assets (true)
+  ---
+  duration_ms: 2962.4174
+  type: 'test'
+  ...
+# Subtest: upgrade preview is read-only and stable; legacy init never migrates implicitly
+ok 124 - upgrade preview is read-only and stable; legacy init never migrates implicitly
+  ---
+  duration_ms: 1205.9466
+  type: 'test'
+  ...
+# Subtest: upgrade preserves section surroundings, custom rules, source and old completion records
+ok 125 - upgrade preserves section surroundings, custom rules, source and old completion records
+  ---
+  duration_ms: 1688.8328
+  type: 'test'
+  ...
+# Subtest: modified managed resources and fabricated legacy baselines cannot be overwritten
+ok 126 - modified managed resources and fabricated legacy baselines cannot be overwritten
+  ---
+  duration_ms: 911.2948
+  type: 'test'
+  ...
+# Subtest: stale plan rejects even section-external changes and known permissive clauses conflict
+ok 127 - stale plan rejects even section-external changes and known permissive clauses conflict
+  ---
+  duration_ms: 882.93
+  type: 'test'
+  ...
+# Subtest: unknown versions fail without changes
+ok 128 - unknown versions fail without changes
+  ---
+  duration_ms: 323.672
+  type: 'test'
+  ...
+# Subtest: partial upgrade blocks further migration and recovers original content and version
+ok 129 - partial upgrade blocks further migration and recovers original content and version
+  ---
+  duration_ms: 1499.562
+  type: 'test'
+  ...
+# Subtest: verification failure retains transaction; recovery preserves later edits by refusing conflict
+ok 130 - verification failure retains transaction; recovery preserves later edits by refusing conflict
+  ---
+  duration_ms: 833.0447
+  type: 'test'
+  ...
+# Subtest: workspace upgrade retains repositories, child rules and existing documents
+ok 131 - workspace upgrade retains repositories, child rules and existing documents
+  ---
+  duration_ms: 2597.0701
+  type: 'test'
+  ...
+# Subtest: managed sections accept CRLF edits while upgrading preserves outside bytes
+ok 132 - managed sections accept CRLF edits while upgrading preserves outside bytes
+  ---
+  duration_ms: 1297.2813
+  type: 'test'
+  ...
+# Subtest: managed section metadata recorded with CRLF remains readable after LF conversion
+ok 133 - managed section metadata recorded with CRLF remains readable after LF conversion
+  ---
+  duration_ms: 1267.5702
+  type: 'test'
+  ...
+# Subtest: EOL equivalence permits distributed rule checkout conversion but rejects substantive edits
+ok 134 - EOL equivalence permits distributed rule checkout conversion but rejects substantive edits
+  ---
+  duration_ms: 1239.9049
+  type: 'test'
+  ...
+# Subtest: 0.2.0 requires explicit upgrade and preserves custom content and confirmation history
+ok 135 - 0.2.0 requires explicit upgrade and preserves custom content and confirmation history
+  ---
+  duration_ms: 2521.7395
+  type: 'test'
+  ...
+# Subtest: 0.2.0 changed entry remains a conflict even with a forged matching metadata digest
+ok 136 - 0.2.0 changed entry remains a conflict even with a forged matching metadata digest
+  ---
+  duration_ms: 966.7707
+  type: 'test'
+  ...
+# Subtest: 0.2.0 workspace upgrade selects its own baseline and preserves all repository contents
+ok 137 - 0.2.0 workspace upgrade selects its own baseline and preserves all repository contents
+  ---
+  duration_ms: 2565.5772
+  type: 'test'
+  ...
+# Subtest: 0.2.1 explicit upgrade preserves handwritten and machine work records (project)
+ok 138 - 0.2.1 explicit upgrade preserves handwritten and machine work records (project)
+  ---
+  duration_ms: 1909.0497
+  type: 'test'
+  ...
+# Subtest: 0.2.1 explicit upgrade preserves handwritten and machine work records (workspace)
+ok 139 - 0.2.1 explicit upgrade preserves handwritten and machine work records (workspace)
+  ---
+  duration_ms: 4172.4738
+  type: 'test'
+  ...
+# Subtest: 0.2.2 explicit upgrade preserves handwritten and machine work records (project)
+ok 140 - 0.2.2 explicit upgrade preserves handwritten and machine work records (project)
+  ---
+  duration_ms: 1897.7634
+  type: 'test'
+  ...
+# Subtest: 0.2.2 explicit upgrade preserves handwritten and machine work records (workspace)
+ok 141 - 0.2.2 explicit upgrade preserves handwritten and machine work records (workspace)
+  ---
+  duration_ms: 4389.6222
+  type: 'test'
+  ...
+# Subtest: 0.3.0 explicit upgrade preserves handwritten and machine work records (project)
+ok 142 - 0.3.0 explicit upgrade preserves handwritten and machine work records (project)
+  ---
+  duration_ms: 1938.2208
+  type: 'test'
+  ...
+# Subtest: 0.3.0 explicit upgrade preserves handwritten and machine work records (workspace)
+ok 143 - 0.3.0 explicit upgrade preserves handwritten and machine work records (workspace)
+  ---
+  duration_ms: 4431.3809
+  type: 'test'
+  ...
+# Subtest: 0.3.1 explicit upgrade preserves handwritten and machine work records (project)
+ok 144 - 0.3.1 explicit upgrade preserves handwritten and machine work records (project)
+  ---
+  duration_ms: 1848.3518
+  type: 'test'
+  ...
+# Subtest: 0.3.1 explicit upgrade preserves handwritten and machine work records (workspace)
+ok 145 - 0.3.1 explicit upgrade preserves handwritten and machine work records (workspace)
+  ---
+  duration_ms: 4226.7535
+  type: 'test'
+  ...
+# Subtest: 0.3.2 explicit upgrade preserves handwritten and machine work records (project)
+ok 146 - 0.3.2 explicit upgrade preserves handwritten and machine work records (project)
+  ---
+  duration_ms: 1927.4853
+  type: 'test'
+  ...
+# Subtest: 0.3.2 explicit upgrade preserves handwritten and machine work records (workspace)
+ok 147 - 0.3.2 explicit upgrade preserves handwritten and machine work records (workspace)
+  ---
+  duration_ms: 4151.8053
+  type: 'test'
+  ...
+# Subtest: 0.3.3 explicit upgrade preserves handwritten and machine work records (project)
+ok 148 - 0.3.3 explicit upgrade preserves handwritten and machine work records (project)
+  ---
+  duration_ms: 1846.6826
+  type: 'test'
+  ...
+# Subtest: 0.3.3 explicit upgrade preserves handwritten and machine work records (workspace)
+ok 149 - 0.3.3 explicit upgrade preserves handwritten and machine work records (workspace)
+  ---
+  duration_ms: 4180.4627
+  type: 'test'
+  ...
+# Subtest: 0.3.4 explicit upgrade preserves handwritten and machine work records (project)
+ok 150 - 0.3.4 explicit upgrade preserves handwritten and machine work records (project)
+  ---
+  duration_ms: 1846.5772
+  type: 'test'
+  ...
+# Subtest: 0.3.4 explicit upgrade preserves handwritten and machine work records (workspace)
+ok 151 - 0.3.4 explicit upgrade preserves handwritten and machine work records (workspace)
+  ---
+  duration_ms: 4189.0209
+  type: 'test'
+  ...
+# Subtest: 0.3.5 explicit upgrade preserves handwritten and machine work records (project)
+ok 152 - 0.3.5 explicit upgrade preserves handwritten and machine work records (project)
+  ---
+  duration_ms: 1771.2839
+  type: 'test'
+  ...
+# Subtest: 0.3.5 explicit upgrade preserves handwritten and machine work records (workspace)
+ok 153 - 0.3.5 explicit upgrade preserves handwritten and machine work records (workspace)
+  ---
+  duration_ms: 4090.1779
+  type: 'test'
+  ...
+# Subtest: 0.2.1 custom managed work contract is not overwritten even after digest forgery
+ok 154 - 0.2.1 custom managed work contract is not overwritten even after digest forgery
+  ---
+  duration_ms: 897.8514
+  type: 'test'
+  ...
+# Subtest: 0.3.2 upgrades expose functional planning from entry and activity rules without changing old work
+ok 155 - 0.3.2 upgrades expose functional planning from entry and activity rules without changing old work
+  ---
+  duration_ms: 1339.1731
+  type: 'test'
+  ...
+# Subtest: 0.3.2 customized planning rules are preserved when upgrade conflicts
+ok 156 - 0.3.2 customized planning rules are preserved when upgrade conflicts
+  ---
+  duration_ms: 696.715
+  type: 'test'
+  ...
+# Subtest: 0.3.3 explicit upgrade exposes onboarding and project standards without replacing project evidence (false)
+ok 157 - 0.3.3 explicit upgrade exposes onboarding and project standards without replacing project evidence (false)
+  ---
+  duration_ms: 1214.1254
+  type: 'test'
+  ...
+# Subtest: 0.3.3 explicit upgrade exposes onboarding and project standards without replacing project evidence (true)
+ok 158 - 0.3.3 explicit upgrade exposes onboarding and project standards without replacing project evidence (true)
+  ---
+  duration_ms: 2635.498
+  type: 'test'
+  ...
+# Subtest: 0.3.3 customized rules remain protected even with a forged digest (false)
+ok 159 - 0.3.3 customized rules remain protected even with a forged digest (false)
+  ---
+  duration_ms: 1115.6717
+  type: 'test'
+  ...
+# Subtest: 0.3.3 customized rules remain protected even with a forged digest (true)
+ok 160 - 0.3.3 customized rules remain protected even with a forged digest (true)
+  ---
+  duration_ms: 2350.0974
+  type: 'test'
+  ...
+# Subtest: 0.3.4 customized rules remain protected even with a forged digest (false)
+ok 161 - 0.3.4 customized rules remain protected even with a forged digest (false)
+  ---
+  duration_ms: 1158.509
+  type: 'test'
+  ...
+# Subtest: 0.3.4 customized rules remain protected even with a forged digest (true)
+ok 162 - 0.3.4 customized rules remain protected even with a forged digest (true)
+  ---
+  duration_ms: 2387.5967
+  type: 'test'
+  ...
+# Subtest: 0.3.5 customized rules remain protected even with a forged digest (false)
+ok 163 - 0.3.5 customized rules remain protected even with a forged digest (false)
+  ---
+  duration_ms: 1081.9048
+  type: 'test'
+  ...
+# Subtest: 0.3.5 customized rules remain protected even with a forged digest (true)
+ok 164 - 0.3.5 customized rules remain protected even with a forged digest (true)
+  ---
+  duration_ms: 2559.9835
+  type: 'test'
+  ...
+# Subtest: 0.3.4 planning upgrade preserves user plans and confirmation evidence (false)
+ok 165 - 0.3.4 planning upgrade preserves user plans and confirmation evidence (false)
+  ---
+  duration_ms: 1360.557
+  type: 'test'
+  ...
+# Subtest: 0.3.4 planning upgrade preserves user plans and confirmation evidence (true)
+ok 166 - 0.3.4 planning upgrade preserves user plans and confirmation evidence (true)
+  ---
+  duration_ms: 2996.2907
+  type: 'test'
+  ...
+# Subtest: initialization supplies shared usage and launcher with discoverable links and no machine paths
+ok 167 - initialization supplies shared usage and launcher with discoverable links and no machine paths
+  ---
+  duration_ms: 603.6808
+  type: 'test'
+  ...
+# Subtest: 0.3.1 upgrades add usage while preserving index surroundings and mappings (false)
+ok 168 - 0.3.1 upgrades add usage while preserving index surroundings and mappings (false)
+  ---
+  duration_ms: 1337.2462
+  type: 'test'
+  ...
+# Subtest: 0.3.1 upgrades add usage while preserving index surroundings and mappings (true)
+ok 169 - 0.3.1 upgrades add usage while preserving index surroundings and mappings (true)
+  ---
+  duration_ms: 2383.6407
+  type: 'test'
+  ...
+# Subtest: existing customized .tiller/usage.md is protected on init and upgrade
+ok 170 - existing customized .tiller/usage.md is protected on init and upgrade
+  ---
+  duration_ms: 811.3466
+  type: 'test'
+  ...
+# Subtest: existing customized .tiller/run.cjs is protected on init and upgrade
+ok 171 - existing customized .tiller/run.cjs is protected on init and upgrade
+  ---
+  duration_ms: 798.3551
+  type: 'test'
+  ...
+# Subtest: upgrade binds newly added file contents into the plan and accepts identical distributed resources
+ok 172 - upgrade binds newly added file contents into the plan and accepts identical distributed resources
+  ---
+  duration_ms: 1813.9124
+  type: 'test'
+  ...
+# Subtest: metadata managed set remains strict for both legacy and current versions
+ok 173 - metadata managed set remains strict for both legacy and current versions
+  ---
+  duration_ms: 656.8844
+  type: 'test'
+  ...
+# Subtest: old read-only inspection remains valid when new entry paths are ignored, but upgrade refuses them
+ok 174 - old read-only inspection remains valid when new entry paths are ignored, but upgrade refuses them
+  ---
+  duration_ms: 1345.8129
+  type: 'test'
+  ...
+# Subtest: managed resource EOL equivalence is bidirectional and restricted to the distributed allowlist
+ok 175 - managed resource EOL equivalence is bidirectional and restricted to the distributed allowlist
+  ---
+  duration_ms: 1.2413
+  type: 'test'
+  ...
+# Subtest: resource checkout EOL conversion keeps inspection ready and preserves bytes on repeated init
+ok 176 - resource checkout EOL conversion keeps inspection ready and preserves bytes on repeated init
+  ---
+  duration_ms: 1409.5494
+  type: 'test'
+  ...
+# Subtest: initialization and upgrade accept existing distributed resources with alternate EOL without rewriting them
+ok 177 - initialization and upgrade accept existing distributed resources with alternate EOL without rewriting them
+  ---
+  duration_ms: 1550.5421
+  type: 'test'
+  ...
+# Subtest: restricted YAML parses readable block lists, quoted scalars and nested criteria
+ok 178 - restricted YAML parses readable block lists, quoted scalars and nested criteria
+  ---
+  duration_ms: 3.5164
+  type: 'test'
+  ...
+# Subtest: restricted YAML rejects ambiguous or executable syntax, duplicate and unsafe keys and excessive input
+ok 179 - restricted YAML rejects ambiguous or executable syntax, duplicate and unsafe keys and excessive input
+  ---
+  duration_ms: 1.693
+  type: 'test'
+  ...
+# Subtest: scaffold is safe, empty, repeatable and preserves user-authored index
+ok 180 - scaffold is safe, empty, repeatable and preserves user-authored index
+  ---
+  duration_ms: 1563.925
+  type: 'test'
+  ...
+# Subtest: scaffold refuses partial or orphan verification content without overwriting
+ok 181 - scaffold refuses partial or orphan verification content without overwriting
+  ---
+  duration_ms: 665.3019
+  type: 'test'
+  ...
+# Subtest: inspection resolves declared references and records text snapshots without executing tests
+ok 182 - inspection resolves declared references and records text snapshots without executing tests
+  ---
+  duration_ms: 2004.2601
+  type: 'test'
+  ...
+# Subtest: catalog rejects unresolved ids, unknown fields, duplicate cases and duplicate suite mappings
+ok 183 - catalog rejects unresolved ids, unknown fields, duplicate cases and duplicate suite mappings
+  ---
+  duration_ms: 9838.7104
+  type: 'test'
+  ...
+# Subtest: module membership, cross-module scope and system placement are checked
+ok 184 - module membership, cross-module scope and system placement are checked
+  ---
+  duration_ms: 8722.03
+  type: 'test'
+  ...
+# Subtest: configuration rejects unknown fields, inconsistent applicability and unbounded or missing suite inputs
+ok 185 - configuration rejects unknown fields, inconsistent applicability and unbounded or missing suite inputs
+  ---
+  duration_ms: 3307.7873
+  type: 'test'
+  ...
+# Subtest: references refuse ignored local files, traversal, unregistered repositories and symlinks
+ok 186 - references refuse ignored local files, traversal, unregistered repositories and symlinks
+  ---
+  duration_ms: 1907.1075
+  type: 'test'
+  ...
+# Subtest: multi-repository references use registered identities instead of management traversal
+ok 187 - multi-repository references use registered identities instead of management traversal
+  ---
+  duration_ms: 3398.9791
+  type: 'test'
+  ...
+# Subtest: management suites cannot select repository container or nested repositories through cwd casing
+ok 188 - management suites cannot select repository container or nested repositories through cwd casing
+  ---
+  duration_ms: 11245.0639
+  type: 'test'
+  ...
+# Subtest: verification CLI creates no business cases and check stays read-only
+ok 189 - verification CLI creates no business cases and check stays read-only
+  ---
+  duration_ms: 3178.6414
+  type: 'test'
+  ...
+# Subtest: verification CLI binds explicit runs and distinguishes reported case evidence
+ok 190 - verification CLI binds explicit runs and distinguishes reported case evidence
+  ---
+  duration_ms: 25762.3917
+  type: 'test'
+  ...
+# Subtest: suite exit zero records execution but never invents individual case passes
+ok 191 - suite exit zero records execution but never invents individual case passes
+  ---
+  duration_ms: 7932.0657
+  type: 'test'
+  ...
+# Subtest: failed command, timeout and output overflow stay nonpassing
+ok 192 - failed command, timeout and output overflow stay nonpassing
+  ---
+  duration_ms: 22296.4116
+  type: 'test'
+  ...
+# Subtest: changed inputs invalidate preview before execution and evidence after execution
+ok 193 - changed inputs invalidate preview before execution and evidence after execution
+  ---
+  duration_ms: 12994.4612
+  type: 'test'
+  ...
+# Subtest: self-modifying execution preserves its result but is stale immediately
+ok 194 - self-modifying execution preserves its result but is stale immediately
+  ---
+  duration_ms: 6333.9175
+  type: 'test'
+  ...
+# Subtest: reported outcomes update individual cases and bind evidence without erasing history
+ok 195 - reported outcomes update individual cases and bind evidence without erasing history
+  ---
+  duration_ms: 23425.5229
+  type: 'test'
+  ...
+# Subtest: invalid imports and tampered records are rejected rather than counted as passes
+ok 196 - invalid imports and tampered records are rejected rather than counted as passes
+  ---
+  duration_ms: 8274.2121
+  type: 'test'
+  ...
+# Subtest: environment changes invalidate plan, and inherited Git variables do not reach child
+ok 197 - environment changes invalidate plan, and inherited Git variables do not reach child
+  ---
+  duration_ms: 7828.1366
+  type: 'test'
+  ...
+# Subtest: multi-repository execution resolves registered directory and enforces work scope
+ok 198 - multi-repository execution resolves registered directory and enforces work scope
+  ---
+  duration_ms: 25907.4008
+  type: 'test'
+  ...
+# Subtest: pending categories and uncovered requirements prevent complete report
+ok 199 - pending categories and uncovered requirements prevent complete report
+  ---
+  duration_ms: 8919.3561
+  type: 'test'
+  ...
+# Subtest: ignored result directory or individual result cannot be written or trusted
+ok 200 - ignored result directory or individual result cannot be written or trusted
+  ---
+  duration_ms: 25587.3494
+  type: 'test'
+  ...
+# Subtest: passed outcomes require independent evidence rather than definitions or prior machine records
+ok 201 - passed outcomes require independent evidence rather than definitions or prior machine records
+  ---
+  duration_ms: 9719.1005
+  type: 'test'
+  ...
+# Subtest: schema2 adds design to the same work after matching requirements approval, preserving original content
+ok 202 - schema2 adds design to the same work after matching requirements approval, preserving original content
+  ---
+  duration_ms: 13874.0621
+  type: 'test'
+  ...
+# Subtest: design rejects approved unrelated subjects or insufficient scope without mutation
+ok 203 - design rejects approved unrelated subjects or insufficient scope without mutation
+  ---
+  duration_ms: 9579.1284
+  type: 'test'
+  ...
+# Subtest: create and add reference existing shared specifications without copies and reject conflicting aliases
+ok 204 - create and add reference existing shared specifications without copies and reject conflicting aliases
+  ---
+  duration_ms: 6657.4049
+  type: 'test'
+  ...
+# Subtest: creation supports explicit scope for generated documents and direct design inherits approved scope
+ok 205 - creation supports explicit scope for generated documents and direct design inherits approved scope
+  ---
+  duration_ms: 8154.3278
+  type: 'test'
+  ...
+# Subtest: cross-repository references require explicit identity, registered repositories and scope
+ok 206 - cross-repository references require explicit identity, registered repositories and scope
+  ---
+  duration_ms: 17914.7856
+  type: 'test'
+  ...
+# Subtest: completion chooses an artifact, preserves the other draft and never reports whole work complete
+ok 207 - completion chooses an artifact, preserves the other draft and never reports whole work complete
+  ---
+  duration_ms: 21873.2283
+  type: 'test'
+  ...
+# Subtest: binding imported design requires current requirements, keeps history and invalidates earlier completion
+ok 208 - binding imported design requires current requirements, keeps history and invalidates earlier completion
+  ---
+  duration_ms: 25086.3675
+  type: 'test'
+  ...
+# Subtest: schema1 remains read-only and neither check nor failed mutation migrates it
+ok 209 - schema1 remains read-only and neither check nor failed mutation migrates it
+  ---
+  duration_ms: 2504.5976
+  type: 'test'
+  ...
+# Subtest: reference inputs reject private paths, process-entry artifacts and unsupported self-declared states
+ok 210 - reference inputs reject private paths, process-entry artifacts and unsupported self-declared states
+  ---
+  duration_ms: 692.0202
+  type: 'test'
+  ...
+# Subtest: create refuses an unregistered existing directory instead of silently adopting README notes
+ok 211 - create refuses an unregistered existing directory instead of silently adopting README notes
+  ---
+  duration_ms: 517.7256
+  type: 'test'
+  ...
+# Subtest: work check reports actionable structural gaps for unregistered README-only work
+ok 212 - work check reports actionable structural gaps for unregistered README-only work
+  ---
+  duration_ms: 395.8279
+  type: 'test'
+  ...
+# Subtest: completion and resume reject approval of matching files under an unrelated scope
+ok 213 - completion and resume reject approval of matching files under an unrelated scope
+  ---
+  duration_ms: 16437.7448
+  type: 'test'
+  ...
+# Subtest: adopted design without historical approval can bind a new real requirement decision
+ok 214 - adopted design without historical approval can bind a new real requirement decision
+  ---
+  duration_ms: 11194.558
+  type: 'test'
+  ...
+# Subtest: CLI creates references and adds design to the same work only after matching confirmation
+ok 215 - CLI creates references and adds design to the same work only after matching confirmation
+  ---
+  duration_ms: 15593.9781
+  type: 'test'
+  ...
+# Subtest: CLI inspects and adopts historical material with explicit input and stale-plan protection
+ok 216 - CLI inspects and adopts historical material with explicit input and stale-plan protection
+  ---
+  duration_ms: 6557.3578
+  type: 'test'
+  ...
+# Subtest: CLI rejects ambiguous artifact options without writing
+ok 217 - CLI rejects ambiguous artifact options without writing
+  ---
+  duration_ms: 2007.0768
+  type: 'test'
+  ...
+# Subtest: inspection diagnoses README-only, handwritten entries and flat history without mutating files
+ok 218 - inspection diagnoses README-only, handwritten entries and flat history without mutating files
+  ---
+  duration_ms: 706.4175
+  type: 'test'
+  ...
+# Subtest: adoption uses explicit mapping, preserves originals and allows auxiliary README
+ok 219 - adoption uses explicit mapping, preserves originals and allows auxiliary README
+  ---
+  duration_ms: 3665.7575
+  type: 'test'
+  ...
+# Subtest: adoption rejects ambiguous mixed files, wrong identities and unregistered repositories
+ok 220 - adoption rejects ambiguous mixed files, wrong identities and unregistered repositories
+  ---
+  duration_ms: 1486.6366
+  type: 'test'
+  ...
+# Subtest: inspection rejects unregistered scope repositories even when artifacts remain local
+ok 221 - inspection rejects unregistered scope repositories even when artifacts remain local
+  ---
+  duration_ms: 2371.0151
+  type: 'test'
+  ...
+# Subtest: adoption binds source, input bytes and target confirmation history to plan
+ok 222 - adoption binds source, input bytes and target confirmation history to plan
+  ---
+  duration_ms: 3599.8995
+  type: 'test'
+  ...
+# Subtest: schema 1 migration preserves raw record and completion as history, never approval
+ok 223 - schema 1 migration preserves raw record and completion as history, never approval
+  ---
+  duration_ms: 1785.5721
+  type: 'test'
+  ...
+# Subtest: flat records retain original path and history design remains unconfirmed
+ok 224 - flat records retain original path and history design remains unconfirmed
+  ---
+  duration_ms: 1861.9069
+  type: 'test'
+  ...
+# Subtest: adoption never writes referenced repository files
+ok 225 - adoption never writes referenced repository files
+  ---
+  duration_ms: 3035.3972
+  type: 'test'
+  ...
+# Subtest: inspection and adoption reject symlink access
+ok 226 - inspection and adoption reject symlink access
+  ---
+  duration_ms: 465.0108
+  type: 'test'
+  ...
+# Subtest: adoption changes use standard recovery journal and respect existing transaction
+ok 227 - adoption changes use standard recovery journal and respect existing transaction
+  ---
+  duration_ms: 1059.5568
+  type: 'test'
+  ...
+# Subtest: migration conflicts preserve existing history and lock contention leaves work unchanged
+ok 228 - migration conflicts preserve existing history and lock contention leaves work unchanged
+  ---
+  duration_ms: 2406.3559
+  type: 'test'
+  ...
+1..228
+# tests 228
+# suites 0
+# pass 228
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 1178476.6195

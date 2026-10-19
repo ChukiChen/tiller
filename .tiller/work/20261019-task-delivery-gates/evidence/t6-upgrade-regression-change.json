@@ -1,0 +1,12 @@
+{
+  "retained": "All historical versions, both modes, byte preservation, custom resource protection and planning conditions retained.",
+  "build": "Not run; uses frozen dist from full-suite run.",
+  "changes": [
+    "warning text: 规则升级 -> 资源升级",
+    "planning entry text: 取得规划确认 -> 取得 planning 确认并激活"
+  ],
+  "file": "test/upgrade.test.mjs",
+  "afterSha256": "e6be1f6cc41990828ed9be31c27270da130286d190240501d2b69525fdee1556",
+  "beforeSha256": "d13643f97fc7ae8f5c71728587336c5f5ab39b0563580dea8b416c6b72a9bcc5",
+  "recordedAt": "2026-10-19T15:40:28.9145232Z"
+}

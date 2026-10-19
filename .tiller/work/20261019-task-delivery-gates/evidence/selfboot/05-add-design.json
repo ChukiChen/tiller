@@ -1,0 +1,22 @@
+{
+  "label": "05-add-design",
+  "command": [
+    "node",
+    ".tiller/run.cjs",
+    "work",
+    "add",
+    "20261019-t6-selfboot",
+    "--input",
+    "inputs/add-design.json",
+    "--json"
+  ],
+  "startedAt": "2026-10-19T13:55:06.568Z",
+  "finishedAt": "2026-10-19T13:55:16.160Z",
+  "durationMs": 9589,
+  "exitCode": 0,
+  "signal": null,
+  "error": null,
+  "stdout": "{\"ok\":true,\"root\":\"<selfboot-root>\",\"id\":\"20261019-t6-selfboot\",\"artifact\":\"design\",\"source\":{\"repository\":\".\",\"path\":\"authority/design.md\"},\"changed\":true,\"automaticTransition\":false}\n",
+  "stderr": "",
+  "pathNormalization": "Local root paths normalized; exact original retained in local observations."
+}

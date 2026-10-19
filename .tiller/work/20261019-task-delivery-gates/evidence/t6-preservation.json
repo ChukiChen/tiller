@@ -1,0 +1,27 @@
+{
+  "verified": true,
+  "files": {
+    ".tiller/rules/project.md": "e32b6de0ef056d0a8dccd6708ed642cbcf78605bc5eb8dd0ab7397f66953e19a",
+    ".tiller/rules/testing.md": "aa4064e2996b234e2f94b16840680fcca57b46174d4e897663affbf9b544d8d6",
+    ".tiller/work/20261015-isolated-delivery/confirmations.json": "179fdb96e5c46b34cb0fed861df07cd60a9b0731fd3dde9d54ac64ba0671652d",
+    ".tiller/work/20261015-isolated-delivery/record.json": "d1941d5eeaa287e04dafe372d7a14baf825730dee6379414cc6194c14275ef4f",
+    ".tiller/work/20261015-work-artifacts/confirmations.json": "4a18fe16845c8a0e0452d37aeebcb9932fb2a7669f3201c74afcc11e743675ba",
+    ".tiller/work/20261015-work-artifacts/record.json": "ea6437edb41022974f916810b6c15f2d638e823e2b25f51da2965b85e035bba6",
+    ".tiller/work/20261016-functional-planning/confirmations.json": "ee3aef2b7dbb4ffe527dae15d9f7a820906e33ded7bacf8cfe1668dcd9ecc7b1",
+    ".tiller/work/20261016-functional-planning/record.json": "9f120d25349c36c8a496ebb2799b16cc8648aa9d8f280112a7108fd517c48e9a",
+    ".tiller/work/20261016-implementation-progress/record.json": "3caf28f22835b55afa0fa3f6bdf165d1b680779f0124b1d0bbaa87da1053815c",
+    ".tiller/work/20261016-project-onboarding/confirmations.json": "2522f9a94fbc74683bb0e72db5f892bc35e043914298ef8d18b8df8e26227165",
+    ".tiller/work/20261016-project-onboarding/record.json": "f3a892500e1cac895bedaaa5b54fe7161569f7abfe5ea9f6f48c46a5cd7d6f2a",
+    ".tiller/work/20261016-repository-layout/confirmations.json": "d88663c635f590eb0baf5165ce4af2e240a20ccec021786674901f4ff1d86a81",
+    ".tiller/work/20261016-repository-layout/record.json": "bf306ea1780f257dff620232397999768de5419b72eee673bf58f953e463cc6b",
+    ".tiller/work/20261016-usage-entry/confirmations.json": "3899249ba3230b75559e11cbf4d809fb2edcfa8385fd519184474c699d3218af",
+    ".tiller/work/20261016-usage-entry/record.json": "548a89e4540e3e6bd7eedb2969ab743c98544d96ab7d5bad4d31c62c57b2e842",
+    ".tiller/work/20261017-implementation-planning/record.json": "bc1964c7787da2886fb3718695c56838f4b96bebcadfa42d994cc672d5ac95de",
+    ".tiller/work/20261019-task-delivery-gates/confirmations.json": "766542181cc992aa52e59b29d4e1c599c525bb35bb161163251ee0efa53a02da",
+    ".tiller/work/20261019-task-delivery-gates/record.json": "e8e0e71d99885490fb774c52acdf2f2be87d3e6cc1cc24f306c4f8099a287342",
+    ".tiller/work/20261019-testing-verification/record.json": "25bc6e9bdac545db694470219e604085c4b6dcd1f5e9fc218f422332fdb5346d",
+    ".tiller/work/20261019-testing-verification/verification-runs/3b8ce660-bc8c-45e8-b967-adf3a1edd605.json": "0fb954790323775b961d27d8dc295d01e2643347a622cc4f0f9f787e522bfc84",
+    ".tiller/work/20261019-testing-verification/verification-runs/85d58a11-8757-404c-ba4f-394359101c84.json": "70c6cee7fb261cf6b511baf1ff5ddccf886b8f874106da2ef5858f78c5b6c049",
+    ".tiller/work/human-confirmation/confirmations.json": "d7e6f2b92ff068c911fc0638f2c7b3d607d3b6608d74b53b09f64cb744de9ded"
+  }
+}

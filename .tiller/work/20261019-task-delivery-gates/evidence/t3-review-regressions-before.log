@@ -1,0 +1,46 @@
+TAP version 13
+# Subtest: one manual case can bind multiple artifact checks without losing observed inputs
+not ok 1 - one manual case can bind multiple artifact checks without losing observed inputs
+  ---
+  duration_ms: 2623.1774
+  type: 'test'
+  location: 'D:\\dev_projects_ai\\tiller-clean\\.tiller\\local\\worktrees\\testing-verification\\test\\verification-selection.test.mjs:298:1'
+  failureType: 'testCodeFailure'
+  error: '用例或人工检查缺少受检输入：TC-A'
+  code: 'ERR_TEST_FAILURE'
+  stack: |-
+    fail (file:///D:/dev_projects_ai/tiller-clean/.tiller/local/worktrees/testing-verification/dist/verification-runs.js:16:32)
+    bindingFor (file:///D:/dev_projects_ai/tiller-clean/.tiller/local/worktrees/testing-verification/dist/verification-runs.js:135:9)
+    selectedBindings (file:///D:/dev_projects_ai/tiller-clean/.tiller/local/worktrees/testing-verification/dist/verification-runs.js:180:42)
+    file:///D:/dev_projects_ai/tiller-clean/.tiller/local/worktrees/testing-verification/dist/verification-runs.js:476:32
+    async withProjectLock (file:///D:/dev_projects_ai/tiller-clean/.tiller/local/worktrees/testing-verification/dist/files.js:165:16)
+    async observe (file:///D:/dev_projects_ai/tiller-clean/.tiller/local/worktrees/testing-verification/test/verification-selection.test.mjs:58:20)
+    async TestContext.<anonymous> (file:///D:/dev_projects_ai/tiller-clean/.tiller/local/worktrees/testing-verification/test/verification-selection.test.mjs:305:3)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+# Subtest: cross-work evidence compares scope membership independently of declaration order
+not ok 2 - cross-work evidence compares scope membership independently of declaration order
+  ---
+  duration_ms: 12604.9916
+  type: 'test'
+  location: 'D:\\dev_projects_ai\\tiller-clean\\.tiller\\local\\worktrees\\testing-verification\\test\\verification-selection.test.mjs:316:1'
+  failureType: 'testCodeFailure'
+  error: '跨工作证据范围不一致。'
+  code: 'ERR_TEST_FAILURE'
+  stack: |-
+    fail (file:///D:/dev_projects_ai/tiller-clean/.tiller/local/worktrees/testing-verification/dist/verification-runs.js:16:32)
+    evaluateVerificationSelection (file:///D:/dev_projects_ai/tiller-clean/.tiller/local/worktrees/testing-verification/dist/verification-runs.js:557:17)
+    async TestContext.<anonymous> (file:///D:/dev_projects_ai/tiller-clean/.tiller/local/worktrees/testing-verification/test/verification-selection.test.mjs:326:18)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+1..2
+# tests 2
+# suites 0
+# pass 0
+# fail 2
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 16371.7829

@@ -33,7 +33,7 @@ export interface DeliveryEvent {
 }
 
 export interface DeliveryRecord {
-  schemaVersion: 1;
+  schemaVersion: 2;
   workId: string;
   mode: 'project' | 'workspace';
   designRequest: string;
@@ -48,6 +48,7 @@ export interface DeliveryContext {
   recordRoot: string;
   workId: string;
   record: DeliveryRecord;
+  recordText: string | null;
   bindings: Record<string, DeliveryBinding>;
 }
 

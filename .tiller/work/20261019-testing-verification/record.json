@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 2,
+  "id": "20261019-testing-verification",
+  "title": "测试用例与验证证据管理",
+  "createdAt": "2026-10-19T03:22:58.154Z",
+  "level": "change",
+  "scope": {
+    "repositories": [
+      "."
+    ],
+    "targets": [
+      "20261019-testing-verification"
+    ]
+  },
+  "artifacts": {
+    "requirements": {
+      "type": "change-requirements",
+      "source": {
+        "repository": ".",
+        "path": ".tiller/work/20261019-testing-verification/requirements.md"
+      },
+      "origin": "generated",
+      "status": "draft"
+    }
+  }
+}

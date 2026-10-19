@@ -1,0 +1,13 @@
+{
+  "operationId": "verify-downstream-after-handoff",
+  "expectedRevision": 6,
+  "attemptId": "attempt-20a2f8fff93b0a0e5a135d3f",
+  "evidenceRefs": [
+    {
+      "checkId": "recovery-review",
+      "workId": "20261019-t6-selfboot",
+      "runId": "0b2c6dd1-a485-4a94-8e54-a4af44c42607",
+      "environment": "Windows actual successor inspection after executor handoff"
+    }
+  ]
+}

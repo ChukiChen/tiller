@@ -1,0 +1,168 @@
+{
+  "rootFiles": [
+    ".git",
+    ".gitignore",
+    "AGENTS.md",
+    "package-lock.json",
+    "package.json",
+    "README.md",
+    "tsconfig.json"
+  ],
+  "checkedAt": "2026-10-19T15:22:44.1197657Z",
+  "rebuiltDistChecks": {
+    "dist/planning.js": {
+      "actual": "d9897174fc710548b5b8d8a8908da89cf0a72d9edc15c3252f0901fbd13d2e6d",
+      "matches": true,
+      "expected": "d9897174fc710548b5b8d8a8908da89cf0a72d9edc15c3252f0901fbd13d2e6d"
+    },
+    "dist/task-artifacts.js": {
+      "actual": "3bf4428035896977da17ccfa94c4f7161fd9e64db77f92df97ac8dcf616ffa86",
+      "matches": true,
+      "expected": "3bf4428035896977da17ccfa94c4f7161fd9e64db77f92df97ac8dcf616ffa86"
+    },
+    "dist/files.js": {
+      "actual": "2671433688d9a3e58880b2e257e92b185e8330b5b8752c046574a99fd3de55be",
+      "matches": true,
+      "expected": "2671433688d9a3e58880b2e257e92b185e8330b5b8752c046574a99fd3de55be"
+    },
+    "dist/repository-paths.js": {
+      "actual": "d7808a0ff43919f393a5c4078025d9a384a5ae95665fdeda8aed6dd43e2d7218",
+      "matches": true,
+      "expected": "d7808a0ff43919f393a5c4078025d9a384a5ae95665fdeda8aed6dd43e2d7218"
+    },
+    "dist/planning-types.js": {
+      "actual": "8e609bb71c20b858c77f0e9f90bb1319db8477b13f9f965f1a1e18524bf50881",
+      "matches": true,
+      "expected": "8e609bb71c20b858c77f0e9f90bb1319db8477b13f9f965f1a1e18524bf50881"
+    },
+    "dist/delivery-location.js": {
+      "actual": "8f9013381e2682278a0e493654eed9e0892f6e9404d1fcb7e9ea9522491465c3",
+      "matches": true,
+      "expected": "8f9013381e2682278a0e493654eed9e0892f6e9404d1fcb7e9ea9522491465c3"
+    },
+    "dist/confirmations.js": {
+      "actual": "53dc2c0d97e4b8279955d5c516161234e560aa32f5517b5d42c61207211e60d0",
+      "matches": true,
+      "expected": "53dc2c0d97e4b8279955d5c516161234e560aa32f5517b5d42c61207211e60d0"
+    },
+    "dist/verification-selection.js": {
+      "actual": "35230d949f6e4b62bb0515901c96f2f6c62f859c7a8b9dbba35ae98929f733b9",
+      "matches": true,
+      "expected": "35230d949f6e4b62bb0515901c96f2f6c62f859c7a8b9dbba35ae98929f733b9"
+    },
+    "dist/gate-conditions.js": {
+      "actual": "d3ba23b7c0ef09e7a919a9555660e9b27de3da534d058a3837d881da5146eb64",
+      "matches": true,
+      "expected": "d3ba23b7c0ef09e7a919a9555660e9b27de3da534d058a3837d881da5146eb64"
+    },
+    "dist/tasks.js": {
+      "actual": "2299dd95ec23f12cce0e81641ceaebaaa4ff405a597925cbbb9edf81794256ed",
+      "matches": true,
+      "expected": "2299dd95ec23f12cce0e81641ceaebaaa4ff405a597925cbbb9edf81794256ed"
+    },
+    "dist/work-history.js": {
+      "actual": "94a3c9d2cb23f8f405d615ac27d1be82f9f3d5eb14e05520ad7fbc3d06d60249",
+      "matches": true,
+      "expected": "94a3c9d2cb23f8f405d615ac27d1be82f9f3d5eb14e05520ad7fbc3d06d60249"
+    },
+    "dist/core.js": {
+      "actual": "d59d4e1eee738f91de2d13bc67dc645031eed2d4cef633db20431c238ee34498",
+      "matches": true,
+      "expected": "d59d4e1eee738f91de2d13bc67dc645031eed2d4cef633db20431c238ee34498"
+    },
+    "dist/work.js": {
+      "actual": "60a5a5c9f3f1083109561d333ce5d99e642ee0ee1a69e93fecf25a96c815f406",
+      "matches": true,
+      "expected": "60a5a5c9f3f1083109561d333ce5d99e642ee0ee1a69e93fecf25a96c815f406"
+    },
+    "dist/runtime.js": {
+      "actual": "275bdd7509ea190422dfd416042cf5c41062d9e127b5ff61def1467610c085e1",
+      "matches": true,
+      "expected": "275bdd7509ea190422dfd416042cf5c41062d9e127b5ff61def1467610c085e1"
+    },
+    "dist/overall-delivery.js": {
+      "actual": "4a59e3a8b502009db5ba8c62f46ad28a147579fce1fd3f6c7fbe53fc0a3fe1c5",
+      "matches": true,
+      "expected": "4a59e3a8b502009db5ba8c62f46ad28a147579fce1fd3f6c7fbe53fc0a3fe1c5"
+    },
+    "dist/cli.js": {
+      "actual": "dcb2ed74971eae1189435d515a928076e6352bace61877713d3a7c1f1210aeda",
+      "matches": true,
+      "expected": "dcb2ed74971eae1189435d515a928076e6352bace61877713d3a7c1f1210aeda"
+    },
+    "dist/delivery-types.js": {
+      "actual": "8e609bb71c20b858c77f0e9f90bb1319db8477b13f9f965f1a1e18524bf50881",
+      "matches": true,
+      "expected": "8e609bb71c20b858c77f0e9f90bb1319db8477b13f9f965f1a1e18524bf50881"
+    },
+    "dist/verification-runs.js": {
+      "actual": "8a59f152bb25cf14d0c638df42cb55e72275c29d3e303fd039dd1e81027cc371",
+      "matches": true,
+      "expected": "8a59f152bb25cf14d0c638df42cb55e72275c29d3e303fd039dd1e81027cc371"
+    },
+    "dist/gate-exceptions.js": {
+      "actual": "f84783c8e8d4b3155e36496d4fc2a8efec0534d71a23f79608d7cf98daa7f6e9",
+      "matches": true,
+      "expected": "f84783c8e8d4b3155e36496d4fc2a8efec0534d71a23f79608d7cf98daa7f6e9"
+    },
+    "dist/types.js": {
+      "actual": "8e609bb71c20b858c77f0e9f90bb1319db8477b13f9f965f1a1e18524bf50881",
+      "matches": true,
+      "expected": "8e609bb71c20b858c77f0e9f90bb1319db8477b13f9f965f1a1e18524bf50881"
+    },
+    "dist/verification-yaml.js": {
+      "actual": "975539b70f415722ea89500a77f371f6afa823d62c9eb7df452f749d1841f0b3",
+      "matches": true,
+      "expected": "975539b70f415722ea89500a77f371f6afa823d62c9eb7df452f749d1841f0b3"
+    },
+    "dist/upgrade.js": {
+      "actual": "4a2d44f433c86bf663e9b9a98b675fb2170214ea452748e65556e42278adc144",
+      "matches": true,
+      "expected": "4a2d44f433c86bf663e9b9a98b675fb2170214ea452748e65556e42278adc144"
+    },
+    "dist/delivery-actions.js": {
+      "actual": "43e40b787aa807eb1fafe6b1c647baabed00287f8f373a191b91aa84659dc422",
+      "matches": true,
+      "expected": "43e40b787aa807eb1fafe6b1c647baabed00287f8f373a191b91aa84659dc422"
+    },
+    "dist/review-adapters.js": {
+      "actual": "4ae8c39a2716d807f47268ae119e92f08d54eba299c43cd5c666b610f569f843",
+      "matches": true,
+      "expected": "4ae8c39a2716d807f47268ae119e92f08d54eba299c43cd5c666b610f569f843"
+    },
+    "dist/task-records.js": {
+      "actual": "e4f6cff7210c96c1ccae07d6917ce321f86603f4f44dfe400d337c74153ef63c",
+      "matches": true,
+      "expected": "e4f6cff7210c96c1ccae07d6917ce321f86603f4f44dfe400d337c74153ef63c"
+    },
+    "dist/verification-cases.js": {
+      "actual": "6aa023185c9f78a065d5d6f86c0320f8d70d80571c0f9fff5cf3bfe7f731035f",
+      "matches": true,
+      "expected": "6aa023185c9f78a065d5d6f86c0320f8d70d80571c0f9fff5cf3bfe7f731035f"
+    },
+    "dist/delivery-git.js": {
+      "actual": "36b13d972788596531bcf0769eb745eda15f6afefe3937626f96917d08245a21",
+      "matches": true,
+      "expected": "36b13d972788596531bcf0769eb745eda15f6afefe3937626f96917d08245a21"
+    },
+    "dist/delivery-environment.js": {
+      "actual": "d3cd6aafc9d4d4a964e72db4ade9dffeccdc32c629036b87c4dd0529c415123c",
+      "matches": true,
+      "expected": "d3cd6aafc9d4d4a964e72db4ade9dffeccdc32c629036b87c4dd0529c415123c"
+    }
+  },
+  "copiedFrozen": 126,
+  "rebuild": "npm run test:package invokes tsc; npm pack invokes prepack tsc again",
+  "copiedFrozenInputs": 98,
+  "automaticPackageInputsExist": {
+    ".npmrc": false,
+    "LICENSE.txt": false,
+    "LICENCE.md": false,
+    "LICENCE": false,
+    "LICENSE": false,
+    "NOTICE": false,
+    "LICENSE.md": false,
+    ".npmignore": false
+  },
+  "copiedFrozenDist": 28
+}

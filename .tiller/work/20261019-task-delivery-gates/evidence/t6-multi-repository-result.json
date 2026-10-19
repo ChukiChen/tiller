@@ -1,0 +1,15 @@
+{
+  "scope": "additional targeted regression; not included in the original full-test launch glob",
+  "tests": 1,
+  "passed": 1,
+  "failed": 0,
+  "skipped": 0,
+  "durationMs": 1398843.2584,
+  "exitCode": 0,
+  "exitCodeSource": "root agent confirmed its session 78929",
+  "log": ".tiller/work/20261019-task-delivery-gates/evidence/t6-multi-repository.log",
+  "logSha256": "b8f293c0c0f4169318599f0a03fddd11df1e6562f75ab4e75d6f6adc1129fc3e",
+  "testFile": "test/overall-multi-repository.test.mjs",
+  "testSha256": "9eafc4ea14f0bc44567992df917e07853649887ffc6059a49416774a9ef441fd",
+  "collectedAt": "2026-10-19T14:29:31.7314209Z"
+}

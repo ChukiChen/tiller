@@ -1,0 +1,16 @@
+schema_version: 1
+cases:
+  - id: TC-VERIFY-EVIDENCE
+    title: 结果保留历史并绑定独立证据
+    modules: ["verification"]
+    categories: ["integration","reliability"]
+    requirements: ["VERIFY-07","VERIFY-08"]
+    given: ["逐用例外部声明及报告"]
+    when: ["追加声明并修改证据文件"]
+    then: ["历史保留，证据变化后原结论过期"]
+    automation:
+      suite: execution
+      test_ref: "reported outcomes update individual cases and bind evidence without erasing history"
+      source:
+        repository: .
+        path: test/verification-runs.test.mjs

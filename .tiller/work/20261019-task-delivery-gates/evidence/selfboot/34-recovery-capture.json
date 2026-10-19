@@ -1,0 +1,22 @@
+{
+  "label": "34-recovery-capture",
+  "command": [
+    "node",
+    ".tiller/run.cjs",
+    "verification",
+    "capture",
+    "20261019-t6-selfboot",
+    "--input",
+    "inputs/recovery-capture.json",
+    "--json"
+  ],
+  "startedAt": "2026-10-19T14:34:56.287Z",
+  "finishedAt": "2026-10-19T14:35:02.726Z",
+  "durationMs": 6436,
+  "exitCode": 0,
+  "signal": null,
+  "error": null,
+  "stdout": "{\"ok\":true,\"path\":\".tiller/work/20261019-t6-selfboot/verification-runs/e40eebdf-2922-4eb7-86cc-41c08a46e0ad.json\",\"record\":{\"schemaVersion\":2,\"id\":\"e40eebdf-2922-4eb7-86cc-41c08a46e0ad\",\"workId\":\"20261019-t6-selfboot\",\"sequence\":3,\"createdAt\":\"2026-10-19T14:35:02.218Z\",\"source\":\"captured\",\"suite\":null,\"caseIds\":[],\"bindings\":{\"check:recovery-review\":{\"identity\":\"0c6df5ad6968a7baa084354dd130febff48fcf11c7d9cd9344bdb0e65b318cab\",\"definition\":\"9f39e55a95952fac0555b762ab30f3ecafd07db9b4f49c3a07cbe29a86707458\",\"inputs\":{\".::docs/recovery.md\":\"a3886d4858d009c22dccef2b443e21a6b11777de0479e322a2435844a6457174\",\".::probe.cjs\":\"a55552ce78f33310c5c7890f769bee390109eb5b7b509e083a3f6dd15737fbf3\",\".::authority/requirements.md\":\"5738ea2a287fa888ba6e1e28f7b29c1c5472669b9592edbe10d78c730d5a4be8\"},\"check\":{\"id\":\"recovery-review\",\"kind\":\"manual\",\"artifactIds\":[\"notes\"],\"inputs\":[{\"repository\":\".\",\"path\":\"docs/recovery.md\"},{\"repository\":\".\",\"path\":\"probe.cjs\"}],\"requirements\":[\"GATE-03\",\"GATE-06\",\"GATE-08\"],\"categories\":[\"integration\",\"scenario\",\"reliability\"],\"reason\":\"执行者逐项核对说明与实际失败、拒绝、修复和接续事实。\"},\"caseChecks\":[],\"caseId\":null,\"modules\":[]}},\"evidence\":{},\"captureId\":null,\"environment\":\"Windows actual successor inspection after executor handoff\",\"results\":[],\"execution\":null,\"staleAfterExecution\":false,\"digest\":\"7c214afad9e6a806ae9d50db3827bfdb3a279dbf97d83a4a9e91069b49da143d\"},\"limitation\":\"记录摘要用于发现意外修改，不是身份签名；报告和执行结果不代替人工验收，也不能证明宿主遵守了任务顺序。\",\"ready\":true,\"captureId\":\"e40eebdf-2922-4eb7-86cc-41c08a46e0ad\"}\n",
+  "stderr": "",
+  "pathNormalization": "Local root paths normalized; exact original retained in local observations."
+}

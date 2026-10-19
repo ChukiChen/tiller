@@ -1,0 +1,238 @@
+TAP version 13
+# Subtest: restricted YAML parses readable block lists, quoted scalars and nested criteria
+ok 1 - restricted YAML parses readable block lists, quoted scalars and nested criteria
+  ---
+  duration_ms: 337.6036
+  type: 'test'
+  ...
+# Subtest: restricted YAML rejects ambiguous or executable syntax, duplicate and unsafe keys and excessive input
+ok 2 - restricted YAML rejects ambiguous or executable syntax, duplicate and unsafe keys and excessive input
+  ---
+  duration_ms: 6.0628
+  type: 'test'
+  ...
+# Subtest: scaffold is safe, empty, repeatable and preserves user-authored index
+ok 3 - scaffold is safe, empty, repeatable and preserves user-authored index
+  ---
+  duration_ms: 3173.1334
+  type: 'test'
+  ...
+# Subtest: scaffold refuses partial or orphan verification content without overwriting
+ok 4 - scaffold refuses partial or orphan verification content without overwriting
+  ---
+  duration_ms: 1814.825
+  type: 'test'
+  ...
+# Subtest: inspection resolves declared references and records text snapshots without executing tests
+ok 5 - inspection resolves declared references and records text snapshots without executing tests
+  ---
+  duration_ms: 4341.0441
+  type: 'test'
+  ...
+# Subtest: catalog rejects unresolved ids, unknown fields, duplicate cases and duplicate suite mappings
+ok 6 - catalog rejects unresolved ids, unknown fields, duplicate cases and duplicate suite mappings
+  ---
+  duration_ms: 34399.8317
+  type: 'test'
+  ...
+# Subtest: module membership, cross-module scope and system placement are checked
+ok 7 - module membership, cross-module scope and system placement are checked
+  ---
+  duration_ms: 48971.1107
+  type: 'test'
+  ...
+# Subtest: configuration rejects unknown fields, inconsistent applicability and unbounded or missing suite inputs
+ok 8 - configuration rejects unknown fields, inconsistent applicability and unbounded or missing suite inputs
+  ---
+  duration_ms: 10551.1317
+  type: 'test'
+  ...
+# Subtest: references refuse ignored local files, traversal, unregistered repositories and symlinks
+ok 9 - references refuse ignored local files, traversal, unregistered repositories and symlinks
+  ---
+  duration_ms: 6300.5659
+  type: 'test'
+  ...
+# Subtest: multi-repository references use registered identities instead of management traversal
+ok 10 - multi-repository references use registered identities instead of management traversal
+  ---
+  duration_ms: 11039.1243
+  type: 'test'
+  ...
+# Subtest: management suites cannot select repository container or nested repositories through cwd casing
+ok 11 - management suites cannot select repository container or nested repositories through cwd casing
+  ---
+  duration_ms: 42140.6271
+  type: 'test'
+  ...
+# Subtest: suite exit zero records execution but never invents individual case passes
+ok 12 - suite exit zero records execution but never invents individual case passes
+  ---
+  duration_ms: 36900.1529
+  type: 'test'
+  ...
+# Subtest: failed command, timeout and output overflow stay nonpassing
+ok 13 - failed command, timeout and output overflow stay nonpassing
+  ---
+  duration_ms: 111209.8463
+  type: 'test'
+  ...
+# Subtest: changed inputs invalidate preview before execution and evidence after execution
+ok 14 - changed inputs invalidate preview before execution and evidence after execution
+  ---
+  duration_ms: 51847.6094
+  type: 'test'
+  ...
+# Subtest: self-modifying execution preserves its result but is stale immediately
+ok 15 - self-modifying execution preserves its result but is stale immediately
+  ---
+  duration_ms: 18590.1114
+  type: 'test'
+  ...
+# Subtest: reported outcomes update individual cases and bind evidence without erasing history
+ok 16 - reported outcomes update individual cases and bind evidence without erasing history
+  ---
+  duration_ms: 50918.6477
+  type: 'test'
+  ...
+# Subtest: invalid imports and tampered records are rejected rather than counted as passes
+ok 17 - invalid imports and tampered records are rejected rather than counted as passes
+  ---
+  duration_ms: 16853.1411
+  type: 'test'
+  ...
+# Subtest: unsupported run versions block reads, new evidence and execution while preserving shared files
+ok 18 - unsupported run versions block reads, new evidence and execution while preserving shared files
+  ---
+  duration_ms: 16847.4007
+  type: 'test'
+  ...
+# Subtest: unsupported work versions cannot execute or report verification and remain unchanged
+ok 19 - unsupported work versions cannot execute or report verification and remain unchanged
+  ---
+  duration_ms: 5740.4788
+  type: 'test'
+  ...
+# Subtest: environment changes invalidate plan, and inherited Git variables do not reach child
+ok 20 - environment changes invalidate plan, and inherited Git variables do not reach child
+  ---
+  duration_ms: 13547.661
+  type: 'test'
+  ...
+# Subtest: multi-repository execution resolves registered directory and enforces work scope
+ok 21 - multi-repository execution resolves registered directory and enforces work scope
+  ---
+  duration_ms: 38816.514
+  type: 'test'
+  ...
+# Subtest: pending categories and uncovered requirements prevent complete report
+ok 22 - pending categories and uncovered requirements prevent complete report
+  ---
+  duration_ms: 14685.5498
+  type: 'test'
+  ...
+# Subtest: ignored result directory or individual result cannot be written or trusted
+ok 23 - ignored result directory or individual result cannot be written or trusted
+  ---
+  duration_ms: 34437.4679
+  type: 'test'
+  ...
+# Subtest: passed outcomes require independent evidence rather than definitions or prior machine records
+ok 24 - passed outcomes require independent evidence rather than definitions or prior machine records
+  ---
+  duration_ms: 49994.4443
+  type: 'test'
+  ...
+# Subtest: ignored new JSON result is rejected before executing any command
+ok 25 - ignored new JSON result is rejected before executing any command
+  ---
+  duration_ms: 38545.7203
+  type: 'test'
+  ...
+# Subtest: scoped evaluation ignores unrelated gaps and changes while stable work identity prevents self invalidation
+ok 26 - scoped evaluation ignores unrelated gaps and changes while stable work identity prevents self invalidation
+  ---
+  duration_ms: 36566.8319
+  type: 'test'
+  ...
+# Subtest: a report cannot capture current code retroactively or conceal a newer unexecuted attempt
+ok 27 - a report cannot capture current code retroactively or conceal a newer unexecuted attempt
+  ---
+  duration_ms: 61294.6768
+  type: 'test'
+  ...
+# Subtest: manual document checks require actual inputs, cover current artifacts and reject control self references
+ok 28 - manual document checks require actual inputs, cover current artifacts and reject control self references
+  ---
+  duration_ms: 11968.6481
+  type: 'test'
+  ...
+# Subtest: evidence cannot alias tested inputs through filename case differences
+ok 29 - evidence cannot alias tested inputs through filename case differences
+  ---
+  duration_ms: 8210.068
+  type: 'test'
+  ...
+# Subtest: execution checks preserve suite versus case distinction and match complete artifact inputs
+ok 30 - execution checks preserve suite versus case distinction and match complete artifact inputs
+  ---
+  duration_ms: 39025.5101
+  type: 'test'
+  ...
+# Subtest: one explicit case result also satisfies its declared artifact check without duplicate outcomes
+ok 31 - one explicit case result also satisfies its declared artifact check without duplicate outcomes
+  ---
+  duration_ms: 27247.3428
+  type: 'test'
+  ...
+# Subtest: binary generated outputs bind actual bytes and shared provenance with source inputs
+ok 32 - binary generated outputs bind actual bytes and shared provenance with source inputs
+  ---
+  duration_ms: 23961.3855
+  type: 'test'
+  ...
+# Subtest: business files with control-like basenames remain valid inputs and independent evidence
+ok 33 - business files with control-like basenames remain valid inputs and independent evidence
+  ---
+  duration_ms: 8153.5515
+  type: 'test'
+  ...
+# Subtest: malformed global configuration and duplicate identities remain fatal for a narrow selection
+ok 34 - malformed global configuration and duplicate identities remain fatal for a narrow selection
+  ---
+  duration_ms: 4655.9089
+  type: 'test'
+  ...
+# Subtest: cross-work evidence must be explicit, scope-matched and the latest result for its origin
+ok 35 - cross-work evidence must be explicit, scope-matched and the latest result for its origin
+  ---
+  duration_ms: 35838.5779
+  type: 'test'
+  ...
+# Subtest: newer check outcomes invalidate case aliases and cannot be overwritten with an older capture
+ok 36 - newer check outcomes invalidate case aliases and cannot be overwritten with an older capture
+  ---
+  duration_ms: 26355.0422
+  type: 'test'
+  ...
+# Subtest: actual execution checks cannot be satisfied by a captured manual observation
+ok 37 - actual execution checks cannot be satisfied by a captured manual observation
+  ---
+  duration_ms: 1040.3127
+  type: 'test'
+  ...
+# Subtest: restoring files cannot rehabilitate a run known to have changed its tested inputs
+ok 38 - restoring files cannot rehabilitate a run known to have changed its tested inputs
+  ---
+  duration_ms: 13401.5572
+  type: 'test'
+  ...
+1..38
+# tests 38
+# suites 0
+# pass 38
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 499491.7024

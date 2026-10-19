@@ -1,0 +1,154 @@
+TAP version 13
+# Subtest: explicit commit stages only selected file, preserves unrelated changes and normal push verifies remote
+ok 1 - explicit commit stages only selected file, preserves unrelated changes and normal push verifies remote
+  ---
+  duration_ms: 71982.1233
+  type: 'test'
+  ...
+# Subtest: changed content and changed authorization invalidate plans without committing
+ok 2 - changed content and changed authorization invalidate plans without committing
+  ---
+  duration_ms: 46594.4244
+  type: 'test'
+  ...
+# Subtest: missing authorization, fake quote and unrelated index prevent commits
+ok 3 - missing authorization, fake quote and unrelated index prevent commits
+  ---
+  duration_ms: 37794.2379
+  type: 'test'
+  ...
+# Subtest: remote identity drift invalidates push plan even if branch OIDs agree
+ok 4 - remote identity drift invalidates push plan even if branch OIDs agree
+  ---
+  duration_ms: 35306.0824
+  type: 'test'
+  ...
+# Subtest: multiple push destinations are rejected before any remote write
+ok 5 - multiple push destinations are rejected before any remote write
+  ---
+  duration_ms: 31136.8167
+  type: 'test'
+  ...
+# Subtest: cleanup requires separate authority and refuses dirty or unique records
+ok 6 - cleanup requires separate authority and refuses dirty or unique records
+  ---
+  duration_ms: 32209.7565
+  type: 'test'
+  ...
+# Subtest: cleanup restores only archived controls and preserves exact receipts at durable source
+ok 7 - cleanup restores only archived controls and preserves exact receipts at durable source
+  ---
+  duration_ms: 74806.0865
+  type: 'test'
+  ...
+# Subtest: failed worktree removal preserves archived authority and can reconcile after factual recovery
+ok 8 - failed worktree removal preserves archived authority and can reconcile after factual recovery
+  ---
+  duration_ms: 84209.7906
+  type: 'test'
+  ...
+# Subtest: explicit remote branch deletion is guarded and requires retained target ancestry
+ok 9 - explicit remote branch deletion is guarded and requires retained target ancestry
+  ---
+  duration_ms: 84523.8738
+  type: 'test'
+  ...
+# Subtest: unknown external operation blocks replay until a factual reconciliation
+ok 10 - unknown external operation blocks replay until a factual reconciliation
+  ---
+  duration_ms: 36167.3074
+  type: 'test'
+  ...
+# Subtest: document manifest is stable, content based and rejects modified approved design
+ok 11 - document manifest is stable, content based and rejects modified approved design
+  ---
+  duration_ms: 51205.9417
+  type: 'test'
+  ...
+# Subtest: Git-owned approved documents must be in the actual delivery commit
+ok 12 - Git-owned approved documents must be in the actual delivery commit
+  ---
+  duration_ms: 45262.5591
+  type: 'test'
+  ...
+# Subtest: non-Git management documents use verified immutable snapshots without inventing a management commit
+ok 13 - non-Git management documents use verified immutable snapshots without inventing a management commit
+  ---
+  duration_ms: 28352.5884
+  type: 'test'
+  ...
+# Subtest: packaged command routes prepared work, uses caller input and commits only an authorized file
+ok 14 - packaged command routes prepared work, uses caller input and commits only an authorized file
+  ---
+  duration_ms: 79216.5431
+  type: 'test'
+  ...
+# Subtest: delivery CLI rejects ambiguous action flags before creating a working environment
+ok 15 - delivery CLI rejects ambiguous action flags before creating a working environment
+  ---
+  duration_ms: 435.2197
+  type: 'test'
+  ...
+# Subtest: project prepares a worktree, preserves source bytes, redirects records and supports normal commits
+ok 16 - project prepares a worktree, preserves source bytes, redirects records and supports normal commits
+  ---
+  duration_ms: 80182.3913
+  type: 'test'
+  ...
+# Subtest: explicit additions, modifications and deletions preserve a rename without altering the source
+ok 17 - explicit additions, modifications and deletions preserve a rename without altering the source
+  ---
+  duration_ms: 45360.5911
+  type: 'test'
+  ...
+# Subtest: changed source contents invalidate the plan before any worktree exists
+ok 18 - changed source contents invalidate the plan before any worktree exists
+  ---
+  duration_ms: 40393.6843
+  type: 'test'
+  ...
+# Subtest: untracked approval materials must be explicitly handed over
+ok 19 - untracked approval materials must be explicitly handed over
+  ---
+  duration_ms: 67556.0525
+  type: 'test'
+  ...
+# Subtest: design changes, credentials, ignored content and occupied branches are rejected
+ok 20 - design changes, credentials, ignored content and occupied branches are rejected
+  ---
+  duration_ms: 36794.3036
+  type: 'test'
+  ...
+# Subtest: workspace direct repositories retain mode and isolated Git management authority
+ok 21 - workspace direct repositories retain mode and isolated Git management authority
+  ---
+  duration_ms: 69543.4302
+  type: 'test'
+  ...
+# Subtest: workspace direct repositories retain mode and non-Git management authority
+ok 22 - workspace direct repositories retain mode and non-Git management authority
+  ---
+  duration_ms: 34882.5566
+  type: 'test'
+  ...
+# Subtest: workspace grouped repositories retain mode and isolated Git management authority
+ok 23 - workspace grouped repositories retain mode and isolated Git management authority
+  ---
+  duration_ms: 71866.6581
+  type: 'test'
+  ...
+# Subtest: workspace grouped repositories retain mode and non-Git management authority
+ok 24 - workspace grouped repositories retain mode and non-Git management authority
+  ---
+  duration_ms: 32623.9119
+  type: 'test'
+  ...
+1..24
+# tests 24
+# suites 0
+# pass 24
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 659819.2508

@@ -1,0 +1,14 @@
+{
+  "planningDefinition": "passed",
+  "verificationSelection": "passed",
+  "taskInputs": [
+    "start",
+    "verify",
+    "resume"
+  ],
+  "checkpointDigest": "passed",
+  "localLinkCount": 44,
+  "missingLocalLinks": [],
+  "limitation": "Examples validate structure only; illustrative references are not approvals. resources usage index.md is checked at its installed .tiller/index.md destination. No actual work or user decision created."
+}
+Final sample correction rechecked: matching guide-review result identity; all plan/selection/task parsers passed. Example result remains not-run until actual observation.

@@ -127,7 +127,8 @@ export async function locateDelivery(rootInput: string, id?: string): Promise<De
   }
   const recordText = await readTextIfExists(location.recordRoot, `.tiller/work/${workId}/delivery.json`);
   const record = recordText ? JSON.parse(recordText) as { schemaVersion: number; workId: string; repositories: { id: string; branch: string }[] } : null;
-  if (!record || record.schemaVersion !== 1 || record.workId !== workId || !Array.isArray(record.repositories)) throw new Error('活动交付记录缺失或格式无效。');
+  if (record && record.schemaVersion !== 2) throw Object.assign(new Error('交付记录仅支持版本 2；请创建新工作，不支持迁移旧记录。'), { code: 'UNSUPPORTED_RECORD_VERSION' });
+  if (!record || record.schemaVersion !== 2 || record.workId !== workId || !Array.isArray(record.repositories)) throw new Error('活动交付记录缺失或格式无效。');
   if (record.repositories.length !== Object.keys(location.bindings).length) throw new Error('共享交付范围与本机映射不一致。');
   for (const [repository, binding] of Object.entries(location.bindings)) {
     if ((location.mode === 'project' && repository !== '.') || (repository !== '.' && !metadata.repositories.includes(repository))) throw new Error('活动仓库不属于工程登记范围。');

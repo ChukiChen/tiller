@@ -1,0 +1,26 @@
+{
+  "label": "21-foundation-failed-verify",
+  "command": [
+    "node",
+    ".tiller/run.cjs",
+    "work",
+    "task",
+    "verify",
+    "20261019-t6-selfboot",
+    "--task",
+    "foundation",
+    "--input",
+    "inputs/verify-foundation-failed.json",
+    "--plan",
+    "--json"
+  ],
+  "startedAt": "2026-10-19T14:16:37.137Z",
+  "finishedAt": "2026-10-19T14:17:37.404Z",
+  "durationMs": 60263,
+  "exitCode": 1,
+  "signal": null,
+  "error": null,
+  "stdout": "{\"ok\":false,\"operationId\":\"verify-foundation-failed\",\"planId\":\"c1b889a99b17b0ed53428b8682e469336db80d235e61017bf192a075aceacd1f\",\"basisDigest\":\"c1b889a99b17b0ed53428b8682e469336db80d235e61017bf192a075aceacd1f\",\"technicalBasisDigest\":\"d53b89faba4c0fff6fe86cde93c36f437d7ddba9374ce5f1cc5a6a311ed8a5ba\",\"changed\":false,\"operationAllowed\":false,\"technicalReady\":false,\"blockingReasons\":[{\"code\":\"VERIFICATION_REQUIRED\",\"conditionId\":\"condition-7c6f756e78601f0e1eb03648\",\"message\":\"check:probe-exec 尚未通过：failed。\",\"nextAction\":\"补足该条件后重新预览，核对当前对象与证据。\",\"exceptionAllowed\":true,\"taskId\":\"foundation\"},{\"code\":\"VERIFICATION_REQUIRED\",\"conditionId\":\"condition-655bcfa61c8559a3ba9bfe1d\",\"message\":\"测试类别 integration 仍有未通过或未执行用例/检查。\",\"nextAction\":\"补足该条件后重新预览，核对当前对象与证据。\",\"exceptionAllowed\":true,\"taskId\":\"foundation\"},{\"code\":\"VERIFICATION_REQUIRED\",\"conditionId\":\"condition-c5e6b5094cbb02026e1b6e0d\",\"message\":\"测试类别 scenario 仍有未通过或未执行用例/检查。\",\"nextAction\":\"补足该条件后重新预览，核对当前对象与证据。\",\"exceptionAllowed\":true,\"taskId\":\"foundation\"},{\"code\":\"VERIFICATION_REQUIRED\",\"conditionId\":\"condition-82fa7eb9895177e26ac57aaf\",\"message\":\"测试类别 reliability 仍有未通过或未执行用例/检查。\",\"nextAction\":\"补足该条件后重新预览，核对当前对象与证据。\",\"exceptionAllowed\":true,\"taskId\":\"foundation\"}],\"technicalIssues\":[{\"code\":\"VERIFICATION_REQUIRED\",\"conditionId\":\"condition-7c6f756e78601f0e1eb03648\",\"message\":\"check:probe-exec 尚未通过：failed。\",\"nextAction\":\"补足该条件后重新预览，核对当前对象与证据。\",\"exceptionAllowed\":true,\"taskId\":\"foundation\"},{\"code\":\"VERIFICATION_REQUIRED\",\"conditionId\":\"condition-655bcfa61c8559a3ba9bfe1d\",\"message\":\"测试类别 integration 仍有未通过或未执行用例/检查。\",\"nextAction\":\"补足该条件后重新预览，核对当前对象与证据。\",\"exceptionAllowed\":true,\"taskId\":\"foundation\"},{\"code\":\"VERIFICATION_REQUIRED\",\"conditionId\":\"condition-c5e6b5094cbb02026e1b6e0d\",\"message\":\"测试类别 scenario 仍有未通过或未执行用例/检查。\",\"nextAction\":\"补足该条件后重新预览，核对当前对象与证据。\",\"exceptionAllowed\":true,\"taskId\":\"foundation\"},{\"code\":\"VERIFICATION_REQUIRED\",\"conditionId\":\"condition-82fa7eb9895177e26ac57aaf\",\"message\":\"测试类别 reliability 仍有未通过或未执行用例/检查。\",\"nextAction\":\"补足该条件后重新预览，核对当前对象与证据。\",\"exceptionAllowed\":true,\"taskId\":\"foundation\"}],\"exceptions\":[],\"status\":\"blocked\",\"warnings\":[],\"revision\":3,\"planningRevision\":\"t6-one\",\"taskId\":\"foundation\",\"attemptId\":\"attempt-4652445baafba54321c25bf7\",\"issues\":[\"check:probe-exec 尚未通过：failed。\",\"测试类别 integration 仍有未通过或未执行用例/检查。\",\"测试类别 scenario 仍有未通过或未执行用例/检查。\",\"测试类别 reliability 仍有未通过或未执行用例/检查。\"]}\n",
+  "stderr": "",
+  "pathNormalization": "Local root paths normalized; exact original retained in local observations."
+}

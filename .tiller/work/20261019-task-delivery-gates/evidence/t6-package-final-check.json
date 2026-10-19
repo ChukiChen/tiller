@@ -1,0 +1,42 @@
+{
+  "testedHelperSha256": "8d703cd95dcfa75d12a49147b2d19bb48fab494e5cb79a3ba14cadce2145961b",
+  "snapshotRoot": "C:\\Users\\Administrator\\AppData\\Local\\Temp\\tiller-package-snapshot-929e0e61522c4e6897db205de400b0e1",
+  "copiedOutputHashes": {
+    "gates-workspace-transcript.json": "b63e1a51e6be682488ac7b3b4bb5ee2d79939e7e5df3a06c9fc573944bae6f20",
+    "result.json": "83b726937fd8dc2c0986cfe651637b63c10f6f23548d85fc7aa406751cd63d1f",
+    "gates-project-transcript.json": "8d1af2fe81ebb469f4013e606db84402967cbe7ec6b8b4b2346aa97118a3bfd4",
+    "tiller-0.4.0.tgz": "a3877f6936ad4c7ff0a62e7796e83f736f2693c74110c268be6c1fa45c498110"
+  },
+  "rebuiltDistUnchanged": true,
+  "mainFrozenCount": 126,
+  "limitations": [
+    "Approvals and manual evidence are synthetic package fixtures, not real user acceptance or AI selfboot.",
+    "Only Windows was executed.",
+    "The main helper is still frozen and must receive the exact tested snapshot change after the original full-suite window closes."
+  ],
+  "mainFrozenUnchanged": true,
+  "preservedOutputRoot": "D:\\dev_projects_ai\\tiller-clean\\.tiller\\local\\worktrees\\testing-verification\\.tiller\\local\\package-validation-0.4.0-t6-snapshot",
+  "firstRun": {
+    "exitCode": 1,
+    "durationMs": 105878
+  },
+  "snapshotDifferences": [
+    "scripts/package-gates-smoke.mjs"
+  ],
+  "oldPackagePresent": true,
+  "archiveMemberComparison": "t6-package-archive-comparison.json: 58 identical members; final tar SHA unchanged",
+  "checkedAt": "2026-10-19T15:35:09.6318337Z",
+  "oldResultsPreserved": {
+    ".tiller/local/package-validation/result.json": "b07b12028d23304d70333572d294e48236b63b089ee74231bcdccfdb12241b7b",
+    ".tiller/local/package-validation/result-0.3.6-before-t6.json": "b07b12028d23304d70333572d294e48236b63b089ee74231bcdccfdb12241b7b"
+  },
+  "archiveByteIdenticalToSelfboot": true,
+  "archiveSha256": "a3877f6936ad4c7ff0a62e7796e83f736f2693c74110c268be6c1fa45c498110",
+  "retry": {
+    "durationMs": 529406,
+    "workspaceCommands": 3,
+    "projectCommands": 30,
+    "exitCode": 0
+  },
+  "rebuiltDistCount": 28
+}

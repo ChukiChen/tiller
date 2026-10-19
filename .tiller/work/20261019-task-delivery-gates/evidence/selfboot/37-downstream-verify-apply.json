@@ -1,0 +1,27 @@
+{
+  "label": "37-downstream-verify-apply",
+  "command": [
+    "node",
+    ".tiller/run.cjs",
+    "work",
+    "task",
+    "verify",
+    "20261019-t6-selfboot",
+    "--task",
+    "downstream",
+    "--input",
+    "inputs/verify-downstream.json",
+    "--apply",
+    "c5a0d7b6d0309a31527a7d44c4cc6961aafbb5c8357f268ddcbedd3cbca73121",
+    "--json"
+  ],
+  "startedAt": "2026-10-19T14:37:59.616Z",
+  "finishedAt": "2026-10-19T14:40:26.592Z",
+  "durationMs": 146971,
+  "exitCode": 0,
+  "signal": null,
+  "error": null,
+  "stdout": "{\"ok\":true,\"operationId\":\"verify-downstream-after-handoff\",\"inputDigest\":\"93a8e3747e280eb4cb6c0f8f7684d09d6c4116b84af1cd27f7fef8d49bc468e0\",\"kind\":\"task-verify\",\"revision\":7,\"planningRevision\":\"t6-one\",\"basisDigest\":\"c5a0d7b6d0309a31527a7d44c4cc6961aafbb5c8357f268ddcbedd3cbca73121\",\"operationAllowed\":true,\"technicalReady\":true,\"blockingReasons\":[],\"taskId\":\"downstream\",\"attemptId\":\"attempt-20a2f8fff93b0a0e5a135d3f\",\"eventSequence\":6,\"technicalBasisDigest\":\"9c6e7098179b98d9edcc892bb39553a875a0fd03af4c3f902cdb5a482b3b3b91\",\"exceptions\":[],\"failureReasons\":[],\"status\":\"allowed\",\"changed\":true,\"historical\":false}\n",
+  "stderr": "",
+  "pathNormalization": "Local root paths normalized; exact original retained in local observations."
+}

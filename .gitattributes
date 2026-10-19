@@ -1,0 +1,2 @@
+# Raw evidence preserves its original bytes, whitespace and recorded hashes.
+/.tiller/work/**/evidence/** -text -whitespace

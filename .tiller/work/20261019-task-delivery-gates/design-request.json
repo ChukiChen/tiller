@@ -1,0 +1,24 @@
+{
+  "requestId": "design-gates-1",
+  "gate": "design",
+  "scope": {
+    "repositories": [
+      "."
+    ],
+    "targets": [
+      "20261019-task-delivery-gates"
+    ]
+  },
+  "subjects": [
+    {
+      "repository": ".",
+      "path": ".tiller/work/20261019-task-delivery-gates/design.md"
+    }
+  ],
+  "upstream": [
+    "requirements-gates-1"
+  ],
+  "reviewSummary": "请确认任务与交付门禁具体设计：不可变规划及单一任务记录；start/verify/整体门禁；范围内证据绑定及变化重核；明确例外；新格式拒绝旧记录且不迁移不删除；合入继续保留既有平台限制。命令和记录格式为待实现方案。",
+  "openIssues": [],
+  "nextAction": "形成并确认实施规划，随后按任务推进实现和验证；不包含提交、推送、合入或发布授权"
+}

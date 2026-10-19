@@ -32,7 +32,7 @@ async function legacy(t, workspace = false) {
 test('initialization supplies shared usage and launcher with discoverable links and no machine paths', async t => {
   const root = fixture(t);
   const result = await initialize({ root });
-  assert.equal(result.metadata.resourceVersion, '0.3.5');
+  assert.equal(result.metadata.resourceVersion, '0.4.0');
   assert.equal(Object.keys(result.metadata.managedFiles).length, 13);
   for (const name of added) {
     assert.equal(read(root, name), readFileSync(new URL(`../resources/${name.slice(8)}`, import.meta.url), 'utf8'));
@@ -40,6 +40,9 @@ test('initialization supplies shared usage and launcher with discoverable links 
   }
   assert.match(read(root, 'AGENTS.md'), /\.tiller\/usage\.md/u);
   assert.match(read(root, '.tiller/index.md'), /\]\(usage\.md\)/u);
+  const usage = read(root, '.tiller/usage.md');
+  for (const command of ['work plan register', 'work task', 'delivery-check', 'delivery-ready']) assert.ok(usage.includes(command), command);
+  assert.doesNotMatch(usage, /没有专用 CLI 确认类型/u);
   const before = snapshot(root);
   assert.equal((await initialize({ root })).changed, false);
   assert.deepEqual(snapshot(root), before);
@@ -100,7 +103,7 @@ test('metadata managed set remains strict for both legacy and current versions',
   assert.throws(() => parseMetadata(JSON.stringify(old)), /受管文件依据/u);
   const current = fixture(t);
   await initialize({ root: current });
-  for (const version of ['0.3.2', '0.3.3', '0.3.4', '0.3.5']) {
+  for (const version of ['0.3.2', '0.3.3', '0.3.4', '0.3.5', '0.3.6', '0.4.0']) {
     const metadata = JSON.parse(read(current, '.tiller/project.json'));
     metadata.resourceVersion = version;
     assert.equal(Object.keys(parseMetadata(JSON.stringify(metadata)).managedFiles).length, 13);

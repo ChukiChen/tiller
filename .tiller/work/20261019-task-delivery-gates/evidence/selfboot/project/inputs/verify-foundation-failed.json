@@ -1,0 +1,13 @@
+{
+  "operationId": "verify-foundation-failed",
+  "expectedRevision": 3,
+  "evidenceRefs": [
+    {
+      "checkId": "probe-exec",
+      "workId": "20261019-t6-selfboot",
+      "runId": "e495e907-7873-4392-bf7d-163cc951f560",
+      "environment": "sha256:0ad1c056aabf10aa3f62b1a4534bae15aaafcfd4980bcb475791aead3465a442"
+    }
+  ],
+  "attemptId": "attempt-4652445baafba54321c25bf7"
+}

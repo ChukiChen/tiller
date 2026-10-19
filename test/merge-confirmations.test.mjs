@@ -3,8 +3,8 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { initialize } from '../dist/core.js';
-import { requestConfirmation, recordDecision, checkGate, checkMergeGate, planConfirmationMigration, applyConfirmationMigration } from '../dist/confirmations.js';
-import { fixture, put } from './helpers.mjs';
+import { requestConfirmation, recordDecision, checkGate, checkMergeGate } from '../dist/confirmations.js';
+import { fixture, put, snapshot } from './helpers.mjs';
 
 const id = 'isolated-delivery';
 const directory = `.tiller/work/${id}`;
@@ -68,7 +68,7 @@ test('merge approval binds exact delivery versions and requires fresh runtime st
   assert.equal(checked.sourceVerification, 'not-independently-verified');
   assert.equal(checked.automaticTransition, false);
   assert.equal((await checkGate(root, id, 'merge')).confirmed, false);
-  assert.equal(JSON.parse(readFileSync(join(root, registryPath), 'utf8')).schemaVersion, 2);
+  assert.equal(JSON.parse(readFileSync(join(root, registryPath), 'utf8')).schemaVersion, 3);
   assert.match(readFileSync(join(root, directory, 'reviews/request-merge/presentation.md'), 'utf8'), /"mergeBinding"/u);
 });
 
@@ -152,57 +152,21 @@ test('changed merge versions cannot reuse old approval as nonsemantic difference
   await assert.rejects(recordDecision(root, id, reused), /合入版本绑定变化/u);
 });
 
-function legacy(root) {
-  const parsed = JSON.parse(readFileSync(join(root, registryPath), 'utf8'));
-  parsed.schemaVersion = 1;
-  const bytes = JSON.stringify(parsed, null, 4) + '\r\n';
-  put(root, registryPath, bytes);
-  return bytes;
-}
-test('legacy confirmations remain readable and explicitly migrate without altering historical evidence', async t => {
+test('old and unknown confirmation versions reject reads and writes without migrating or deleting files', async t => {
   const root = await setup(t);
-  const original = legacy(root);
-  assert.equal((await checkGate(root, id, 'design')).confirmed, true);
-  await assert.rejects(requestConfirmation(root, id, mergeRequest()), /migrate-confirmations/u);
-  await assert.rejects(recordDecision(root, id, decision(root, 'design', 'new-design')), /版本 1 只读/u);
-  const plan = await planConfirmationMigration(root, id);
-  assert.equal(plan.ready, true);
-  assert.equal(plan.required, true);
-  assert.equal(readFileSync(join(root, registryPath), 'utf8'), original);
-  const applied = await applyConfirmationMigration(root, id, plan.planId);
-  assert.equal(applied.changed, true);
-  assert.equal(applied.automaticTransition, false);
-  assert.equal(readFileSync(join(root, plan.historyPath), 'utf8'), original);
-  assert.equal((await checkGate(root, id, 'design')).confirmed, true);
   await approvedMerge(root);
-  assert.equal((await checkMergeGate(root, id, 'merge', binding())).confirmed, true);
-  const current = await planConfirmationMigration(root, id);
-  assert.equal(current.required, false);
-  assert.equal((await applyConfirmationMigration(root, id, current.planId)).changed, false);
-});
-
-test('migration rejects stale plans and protects an existing original', async t => {
-  const root = await setup(t);
-  legacy(root);
-  const plan = await planConfirmationMigration(root, id);
-  put(root, registryPath, readFileSync(join(root, registryPath), 'utf8') + '\n');
-  await assert.rejects(applyConfirmationMigration(root, id, plan.planId), /计划已过期/u);
-  const fresh = await planConfirmationMigration(root, id);
-  put(root, fresh.historyPath, '# Existing unrelated history\n');
-  await assert.rejects(applyConfirmationMigration(root, id, fresh.planId), /计划已过期/u);
-  const conflicted = await planConfirmationMigration(root, id);
-  assert.equal(conflicted.ready, false);
-  await assert.rejects(applyConfirmationMigration(root, id, conflicted.planId), /不能覆盖/u);
-  assert.equal(readFileSync(join(root, fresh.historyPath), 'utf8'), '# Existing unrelated history\n');
-});
-
-test('unknown schemas and legacy merge claims cannot be silently migrated', async t => {
-  const root = await setup(t);
   const original = JSON.parse(readFileSync(join(root, registryPath), 'utf8'));
-  put(root, registryPath, JSON.stringify({ ...original, schemaVersion: 3 }));
-  await assert.rejects(planConfirmationMigration(root, id), /版本或工作身份/u);
-  put(root, registryPath, JSON.stringify(original));
-  await approvedMerge(root);
-  legacy(root);
-  await assert.rejects(planConfirmationMigration(root, id), /旧版确认记录不能包含合入许可/u);
+  const nextDecision = decision(root, 'design', 'new-design');
+  for (const version of [1, 2, 4]) {
+    const bytes = JSON.stringify({ ...original, schemaVersion: version }, null, 4) + '\r\n';
+    put(root, registryPath, bytes);
+    const before = snapshot(root);
+    const unsupported = { code: 'UNSUPPORTED_RECORD_VERSION' };
+    await assert.rejects(checkGate(root, id, 'design'), unsupported);
+    await assert.rejects(checkMergeGate(root, id, 'merge', binding()), unsupported);
+    await assert.rejects(requestConfirmation(root, id, mergeRequest('next')), unsupported);
+    await assert.rejects(recordDecision(root, id, nextDecision), unsupported);
+    assert.equal(readFileSync(join(root, registryPath), 'utf8'), bytes);
+    assert.deepEqual(snapshot(root), before);
+  }
 });

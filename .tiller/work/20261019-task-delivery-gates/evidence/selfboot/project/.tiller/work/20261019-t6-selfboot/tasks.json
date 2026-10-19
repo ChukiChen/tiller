@@ -1,0 +1,294 @@
+{
+  "schemaVersion": 1,
+  "ownerWorkId": "20261019-t6-selfboot",
+  "revision": 7,
+  "activePlanning": {
+    "revision": "t6-one",
+    "confirmation": {
+      "workId": "20261019-t6-selfboot",
+      "requestId": "planning",
+      "decisionId": "existing-t6-planning"
+    },
+    "definitionDigest": "6f308a3d816038a1cb052bcbb8e5e9de384120f89564fb040b26cf916ed55b1a",
+    "eventSequence": 1
+  },
+  "events": [
+    {
+      "sequence": 1,
+      "operationId": "activate-t6",
+      "kind": "planning-activated",
+      "at": "2026-10-19T14:08:04.515Z",
+      "revision": "t6-one",
+      "definitionDigest": "6f308a3d816038a1cb052bcbb8e5e9de384120f89564fb040b26cf916ed55b1a",
+      "confirmation": {
+        "workId": "20261019-t6-selfboot",
+        "requestId": "planning",
+        "decisionId": "existing-t6-planning"
+      },
+      "changes": {
+        "added": [
+          "foundation",
+          "downstream"
+        ],
+        "changed": [],
+        "retainedCandidates": [],
+        "removed": [],
+        "removedRequirements": []
+      }
+    },
+    {
+      "sequence": 2,
+      "operationId": "start-foundation",
+      "kind": "task-started",
+      "at": "2026-10-19T14:11:09.450Z",
+      "taskId": "foundation",
+      "attemptId": "attempt-4652445baafba54321c25bf7",
+      "planningRevision": "t6-one",
+      "taskDigest": "f88d55d56bae8d31ff9fc16e170796f27995dd5d72a9734c0b1a0f9a58c985a7",
+      "startBasisDigest": "0e55e8afb3b229d2adc993104d85160ae687f6e9ea3c6cd992c7b9279a147cc4",
+      "dependencies": [],
+      "checkpointRefs": [],
+      "checkpointDigest": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "startEventSequence": 2,
+      "artifactSnapshots": {},
+      "verificationBasisDigest": null,
+      "evidenceRefs": [],
+      "technicalBasisDigest": "da2a82cc0e6de97b27e25f73a0bec860c8d634dac06b44dbc1cf8a624bf3b125",
+      "exceptions": [],
+      "failureReasons": []
+    },
+    {
+      "sequence": 3,
+      "operationId": "verify-foundation-fixed",
+      "kind": "task-verified",
+      "at": "2026-10-19T14:21:32.732Z",
+      "taskId": "foundation",
+      "attemptId": "attempt-4652445baafba54321c25bf7",
+      "planningRevision": "t6-one",
+      "taskDigest": "f88d55d56bae8d31ff9fc16e170796f27995dd5d72a9734c0b1a0f9a58c985a7",
+      "startBasisDigest": "0e55e8afb3b229d2adc993104d85160ae687f6e9ea3c6cd992c7b9279a147cc4",
+      "dependencies": [],
+      "checkpointRefs": [],
+      "checkpointDigest": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "startEventSequence": 2,
+      "artifactSnapshots": {
+        "probe": {
+          ".::probe.cjs": "a55552ce78f33310c5c7890f769bee390109eb5b7b509e083a3f6dd15737fbf3"
+        }
+      },
+      "verificationBasisDigest": "3c1ff230b279aab3706285b17a6fc667a25209189bd2cfd004351550c2c25560",
+      "evidenceRefs": [
+        {
+          "workId": "20261019-t6-selfboot",
+          "runId": "84d743c5-5e92-4dc0-8bca-812d7a156adc",
+          "checkId": "probe-exec",
+          "environment": "sha256:0ad1c056aabf10aa3f62b1a4534bae15aaafcfd4980bcb475791aead3465a442"
+        }
+      ],
+      "technicalBasisDigest": "4d0dc7184ffd044a6fe573d6154bce9fa6b14a7896331d94120186a8b008f050",
+      "exceptions": [],
+      "failureReasons": []
+    },
+    {
+      "sequence": 4,
+      "operationId": "start-downstream-after-verified",
+      "kind": "task-started",
+      "at": "2026-10-19T14:24:21.327Z",
+      "taskId": "downstream",
+      "attemptId": "attempt-9743e5fa47b928eab421a051",
+      "planningRevision": "t6-one",
+      "taskDigest": "b51f5f6e5d9c317d3796f2c2e3581a05f80f0f7c98d418e5c6707d96b84c4216",
+      "startBasisDigest": "6e8e65b92693f877dfc6b84e8f5c05ce88773afacc433921185a07e443696a99",
+      "dependencies": [
+        {
+          "taskId": "foundation",
+          "eventSequence": 3,
+          "artifactDigest": "7ee386a5bfd1ac76af0661c78108152aa3c3a51e9316253ec04d2cf31c70febd"
+        }
+      ],
+      "checkpointRefs": [],
+      "checkpointDigest": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "startEventSequence": 4,
+      "artifactSnapshots": {},
+      "verificationBasisDigest": null,
+      "evidenceRefs": [],
+      "technicalBasisDigest": "e490b39b1da9be547a87eb947622be6a36c2e68ffed29610b3433bb04bef53fb",
+      "exceptions": [],
+      "failureReasons": []
+    },
+    {
+      "sequence": 5,
+      "operationId": "resume-downstream-after-handoff",
+      "kind": "task-resumed",
+      "at": "2026-10-19T14:32:04.097Z",
+      "taskId": "downstream",
+      "attemptId": "attempt-20a2f8fff93b0a0e5a135d3f",
+      "planningRevision": "t6-one",
+      "taskDigest": "b51f5f6e5d9c317d3796f2c2e3581a05f80f0f7c98d418e5c6707d96b84c4216",
+      "startBasisDigest": "6e8e65b92693f877dfc6b84e8f5c05ce88773afacc433921185a07e443696a99",
+      "dependencies": [
+        {
+          "taskId": "foundation",
+          "eventSequence": 3,
+          "artifactDigest": "7ee386a5bfd1ac76af0661c78108152aa3c3a51e9316253ec04d2cf31c70febd"
+        }
+      ],
+      "checkpointRefs": [],
+      "checkpointDigest": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "startEventSequence": 5,
+      "artifactSnapshots": {},
+      "verificationBasisDigest": null,
+      "evidenceRefs": [],
+      "technicalBasisDigest": "0b76b2061e9cb714abed86e4908555f90107a1e4189dd7db9369ed608c394fb8",
+      "exceptions": [],
+      "failureReasons": []
+    },
+    {
+      "sequence": 6,
+      "operationId": "verify-downstream-after-handoff",
+      "kind": "task-verified",
+      "at": "2026-10-19T14:38:50.494Z",
+      "taskId": "downstream",
+      "attemptId": "attempt-20a2f8fff93b0a0e5a135d3f",
+      "planningRevision": "t6-one",
+      "taskDigest": "b51f5f6e5d9c317d3796f2c2e3581a05f80f0f7c98d418e5c6707d96b84c4216",
+      "startBasisDigest": "6e8e65b92693f877dfc6b84e8f5c05ce88773afacc433921185a07e443696a99",
+      "dependencies": [
+        {
+          "taskId": "foundation",
+          "eventSequence": 3,
+          "artifactDigest": "7ee386a5bfd1ac76af0661c78108152aa3c3a51e9316253ec04d2cf31c70febd"
+        }
+      ],
+      "checkpointRefs": [],
+      "checkpointDigest": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "startEventSequence": 5,
+      "artifactSnapshots": {
+        "notes": {
+          ".::docs/recovery.md": "a3886d4858d009c22dccef2b443e21a6b11777de0479e322a2435844a6457174"
+        }
+      },
+      "verificationBasisDigest": "fc021c62a20d023820342d0860a157021c59b8f8858a5a3fa5ae9296aecb12b8",
+      "evidenceRefs": [
+        {
+          "workId": "20261019-t6-selfboot",
+          "runId": "0b2c6dd1-a485-4a94-8e54-a4af44c42607",
+          "environment": "Windows actual successor inspection after executor handoff",
+          "checkId": "recovery-review"
+        }
+      ],
+      "technicalBasisDigest": "9c6e7098179b98d9edcc892bb39553a875a0fd03af4c3f902cdb5a482b3b3b91",
+      "exceptions": [],
+      "failureReasons": []
+    }
+  ],
+  "operations": [
+    {
+      "operationId": "register-t6",
+      "inputDigest": "c441071f0d72d0cac0196cfc78c1bf15786aa159b424e6b4300f4ad945c9fccc",
+      "kind": "register",
+      "revision": 1,
+      "planningRevision": "t6-one",
+      "basisDigest": "a05f2597dc457e245a1a97c7c83f029a6e916dd658d63702cdd4a0e98099fb28",
+      "operationAllowed": true,
+      "technicalReady": false,
+      "blockingReasons": []
+    },
+    {
+      "operationId": "activate-t6",
+      "inputDigest": "c9994c5ef6a8adf946e441ff6b13100c45e8e798656d74e669f8932362a7475c",
+      "kind": "activate",
+      "revision": 2,
+      "planningRevision": "t6-one",
+      "basisDigest": "e1aa65441c4aac1252ca4e25047055c84614527fd2d801fc547f33bb9100d9ce",
+      "operationAllowed": true,
+      "technicalReady": false,
+      "blockingReasons": []
+    },
+    {
+      "operationId": "start-foundation",
+      "inputDigest": "cfe289bdcdede8aaf06e38f6405fbaff3931b2ae168903f81d57ab74d4121318",
+      "kind": "task-start",
+      "revision": 3,
+      "planningRevision": "t6-one",
+      "basisDigest": "59c4fea8121a16d3b86a549b68919aa656a09c3babdd3883219c405244d0c3bf",
+      "operationAllowed": true,
+      "technicalReady": false,
+      "blockingReasons": [],
+      "taskId": "foundation",
+      "attemptId": "attempt-4652445baafba54321c25bf7",
+      "eventSequence": 2,
+      "technicalBasisDigest": "da2a82cc0e6de97b27e25f73a0bec860c8d634dac06b44dbc1cf8a624bf3b125",
+      "exceptions": [],
+      "failureReasons": []
+    },
+    {
+      "operationId": "verify-foundation-fixed",
+      "inputDigest": "d729a88a752a86a116496d0e7035c7d92d4b38e6e33ee0e3ae0e19e4f8b99c87",
+      "kind": "task-verify",
+      "revision": 4,
+      "planningRevision": "t6-one",
+      "basisDigest": "8741319abc4074dde2e32442b9b310c8bdfffdbcef12447addc8bb37a46df566",
+      "operationAllowed": true,
+      "technicalReady": true,
+      "blockingReasons": [],
+      "taskId": "foundation",
+      "attemptId": "attempt-4652445baafba54321c25bf7",
+      "eventSequence": 3,
+      "technicalBasisDigest": "4d0dc7184ffd044a6fe573d6154bce9fa6b14a7896331d94120186a8b008f050",
+      "exceptions": [],
+      "failureReasons": []
+    },
+    {
+      "operationId": "start-downstream-after-verified",
+      "inputDigest": "75a00194622c279241c7a5cae30cf16d45185a7d264ab3ad765de703a7877f07",
+      "kind": "task-start",
+      "revision": 5,
+      "planningRevision": "t6-one",
+      "basisDigest": "cf13e9a4e05fce2d77bac12ae6d70bc84d951309e6040c96f5759bb50bba5607",
+      "operationAllowed": true,
+      "technicalReady": false,
+      "blockingReasons": [],
+      "taskId": "downstream",
+      "attemptId": "attempt-9743e5fa47b928eab421a051",
+      "eventSequence": 4,
+      "technicalBasisDigest": "e490b39b1da9be547a87eb947622be6a36c2e68ffed29610b3433bb04bef53fb",
+      "exceptions": [],
+      "failureReasons": []
+    },
+    {
+      "operationId": "resume-downstream-after-handoff",
+      "inputDigest": "555004412558d24f635ff1899d476f57ee234f9e279e6c60bd73fca45a7688e9",
+      "kind": "task-resume",
+      "revision": 6,
+      "planningRevision": "t6-one",
+      "basisDigest": "33868d69f8a7943a10ec641f33af8cf2a35b18bf80c626b704d03db7a8b6e8d5",
+      "operationAllowed": true,
+      "technicalReady": false,
+      "blockingReasons": [],
+      "taskId": "downstream",
+      "attemptId": "attempt-20a2f8fff93b0a0e5a135d3f",
+      "eventSequence": 5,
+      "technicalBasisDigest": "0b76b2061e9cb714abed86e4908555f90107a1e4189dd7db9369ed608c394fb8",
+      "exceptions": [],
+      "failureReasons": []
+    },
+    {
+      "operationId": "verify-downstream-after-handoff",
+      "inputDigest": "93a8e3747e280eb4cb6c0f8f7684d09d6c4116b84af1cd27f7fef8d49bc468e0",
+      "kind": "task-verify",
+      "revision": 7,
+      "planningRevision": "t6-one",
+      "basisDigest": "c5a0d7b6d0309a31527a7d44c4cc6961aafbb5c8357f268ddcbedd3cbca73121",
+      "operationAllowed": true,
+      "technicalReady": true,
+      "blockingReasons": [],
+      "taskId": "downstream",
+      "attemptId": "attempt-20a2f8fff93b0a0e5a135d3f",
+      "eventSequence": 6,
+      "technicalBasisDigest": "9c6e7098179b98d9edcc892bb39553a875a0fd03af4c3f902cdb5a482b3b3b91",
+      "exceptions": [],
+      "failureReasons": []
+    }
+  ]
+}

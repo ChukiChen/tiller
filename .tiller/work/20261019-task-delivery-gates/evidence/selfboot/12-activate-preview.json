@@ -1,0 +1,24 @@
+{
+  "label": "12-activate-preview",
+  "command": [
+    "node",
+    ".tiller/run.cjs",
+    "work",
+    "plan",
+    "activate",
+    "20261019-t6-selfboot",
+    "--input",
+    "inputs/activate.json",
+    "--plan",
+    "--json"
+  ],
+  "startedAt": "2026-10-19T14:06:27.492Z",
+  "finishedAt": "2026-10-19T14:07:11.420Z",
+  "durationMs": 43924,
+  "exitCode": 0,
+  "signal": null,
+  "error": null,
+  "stdout": "{\"ok\":true,\"operationId\":\"activate-t6\",\"planId\":\"e1aa65441c4aac1252ca4e25047055c84614527fd2d801fc547f33bb9100d9ce\",\"basisDigest\":\"e1aa65441c4aac1252ca4e25047055c84614527fd2d801fc547f33bb9100d9ce\",\"operationAllowed\":true,\"technicalReady\":false,\"blockingReasons\":[],\"changed\":false,\"revision\":1,\"planningRevision\":\"t6-one\",\"changes\":{\"added\":[\"foundation\",\"downstream\"],\"changed\":[],\"retainedCandidates\":[],\"removed\":[],\"removedRequirements\":[]}}\n",
+  "stderr": "",
+  "pathNormalization": "Local root paths normalized; exact original retained in local observations."
+}

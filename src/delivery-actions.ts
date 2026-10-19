@@ -2,7 +2,7 @@ import { createHash, randomUUID } from 'node:crypto';
 import { lstat, mkdir, readFile, readdir, realpath, rename, unlink, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { assertSafePath, validateRelativePath } from './files.js';
-import { checkGate, checkMergeGate, type MergeBinding } from './confirmations.js';
+import { checkGate, checkMergeGate, inspectBoundDelivery, type MergeBinding } from './confirmations.js';
 import { loadDeliveryContext, saveDeliveryRecord, withDeliveryLock, rebindDeliveryAfterCleanup } from './delivery-environment.js';
 import { git } from './delivery-git.js';
 import type { DeliveryContext, DeliveryRepository } from './delivery-types.js';
@@ -199,6 +199,17 @@ function checkReview(review: ReviewObject, repo: DeliveryRepository, head: strin
   if (review.source !== repo.branch || review.target !== repo.target || review.sourceOid !== head) throw new Error('评审源、目标或提交与交付范围不一致。');
 }
 function stableReview(review: ReviewObject): Omit<ReviewObject, 'observedAt'> { const { observedAt: _time, ...stable } = review; return stable; }
+async function deliveryReadiness(context: DeliveryContext): Promise<Record<string, unknown>> {
+  try {
+    const { inspectWorkDelivery } = await import('./overall-delivery.js');
+    const current = await inspectWorkDelivery(context.recordRoot, context.workId);
+    return { scope: current.scope, technicalReady: current.technicalReady, operationAllowed: current.operationAllowed,
+      processEvidence: current.processEvidence, basisDigest: current.basisDigest, issues: current.issues };
+  } catch (error) {
+    return { technicalReady: false, operationAllowed: false, processEvidence: 'unknown',
+      issues: [(error as Error).message], limitation: '无法核对当前整体门禁；进行中评审和真实观察仍可登记。' };
+  }
+}
 async function snapshot(context: DeliveryContext, action: DeliveryAction, input: DeliveryActionInput): Promise<unknown> {
   const { repo, root } = repository(context, input);
   const state = await localState(root) as { head: string; branch: string };
@@ -228,6 +239,7 @@ async function snapshot(context: DeliveryContext, action: DeliveryAction, input:
   }
   if (action === 'push' && oid(input.oid) !== state.head) throw new Error('推送 OID 必须等于当前活动 HEAD。');
   if (action === 'review') {
+    extra.deliveryReadiness = await deliveryReadiness(context);
     const service = adapter(input); text(input.documentsVersion, '资料版本');
     if (input.operation !== 'attach' && (!input.provider?.tokenEnv || !process.env[input.provider.tokenEnv])) throw new Error('评审写操作缺少配置的认证凭据。');
     const material = await documentsVersion(context);
@@ -246,6 +258,14 @@ async function snapshot(context: DeliveryContext, action: DeliveryAction, input:
     } else throw new Error('评审操作须为 create/update/attach。');
   }
   if (action === 'merge') {
+    if (!input.binding?.deliveryBinding) throw new Error('合入必须绑定整体交付回执与当前检查摘要。');
+    const delivery = await inspectBoundDelivery(context.recordRoot, context.workId, input.binding.deliveryBinding, undefined, 'merge');
+    const { inspectExceptions } = await import('./gate-exceptions.js');
+    const exceptions = await inspectExceptions(context.recordRoot, context.workId, delivery.current.scope, 'merge', undefined,
+      delivery.current.issues, delivery.current.basisDigest, input.binding.deliveryExceptionRefs ?? []);
+    if (!exceptions.operationAllowed) throw new Error('整体合入门禁未满足；必须补足条件或取得针对 merge 的明确例外。');
+    extra.deliveryReadiness = { technicalReady: delivery.current.technicalReady, operationAllowed: exceptions.operationAllowed,
+      basisDigest: delivery.current.basisDigest, processEvidence: delivery.current.processEvidence, exceptions: exceptions.exceptions };
     const review = await adapter(input).get(text(input.reviewId, '评审标识')); checkReview(review, repo, state.head);
     if (!input.binding) throw new Error('合入缺少版本组合。');
     if (input.binding.documentsVersion !== (await documentsVersion(context)).version) throw new Error('合入资料版本发生变化。');
@@ -278,6 +298,7 @@ async function externalReviewObservation(context: DeliveryContext, input: Delive
   const head = (await git(root, ['rev-parse', 'HEAD'])).trim();
   checkReview(review, repo, head);
   return { review: stableReview(review), origin: 'external-observation', scopeVerification: 'needs-review',
+    deliveryReadiness: await deliveryReadiness(context), processEvidence: 'observed-only',
     limitation: '平台状态是观测事实，不证明人工合入遵守了批准目标版本、检查和授权；仍须核对合入证据。' };
 }
 async function validateCleanup(context: DeliveryContext, input: DeliveryActionInput, repo: DeliveryRepository, root: string): Promise<void> {
@@ -311,6 +332,33 @@ async function archivedControlChanges(context: DeliveryContext, repo: DeliveryRe
   const allowed = `.tiller/work/${context.workId}/`;
   const sourceRoot = context.bindings[repo.id]!.sourceRoot;
   const registered = new Set(['work.md', 'record.json', 'delivery.json', 'confirmations.json'].map(name => allowed + name));
+  const { loadPlanningState, readRegisteredPlanning } = await import('./planning.js');
+  // Register exact parsed control records; a directory prefix is never deletion authority.
+  try {
+    await lstat(await assertSafePath(context.recordRoot, `${allowed}tasks.json`));
+    const planning = await loadPlanningState(context.recordRoot, context.workId);
+    registered.add(`${allowed}tasks.json`);
+    if (planning.state.activePlanning) registered.add(`${allowed}plan.md`);
+    for (const operation of planning.state.operations.filter(operation => operation.kind === 'register')) {
+      const definition = await readRegisteredPlanning(context.recordRoot, context.workId, operation.planningRevision);
+      registered.add(definition.definitionPath); registered.add(definition.reviewPath);
+    }
+  } catch (error) { if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error; }
+  const { readVerificationRecords } = await import('./verification-runs.js');
+  for (const run of await readVerificationRecords(context.recordRoot, context.workId)) registered.add(`${allowed}verification-runs/${run.id}.json`);
+  const receiptDirectory = `${allowed}delivery-checks`;
+  let receiptNames: string[] = [];
+  try { receiptNames = await readdir(await assertSafePath(context.recordRoot, receiptDirectory)); }
+  catch (error) { if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error; }
+  if (receiptNames.length > 10000) throw new Error('交付回执数量超过归档检查上限。');
+  if (receiptNames.length) {
+    const { readDeliveryReceipt } = await import('./overall-delivery.js');
+    for (const name of receiptNames) {
+      if (!name.endsWith('.json')) throw new Error('交付回执目录含未登记内容，不能清理。');
+      await readDeliveryReceipt(context.recordRoot, context.workId, name.slice(0, -5));
+      registered.add(`${receiptDirectory}/${name}`);
+    }
+  }
   if (input.authorization) registered.add(input.authorization.source.path);
   for (const event of context.record.events) {
     const authority = event.details.authorization as DeliveryAuthorization | undefined;
@@ -399,7 +447,9 @@ async function reconcileObservation(context: DeliveryContext, journal: Journal, 
       if (result.body !== reviewBody(original, journal.operationId) || result.title !== original.title) throw new Error('平台内容不能证明原评审写入完成，保留 unknown。');
     }
     if (journal.action === 'merge' && result.state !== 'merged') throw new Error('平台尚未证明已合入。');
-    return { review: stableReview(result), documentsVersion: original.documentsVersion ?? null };
+    return { review: stableReview(result), documentsVersion: original.documentsVersion ?? null,
+      deliveryReadiness: await deliveryReadiness(context), processEvidence: 'observed-only',
+      limitation: '当前门禁只描述现在的对象，恢复观察不补造操作发生时的放行或授权。' };
   }
   throw new Error('此操作须人工核对现场；不能推断或重放。');
 }
@@ -461,7 +511,8 @@ export async function applyDeliveryAction(root: string, id: string, action: Deli
         const review = input.operation === 'create' ? await service.create(write) : input.operation === 'update' ? await service.update(input.reviewId!, write) : await service.get(input.reviewId!);
         checkReview(review, repo, journal.head);
         if (input.operation !== 'attach' && (review.body !== write.body || review.title !== write.title)) throw new Error('平台返回内容与评审写入不一致。');
-        result = { review: stableReview(review), documentsVersion: input.documentsVersion! };
+        result = { review: stableReview(review), documentsVersion: input.documentsVersion!,
+          deliveryReadiness: (state as { extra: Record<string, unknown> }).extra.deliveryReadiness };
       } else if (action === 'merge') {
         return adapter(input).merge();
       } else if (action === 'reconcile') {

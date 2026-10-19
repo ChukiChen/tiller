@@ -1,0 +1,304 @@
+TAP version 13
+# Subtest: 0.3.5 testing upgrade preserves existing verification assets (false)
+ok 1 - 0.3.5 testing upgrade preserves existing verification assets (false)
+  ---
+  duration_ms: 1725.2984
+  type: 'test'
+  ...
+# Subtest: 0.3.5 testing upgrade preserves existing verification assets (true)
+ok 2 - 0.3.5 testing upgrade preserves existing verification assets (true)
+  ---
+  duration_ms: 3640.8521
+  type: 'test'
+  ...
+# Subtest: upgrade preview is read-only and stable; legacy init never migrates implicitly
+ok 3 - upgrade preview is read-only and stable; legacy init never migrates implicitly
+  ---
+  duration_ms: 1514.3433
+  type: 'test'
+  ...
+# Subtest: upgrade preserves section surroundings, custom rules, source and old completion records
+ok 4 - upgrade preserves section surroundings, custom rules, source and old completion records
+  ---
+  duration_ms: 2152.7467
+  type: 'test'
+  ...
+# Subtest: modified managed resources and fabricated legacy baselines cannot be overwritten
+ok 5 - modified managed resources and fabricated legacy baselines cannot be overwritten
+  ---
+  duration_ms: 995.1616
+  type: 'test'
+  ...
+# Subtest: stale plan rejects even section-external changes and known permissive clauses conflict
+ok 6 - stale plan rejects even section-external changes and known permissive clauses conflict
+  ---
+  duration_ms: 1014.5488
+  type: 'test'
+  ...
+# Subtest: unknown versions fail without changes
+ok 7 - unknown versions fail without changes
+  ---
+  duration_ms: 394.6323
+  type: 'test'
+  ...
+# Subtest: partial upgrade blocks further migration and recovers original content and version
+ok 8 - partial upgrade blocks further migration and recovers original content and version
+  ---
+  duration_ms: 1714.3902
+  type: 'test'
+  ...
+# Subtest: verification failure retains transaction; recovery preserves later edits by refusing conflict
+ok 9 - verification failure retains transaction; recovery preserves later edits by refusing conflict
+  ---
+  duration_ms: 1015.1355
+  type: 'test'
+  ...
+# Subtest: workspace upgrade retains repositories, child rules and existing documents
+ok 10 - workspace upgrade retains repositories, child rules and existing documents
+  ---
+  duration_ms: 3324.6876
+  type: 'test'
+  ...
+# Subtest: managed sections accept CRLF edits while upgrading preserves outside bytes
+ok 11 - managed sections accept CRLF edits while upgrading preserves outside bytes
+  ---
+  duration_ms: 1447.4545
+  type: 'test'
+  ...
+# Subtest: managed section metadata recorded with CRLF remains readable after LF conversion
+ok 12 - managed section metadata recorded with CRLF remains readable after LF conversion
+  ---
+  duration_ms: 1660.0994
+  type: 'test'
+  ...
+# Subtest: EOL equivalence permits distributed rule checkout conversion but rejects substantive edits
+ok 13 - EOL equivalence permits distributed rule checkout conversion but rejects substantive edits
+  ---
+  duration_ms: 1410.0625
+  type: 'test'
+  ...
+# Subtest: 0.2.0 requires explicit upgrade and preserves custom content and confirmation history
+ok 14 - 0.2.0 requires explicit upgrade and preserves custom content and confirmation history
+  ---
+  duration_ms: 2761.3128
+  type: 'test'
+  ...
+# Subtest: 0.2.0 changed entry remains a conflict even with a forged matching metadata digest
+ok 15 - 0.2.0 changed entry remains a conflict even with a forged matching metadata digest
+  ---
+  duration_ms: 2083.8942
+  type: 'test'
+  ...
+# Subtest: 0.2.0 workspace upgrade selects its own baseline and preserves all repository contents
+ok 16 - 0.2.0 workspace upgrade selects its own baseline and preserves all repository contents
+  ---
+  duration_ms: 3571.7055
+  type: 'test'
+  ...
+# Subtest: 0.2.1 explicit upgrade preserves handwritten and machine work records (project)
+ok 17 - 0.2.1 explicit upgrade preserves handwritten and machine work records (project)
+  ---
+  duration_ms: 2230.277
+  type: 'test'
+  ...
+# Subtest: 0.2.1 explicit upgrade preserves handwritten and machine work records (workspace)
+ok 18 - 0.2.1 explicit upgrade preserves handwritten and machine work records (workspace)
+  ---
+  duration_ms: 6255.5427
+  type: 'test'
+  ...
+# Subtest: 0.2.2 explicit upgrade preserves handwritten and machine work records (project)
+ok 19 - 0.2.2 explicit upgrade preserves handwritten and machine work records (project)
+  ---
+  duration_ms: 4116.0875
+  type: 'test'
+  ...
+# Subtest: 0.2.2 explicit upgrade preserves handwritten and machine work records (workspace)
+ok 20 - 0.2.2 explicit upgrade preserves handwritten and machine work records (workspace)
+  ---
+  duration_ms: 4888.3388
+  type: 'test'
+  ...
+# Subtest: 0.3.0 explicit upgrade preserves handwritten and machine work records (project)
+ok 21 - 0.3.0 explicit upgrade preserves handwritten and machine work records (project)
+  ---
+  duration_ms: 2186.2174
+  type: 'test'
+  ...
+# Subtest: 0.3.0 explicit upgrade preserves handwritten and machine work records (workspace)
+ok 22 - 0.3.0 explicit upgrade preserves handwritten and machine work records (workspace)
+  ---
+  duration_ms: 5749.4573
+  type: 'test'
+  ...
+# Subtest: 0.3.1 explicit upgrade preserves handwritten and machine work records (project)
+ok 23 - 0.3.1 explicit upgrade preserves handwritten and machine work records (project)
+  ---
+  duration_ms: 2141.682
+  type: 'test'
+  ...
+# Subtest: 0.3.1 explicit upgrade preserves handwritten and machine work records (workspace)
+ok 24 - 0.3.1 explicit upgrade preserves handwritten and machine work records (workspace)
+  ---
+  duration_ms: 4905.7222
+  type: 'test'
+  ...
+# Subtest: 0.3.2 explicit upgrade preserves handwritten and machine work records (project)
+ok 25 - 0.3.2 explicit upgrade preserves handwritten and machine work records (project)
+  ---
+  duration_ms: 1998.7697
+  type: 'test'
+  ...
+# Subtest: 0.3.2 explicit upgrade preserves handwritten and machine work records (workspace)
+ok 26 - 0.3.2 explicit upgrade preserves handwritten and machine work records (workspace)
+  ---
+  duration_ms: 4610.7873
+  type: 'test'
+  ...
+# Subtest: 0.3.3 explicit upgrade preserves handwritten and machine work records (project)
+ok 27 - 0.3.3 explicit upgrade preserves handwritten and machine work records (project)
+  ---
+  duration_ms: 1960.4651
+  type: 'test'
+  ...
+# Subtest: 0.3.3 explicit upgrade preserves handwritten and machine work records (workspace)
+ok 28 - 0.3.3 explicit upgrade preserves handwritten and machine work records (workspace)
+  ---
+  duration_ms: 5421.1404
+  type: 'test'
+  ...
+# Subtest: 0.3.4 explicit upgrade preserves handwritten and machine work records (project)
+ok 29 - 0.3.4 explicit upgrade preserves handwritten and machine work records (project)
+  ---
+  duration_ms: 1955.9654
+  type: 'test'
+  ...
+# Subtest: 0.3.4 explicit upgrade preserves handwritten and machine work records (workspace)
+ok 30 - 0.3.4 explicit upgrade preserves handwritten and machine work records (workspace)
+  ---
+  duration_ms: 4540.8267
+  type: 'test'
+  ...
+# Subtest: 0.3.5 explicit upgrade preserves handwritten and machine work records (project)
+ok 31 - 0.3.5 explicit upgrade preserves handwritten and machine work records (project)
+  ---
+  duration_ms: 2122.4225
+  type: 'test'
+  ...
+# Subtest: 0.3.5 explicit upgrade preserves handwritten and machine work records (workspace)
+ok 32 - 0.3.5 explicit upgrade preserves handwritten and machine work records (workspace)
+  ---
+  duration_ms: 4949.691
+  type: 'test'
+  ...
+# Subtest: 0.3.6 explicit upgrade preserves handwritten and machine work records (project)
+ok 33 - 0.3.6 explicit upgrade preserves handwritten and machine work records (project)
+  ---
+  duration_ms: 2677.5441
+  type: 'test'
+  ...
+# Subtest: 0.3.6 explicit upgrade preserves handwritten and machine work records (workspace)
+ok 34 - 0.3.6 explicit upgrade preserves handwritten and machine work records (workspace)
+  ---
+  duration_ms: 5706.3259
+  type: 'test'
+  ...
+# Subtest: 0.2.1 custom managed work contract is not overwritten even after digest forgery
+ok 35 - 0.2.1 custom managed work contract is not overwritten even after digest forgery
+  ---
+  duration_ms: 1081.8653
+  type: 'test'
+  ...
+# Subtest: 0.3.2 upgrades expose functional planning from entry and activity rules without changing old work
+ok 36 - 0.3.2 upgrades expose functional planning from entry and activity rules without changing old work
+  ---
+  duration_ms: 1490.5253
+  type: 'test'
+  ...
+# Subtest: 0.3.2 customized planning rules are preserved when upgrade conflicts
+ok 37 - 0.3.2 customized planning rules are preserved when upgrade conflicts
+  ---
+  duration_ms: 936.03
+  type: 'test'
+  ...
+# Subtest: 0.3.3 explicit upgrade exposes onboarding and project standards without replacing project evidence (false)
+ok 38 - 0.3.3 explicit upgrade exposes onboarding and project standards without replacing project evidence (false)
+  ---
+  duration_ms: 1363.8821
+  type: 'test'
+  ...
+# Subtest: 0.3.3 explicit upgrade exposes onboarding and project standards without replacing project evidence (true)
+ok 39 - 0.3.3 explicit upgrade exposes onboarding and project standards without replacing project evidence (true)
+  ---
+  duration_ms: 3100.4255
+  type: 'test'
+  ...
+# Subtest: 0.3.3 customized rules remain protected even with a forged digest (false)
+ok 40 - 0.3.3 customized rules remain protected even with a forged digest (false)
+  ---
+  duration_ms: 1473.0371
+  type: 'test'
+  ...
+# Subtest: 0.3.3 customized rules remain protected even with a forged digest (true)
+ok 41 - 0.3.3 customized rules remain protected even with a forged digest (true)
+  ---
+  duration_ms: 2576.0514
+  type: 'test'
+  ...
+# Subtest: 0.3.4 customized rules remain protected even with a forged digest (false)
+ok 42 - 0.3.4 customized rules remain protected even with a forged digest (false)
+  ---
+  duration_ms: 1206.503
+  type: 'test'
+  ...
+# Subtest: 0.3.4 customized rules remain protected even with a forged digest (true)
+ok 43 - 0.3.4 customized rules remain protected even with a forged digest (true)
+  ---
+  duration_ms: 2727.1137
+  type: 'test'
+  ...
+# Subtest: 0.3.5 customized rules remain protected even with a forged digest (false)
+ok 44 - 0.3.5 customized rules remain protected even with a forged digest (false)
+  ---
+  duration_ms: 1190.4717
+  type: 'test'
+  ...
+# Subtest: 0.3.5 customized rules remain protected even with a forged digest (true)
+ok 45 - 0.3.5 customized rules remain protected even with a forged digest (true)
+  ---
+  duration_ms: 2581.1092
+  type: 'test'
+  ...
+# Subtest: 0.3.6 customized rules remain protected even with a forged digest (false)
+ok 46 - 0.3.6 customized rules remain protected even with a forged digest (false)
+  ---
+  duration_ms: 1175.7971
+  type: 'test'
+  ...
+# Subtest: 0.3.6 customized rules remain protected even with a forged digest (true)
+ok 47 - 0.3.6 customized rules remain protected even with a forged digest (true)
+  ---
+  duration_ms: 2703.7159
+  type: 'test'
+  ...
+# Subtest: 0.3.4 planning upgrade preserves user plans and confirmation evidence (false)
+ok 48 - 0.3.4 planning upgrade preserves user plans and confirmation evidence (false)
+  ---
+  duration_ms: 1616.9359
+  type: 'test'
+  ...
+# Subtest: 0.3.4 planning upgrade preserves user plans and confirmation evidence (true)
+ok 49 - 0.3.4 planning upgrade preserves user plans and confirmation evidence (true)
+  ---
+  duration_ms: 3585.6945
+  type: 'test'
+  ...
+1..49
+# tests 49
+# suites 0
+# pass 49
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 127910.9257

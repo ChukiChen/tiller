@@ -6,12 +6,24 @@ import type { FileChange, ProjectMetadata } from './types.js';
 import { resolveRepositoryRoot, resolveWorkRoot, withDeliveryLocation } from './delivery-location.js';
 import { repositoryPath } from './repository-paths.js';
 
-type Gate = 'requirements' | 'design' | 'acceptance' | 'merge' | 'release';
-type Outcome = 'approved' | 'rejected' | 'conditional' | 'revoked';
-interface FileRef { repository: string; path: string }
-interface Scope { repositories: string[]; targets: string[] }
+export type Gate = 'requirements' | 'design' | 'planning' | 'checkpoint' | 'exception' | 'acceptance' | 'merge' | 'release';
+export type Outcome = 'approved' | 'rejected' | 'conditional' | 'revoked';
+export interface FileRef { repository: string; path: string }
+export interface Scope { repositories: string[]; targets: string[] }
+export type ConfirmationOperation = 'start' | 'verify' | 'resume' | 'delivery-ready' | 'merge' | 'release';
+export interface CheckpointBinding {
+  ownerWorkId: string; taskId?: string; checkpointId: string; operation: ConfirmationOperation; definitionDigest: string;
+}
+export interface ExceptionBinding {
+  ownerWorkId: string; taskId?: string; operation: ConfirmationOperation;
+  conditionIds: string[]; basisDigest: string; reason: string; allowedAction: string; endCondition: string;
+}
+export interface ConfirmationReference { workId: string; requestId: string; decisionId: string }
+export interface DeliveryBinding { deliveryCheckId: string; deliveryBasisDigest: string }
 export interface MergeBinding {
   documentsVersion: string;
+  deliveryBinding?: DeliveryBinding;
+  deliveryExceptionRefs?: ConfirmationReference[];
   repositories: {
     repository: string;
     review: { provider: string; id: string; url: string };
@@ -23,27 +35,32 @@ export interface MergeBinding {
 interface Source { kind: 'conversation' | 'document'; reference: FileRef; quote: string; presentation: FileRef }
 interface SourceReview { reviewer: string; rationale: string; reviewedAt: string }
 interface Exception { reason: string; allowedAction: string; endCondition: string; source: Source; sourceReview: SourceReview }
-interface RequestInput {
+export interface RequestInput {
   requestId: string; gate: Gate; scope: Scope; subjects: FileRef[]; upstream: string[];
   reviewSummary: string; openIssues: string[]; nextAction: string; exception?: Exception;
   mergeBinding?: MergeBinding;
+  checkpointBinding?: CheckpointBinding;
+  exceptionBinding?: ExceptionBinding;
+  deliveryBinding?: DeliveryBinding;
+  deliveryExceptionRefs?: ConfirmationReference[];
 }
-interface DecisionInput {
+export interface DecisionInput {
   decisionId: string; requestId: string; outcome: Outcome; conditions: string[];
   source: Source; sourceReview?: SourceReview; decidedAt?: string | null;
   reuseOf?: { requestId: string; decisionId: string; reason: string };
 }
-interface BoundFile extends FileRef { sha256: string; snapshot: string }
-interface Request extends RequestInput {
+export interface BoundFile extends FileRef { sha256: string; snapshot: string }
+export interface Request extends RequestInput {
   createdAt: string; files: BoundFile[];
   dependencies: { requestId: string; fingerprint: string; decisionId: string }[];
   exceptionFiles: BoundFile[];
 }
-interface Decision extends DecisionInput { recordedAt: string; files: BoundFile[] }
-interface Registry { schemaVersion: 1 | 2; workId: string; requests: Request[]; decisions: Decision[] }
+export interface Decision extends DecisionInput { recordedAt: string; files: BoundFile[] }
+interface Registry { schemaVersion: 3; workId: string; requests: Request[]; decisions: Decision[] }
 export interface GateResult {
   requestId: string; gate: Gate; status: 'pending' | 'confirmed' | 'rejected' | 'conditional' | 'needs-review' | 'invalidated';
   confirmed: boolean; issues: string[]; decisionId?: string; confirmationBasis?: 'reported-review';
+  deliveryStatus?: 'accepted' | 'accepted-with-exceptions';
   sourceVerification: 'not-independently-verified'; automaticTransition: false;
 }
 export type GateCheck = GateResult & { gateStatus: GateResult['status']; recordValid: true; blockingReasons: string[]; enforcementScope: 'tiller-cli-only'; limitation: string };
@@ -98,7 +115,7 @@ function ref(value: unknown): FileRef {
 }
 function scope(value: unknown): Scope {
   const item = object(value, ['repositories', 'targets'], '范围');
-  return { repositories: strings(item.repositories, '范围仓库', true), targets: strings(item.targets, '范围目标', true) };
+  return { repositories: strings(item.repositories, '范围仓库', true).map(repositoryIdentity), targets: strings(item.targets, '范围目标', true) };
 }
 function source(value: unknown): Source {
   const item = object(value, ['kind', 'reference', 'quote', 'presentation'], '来源');
@@ -119,8 +136,23 @@ function oid(value: unknown): string {
   if (!/^(?:[a-f0-9]{40}|[a-f0-9]{64})$/u.test(result)) fail('版本须为完整提交 OID 或 SHA-256 摘要。');
   return result;
 }
+export function parseDeliveryBinding(value: unknown): DeliveryBinding {
+  const item = object(value, ['deliveryCheckId', 'deliveryBasisDigest'], '整体交付绑定');
+  const deliveryBasisDigest = text(item.deliveryBasisDigest, '整体交付摘要');
+  if (!/^[a-f0-9]{64}$/u.test(deliveryBasisDigest)) fail('整体交付摘要须为 SHA-256。');
+  return { deliveryCheckId: identifier(item.deliveryCheckId), deliveryBasisDigest };
+}
+function deliveryExceptionRefs(value: unknown): ConfirmationReference[] {
+  if (!Array.isArray(value) || value.length > 1000) fail('交付例外引用须为有限数组。');
+  const refs = value.map(raw => {
+    const item = object(raw, ['workId', 'requestId', 'decisionId'], '交付例外引用');
+    return { workId: identifier(item.workId), requestId: identifier(item.requestId), decisionId: identifier(item.decisionId) };
+  });
+  if (new Set(refs.map(ref => `${ref.workId}::${ref.requestId}`.toLowerCase())).size !== refs.length) fail('交付例外引用重复。');
+  return refs;
+}
 function mergeBinding(value: unknown): MergeBinding {
-  const item = object(value, ['documentsVersion', 'repositories'], '合入版本绑定');
+  const item = object(value, ['documentsVersion', 'repositories', 'deliveryBinding', 'deliveryExceptionRefs'], '合入版本绑定');
   if (!Array.isArray(item.repositories) || !item.repositories.length) fail('合入仓库不能为空。');
   const repositories = item.repositories.map(raw => {
     const repo = object(raw, ['repository', 'review', 'sourceOid', 'targetBranch', 'targetOid', 'dependencies', 'checks'], '合入仓库');
@@ -151,11 +183,36 @@ function mergeBinding(value: unknown): MergeBinding {
   if (new Set(repositories.map(repo => repo.repository)).size !== repositories.length) fail('合入仓库不能重复。');
   const documentsVersion = text(item.documentsVersion, '资料版本');
   if (!/^sha256:[a-f0-9]{64}$/u.test(documentsVersion)) oid(documentsVersion);
-  return { documentsVersion, repositories };
+  const bound = item.deliveryBinding === undefined ? undefined : parseDeliveryBinding(item.deliveryBinding);
+  if (item.deliveryExceptionRefs !== undefined && !bound) fail('合入例外必须绑定整体交付对象。');
+  return { documentsVersion, repositories, ...(bound ? { deliveryBinding: bound } : {}),
+    ...(item.deliveryExceptionRefs === undefined ? {} : { deliveryExceptionRefs: deliveryExceptionRefs(item.deliveryExceptionRefs) }) };
+}
+function operationBinding(item: Record<string, unknown>): Pick<CheckpointBinding, 'ownerWorkId' | 'taskId' | 'operation'> {
+  if (typeof item.operation !== 'string' || !['start', 'verify', 'resume', 'delivery-ready', 'merge', 'release'].includes(item.operation)) fail('确认操作无效。');
+  const result: Pick<CheckpointBinding, 'ownerWorkId' | 'taskId' | 'operation'> = { ownerWorkId: identifier(item.ownerWorkId), operation: item.operation as ConfirmationOperation };
+  if (['start', 'verify', 'resume'].includes(result.operation)) result.taskId = identifier(item.taskId);
+  else if (item.taskId !== undefined) fail('交付、合入和发布操作不能声明任务身份。');
+  return result;
+}
+function checkpointBinding(value: unknown): CheckpointBinding {
+  const item = object(value, ['ownerWorkId', 'taskId', 'checkpointId', 'operation', 'definitionDigest'], '人工检查绑定');
+  const definitionDigest = text(item.definitionDigest, '检查点定义摘要');
+  if (!/^[a-f0-9]{64}$/u.test(definitionDigest)) fail('检查点定义摘要须为 SHA-256。');
+  return { ...operationBinding(item), checkpointId: identifier(item.checkpointId), definitionDigest };
+}
+function exceptionBinding(value: unknown): ExceptionBinding {
+  const item = object(value, ['ownerWorkId', 'taskId', 'operation', 'conditionIds', 'basisDigest', 'reason', 'allowedAction', 'endCondition'], '例外绑定');
+  const basisDigest = text(item.basisDigest, '例外对象摘要');
+  if (!/^[a-f0-9]{64}$/u.test(basisDigest)) fail('例外对象摘要须为 SHA-256。');
+  return {
+    ...operationBinding(item), conditionIds: strings(item.conditionIds, '例外条件标识', true).map(identifier), basisDigest,
+    reason: text(item.reason, '例外理由'), allowedAction: text(item.allowedAction, '例外允许动作'), endCondition: text(item.endCondition, '例外失效条件'),
+  };
 }
 function requestInput(value: unknown): RequestInput {
-  const item = object(value, ['requestId', 'gate', 'scope', 'subjects', 'upstream', 'reviewSummary', 'openIssues', 'nextAction', 'exception', 'mergeBinding'], '确认请求');
-  if (!['requirements', 'design', 'acceptance', 'merge', 'release'].includes(String(item.gate))) fail('确认节点无效。');
+  const item = object(value, ['requestId', 'gate', 'scope', 'subjects', 'upstream', 'reviewSummary', 'openIssues', 'nextAction', 'exception', 'mergeBinding', 'checkpointBinding', 'exceptionBinding', 'deliveryBinding', 'deliveryExceptionRefs'], '确认请求');
+  if (typeof item.gate !== 'string' || !['requirements', 'design', 'planning', 'checkpoint', 'exception', 'acceptance', 'merge', 'release'].includes(item.gate)) fail('确认节点无效。');
   if (!Array.isArray(item.subjects) || !item.subjects.length) fail('审阅对象不能为空。');
   const result: RequestInput = {
     requestId: identifier(item.requestId), gate: item.gate as Gate, scope: scope(item.scope), subjects: item.subjects.map(ref),
@@ -170,6 +227,23 @@ function requestInput(value: unknown): RequestInput {
       if (repo.checks.evidence.some(evidence => !result.subjects.some(subject => evidence.repository === subject.repository && evidence.path === subject.path))) fail('检查证据必须列入本次审阅对象以绑定内容快照。');
     }
   } else if (item.mergeBinding !== undefined) fail('只有合入节点可以声明合入版本绑定。');
+  if (item.deliveryBinding !== undefined) {
+    if (result.gate !== 'acceptance' && result.gate !== 'release') fail('整体交付绑定仅用于整体验收或发布。');
+    result.deliveryBinding = parseDeliveryBinding(item.deliveryBinding);
+  }
+  if (result.gate === 'release' && !result.deliveryBinding) fail('release 必须绑定整体交付对象及同对象的 acceptance。');
+  if (item.deliveryExceptionRefs !== undefined) {
+    if (result.gate !== 'release') fail('发布专属例外只能用于 release。');
+    result.deliveryExceptionRefs = deliveryExceptionRefs(item.deliveryExceptionRefs);
+  }
+  if ((result.deliveryBinding || result.gate === 'release') && item.exception !== undefined) fail('整体验收和发布不能使用内嵌例外跳过门禁；须引用具体操作的独立例外。');
+  if (['planning', 'checkpoint', 'exception'].includes(result.gate) && item.exception !== undefined) fail('新确认节点不能通过内嵌例外省略上游确认；例外须使用独立 exception 请求。');
+  if (result.gate === 'checkpoint') result.checkpointBinding = checkpointBinding(item.checkpointBinding);
+  else if (item.checkpointBinding !== undefined) fail('只有 checkpoint 节点可以声明人工检查绑定。');
+  if (result.gate === 'exception') {
+    result.exceptionBinding = exceptionBinding(item.exceptionBinding);
+    if (result.exceptionBinding.allowedAction !== result.nextAction) fail('例外允许动作必须与本请求下一步完全对应。');
+  } else if (item.exceptionBinding !== undefined) fail('只有 exception 节点可以声明例外绑定。');
   if (item.exception !== undefined) {
     const ex = object(item.exception, ['reason', 'allowedAction', 'endCondition', 'source', 'sourceReview'], '例外');
     result.exception = { reason: text(ex.reason, '例外理由'), allowedAction: text(ex.allowedAction, '例外允许动作'), endCondition: text(ex.endCondition, '例外终止条件'), source: source(ex.source), sourceReview: review(ex.sourceReview) };
@@ -181,7 +255,7 @@ function requestInput(value: unknown): RequestInput {
 }
 function decisionInput(value: unknown): DecisionInput {
   const item = object(value, ['decisionId', 'requestId', 'outcome', 'conditions', 'source', 'sourceReview', 'decidedAt', 'reuseOf'], '用户决定');
-  if (!['approved', 'rejected', 'conditional', 'revoked'].includes(String(item.outcome))) fail('用户决定类型无效。');
+  if (typeof item.outcome !== 'string' || !['approved', 'rejected', 'conditional', 'revoked'].includes(item.outcome)) fail('用户决定类型无效。');
   const result: DecisionInput = { decisionId: identifier(item.decisionId), requestId: identifier(item.requestId), outcome: item.outcome as Outcome, conditions: strings(item.conditions, '条件'), source: source(item.source) };
   if (result.outcome === 'conditional' && !result.conditions.length) fail('有条件决定须保留实际条件。');
   if (result.outcome === 'approved' && result.conditions.length) fail('带有条件的批准须使用 conditional，条件核对后由新决定明确接受。');
@@ -200,7 +274,7 @@ function fingerprint(value: Request): string { return digest(json(value)); }
 function registryPath(id: string): string { return `.tiller/work/${identifier(id)}/confirmations.json`; }
 function presentationPath(id: string, requestId: string): string { return `.tiller/work/${id}/reviews/request-${requestId}/presentation.md`; }
 function presentation(request: Request): string {
-  return `# 确认请求 ${request.requestId}\n\n请审阅以下具体范围、对象、未决事项和下一步。批准只适用于本请求。\n\n\`\`\`json\n${json({ requestId: request.requestId, gate: request.gate, scope: request.scope, reviewSummary: request.reviewSummary, openIssues: request.openIssues, nextAction: request.nextAction, subjects: request.files, upstream: request.dependencies, exception: request.exception ?? null, ...(request.mergeBinding ? { mergeBinding: request.mergeBinding } : {}) })}\`\`\`\n`;
+  return `# 确认请求 ${request.requestId}\n\n请审阅以下具体范围、对象、未决事项和下一步。批准只适用于本请求。\n\n\`\`\`json\n${json({ requestId: request.requestId, gate: request.gate, scope: request.scope, reviewSummary: request.reviewSummary, openIssues: request.openIssues, nextAction: request.nextAction, subjects: request.files, upstream: request.dependencies, exception: request.exception ?? null, ...(request.mergeBinding ? { mergeBinding: request.mergeBinding } : {}), ...(request.checkpointBinding ? { checkpointBinding: request.checkpointBinding } : {}), ...(request.exceptionBinding ? { exceptionBinding: request.exceptionBinding } : {}), ...(request.deliveryBinding ? { deliveryBinding: request.deliveryBinding } : {}), ...(request.deliveryExceptionRefs ? { deliveryExceptionRefs: request.deliveryExceptionRefs } : {}) })}\`\`\`\n`;
 }
 
 async function fileText(root: string, reference: FileRef): Promise<string> {
@@ -227,7 +301,7 @@ async function load(root: string, id: string) {
   await assertSharedPaths(root, [location, notes]);
   if (await readTextIfExists(root, notes) === null) fail(`工作说明不存在：${notes}`);
   const original = await readTextIfExists(root, location);
-  const registry: Registry = original === null ? { schemaVersion: 2, workId: id, requests: [], decisions: [] } : parseRegistry(original, id);
+  const registry: Registry = original === null ? { schemaVersion: 3, workId: id, requests: [], decisions: [] } : parseRegistry(original, id);
   return { location, original, registry };
 }
 function boundFiles(value: unknown, id: string): BoundFile[] {
@@ -246,10 +320,10 @@ function parseRegistry(contents: string, id: string): Registry {
   let raw: unknown;
   try { raw = JSON.parse(contents); } catch { fail('确认记录不是有效 JSON。'); }
   const item = object(raw, ['schemaVersion', 'workId', 'requests', 'decisions'], '确认记录');
-  if (![1, 2].includes(Number(item.schemaVersion)) || typeof item.schemaVersion !== 'number' || item.workId !== id || !Array.isArray(item.requests) || !Array.isArray(item.decisions)) fail('确认记录版本或工作身份无效。');
+  if (item.schemaVersion !== 3) throw Object.assign(new Error(`不支持确认记录版本 ${String(item.schemaVersion)}；仅支持版本 3。请使用 tiller work create 创建新工作并重新核对确认；旧文件保持原位。`), { code: 'UNSUPPORTED_RECORD_VERSION' });
+  if (item.workId !== id || !Array.isArray(item.requests) || !Array.isArray(item.decisions)) fail('确认记录工作身份或请求/决定列表无效。');
   const requests: Request[] = item.requests.map(rawRequest => {
-    const parsed = object(rawRequest, ['requestId', 'gate', 'scope', 'subjects', 'upstream', 'reviewSummary', 'openIssues', 'nextAction', 'exception', 'mergeBinding', 'createdAt', 'files', 'dependencies', 'exceptionFiles'], '已保存请求');
-    if (item.schemaVersion === 1 && (parsed.gate === 'merge' || parsed.mergeBinding !== undefined)) fail('旧版确认记录不能包含合入许可。');
+    const parsed = object(rawRequest, ['requestId', 'gate', 'scope', 'subjects', 'upstream', 'reviewSummary', 'openIssues', 'nextAction', 'exception', 'mergeBinding', 'checkpointBinding', 'exceptionBinding', 'deliveryBinding', 'deliveryExceptionRefs', 'createdAt', 'files', 'dependencies', 'exceptionFiles'], '已保存请求');
     const { createdAt, files, dependencies, exceptionFiles, ...input } = parsed;
     if (!Array.isArray(dependencies)) fail('依赖记录格式无效。');
     return { ...requestInput(input), createdAt: date(createdAt, '创建时间'), files: boundFiles(files, id), exceptionFiles: boundFiles(exceptionFiles, id), dependencies: dependencies.map(rawDependency => {
@@ -265,8 +339,9 @@ function parseRegistry(contents: string, id: string): Registry {
     return { ...decisionInput(input), recordedAt: date(recordedAt, '记录时间'), files: boundFiles(files, id) };
   });
   if (new Set(requests.map(req => req.requestId)).size !== requests.length || new Set(decisions.map(dec => dec.decisionId)).size !== decisions.length) fail('请求或决定标识重复。');
+  for (const request of requests) assertBindingOwner(request, id);
   if (decisions.some(decision => !requests.some(req => req.requestId === decision.requestId))) fail('决定引用不存在的请求。');
-  return { schemaVersion: item.schemaVersion as 1 | 2, workId: id, requests, decisions };
+  return { schemaVersion: 3, workId: id, requests, decisions };
 }
 async function capture(root: string, id: string, category: string, references: FileRef[]) {
   const files: BoundFile[] = [];
@@ -309,7 +384,16 @@ async function checkSource(root: string, value: Source, files: BoundFile[], sour
   } catch (error) { issues.push((error as Error).message); }
   return issues;
 }
-function prerequisite(gate: Gate): Gate | null { return gate === 'design' ? 'requirements' : gate === 'merge' ? 'design' : gate === 'release' ? 'acceptance' : null; }
+function prerequisite(gate: Gate): Gate | null {
+  if (gate === 'design') return 'requirements';
+  if (gate === 'planning' || gate === 'exception' || gate === 'merge') return 'design';
+  if (gate === 'checkpoint') return 'planning';
+  return gate === 'release' ? 'acceptance' : null;
+}
+function assertBindingOwner(request: RequestInput, workId: string): void {
+  const owner = request.checkpointBinding?.ownerWorkId ?? request.exceptionBinding?.ownerWorkId;
+  if (owner !== undefined && owner !== workId) fail('检查点或例外必须登记在其 ownerWorkId 对应工作；关联工作不扩大授权范围。');
+}
 function coverage(request: RequestInput, upstream: Request[]): boolean {
   const needed = prerequisite(request.gate);
   if (request.gate === 'merge') return request.scope.repositories.every(repository => request.scope.targets.every(target => upstream.some(parent => parent.gate === needed && parent.scope.repositories.includes(repository) && parent.scope.targets.includes(target))));
@@ -324,6 +408,8 @@ async function checkReuse(root: string, registry: Registry, request: Request, de
   if (!previous || !original || original.decisionId !== reuse.decisionId || original.outcome !== 'approved' || !original.sourceReview) return ['非语义复用只能引用尚未被替代、拒绝或撤销且已复核来源的原批准。'];
   if (previous.gate !== request.gate || json(previous.scope) !== json(request.scope) || !sameRefs(previous.subjects, request.subjects)) return ['非语义复用必须保持节点、范围和对象身份一致。'];
   if (request.gate === 'merge' && json(previous.mergeBinding) !== json(request.mergeBinding)) return ['合入版本绑定变化必须重新取得用户确认，不能按非语义变化复用。'];
+  if (json(previous.checkpointBinding) !== json(request.checkpointBinding) || json(previous.exceptionBinding) !== json(request.exceptionBinding)) return ['人工检查或例外绑定变化必须重新取得用户确认，不能按非语义变化复用。'];
+  if (json(previous.deliveryBinding) !== json(request.deliveryBinding) || json(previous.deliveryExceptionRefs) !== json(request.deliveryExceptionRefs)) return ['整体交付对象或发布例外变化必须重新确认，不能按非语义变化复用。'];
   if (decision.source.kind !== original.source.kind || json(decision.source.reference) !== json(original.source.reference) || decision.source.quote !== original.source.quote || decision.decidedAt !== original.decidedAt) return ['复核须保留原用户来源、原话及决定时间，不能冒称新用户决定。'];
   const issues = await checkSource(root, original.source, original.files, original.sourceReview);
   try {
@@ -346,6 +432,35 @@ async function checkReuse(root: string, registry: Registry, request: Request, de
   if (previous.exception) issues.push(...await checkSource(root, previous.exception.source, previous.exceptionFiles, previous.exception.sourceReview));
   issues.push(...await checkReuse(root, registry, previous, original, new Set(visited).add(reuse.decisionId), new Set(requestVisited).add(request.requestId)));
   return issues;
+}
+/** Recompute the bound technical object; a saved receipt alone never grants permission. */
+export async function inspectBoundDelivery(root: string, workId: string, value: DeliveryBinding, requestScope?: Scope, operation: 'delivery-ready' | 'merge' | 'release' = 'delivery-ready') {
+  const binding = parseDeliveryBinding(value);
+  const { inspectDeliveryReceipt } = await import('./overall-delivery.js');
+  const inspected = await inspectDeliveryReceipt(root, workId, binding.deliveryCheckId);
+  if (!(operation === 'delivery-ready' ? inspected.matches : inspected.objectMatches) || inspected.current.basisDigest !== binding.deliveryBasisDigest
+    || inspected.receipt.basisDigest !== binding.deliveryBasisDigest) fail('整体交付回执与当前对象不一致，须重新核对并展示。');
+  if (requestScope && (!inspected.current.scope.repositories.every(repository => requestScope.repositories.includes(repository))
+    || !inspected.current.scope.targets.every(target => requestScope.targets.includes(target)))) fail('确认范围没有覆盖绑定的完整交付对象。');
+  return inspected;
+}
+async function inspectRequestDelivery(root: string, registry: Registry, request: Request, checkAcceptance: boolean) {
+  const inspected = await inspectBoundDelivery(root, registry.workId, request.deliveryBinding!, request.scope, request.gate === 'release' ? 'release' : 'delivery-ready');
+  if (request.gate === 'release') {
+    const { inspectExceptions } = await import('./gate-exceptions.js');
+    const exceptionCheck = await inspectExceptions(root, registry.workId, inspected.current.scope, 'release', undefined,
+      inspected.current.issues, inspected.current.basisDigest, request.deliveryExceptionRefs ?? []);
+    if (!exceptionCheck.operationAllowed) fail('发布交付门禁未满足，delivery-ready 例外不能替代发布专属例外。');
+    const matching = registry.requests.filter(parent => request.upstream.includes(parent.requestId) && parent.gate === 'acceptance'
+      && json(parent.deliveryBinding) === json(request.deliveryBinding));
+    if (!matching.length) fail('发布必须引用同一交付对象的整体验收，普通文档验收不能替代。');
+    if (checkAcceptance) {
+      let accepted = false;
+      for (const parent of matching) if ((await evaluate(root, registry, parent)).confirmed) accepted = true;
+      if (!accepted) fail('发布引用的同对象整体验收当前无效。');
+    }
+  } else if (!inspected.current.operationAllowed) fail('整体验收对象当前未满足交付门禁，且没有覆盖缺口的有效例外。');
+  return inspected.current;
 }
 async function evaluate(root: string, registry: Registry, request: Request, visiting = new Set<string>(), currentBinding?: MergeBinding): Promise<GateResult> {
   const result: GateResult = { requestId: request.requestId, gate: request.gate, status: 'pending', confirmed: false, issues: [], sourceVerification: 'not-independently-verified', automaticTransition: false };
@@ -385,11 +500,19 @@ async function evaluate(root: string, registry: Registry, request: Request, visi
   if (decision.source.presentation.repository !== '.' || decision.source.presentation.path !== presentationPath(registry.workId, request.requestId)) result.issues.push('决定未绑定本请求的具体展示文件。');
   result.issues.push(...await checkSource(root, decision.source, decision.files, decision.sourceReview));
   result.issues.push(...await checkReuse(root, registry, request, decision, new Set(), next));
+  let deliveryReady: boolean | undefined;
+  if (decision.outcome === 'approved' && request.deliveryBinding) {
+    try { deliveryReady = (await inspectRequestDelivery(root, registry, request, false)).technicalReady; }
+    catch (error) { result.issues.push((error as Error).message); }
+  }
   if (decision.outcome === 'revoked') result.status = 'invalidated';
   else if (decision.outcome === 'rejected') result.status = 'rejected';
   else if (decision.outcome === 'conditional') { result.status = 'conditional'; result.issues.push(...decision.conditions.map(condition => `待核对条件：${condition}`)); }
   else if (result.issues.length) result.status = 'needs-review';
-  else { result.status = 'confirmed'; result.confirmed = true; result.confirmationBasis = 'reported-review'; }
+  else {
+    result.status = 'confirmed'; result.confirmed = true; result.confirmationBasis = 'reported-review';
+    if (request.gate === 'acceptance' && request.deliveryBinding) result.deliveryStatus = deliveryReady ? 'accepted' : 'accepted-with-exceptions';
+  }
   if (result.status === 'rejected' || result.status === 'invalidated') result.issues.push('用户已拒绝或撤销此确认。');
   return result;
 }
@@ -397,9 +520,9 @@ async function evaluate(root: string, registry: Registry, request: Request, visi
 export async function requestConfirmation(rootInput: string, id: string, input: unknown) {
   const root = await resolveWorkRoot(rootInput, id);
   const request = requestInput(input);
+  assertBindingOwner(request, id);
   return withProjectLock(root, () => inProject(root, id, true, async () => {
     const data = await load(root, id);
-    assertWritableRegistry(data.registry);
     const existing = data.registry.requests.find(item => item.requestId === request.requestId);
     if (existing) {
       const { createdAt: _createdAt, files: _files, dependencies: _dependencies, exceptionFiles: _exceptionFiles, ...original } = existing;
@@ -448,7 +571,6 @@ export async function recordDecision(rootInput: string, id: string, input: unkno
   const decision = decisionInput(input);
   return withProjectLock(root, () => inProject(root, id, true, async () => {
     const data = await load(root, id);
-    assertWritableRegistry(data.registry);
     const request = data.registry.requests.find(item => item.requestId === decision.requestId);
     if (!request) fail(`确认请求不存在：${decision.requestId}`);
     if (decision.source.presentation.repository !== '.' || decision.source.presentation.path !== presentationPath(id, request.requestId)) fail('决定须引用本请求生成的展示文件。');
@@ -471,6 +593,7 @@ export async function recordDecision(rootInput: string, id: string, input: unkno
     const saved: Decision = { ...decision, recordedAt: new Date().toISOString(), files: captured.files };
     const changed = await checkFiles(root, [...request.files, ...saved.files], false);
     if ((decision.outcome === 'approved' || decision.outcome === 'conditional') && changed.length) fail(changed.join('；'));
+    if (decision.outcome === 'approved' && request.deliveryBinding) await inspectRequestDelivery(root, data.registry, request, true);
     data.registry.decisions.push(saved);
     await applyChanges(root, [...captured.changes, { path: data.location, before: data.original, after: json(data.registry) }]);
     return { changed: true, ...await evaluate(root, data.registry, request), limitation };
@@ -488,6 +611,43 @@ export async function checkGate(rootInput: string, id: string, requestId: string
   });
 }
 
+export type ReadonlyConfirmation<T> = T extends object ? { readonly [K in keyof T]: ReadonlyConfirmation<T[K]> } : T;
+export interface ConfirmationRead {
+  reference: ConfirmationReference;
+  request: Request;
+  decision: Decision;
+  check: GateCheck;
+  requestFingerprint: string;
+  decisionFingerprint: string;
+}
+function freezeConfirmation<T>(value: T): ReadonlyConfirmation<T> {
+  if (value !== null && typeof value === 'object') {
+    for (const child of Object.values(value)) freezeConfirmation(child);
+    Object.freeze(value);
+  }
+  return value as ReadonlyConfirmation<T>;
+}
+
+/** Revalidates an explicit cross-work reference without writing or granting caller scope.
+ * Consumers must match gate, subjects, scope and any operation binding, and recheck before writes.
+ * A structurally valid request can still be pending, rejected or stale; only check.confirmed is approval.
+ */
+export async function readConfirmation(rootInput: string, input: ConfirmationReference): Promise<ReadonlyConfirmation<ConfirmationRead>> {
+  const item = object(input, ['workId', 'requestId', 'decisionId'], '确认引用');
+  const reference = { workId: identifier(item.workId), requestId: identifier(item.requestId), decisionId: identifier(item.decisionId) };
+  const root = await resolveWorkRoot(rootInput, reference.workId);
+  return inProject(root, reference.workId, false, async () => {
+    const { registry } = await load(root, reference.workId);
+    const request = registry.requests.find(candidate => candidate.requestId === reference.requestId);
+    if (!request) fail(`确认请求不存在：${reference.workId}/${reference.requestId}`);
+    const decision = registry.decisions.filter(candidate => candidate.requestId === request.requestId).at(-1);
+    if (!decision || decision.decisionId !== reference.decisionId) fail('确认引用未指向该请求的当前决定；不能继承未知或已被替代的批准。');
+    const checked = await evaluate(root, registry, request);
+    const check: GateCheck = { ...checked, gateStatus: checked.status, recordValid: true, blockingReasons: checked.issues, enforcementScope: 'tiller-cli-only', limitation };
+    return freezeConfirmation({ reference, request, decision, check, requestFingerprint: fingerprint(request), decisionFingerprint: digest(json(decision)) });
+  });
+}
+
 /** Caller obtains current platform/dependency state; this function does not authenticate it. */
 export async function checkMergeGate(rootInput: string, id: string, requestId: string, currentBinding: unknown): Promise<GateCheck> {
   const root = await resolveWorkRoot(rootInput, id);
@@ -501,46 +661,6 @@ export async function checkMergeGate(rootInput: string, id: string, requestId: s
   });
 }
 
-function assertWritableRegistry(registry: Registry): void {
-  if (registry.schemaVersion === 1) fail(`确认记录版本 1 只读；先运行 tiller work migrate-confirmations ${registry.workId} --plan，再 --apply <plan-id> 显式迁移。`);
-}
-
-export async function planConfirmationMigration(rootInput: string, id: string) {
-  const root = await resolveWorkRoot(rootInput, id);
-  return inProject(root, id, false, async () => {
-    const data = await load(root, id);
-    const historyPath = `.tiller/work/${id}/history/confirmations-v1.json`;
-    await assertSharedPaths(root, [historyPath]);
-    const history = await readTextIfExists(root, historyPath);
-    const required = data.registry.schemaVersion === 1;
-    const issues = required && history !== null ? ['历史原件位置已存在；不能覆盖，请先核对来源。'] : [];
-    const notes = await readTextIfExists(root, `.tiller/work/${id}/work.md`);
-    const plan = { root, workId: id, fromVersion: data.registry.schemaVersion, toVersion: 2, required, ready: !issues.length, issues, historyPath };
-    return { ...plan, planId: digest(json({ ...plan, original: data.original, history, notes })) };
-  });
-}
-
-export async function applyConfirmationMigration(rootInput: string, id: string, planId: string) {
-  if (!/^[a-f0-9]{64}$/u.test(planId)) fail('迁移计划标识无效；请先预览。');
-  const root = await resolveWorkRoot(rootInput, id);
-  return withProjectLock(root, () => inProject(root, id, true, async () => {
-    const plan = await planConfirmationMigration(root, id);
-    if (plan.planId !== planId) fail('迁移计划已过期；请重新预览。');
-    if (!plan.ready) fail(plan.issues.join('；'));
-    if (!plan.required) return { ...plan, changed: false, automaticTransition: false as const };
-    const data = await load(root, id);
-    if (data.original === null) fail('旧版确认原件不存在。');
-    // Preserve every old field and all historical fingerprints; migration never creates approval.
-    const upgraded = JSON.parse(data.original) as Record<string, unknown>;
-    upgraded.schemaVersion = 2;
-    await applyChanges(root, [
-      { path: plan.historyPath, before: null, after: data.original },
-      { path: data.location, before: data.original, after: json(upgraded) },
-    ]);
-    return { ...plan, changed: true, automaticTransition: false as const };
-  }));
-}
-
 export async function inspectConfirmations(rootInput: string, id: string) {
   const root = await resolveWorkRoot(rootInput, id);
   return inProject(root, id, false, async () => {
@@ -548,6 +668,24 @@ export async function inspectConfirmations(rootInput: string, id: string) {
     const requests: GateResult[] = [];
     for (const request of registry.requests) requests.push(await evaluate(root, registry, request));
     return { requests, automaticTransition: false as const, limitation };
+  });
+}
+
+/** The public delivery report calls this after the technical kernel, never from inside it. */
+export async function inspectDeliveryAcceptance(rootInput: string, workId: string, basisDigest: string) {
+  if (!/^[a-f0-9]{64}$/u.test(basisDigest)) fail('整体交付摘要须为 SHA-256。');
+  const root = await resolveWorkRoot(rootInput, workId);
+  return inProject(root, workId, false, async () => {
+    const { registry } = await load(root, workId);
+    const request = registry.requests.filter(candidate => candidate.gate === 'acceptance'
+      && candidate.deliveryBinding?.deliveryBasisDigest === basisDigest).at(-1);
+    if (!request) return { status: 'not-requested' as const, basisDigest, confirmed: false, issues: [] as string[] };
+    const checked = await evaluate(root, registry, request);
+    const status = checked.confirmed ? checked.deliveryStatus!
+      : checked.status === 'rejected' || checked.status === 'invalidated' ? 'rejected' as const
+      : checked.status === 'needs-review' ? 'stale' as const : 'pending' as const;
+    return { status, basisDigest, confirmed: checked.confirmed, requestId: request.requestId,
+      ...(checked.decisionId ? { decisionId: checked.decisionId } : {}), deliveryBinding: request.deliveryBinding!, issues: checked.issues };
   });
 }
 

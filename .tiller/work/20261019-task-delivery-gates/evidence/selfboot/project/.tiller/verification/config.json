@@ -1,0 +1,91 @@
+{
+  "schemaVersion": 1,
+  "modules": [],
+  "requirements": [
+    {
+      "id": "GATE-03",
+      "source": {
+        "repository": ".",
+        "path": "authority/requirements.md"
+      }
+    },
+    {
+      "id": "GATE-06",
+      "source": {
+        "repository": ".",
+        "path": "authority/requirements.md"
+      }
+    },
+    {
+      "id": "GATE-08",
+      "source": {
+        "repository": ".",
+        "path": "authority/requirements.md"
+      }
+    }
+  ],
+  "categories": {
+    "unit": {
+      "applicability": "not-applicable",
+      "reason": "本工作只核对已确认T6的安装后入口与依赖、失败恢复及接续顺序；其他类别不作为本样例完成条件。"
+    },
+    "interface": {
+      "applicability": "not-applicable",
+      "reason": "本工作只核对已确认T6的安装后入口与依赖、失败恢复及接续顺序；其他类别不作为本样例完成条件。"
+    },
+    "integration": {
+      "applicability": "applicable",
+      "reason": "本工作只核对已确认T6的安装后入口与依赖、失败恢复及接续顺序；其他类别不作为本样例完成条件。"
+    },
+    "scenario": {
+      "applicability": "applicable",
+      "reason": "本工作只核对已确认T6的安装后入口与依赖、失败恢复及接续顺序；其他类别不作为本样例完成条件。"
+    },
+    "performance": {
+      "applicability": "not-applicable",
+      "reason": "本工作只核对已确认T6的安装后入口与依赖、失败恢复及接续顺序；其他类别不作为本样例完成条件。"
+    },
+    "security": {
+      "applicability": "not-applicable",
+      "reason": "本工作只核对已确认T6的安装后入口与依赖、失败恢复及接续顺序；其他类别不作为本样例完成条件。"
+    },
+    "reliability": {
+      "applicability": "applicable",
+      "reason": "本工作只核对已确认T6的安装后入口与依赖、失败恢复及接续顺序；其他类别不作为本样例完成条件。"
+    },
+    "compatibility": {
+      "applicability": "not-applicable",
+      "reason": "本工作只核对已确认T6的安装后入口与依赖、失败恢复及接续顺序；其他类别不作为本样例完成条件。"
+    },
+    "usability": {
+      "applicability": "not-applicable",
+      "reason": "本工作只核对已确认T6的安装后入口与依赖、失败恢复及接续顺序；其他类别不作为本样例完成条件。"
+    }
+  },
+  "suites": [
+    {
+      "id": "installed-probe",
+      "repository": ".",
+      "command": "node",
+      "args": [
+        "probe.cjs"
+      ],
+      "cwd": ".",
+      "timeoutMs": 30000,
+      "inputs": [
+        {
+          "repository": ".",
+          "path": "probe.cjs"
+        },
+        {
+          "repository": ".",
+          "path": ".tiller/run.cjs"
+        },
+        {
+          "repository": ".",
+          "path": "authority/package.json"
+        }
+      ]
+    }
+  ]
+}
