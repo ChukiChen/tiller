@@ -1,0 +1,11 @@
+{
+  "afterSha256": "1833e8a9617c665c4124f877b8beb927adbdb4ca6ca77e71ddb843c2958aedbe",
+  "revision": 3,
+  "observedAt": "2026-10-19T14:18:44.4340172Z",
+  "observations": [
+    "21-foundation-failed-verify",
+    "22-downstream-blocked"
+  ],
+  "beforeSha256": "1833e8a9617c665c4124f877b8beb927adbdb4ca6ca77e71ddb843c2958aedbe",
+  "bytesPreserved": true
+}

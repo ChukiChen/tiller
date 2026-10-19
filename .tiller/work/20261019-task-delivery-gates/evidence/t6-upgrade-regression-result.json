@@ -1,0 +1,16 @@
+{
+  "command": "node --test test/upgrade.test.mjs",
+  "fileSha256": "e6be1f6cc41990828ed9be31c27270da130286d190240501d2b69525fdee1556",
+  "durationMs": 128102,
+  "finishedAt": "2026-10-19T15:42:37.2803811Z",
+  "exitCode": 0,
+  "startedAt": "2026-10-19T15:40:29.1747685Z",
+  "tests": 49,
+  "pass": 49,
+  "fail": 0,
+  "skipped": 0,
+  "cancelled": 0,
+  "onlyTwoExpectedChanges": true,
+  "nodeTestDurationMs": 127910.9257,
+  "logSha256": "2f511119c05f462961810dcfa07f56875cd5ddbcee866878b2af7b97667ec98e"
+}

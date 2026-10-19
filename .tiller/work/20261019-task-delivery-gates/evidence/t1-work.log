@@ -1,0 +1,142 @@
+TAP version 13
+# Subtest: schema3 adds design to the same work after matching requirements approval, preserving original content
+ok 1 - schema3 adds design to the same work after matching requirements approval, preserving original content
+  ---
+  duration_ms: 16721.1304
+  type: 'test'
+  ...
+# Subtest: design rejects approved unrelated subjects or insufficient scope without mutation
+ok 2 - design rejects approved unrelated subjects or insufficient scope without mutation
+  ---
+  duration_ms: 11436.106
+  type: 'test'
+  ...
+# Subtest: create and add reference existing shared specifications without copies and reject conflicting aliases
+ok 3 - create and add reference existing shared specifications without copies and reject conflicting aliases
+  ---
+  duration_ms: 10526.3942
+  type: 'test'
+  ...
+# Subtest: creation supports explicit scope for generated documents and direct design inherits approved scope
+ok 4 - creation supports explicit scope for generated documents and direct design inherits approved scope
+  ---
+  duration_ms: 14084.382
+  type: 'test'
+  ...
+# Subtest: cross-repository references require explicit identity, registered repositories and scope
+ok 5 - cross-repository references require explicit identity, registered repositories and scope
+  ---
+  duration_ms: 30435.948
+  type: 'test'
+  ...
+# Subtest: completion chooses an artifact, preserves the other draft and never reports whole work complete
+ok 6 - completion chooses an artifact, preserves the other draft and never reports whole work complete
+  ---
+  duration_ms: 37129.4278
+  type: 'test'
+  ...
+# Subtest: binding imported design requires current requirements, keeps history and invalidates earlier completion
+ok 7 - binding imported design requires current requirements, keeps history and invalidates earlier completion
+  ---
+  duration_ms: 47532.1989
+  type: 'test'
+  ...
+# Subtest: schema 1 rejects reads and mutations without changing historical files
+ok 8 - schema 1 rejects reads and mutations without changing historical files
+  ---
+  duration_ms: 5715.379
+  type: 'test'
+  ...
+# Subtest: schema 2 rejects reads and mutations without changing historical files
+ok 9 - schema 2 rejects reads and mutations without changing historical files
+  ---
+  duration_ms: 3977.9941
+  type: 'test'
+  ...
+# Subtest: reference inputs reject private paths, process-entry artifacts and unsupported self-declared states
+ok 10 - reference inputs reject private paths, process-entry artifacts and unsupported self-declared states
+  ---
+  duration_ms: 822.1247
+  type: 'test'
+  ...
+# Subtest: create refuses an unregistered existing directory instead of silently adopting README notes
+ok 11 - create refuses an unregistered existing directory instead of silently adopting README notes
+  ---
+  duration_ms: 657.306
+  type: 'test'
+  ...
+# Subtest: work check reports actionable structural gaps for unregistered README-only work
+ok 12 - work check reports actionable structural gaps for unregistered README-only work
+  ---
+  duration_ms: 487.6167
+  type: 'test'
+  ...
+# Subtest: completion and resume reject approval of matching files under an unrelated scope
+ok 13 - completion and resume reject approval of matching files under an unrelated scope
+  ---
+  duration_ms: 23395.7031
+  type: 'test'
+  ...
+# Subtest: new work references old specification text with fresh approval and no inherited state
+ok 14 - new work references old specification text with fresh approval and no inherited state
+  ---
+  duration_ms: 12001.9937
+  type: 'test'
+  ...
+# Subtest: current records reject unknown fields at every nested record boundary
+ok 15 - current records reject unknown fields at every nested record boundary
+  ---
+  duration_ms: 38357.1702
+  type: 'test'
+  ...
+# Subtest: CLI creates references and adds design to the same work only after matching confirmation
+ok 16 - CLI creates references and adds design to the same work only after matching confirmation
+  ---
+  duration_ms: 24563.145
+  type: 'test'
+  ...
+# Subtest: CLI rejects removed adoption and migration commands without modifying old files
+ok 17 - CLI rejects removed adoption and migration commands without modifying old files
+  ---
+  duration_ms: 2599.7411
+  type: 'test'
+  ...
+# Subtest: CLI rejects ambiguous artifact options without writing
+ok 18 - CLI rejects ambiguous artifact options without writing
+  ---
+  duration_ms: 2623.8604
+  type: 'test'
+  ...
+# Subtest: inspection diagnoses README-only, handwritten entries and flat history without mutating files
+ok 19 - inspection diagnoses README-only, handwritten entries and flat history without mutating files
+  ---
+  duration_ms: 831.3072
+  type: 'test'
+  ...
+# Subtest: inspection checks current references and missing artifacts without rewriting them
+ok 20 - inspection checks current references and missing artifacts without rewriting them
+  ---
+  duration_ms: 2287.0623
+  type: 'test'
+  ...
+# Subtest: inspection rejects unregistered scope repositories even when artifacts remain local
+ok 21 - inspection rejects unregistered scope repositories even when artifacts remain local
+  ---
+  duration_ms: 1568.2893
+  type: 'test'
+  ...
+# Subtest: inspection rejects symlink access
+ok 22 - inspection rejects symlink access
+  ---
+  duration_ms: 1324.8357
+  type: 'test'
+  ...
+1..22
+# tests 22
+# suites 0
+# pass 22
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 289940.3742

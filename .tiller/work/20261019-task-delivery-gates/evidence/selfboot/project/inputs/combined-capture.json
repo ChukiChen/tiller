@@ -1,0 +1,100 @@
+{
+  "selection": {
+    "caseIds": [],
+    "requirements": [
+      "GATE-03",
+      "GATE-06",
+      "GATE-08"
+    ],
+    "modules": [],
+    "categories": {
+      "unit": {
+        "applicability": "not-applicable",
+        "reason": "本工作只核对已确认T6的安装后入口与依赖、失败恢复及接续顺序；其他类别不作为本样例完成条件。"
+      },
+      "interface": {
+        "applicability": "not-applicable",
+        "reason": "本工作只核对已确认T6的安装后入口与依赖、失败恢复及接续顺序；其他类别不作为本样例完成条件。"
+      },
+      "integration": {
+        "applicability": "applicable",
+        "reason": "本工作只核对已确认T6的安装后入口与依赖、失败恢复及接续顺序；其他类别不作为本样例完成条件。"
+      },
+      "scenario": {
+        "applicability": "applicable",
+        "reason": "本工作只核对已确认T6的安装后入口与依赖、失败恢复及接续顺序；其他类别不作为本样例完成条件。"
+      },
+      "performance": {
+        "applicability": "not-applicable",
+        "reason": "本工作只核对已确认T6的安装后入口与依赖、失败恢复及接续顺序；其他类别不作为本样例完成条件。"
+      },
+      "security": {
+        "applicability": "not-applicable",
+        "reason": "本工作只核对已确认T6的安装后入口与依赖、失败恢复及接续顺序；其他类别不作为本样例完成条件。"
+      },
+      "reliability": {
+        "applicability": "applicable",
+        "reason": "本工作只核对已确认T6的安装后入口与依赖、失败恢复及接续顺序；其他类别不作为本样例完成条件。"
+      },
+      "compatibility": {
+        "applicability": "not-applicable",
+        "reason": "本工作只核对已确认T6的安装后入口与依赖、失败恢复及接续顺序；其他类别不作为本样例完成条件。"
+      },
+      "usability": {
+        "applicability": "not-applicable",
+        "reason": "本工作只核对已确认T6的安装后入口与依赖、失败恢复及接续顺序；其他类别不作为本样例完成条件。"
+      }
+    },
+    "reason": "验证既有T6授权内的安装、顺序及恢复。",
+    "scenarioReason": "实际单仓库临时工程，不含业务模块；跨模式产品行为由独立集成证据覆盖。",
+    "checks": [
+      {
+        "id": "combined-review",
+        "kind": "manual",
+        "artifactIds": [
+          "delivered-probe",
+          "delivered-notes"
+        ],
+        "inputs": [
+          {
+            "repository": ".",
+            "path": "probe.cjs"
+          },
+          {
+            "repository": ".",
+            "path": "docs/recovery.md"
+          },
+          {
+            "repository": ".",
+            "path": ".tiller/run.cjs"
+          },
+          {
+            "repository": ".",
+            "path": "authority/package.json"
+          },
+          {
+            "repository": ".",
+            "path": "candidate.tgz",
+            "binary": true,
+            "provenance": {
+              "repository": ".",
+              "path": "authority/package.json"
+            }
+          }
+        ],
+        "requirements": [
+          "GATE-03",
+          "GATE-06",
+          "GATE-08"
+        ],
+        "categories": [
+          "integration",
+          "scenario",
+          "reliability"
+        ],
+        "reason": "整体核对两项交付及实际操作顺序；任务通过不能代替此检查。"
+      }
+    ]
+  },
+  "environment": "Windows actual combined inspection after both task verifications"
+}

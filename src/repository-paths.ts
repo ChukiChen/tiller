@@ -4,7 +4,7 @@ type RepositoryMetadata = Pick<ProjectMetadata, 'mode' | 'repositories' | 'repos
 
 /** Pure validation: usable while resolving delivery locations without loading the project again. */
 export function validateRepositoryMappings(metadata: RepositoryMetadata): void {
-  if (!['0.1.0', '0.2.0', '0.2.1', '0.2.2', '0.3.0', '0.3.1', '0.3.2', '0.3.3', '0.3.4', '0.3.5'].includes(metadata.resourceVersion)) {
+  if (!['0.1.0', '0.2.0', '0.2.1', '0.2.2', '0.3.0', '0.3.1', '0.3.2', '0.3.3', '0.3.4', '0.3.5', '0.3.6', '0.4.0'].includes(metadata.resourceVersion)) {
     throw new Error('工程资源版本不受支持，不能解析仓库映射。');
   }
   if (!Array.isArray(metadata.repositories)) throw new Error('工程仓库清单格式无效。');

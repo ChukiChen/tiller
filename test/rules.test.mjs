@@ -37,11 +37,24 @@ test('shipped guidance separates planning approval from task execution and histo
   assert.match(core, /必要验证失败或缺项.*不进入依赖它的任务/);
   assert.match(core, /最终成品的测试.*不能倒填/);
   assert.match(core, /每任务技术验证不默认增加人工批准/);
-  assert.match(core, /当前 CLI 尚无实施规划确认类型、任务状态机或依赖调度/);
-  assert.match(read('entry.md'), /取得规划确认.*逐任务/);
+  for (const command of ['work plan register', 'work plan activate', 'work task status', 'work task start', 'work task verify', 'work task resume', 'work delivery-check', 'work delivery-ready']) {
+    assert.ok(core.includes(`\`${command}\``), command);
+  }
+  assert.doesNotMatch(core, /当前 CLI 尚无实施规划确认类型|work adopt|migrate-confirmations/);
+  assert.match(core, /历史回执只证明当时成功.*当前有效性仍须重算/);
+  assert.match(core, /旧版机器记录、未知版本或字段明确拒绝.*保留原文/);
+  assert.match(core, /不得把技术未通过改写成通过/);
+  assert.match(read('entry.md'), /取得 planning 确认并激活.*逐任务/);
   assert.match(read('rules/activities/implementation.md'), /并行改串行.*重新核对当前任务与依赖/);
   assert.match(read('rules/activities/delivery.md'), /必要任务未验证.*不能报告整体技术检查已完成/);
-  assert.match(read('templates/product-design.md'), /展示并取得规划确认后逐任务推进/);
+  assert.match(read('templates/product-design.md'), /展示生成的审阅视图并取得 planning 确认后激活/);
+  const delivery = read('rules/activities/delivery.md');
+  for (const status of ['technicalReady', 'operationAllowed', 'processEvidence', 'acceptance']) assert.ok(delivery.includes(status), status);
+  assert.match(delivery, /accepted-with-exceptions.*保留技术未就绪事实/);
+  assert.match(delivery, /delivery-ready 或 merge 例外不适用/);
+  assert.match(delivery, /普通文档验收不增加整体任务完成前置/);
+  assert.match(read('rules/quality/verification.md'), /verification capture.*captureId/);
+  assert.doesNotMatch(read('entry.md'), /work adopt|migrate-confirmations/);
 });
 
 test('initialization preserves the guidance reading chain and ships no preapproved templates', (t) => {
@@ -94,7 +107,7 @@ test('entry and reading chain expose work contracts without permitting merged sp
   const core = read('rules/core.md');
   assert.equal((core.match(/^## 工作记录约定$/gm) ?? []).length, 1);
   assert.match(core, /简单工作仅可合并.*过程信息.*需求与设计保持分开/);
-  assert.match(core, /规则升级不迁移工作记录/);
+  assert.match(core, /工程资源升级独立进行，不迁移工作记录/);
   assert.match(core, /不回填历史批准、不自动批准设计/);
   assert.match(core, /单个产物交付完成不表示整项软件工作完成/);
   for (const directory of ['activities', 'quality']) {

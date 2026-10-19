@@ -1,0 +1,21 @@
+{
+  "label": "30-task-status",
+  "command": [
+    "node",
+    ".tiller/run.cjs",
+    "work",
+    "task",
+    "status",
+    "20261019-t6-selfboot",
+    "--json"
+  ],
+  "startedAt": "2026-10-19T14:29:02.773Z",
+  "finishedAt": "2026-10-19T14:29:33.473Z",
+  "durationMs": 30698,
+  "exitCode": 1,
+  "signal": null,
+  "error": null,
+  "stdout": "{\"ok\":false,\"workId\":\"20261019-t6-selfboot\",\"revision\":5,\"planningRevision\":\"t6-one\",\"ready\":false,\"technicalReady\":false,\"tasks\":[{\"taskId\":\"foundation\",\"recordedStatus\":\"verified\",\"effectiveStatus\":\"verified\",\"blockingReasons\":[],\"warnings\":[],\"nextAction\":\"当前任务技术验证有效。\",\"attemptId\":\"attempt-4652445baafba54321c25bf7\",\"eventSequence\":3,\"artifactSnapshots\":{\"probe\":{\".::probe.cjs\":\"a55552ce78f33310c5c7890f769bee390109eb5b7b509e083a3f6dd15737fbf3\"}},\"verificationBasisDigest\":\"3c1ff230b279aab3706285b17a6fc667a25209189bd2cfd004351550c2c25560\",\"technicalReady\":true,\"exceptions\":[],\"failureReasons\":[]},{\"taskId\":\"downstream\",\"recordedStatus\":\"active\",\"effectiveStatus\":\"active\",\"blockingReasons\":[],\"warnings\":[],\"nextAction\":\"完成约定产物及验证后预览 verify。\",\"attemptId\":\"attempt-9743e5fa47b928eab421a051\",\"eventSequence\":4,\"artifactSnapshots\":{},\"verificationBasisDigest\":null,\"technicalReady\":false,\"exceptions\":[],\"failureReasons\":[]}],\"blockingReasons\":[],\"issues\":[\"downstream：完成约定产物及验证后预览 verify。\"]}\n",
+  "stderr": "",
+  "pathNormalization": "Local root paths normalized; exact original retained in local observations."
+}

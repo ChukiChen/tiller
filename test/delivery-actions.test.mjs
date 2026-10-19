@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { cpSync, existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { initialize } from '../dist/core.js';
+import { createWork } from '../dist/work.js';
 import { requestConfirmation, recordDecision } from '../dist/confirmations.js';
 import { planDeliveryPreparation, applyDeliveryPreparation, loadDeliveryContext } from '../dist/delivery-environment.js';
 import { planDeliveryAction, applyDeliveryAction, deliveryDocumentsVersion, verifyDeliveryDocuments } from '../dist/delivery-actions.js';
@@ -19,6 +20,7 @@ async function baseFixture() {
   await git(root, ['config', 'user.email', 'synthetic@example.invalid']);
   await git(root, ['config', 'core.autocrlf', 'false']);
   await initialize({ root });
+  await createWork(root, id, 'Delivery actions fixture');
   put(root, `${directory}/work.md`, '# Test work\n');
   put(root, `${directory}/authorization.md`, '# Synthetic authorization\nAllow the explicitly listed fixture actions.\n');
   for (const gate of ['requirements', 'design']) {
@@ -116,6 +118,13 @@ test('multiple push destinations are rejected before any remote write', async t 
   await git(root, ['config', '--add', 'remote.origin.pushurl', other]);
   await assert.rejects(planDeliveryAction(root, id, 'push', input('push', { remote: 'origin', oid: (await git(checkout, ['rev-parse', 'HEAD'])).trim() })), /多个读写地址/u);
   assert.equal((await git(other, ['for-each-ref'])).trim(), '');
+});
+
+test('merge cannot proceed without a current whole-delivery binding', async t => {
+  const { root, checkout } = await setup(t);
+  const head = (await git(checkout, ['rev-parse', 'HEAD'])).trim();
+  await assert.rejects(planDeliveryAction(root, id, 'merge', input('merge', { remote: 'origin' })), /整体交付回执/u);
+  assert.equal((await git(checkout, ['rev-parse', 'HEAD'])).trim(), head);
 });
 
 test('cleanup requires separate authority and refuses dirty or unique records', async t => {
@@ -242,6 +251,7 @@ test('non-Git management documents use verified immutable snapshots without inve
   await git(business, ['add', '--all']);
   await git(business, ['commit', '-m', 'Enable no-Git manager fixture']);
   await initialize({ root, mode: 'workspace', repositories: ['business'] });
+  await createWork(root, id, 'Management fixture', { type: 'change-requirements', scope: { repositories: ['.', 'business'], targets: [id] } });
   put(root, `${directory}/work.md`, '# Non-Git management\n');
   for (const gate of ['requirements', 'design']) {
     put(root, `${directory}/${gate}.md`, `# ${gate}\n`);

@@ -1,0 +1,10 @@
+{
+  "operationId": "activate-t6",
+  "confirmation": {
+    "decisionId": "existing-t6-planning",
+    "workId": "20261019-t6-selfboot",
+    "requestId": "planning"
+  },
+  "revision": "t6-one",
+  "expectedRevision": 1
+}

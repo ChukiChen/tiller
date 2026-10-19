@@ -5,7 +5,7 @@ import test from 'node:test';
 import { initialize, inspectProject, recoverProject, requireReadyProject, sha256, trackedContent } from '../dist/core.js';
 import { applyUpgrade, planUpgrade } from '../dist/upgrade.js';
 import { applyChanges, hasPendingTransaction, withProjectLock } from '../dist/files.js';
-import { fixture, gitRepository, put, snapshot } from './helpers.mjs';
+import { cli, failure, fixture, gitRepository, put, snapshot } from './helpers.mjs';
 
 const read = (root, relative) => readFileSync(join(root, relative), 'utf8');
 
@@ -32,10 +32,29 @@ async function legacy(t, workspace = false, version = '0.1.0') {
     delete metadata.managedFiles[relative];
   }
   metadata.resourceVersion = version;
-  if (!['0.3.1', '0.3.2', '0.3.3', '0.3.4'].includes(version)) delete metadata.repositoryPaths;
+  if (!['0.3.1', '0.3.2', '0.3.3', '0.3.4', '0.3.5', '0.3.6'].includes(version)) delete metadata.repositoryPaths;
   put(root, '.tiller/project.json', JSON.stringify(metadata, null, 2) + '\n');
   return root;
 }
+
+for (const workspace of [false, true]) test(`0.3.5 testing upgrade preserves existing verification assets (${workspace})`, async t => {
+  const root = await legacy(t, workspace, '0.3.5');
+  const assets = {
+    '.tiller/verification/index.md': '# Existing verification\n',
+    '.tiller/verification/modules/custom/unit.yaml': 'schema_version: 1\ncases: []\n',
+    '.tiller/rules/testing.md': '# Existing test policy\n',
+  };
+  for (const [relative, content] of Object.entries(assets)) put(root, relative, content);
+  const before = snapshot(root);
+  const plan = await planUpgrade(root);
+  assert.equal(plan.ready, true, plan.conflicts.join('\n'));
+  assert.deepEqual(snapshot(root), before);
+  const result = await applyUpgrade(root, plan.planId);
+  assert.equal(result.metadata.resourceVersion, '0.4.0');
+  for (const [relative, content] of Object.entries(assets)) assert.equal(read(root, relative), content);
+  assert.match(read(root, '.tiller/rules/quality/verification.md'), /YAML/);
+  assert.equal((await planUpgrade(root)).changes.length, 0);
+});
 
 test('upgrade preview is read-only and stable; legacy init never migrates implicitly', async t => {
   const root = await legacy(t);
@@ -44,7 +63,7 @@ test('upgrade preview is read-only and stable; legacy init never migrates implic
   assert.deepEqual(snapshot(root), before);
   assert.equal(plan.ready, true);
   assert.equal(plan.sourceVersion, '0.1.0');
-  assert.equal(plan.targetVersion, '0.3.5');
+  assert.equal(plan.targetVersion, '0.4.0');
   assert.equal((await planUpgrade(root)).planId, plan.planId);
   assert.equal((await initialize({ root })).changed, false);
   assert.deepEqual(snapshot(root), before);
@@ -67,7 +86,7 @@ test('upgrade preserves section surroundings, custom rules, source and old compl
   const result = await applyUpgrade(root, plan.planId);
   assert.equal(result.ready, true);
   assert.equal(result.changed, true);
-  assert.equal(result.metadata.resourceVersion, '0.3.5');
+  assert.equal(result.metadata.resourceVersion, '0.4.0');
   assert.equal(result.metadata.createdAt, created);
   assert.match(read(root, 'AGENTS.md'), /^用户入口\n/u);
   assert.match(read(root, 'AGENTS.md'), /用户尾部\n$/u);
@@ -230,11 +249,11 @@ test('0.2.0 requires explicit upgrade and preserves custom content and confirmat
   assert.deepEqual(snapshot(root), before);
   assert.equal(plan.ready, true, plan.conflicts.join('\n'));
   assert.equal(plan.sourceVersion, '0.2.0');
-  assert.equal(plan.targetVersion, '0.3.5');
+  assert.equal(plan.targetVersion, '0.4.0');
   assert.equal(plan.changes.at(-1).path, '.tiller/project.json');
   const result = await applyUpgrade(root, plan.planId);
   assert.equal(result.ready, true);
-  assert.equal(result.metadata.resourceVersion, '0.3.5');
+  assert.equal(result.metadata.resourceVersion, '0.4.0');
   assert.equal(result.compatibility, 'read-write');
   const after = snapshot(root);
   assert.equal(read(root, 'AGENTS.md').replace(trackedContent('AGENTS.md', read(root, 'AGENTS.md')), ''),
@@ -270,7 +289,7 @@ test('0.2.0 workspace upgrade selects its own baseline and preserves all reposit
   assert.equal(plan.ready, true, plan.conflicts.join('\n'));
   const result = await applyUpgrade(root, plan.planId);
   assert.equal(result.ready, true);
-  assert.equal(result.metadata.resourceVersion, '0.3.5');
+  assert.equal(result.metadata.resourceVersion, '0.4.0');
   assert.deepEqual(result.metadata.repositories, ['repository-a', 'repository-b']);
   assert.match(read(root, '.tiller/index.md'), /管理方式：独立管理工程。/u);
   const after = snapshot(root);
@@ -279,13 +298,13 @@ test('0.2.0 workspace upgrade selects its own baseline and preserves all reposit
   }
 });
 
-for (const version of ['0.2.1', '0.2.2', '0.3.0', '0.3.1', '0.3.2', '0.3.3', '0.3.4']) for (const workspace of [false, true]) {
+for (const version of ['0.2.1', '0.2.2', '0.3.0', '0.3.1', '0.3.2', '0.3.3', '0.3.4', '0.3.5', '0.3.6']) for (const workspace of [false, true]) {
   test(`${version} explicit upgrade preserves handwritten and machine work records (${workspace ? 'workspace' : 'project'})`, async t => {
     const root = await legacy(t, workspace, version);
     put(root, 'AGENTS.md', '用户自定义前文\n' + read(root, 'AGENTS.md') + '\n用户自定义后文\n');
     put(root, '.tiller/work/old-note.md', '# 既有过程\n');
     put(root, '.tiller/work/old/README.md', '# 手工需求与过程\n');
-    put(root, '.tiller/work/old/record.json', '{"schemaVersion":1,"state":"complete"}\n');
+    put(root, '.tiller/work/old/record.json', JSON.stringify({ schemaVersion: version === '0.3.6' ? 2 : 1, state: 'complete' }) + '\n');
     put(root, '.tiller/work/old/confirmations.json', '{"historical":true}\n');
     const before = snapshot(root);
     assert.equal((await inspectProject(root)).compatibility, 'read-only');
@@ -295,9 +314,9 @@ for (const version of ['0.2.1', '0.2.2', '0.3.0', '0.3.1', '0.3.2', '0.3.3', '0.
     const plan = await planUpgrade(root);
     assert.equal(plan.ready, true, plan.conflicts.join('\n'));
     assert.equal(plan.sourceVersion, version);
-    assert.equal(plan.targetVersion, '0.3.5');
+    assert.equal(plan.targetVersion, '0.4.0');
     assert.deepEqual(snapshot(root), before);
-    assert.ok(plan.warnings.some(warning => warning.includes('工作记录不随规则升级迁移')));
+    assert.ok(plan.warnings.some(warning => warning.includes('工作记录不随资源升级迁移')));
     const result = await applyUpgrade(root, plan.planId);
     assert.equal(result.compatibility, 'read-write');
     assert.deepEqual(result.metadata.repositoryPaths, workspace
@@ -310,6 +329,11 @@ for (const version of ['0.2.1', '0.2.2', '0.3.0', '0.3.1', '0.3.2', '0.3.3', '0.
     const after = snapshot(root);
     for (const [relative, content] of Object.entries(before)) {
       if (relative.startsWith('.tiller/work/') || relative.startsWith('repository-')) assert.equal(after[relative], content);
+    }
+    if (version === '0.3.6') {
+      const rejected = failure(cli(root, 'work', 'resume', 'old'));
+      assert.equal(rejected.error.code, 'UNSUPPORTED_RECORD_VERSION');
+      assert.deepEqual(snapshot(root), after, 'The new CLI must reject old work records without migrating or deleting them');
     }
     assert.deepEqual((await planUpgrade(root)).changes, []);
   });
@@ -341,11 +365,11 @@ test('0.3.2 upgrades expose functional planning from entry and activity rules wi
   const plan = await planUpgrade(root);
   assert.equal(plan.ready, true, plan.conflicts.join('\n'));
   assert.equal(plan.sourceVersion, '0.3.2');
-  assert.equal(plan.targetVersion, '0.3.5');
+  assert.equal(plan.targetVersion, '0.4.0');
   assert.ok(plan.changes.some(change => change.path === '.tiller/rules/core.md'));
   const result = await applyUpgrade(root, plan.planId);
   assert.equal(result.ready, true);
-  assert.equal(result.metadata.resourceVersion, '0.3.5');
+  assert.equal(result.metadata.resourceVersion, '0.4.0');
   assert.match(read(root, 'AGENTS.md'), /功能分块/u);
   assert.match(read(root, '.tiller/rules/core.md'), /## 功能分块与实施安排/u);
   assert.match(read(root, '.tiller/rules/core.md'), /骨架/u);
@@ -377,7 +401,7 @@ for (const workspace of [false, true]) test(`0.3.3 explicit upgrade exposes onbo
   const plan = await planUpgrade(root);
   assert.equal(plan.ready, true, plan.conflicts.join('\n'));
   assert.equal(plan.sourceVersion, '0.3.3');
-  assert.equal(plan.targetVersion, '0.3.5');
+  assert.equal(plan.targetVersion, '0.4.0');
   assert.deepEqual(snapshot(root), before);
   assert.ok(plan.changes.some(change => change.path === '.tiller/rules/core.md'));
   const result = await applyUpgrade(root, plan.planId);
@@ -391,7 +415,7 @@ for (const workspace of [false, true]) test(`0.3.3 explicit upgrade exposes onbo
   }
 });
 
-for (const version of ['0.3.3', '0.3.4']) for (const workspace of [false, true]) test(`${version} customized rules remain protected even with a forged digest (${workspace})`, async t => {
+for (const version of ['0.3.3', '0.3.4', '0.3.5', '0.3.6']) for (const workspace of [false, true]) test(`${version} customized rules remain protected even with a forged digest (${workspace})`, async t => {
   const root = await legacy(t, workspace, version);
   const relative = '.tiller/rules/core.md';
   put(root, relative, read(root, relative) + '\nExisting project-specific rule.\n');
@@ -424,17 +448,17 @@ for (const workspace of [false, true]) test(`0.3.4 planning upgrade preserves us
   const plan = await planUpgrade(root);
   assert.equal(plan.ready, true, plan.conflicts.join('\n'));
   assert.equal(plan.sourceVersion, '0.3.4');
-  assert.equal(plan.targetVersion, '0.3.5');
+  assert.equal(plan.targetVersion, '0.4.0');
   assert.deepEqual(snapshot(root), before);
   assert.ok(plan.changes.some(change => change.path === '.tiller/rules/core.md'));
   const result = await applyUpgrade(root, plan.planId);
   assert.equal(result.ready, true);
-  assert.equal(result.metadata.resourceVersion, '0.3.5');
+  assert.equal(result.metadata.resourceVersion, '0.4.0');
   assert.equal(Object.keys(result.metadata.managedFiles).length, 13);
   assert.match(read(root, '.tiller/rules/core.md'), /### 形成与确认实施规划/u);
   assert.match(read(root, '.tiller/rules/core.md'), /### 骨架和已有基础/u);
   assert.match(read(root, '.tiller/rules/core.md'), /### 逐任务推进与接续/u);
-  assert.match(read(root, 'AGENTS.md'), /取得规划确认/u);
+  assert.match(read(root, 'AGENTS.md'), /取得 planning 确认并激活/u);
   assert.match(read(root, 'AGENTS.md'), /^Custom entry prefix\n/u);
   assert.match(read(root, 'AGENTS.md'), /Custom entry suffix\n$/u);
   for (const [relative, content] of Object.entries(preserved)) assert.equal(read(root, relative), content);

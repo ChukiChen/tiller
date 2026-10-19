@@ -1,0 +1,21 @@
+{
+  "firstRun": {
+    "reason": "Required document missing manual review in fixture; product parser correctly rejected.",
+    "exitCode": 1,
+    "durationMs": 105878
+  },
+  "retrySnapshotSha256": "8d703cd95dcfa75d12a49147b2d19bb48fab494e5cb79a3ba14cadce2145961b",
+  "path": "C:\\Users\\Administrator\\AppData\\Local\\Temp\\tiller-package-snapshot-929e0e61522c4e6897db205de400b0e1\\scripts\\package-gates-smoke.mjs",
+  "firstSnapshotSha256": "5a024c1f663f300bd43672576394ed4df4d9aa010fc7502264f975b6abf2990a",
+  "recordedAt": "2026-10-19T15:25:23.5012902Z",
+  "checks": [
+    "node --check passed",
+    "npm run lint passed",
+    "No original test file imports package-gates-smoke/package-smoke/checkInstalledGates."
+  ],
+  "changes": [
+    "invoke timeout 120000 -> 600000",
+    "Keep execution checks; add separate synthetic manual document checks for task and overall with capture -> read/assert -> record."
+  ],
+  "mainFrozenSha256": "563d871a62465ffa31f3020874a04bbee626a000013059c4e4dee0f3d7cfe524"
+}

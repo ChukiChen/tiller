@@ -1,0 +1,15 @@
+{
+  "type": "change-requirements",
+  "source": {
+    "repository": ".",
+    "path": "authority/requirements.md"
+  },
+  "scope": {
+    "repositories": [
+      "."
+    ],
+    "targets": [
+      "T6 安装与顺序自举"
+    ]
+  }
+}

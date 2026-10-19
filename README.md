@@ -22,11 +22,11 @@ tiller 用工程文件保存这些依据：总体与模块规格持续维护，�
 
 ## 当前进展
 
-当前已实现工程接入、通用规则与资料索引、六类文档模板、同一工作逐步补充需求与设计、已有规格引用及历史资料显式接入，以及确认请求、来源复核记录、内容和上游失效检查。0.3.0 新增单仓库与独立管理的隔离开发、授权提交与推送、MR/PR 适配、合入确认及恢复清理；自动合入的能力限制见下文。文档交付记录须关联人工验收；0.1.0、0.2.0、0.2.1、0.2.2、0.3.0、0.3.1、0.3.2、0.3.3、0.3.4 工程可显式升级到 0.3.5。实施规划、任务拆分和逐任务验证由规则指引，计划及其确认来源由人与 AI 在工作记录中维护。
+当前已实现工程接入、六类文档模板、同一工作逐步补充需求与设计、已有规格引用，以及确认请求、来源复核和内容失效检查。CLI 支持规划登记与激活、任务开始/验证/接续、明确验证选择、整体交付检查及有限例外消费。单仓库与独立管理支持隔离开发、授权提交与推送、MR/PR 适配、合入确认及恢复清理；自动合入的能力限制见下文。文档交付与整体验收分别记录，技术就绪不代替用户验收。
 
 0.3.4 补齐已有项目接手和项目开发规范的流程：已有项目先调查现状与验证基线，复用或补足总体规格及规范，再进入增量开发；新项目在总体设计阶段明确项目规范，骨架任务中落实必要检查。局部任务明确范围并保留必要确认。实际调查、规范编写和项目检查由执行者完成，CLI 不自动逆向业务或运行质量检查。完整开发调度、身份认证和宿主直接写入拦截尚未实现。
 
-0.3.5 将实施规划明确为总体设计与任务执行之间的环节：先展示并确认需求覆盖、任务边界、依赖和验证条件，再逐任务推进。每项任务即时保存证据；最终测试不能替代历史阶段验证。当前没有规划确认专用类型、任务状态机或自动依赖调度，CLI 结构检查通过不代表实际流程合规。已有工程需显式升级，旧工作不会自动拆分或补造批准。
+0.3.5 将实施规划明确为总体设计与任务执行之间的环节；当前实现进一步保存 planning 确认、不可变规划修订及逐任务事件。前置未有效验证时阻断依赖任务；已开始任务的依据变化后须 resume。CLI 不自动编写代码、运行全部测试或调度下一任务，也不能认证宿主是否在受控入口之外执行过操作。旧记录保留原位并拒绝推进，不自动补造历史批准或开始事件。
 
 ## 本地运行与安装
 
@@ -37,7 +37,7 @@ npm ci
 npm run check
 node dist/cli.js --help
 npm pack
-npm install -g ./tiller-0.3.5.tgz
+npm install -g ./tiller-0.4.0.tgz
 ```
 
 当前包尚未发布到 npm 注册表。上面的安装来自本地打包结果，不依赖注册表中同名软件。`npm run test:package` 会执行打包、隔离安装、命令入口和中文路径验证。
@@ -128,7 +128,7 @@ tiller work add 20261015-product-outline --type product-design --requirements-re
 
 草稿形成长期规格时仍需协调单一来源，没有自动提升或移动正文的命令。新会话从工程入口读取规则和记录，用 `resume` 核对全部已登记产物、缺口和确认状态。
 
-`check` 的 `ready` 表示文档结构与相关记录检查结果，不表示用户批准。`resume` 同时呈现确认节点与失效原因；旧版完成标记带有 `legacy-document-completion` 和 `unknown-legacy`，不作为已验收依据。
+`check` 的 `ready` 表示文档结构与相关记录检查结果，不表示用户批准。`resume` 同时呈现确认节点与失效原因；旧格式记录明确拒绝推进，不作为当前已验收依据。
 
 ## 检查与接入已有工作
 
@@ -137,33 +137,9 @@ tiller work inspect --all
 tiller work inspect 20261015-product-outline
 ```
 
-检查不要求先有机器登记；会区分缺少工作入口、未登记、旧格式待迁移和已登记文件丢失。额外 README 可以保留，尚未登记或要求的未来设计不会被当作缺失。检查只读，不自动重命名或推断历史批准。
+检查不要求先有机器登记；会区分缺少工作入口、未登记、不支持的旧格式和已登记文件丢失。额外 README 可以保留，尚未登记或要求的未来设计不会被当作缺失。检查只读，不自动重命名或推断历史批准。
 
-手写资料或旧格式记录通过明确映射接入。以下示例将已有过程入口及需求登记为当前工作，文件须实际存在：
-
-```json
-{
-  "title": "产品总体需求",
-  "level": "product",
-  "scope": { "repositories": ["."], "targets": ["20261015-product-outline"] },
-  "entry": { "repository": ".", "path": ".tiller/work/20261015-product-outline/work.md" },
-  "artifacts": {
-    "requirements": {
-      "type": "product-requirements",
-      "source": { "repository": ".", "path": ".tiller/work/20261015-product-outline/requirements.md" }
-    }
-  }
-}
-```
-
-将映射保存为工程内 JSON 后执行：
-
-```sh
-tiller work adopt 20261015-product-outline --input adoption.json --plan
-tiller work adopt 20261015-product-outline --input adoption.json --apply <plan-id>
-```
-
-计划绑定输入及相关文件，变化后需重新预览。原文、确认与快照保留；旧 `record.json` 另存为工作目录下 `history/record-v1.json`，旧完成记录不会变为新批准。若同一旧文档混合了需求和设计，先整理独立产物再映射，命令不会自行拆文。资源 upgrade 不批量迁移历史工作。
+当前不提供 `work adopt` 或记录迁移入口。旧工作和确认原件保持原位；用新的工作标识 `work create`，通过 `source` 明确引用仍适用的需求或设计，再按当前对象重新核对确认。混合文档先整理角色，不由命令推断拆分。工程资源 `upgrade` 不改写旧工作记录。
 
 接入的历史设计缺少当前有效需求依据时，先取得真实需求确认，再显式关联：
 
@@ -195,7 +171,7 @@ tiller work request-confirmation 20261015-product-outline --input .tiller/work/2
 tiller work check-gate 20261015-product-outline --request requirements-1
 ```
 
-请求保存内容快照并返回 `presentation` 审阅文件。展示该文件及其对应正文后等待用户决定；存在关键未决项时应先解决，不为了通过而把 `openIssues` 填为空。节点包括 `requirements`、`design`、`acceptance`、`release`；设计需引用同一工作中覆盖其范围的需求确认，发布需引用对应验收。`upstream` 填这些请求标识。独立管理工程的业务文件使用已登记仓库名及仓库内相对路径，不能借管理根身份绕过该仓库的共享检查。
+请求保存内容快照并返回 `presentation` 审阅文件。展示该文件及其对应正文后等待用户决定；存在关键未决项时应先解决，不为了通过而把 `openIssues` 填为空。节点包括 `requirements`、`design`、`planning`、`checkpoint`、`exception`、`acceptance`、`merge`、`release`。设计引用需求，planning 引用设计，checkpoint 引用 planning，exception 引用设计；发布须引用同一整体交付对象的验收。`upstream` 填请求标识，任务/规划中的确认引用则包含 `workId/requestId/decisionId`。独立管理的业务文件使用稳定仓库标识，不能借管理根身份绕过共享检查。
 
 用户实际作出决定后，保存必要的原话和展示依据，再记录决定。以下字段示意须用真实内容填写，不能直接作为批准依据：
 
@@ -303,18 +279,30 @@ tiller work delivery-status 20261015-student-service
 
 结果未知时保留操作标识，使用 reconcile 先核对；不要重新创建评审或重放推送。清理须先归档共享资料、核对未保存成果并分别授权移除副本和删除分支；本地清理不默认删除远端对象。
 
-旧确认格式的迁移与工程规则升级分开：
+机器记录严格接受当前格式：工作记录与确认记录为版本 3，验证运行与 Git 交付记录为版本 2，规划/任务及整体就绪回执为版本 1。未知版本或字段拒绝，不按缺省值补历史。上述版本指 CLI 维护的记录，不要求给每个命令输入添加 `schemaVersion`；例如规划注册输入没有该字段，内部 `plan` 才有。旧确认不迁移，也不把历史验收变成合入批准。
+
+## 规划、任务与整体交付
 
 ```sh
-tiller work migrate-confirmations 20261015-student-service --plan
-tiller work migrate-confirmations 20261015-student-service --apply <plan-id>
+node .tiller/run.cjs work plan register <work-id> --input registration.json --plan
+node .tiller/run.cjs work plan register <work-id> --input registration.json --apply <plan-id>
+node .tiller/run.cjs work plan activate <work-id> --input activation.json --plan
+node .tiller/run.cjs work plan activate <work-id> --input activation.json --apply <plan-id>
+node .tiller/run.cjs work task status <work-id>
+node .tiller/run.cjs work task start <work-id> --task <task-id> --input operation.json --plan
+node .tiller/run.cjs work task verify <work-id> --task <task-id> --input verification.json --plan
+node .tiller/run.cjs work task resume <work-id> --task <task-id> --input operation.json --plan
+node .tiller/run.cjs work delivery-check <work-id> --input references.json
+node .tiller/run.cjs work delivery-ready <work-id> --input ready.json --plan
 ```
 
-迁移保留 `history/confirmations-v1.json` 原件和原有请求、决定，不把历史验收转为合入批准。
+写操作在核对预览后，用相同输入和 `--apply <plan-id>` 应用。`operationId` 在同一工作内唯一，`expectedRevision` 取当前状态；verify 还必须引用实际 start/resume 返回的 `attemptId`。登记规划不等于批准，激活需当前 planning 确认。task verify 和 delivery-check 只核对已有产物与证据，不执行测试；delivery-ready 保存不可变回执，不自动验收。
+
+字段、可解析的组装示例、检查点摘要和例外约束见[使用指引](resources/usage.md#规划任务与整体交付)。`technicalReady` 表示当前技术条件；`operationAllowed` 可以受明确例外影响。例外不会抹去失败或写成普通 verified，也不会自动传给依赖、合入或发布。历史回执返回 `historical: true`、`currentValidity: not-evaluated`，须重新检查当前有效性。验收/发布用 `deliveryBinding` 绑定具体整体回执及技术摘要；合入在 `mergeBinding` 内绑定，并继续核对 Git 对象和独立授权。
 
 ## 实现与验证范围
 
-源码在 `src/`，通用规则及模板在 `resources/`，测试在 `test/`。没有第三方运行时库，不调用模型、不自动发布。当前实测平台为 Windows；macOS、Linux 尚未实测。工程升级仅支持已知 0.1.0、0.2.0、0.2.1、0.2.2、0.3.0、0.3.1、0.3.2、0.3.3、0.3.4 资源到 0.3.5，尚未实现任意历史版本迁移、远程仓库获取、模式切换或完整开发任务调度。
+源码在 `src/`，通用规则及模板在 `resources/`，测试在 `test/`。没有第三方运行时库，不调用模型、不自动发布。当前实测平台为 Windows；macOS、Linux 尚未实测。工程资源可从已知 0.1.0、0.2.0、0.2.1、0.2.2、0.3.0 至 0.3.6 版本显式升级到 0.4.0；这是资源升级，不是工作记录迁移。尚未实现任意历史格式转换、远程仓库获取、模式切换或自动业务任务调度。
 
 ## 工程文档
 
@@ -330,3 +318,21 @@ tiller work migrate-confirmations 20261015-student-service --apply <plan-id>
 - [开发规范需求](.tiller/specs/modules/standards/requirements.md)
 - [开发规范设计](.tiller/specs/modules/standards/design.md)
 - [首个交付工作及验证](.tiller/work/initial-delivery/work.md)
+
+## 长期测试用例与验证证据
+
+长期用例按 `.tiller/verification/modules/<模块>/<类别>.yaml` 维护，跨模块用例放在 `cross-module/<场景>.yaml`，系统质量用例放在 `system/<专题>.yaml`。模块沿用设计职责，测试代码保留项目语言和原有目录；单元、接口、集成、场景、性能、安全、可靠性、兼容性及易用性分别声明适用范围。
+
+```sh
+node .tiller/run.cjs verification init
+node .tiller/run.cjs verification check
+node .tiller/run.cjs verification run <work-id> --suite <suite-id> --plan
+node .tiller/run.cjs verification run <work-id> --suite <suite-id> --apply <plan-id>
+node .tiller/run.cjs verification capture <work-id> --input observation.json
+node .tiller/run.cjs verification record <work-id> --input <result.json>
+node .tiller/run.cjs verification report <work-id>
+```
+
+`verification init` 按需建立入口和配置，九类默认待明确，不生成业务用例或通过记录。格式、配置示例与操作说明见[使用指引](resources/usage.md)。用例采用受限声明式 YAML，不支持完整 YAML 或脚本执行；复杂测试由既有测试代码实现。
+
+`check` 检查格式、引用与关联，不证明测试充分或实际通过。run/report 可用 `--input` 传入 `{selection}`。`run` 计划明确程序、参数和受检对象；套件退出零不自动变成每条用例通过。人工观察先 `capture` 绑定 `{selection, environment}`，实际观察后 `record` 引用返回的 `captureId`；运行后的逐用例声明可引用实际 run 记录 ID。不能观察后采集当前版本冒充过去证据，也不能手填 execution 检查通过。`report` 使用最新相关尝试并检查证据、定义及完整产物快照，不替代验收或真实 AI 行为评测。未声明依赖和外部环境仍需人工核对。

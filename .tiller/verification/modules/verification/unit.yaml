@@ -1,0 +1,16 @@
+schema_version: 1
+cases:
+  - id: TC-VERIFY-YAML
+    title: 声明式 YAML 可解析且歧义语法被拒绝
+    modules: ["verification"]
+    categories: ["unit"]
+    requirements: ["VERIFY-03","VERIFY-05"]
+    given: ["有效与无效声明式输入"]
+    when: ["解析声明"]
+    then: ["有效输入保留语义，不支持语法明确报错"]
+    automation:
+      suite: catalog
+      test_ref: "restricted YAML rejects ambiguous or executable syntax, duplicate and unsafe keys and excessive input"
+      source:
+        repository: .
+        path: test/verification-cases.test.mjs

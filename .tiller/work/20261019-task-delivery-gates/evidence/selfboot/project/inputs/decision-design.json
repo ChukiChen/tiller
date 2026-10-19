@@ -1,0 +1,23 @@
+{
+  "requestId": "design",
+  "decisionId": "existing-t6-design",
+  "outcome": "approved",
+  "conditions": [],
+  "source": {
+    "kind": "conversation",
+    "reference": {
+      "repository": ".",
+      "path": "authority/design-confirmation-source.md"
+    },
+    "quote": "确认",
+    "presentation": {
+      "repository": ".",
+      "path": ".tiller/work/20261019-t6-selfboot/reviews/request-design/presentation.md"
+    }
+  },
+  "sourceReview": {
+    "reviewer": "本次受控验证执行者",
+    "rationale": "核对原规格SHA256与真实确认来源一致，并核对planning-confirmation-source及plan的T6明确授权受控临时工程与实际顺序验证；这里只登记既有决定适用于该范围，不声称新用户批准、最终验收或曾展示本次机器请求。",
+    "reviewedAt": "2026-10-19T14:01:55.697Z"
+  }
+}

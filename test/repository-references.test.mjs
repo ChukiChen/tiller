@@ -5,7 +5,7 @@ import { join, resolve } from 'node:path';
 import { initialize } from '../dist/core.js';
 import { createWork, addWork, readWorkReference, resumeWork, workReferenceLink } from '../dist/work.js';
 import { requestConfirmation, recordDecision, checkGate, checkMergeGate } from '../dist/confirmations.js';
-import { planWorkAdoption, applyWorkAdoption } from '../dist/work-history.js';
+import { inspectWork } from '../dist/work-history.js';
 import { runWithDeliveryBinding } from '../dist/delivery-location.js';
 import { fixture, gitRepository, put } from './helpers.mjs';
 
@@ -76,27 +76,18 @@ test('management references cannot bypass mapped or reserved repository boundari
   await assert.rejects(readWorkReference(root, ref('docs/requirements.md', 'repositories/service-a')), /未登记/u);
 });
 
-test('nested repository historical adoption keeps originals and builds actual-path navigation', async t => {
+test('historical files remain intact and may be referenced by a newly created work', async t => {
   const { root, repository } = await setup(t);
   const entry = '.tiller/work/history/README.md';
   const original = '# Original history\r\nKeep exact source bytes.\r\n';
   put(root, entry, original);
-  const input = {
-    title: 'Historical repository requirements', level: 'change', scope,
-    entry: ref(entry, '.'), artifacts: { requirements: { type: 'change-requirements', source: ref('docs/requirements.md') } },
-  };
-  const plan = await planWorkAdoption(root, 'history', input);
-  assert.equal(plan.ready, true);
-  await applyWorkAdoption(root, 'history', input, plan.planId);
+  assert.equal((await inspectWork(root, 'history')).ready, false);
+  await createWork(root, 'new-history-reference', 'New current work', { type: 'change-requirements', scope, source: ref('docs/requirements.md') });
   assert.equal(text(root, entry), original);
-  const notes = text(root, '.tiller/work/history/work.md');
+  const notes = text(root, '.tiller/work/new-history-reference/work.md');
   const link = notes.match(/\[requirements\]\(<([^>]+)>\)/)[1];
-  assert.equal(resolve(root, '.tiller/work/history', link), join(repository, 'docs/requirements.md'));
-  assert.deepEqual(JSON.parse(text(root, '.tiller/work/history/record.json')).artifacts.requirements.source, ref('docs/requirements.md'));
-  const bad = structuredClone(input);
-  bad.scope.repositories = ['.'];
-  bad.artifacts.requirements.source = ref('repositories/service-a/docs/requirements.md', '.');
-  await assert.rejects(planWorkAdoption(root, 'history', bad), /仓库身份/u);
+  assert.equal(resolve(root, '.tiller/work/new-history-reference', link), join(repository, 'docs/requirements.md'));
+  assert.equal(JSON.parse(text(root, '.tiller/work/new-history-reference/record.json')).schemaVersion, 3);
 });
 
 test('merge evidence uses stable repository identity with nested paths', async t => {

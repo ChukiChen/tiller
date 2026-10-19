@@ -1,0 +1,26 @@
+{
+  "label": "25-foundation-verify-preview",
+  "command": [
+    "node",
+    ".tiller/run.cjs",
+    "work",
+    "task",
+    "verify",
+    "20261019-t6-selfboot",
+    "--task",
+    "foundation",
+    "--input",
+    "inputs/verify-foundation-fixed.json",
+    "--plan",
+    "--json"
+  ],
+  "startedAt": "2026-10-19T14:19:49.137Z",
+  "finishedAt": "2026-10-19T14:20:37.925Z",
+  "durationMs": 48784,
+  "exitCode": 0,
+  "signal": null,
+  "error": null,
+  "stdout": "{\"ok\":true,\"operationId\":\"verify-foundation-fixed\",\"planId\":\"8741319abc4074dde2e32442b9b310c8bdfffdbcef12447addc8bb37a46df566\",\"basisDigest\":\"8741319abc4074dde2e32442b9b310c8bdfffdbcef12447addc8bb37a46df566\",\"technicalBasisDigest\":\"4d0dc7184ffd044a6fe573d6154bce9fa6b14a7896331d94120186a8b008f050\",\"changed\":false,\"operationAllowed\":true,\"technicalReady\":true,\"blockingReasons\":[],\"technicalIssues\":[],\"exceptions\":[],\"status\":\"allowed\",\"warnings\":[],\"revision\":3,\"planningRevision\":\"t6-one\",\"taskId\":\"foundation\",\"attemptId\":\"attempt-4652445baafba54321c25bf7\"}\n",
+  "stderr": "",
+  "pathNormalization": "Local root paths normalized; exact original retained in local observations."
+}

@@ -1,0 +1,20 @@
+
+Algorithm Hash                                                             Path
+--------- ----                                                             ----
+SHA256    59C6E9D66A40FA2F5759BF690D03AA5B2FCDEF4962D3DA7EEBC1E0AF6408F8E9 D:\dev_projects_ai\tiller-clean\.tiller\local\worktrees\testing-verification\resources\entry.md
+SHA256    F8FBC67EAF0E72094A2944295A6B9BE56DD7E1A118C8A3C0349655FB920FB839 D:\dev_projects_ai\tiller-clean\.tiller\local\worktrees\testing-verification\resources\rules\core.md
+SHA256    BFD1E5820AC3E362101DF98D8A8273A8AEDEC7D599F40F868379EC2AC7AB3C99 D:\dev_projects_ai\tiller-clean\.tiller\local\worktrees\testing-verification\resources\rules\index.md
+SHA256    1F0D68F302DECD338BD4C939E2F6DD132B1ADF489A5B5315B9121D8DACCDF23A D:\dev_projects_ai\tiller-clean\.tiller\local\worktrees\testing-verification\resources\rules\activities\delivery.md
+SHA256    7D9D95B5EC4E05AA0F61216C3CCCE3DA3F408C6FE4114642E03DEBCA7422320C D:\dev_projects_ai\tiller-clean\.tiller\local\worktrees\testing-verification\resources\rules\activities\design.md
+SHA256    B762F800E7BC864C177156924453C90459C99677F800F4AC434A57EBCB780971 D:\dev_projects_ai\tiller-clean\.tiller\local\worktrees\testing-verification\resources\rules\activities\implementation.md
+SHA256    0708F7A780615BFC16F92E33D0438066E33D496A9FA711233D95C341DC003F5F D:\dev_projects_ai\tiller-clean\.tiller\local\worktrees\testing-verification\resources\rules\quality\documents.md
+SHA256    BBE0675BA10B9C79BEDAE0B466175E7DFC31A5E71117B15B7CFF0AE9C94CFCBB D:\dev_projects_ai\tiller-clean\.tiller\local\worktrees\testing-verification\resources\rules\quality\verification.md
+SHA256    7C93D9225BEE40317FF332E8DBE8E450110DA1A172F53F10134EA519743F001E D:\dev_projects_ai\tiller-clean\.tiller\local\worktrees\testing-verification\resources\templates\product-design.md
+SHA256    FD34A0FBF889E0505A340C9E1B9799EE95D68E9AFF4F46EA30DF14BCF4D79582 D:\dev_projects_ai\tiller-clean\.tiller\local\worktrees\testing-verification\resources\templates\module-design.md
+SHA256    7C76098424D85B72D1ED171717488745344568855BBB61D17E18DF961854D0E5 D:\dev_projects_ai\tiller-clean\.tiller\local\worktrees\testing-verification\resources\templates\change-design.md
+SHA256    1415886D6268D43242A40FD2FE00DD3204E054F3655CF4C3234AA12C9B901548 D:\dev_projects_ai\tiller-clean\.tiller\local\worktrees\testing-verification\resources\templates\product-requirements.md
+SHA256    DB23B2433477C837DD9E4C7A430E9D6E4C5433C35D6E157881B6CA1DCC9DE865 D:\dev_projects_ai\tiller-clean\.tiller\local\worktrees\testing-verification\resources\templates\module-requirements.md
+SHA256    312AEC6378ACE2E032B51349F62AA900DD5CE96EF8566E1F97307493F6F7084A D:\dev_projects_ai\tiller-clean\.tiller\local\worktrees\testing-verification\resources\templates\change-requirements.md
+SHA256    A626B1F2275A4EEF80A53844B64FC209E5D8FE5964F153914F2A37E44D8FB8A9 D:\dev_projects_ai\tiller-clean\.tiller\local\worktrees\testing-verification\test\rules.test.mjs
+
+

@@ -1,0 +1,26 @@
+{
+  "label": "17-probe-initial-execution",
+  "command": [
+    "node",
+    ".tiller/run.cjs",
+    "verification",
+    "run",
+    "20261019-t6-selfboot",
+    "--suite",
+    "installed-probe",
+    "--input",
+    "inputs/probe-selection.json",
+    "--apply",
+    "24821ab7b3622f1bf4c61ff36c94c8ec1ff745b1e4b2d2a1a8430840a568e2f1",
+    "--json"
+  ],
+  "startedAt": "2026-10-19T14:13:12.634Z",
+  "finishedAt": "2026-10-19T14:13:19.566Z",
+  "durationMs": 6928,
+  "exitCode": 1,
+  "signal": null,
+  "error": null,
+  "stdout": "{\"ok\":false,\"error\":{\"code\":\"OPERATION_FAILED\",\"message\":\"测试执行计划已变化，请重新预览。\"}}\n",
+  "stderr": "",
+  "pathNormalization": "Local root paths normalized; exact original retained in local observations."
+}

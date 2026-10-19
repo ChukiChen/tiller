@@ -1,0 +1,22 @@
+{
+  "label": "03-requirements-request",
+  "command": [
+    "node",
+    ".tiller/run.cjs",
+    "work",
+    "request-confirmation",
+    "20261019-t6-selfboot",
+    "--input",
+    "inputs/request-requirements.json",
+    "--json"
+  ],
+  "startedAt": "2026-10-19T13:54:25.280Z",
+  "finishedAt": "2026-10-19T13:54:28.330Z",
+  "durationMs": 3046,
+  "exitCode": 0,
+  "signal": null,
+  "error": null,
+  "stdout": "{\"ok\":true,\"changed\":true,\"requestId\":\"requirements\",\"gate\":\"requirements\",\"status\":\"pending\",\"confirmed\":false,\"issues\":[\"等待用户确认。\"],\"sourceVerification\":\"not-independently-verified\",\"automaticTransition\":false,\"presentation\":\".tiller/work/20261019-t6-selfboot/reviews/request-requirements/presentation.md\",\"limitation\":\"仅核对共享记录、内容与执行者所报复核；不能认证用户身份、自动放行或阻止绕过 CLI 的写入。\"}\n",
+  "stderr": "",
+  "pathNormalization": "Local root paths normalized; exact original retained in local observations."
+}

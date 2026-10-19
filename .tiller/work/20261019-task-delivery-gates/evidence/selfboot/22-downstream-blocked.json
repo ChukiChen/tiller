@@ -1,0 +1,26 @@
+{
+  "label": "22-downstream-blocked",
+  "command": [
+    "node",
+    ".tiller/run.cjs",
+    "work",
+    "task",
+    "start",
+    "20261019-t6-selfboot",
+    "--task",
+    "downstream",
+    "--input",
+    "inputs/start-downstream-blocked.json",
+    "--plan",
+    "--json"
+  ],
+  "startedAt": "2026-10-19T14:17:46.372Z",
+  "finishedAt": "2026-10-19T14:18:25.968Z",
+  "durationMs": 39584,
+  "exitCode": 1,
+  "signal": null,
+  "error": null,
+  "stdout": "{\"ok\":false,\"operationId\":\"start-downstream-blocked\",\"planId\":\"478b2244e89c956a2f936389bda1458072910bca04760876627ac502a3c7463c\",\"basisDigest\":\"478b2244e89c956a2f936389bda1458072910bca04760876627ac502a3c7463c\",\"technicalBasisDigest\":\"833b8bc53469b957540da03723d13d10552629b4fcb9120da9788d8f0a49739a\",\"changed\":false,\"operationAllowed\":false,\"technicalReady\":false,\"blockingReasons\":[{\"code\":\"DEPENDENCY_NOT_VERIFIED\",\"conditionId\":\"condition-bab98f3451d85443c5cc4ac8\",\"message\":\"前置任务 foundation 当前未有效验证：active。\",\"nextAction\":\"补足该条件后重新预览，核对当前对象与证据。\",\"exceptionAllowed\":true,\"taskId\":\"downstream\"}],\"technicalIssues\":[{\"code\":\"DEPENDENCY_NOT_VERIFIED\",\"conditionId\":\"condition-bab98f3451d85443c5cc4ac8\",\"message\":\"前置任务 foundation 当前未有效验证：active。\",\"nextAction\":\"补足该条件后重新预览，核对当前对象与证据。\",\"exceptionAllowed\":true,\"taskId\":\"downstream\"}],\"exceptions\":[],\"status\":\"blocked\",\"warnings\":[],\"revision\":3,\"planningRevision\":\"t6-one\",\"taskId\":\"downstream\",\"attemptId\":\"attempt-e334fad4be15b41508c8293a\",\"issues\":[\"前置任务 foundation 当前未有效验证：active。\"]}\n",
+  "stderr": "",
+  "pathNormalization": "Local root paths normalized; exact original retained in local observations."
+}

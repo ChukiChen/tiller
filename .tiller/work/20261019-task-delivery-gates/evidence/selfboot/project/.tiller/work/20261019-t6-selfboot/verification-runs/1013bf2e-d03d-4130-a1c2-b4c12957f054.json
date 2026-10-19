@@ -1,0 +1,92 @@
+{
+  "schemaVersion": 2,
+  "id": "1013bf2e-d03d-4130-a1c2-b4c12957f054",
+  "workId": "20261019-t6-selfboot",
+  "sequence": 6,
+  "createdAt": "2026-10-19T14:41:58.515Z",
+  "source": "reported",
+  "suite": null,
+  "caseIds": [],
+  "bindings": {
+    "check:combined-review": {
+      "identity": "0c6df5ad6968a7baa084354dd130febff48fcf11c7d9cd9344bdb0e65b318cab",
+      "definition": "1da4794f48b6a97ece37067a92781133378f7803858f208ea96eb3439e2b1f65",
+      "inputs": {
+        ".::probe.cjs": "a55552ce78f33310c5c7890f769bee390109eb5b7b509e083a3f6dd15737fbf3",
+        ".::docs/recovery.md": "a3886d4858d009c22dccef2b443e21a6b11777de0479e322a2435844a6457174",
+        ".::.tiller/run.cjs": "f8477c0292d5a2311d74ba66c4e57e98f6a6049a4da788575830fbd19bc751bb",
+        ".::authority/package.json": "2c3b01296eb45e761d60516b7f10defbd9101ee09cb2bab9908e32761bc192c0",
+        ".::candidate.tgz": "a3877f6936ad4c7ff0a62e7796e83f736f2693c74110c268be6c1fa45c498110",
+        ".::authority/requirements.md": "5738ea2a287fa888ba6e1e28f7b29c1c5472669b9592edbe10d78c730d5a4be8"
+      },
+      "check": {
+        "id": "combined-review",
+        "kind": "manual",
+        "artifactIds": [
+          "delivered-probe",
+          "delivered-notes"
+        ],
+        "inputs": [
+          {
+            "repository": ".",
+            "path": "probe.cjs"
+          },
+          {
+            "repository": ".",
+            "path": "docs/recovery.md"
+          },
+          {
+            "repository": ".",
+            "path": ".tiller/run.cjs"
+          },
+          {
+            "repository": ".",
+            "path": "authority/package.json"
+          },
+          {
+            "repository": ".",
+            "path": "candidate.tgz",
+            "binary": true,
+            "provenance": {
+              "repository": ".",
+              "path": "authority/package.json"
+            }
+          }
+        ],
+        "requirements": [
+          "GATE-03",
+          "GATE-06",
+          "GATE-08"
+        ],
+        "categories": [
+          "integration",
+          "scenario",
+          "reliability"
+        ],
+        "reason": "整体核对两项交付及实际操作顺序；任务通过不能代替此检查。"
+      },
+      "caseChecks": [],
+      "caseId": null,
+      "modules": []
+    }
+  },
+  "evidence": {
+    ".::.tiller/work/20261019-t6-selfboot/evidence/combined-review.md": "b8dee6623175debc196236cc5f532d1881be8ac6a6a81947924b11c9ea7217be"
+  },
+  "captureId": "d93a807e-ab5a-4de4-ba13-bc20bdafc8b4",
+  "environment": "Windows actual combined inspection after both task verifications",
+  "results": [
+    {
+      "checkId": "combined-review",
+      "status": "passed",
+      "evidence": {
+        "repository": ".",
+        "path": ".tiller/work/20261019-t6-selfboot/evidence/combined-review.md"
+      },
+      "note": "采集后实际运行入口探针、读取接续说明，并核对六项输入摘要与真实事件顺序；范围和限制见独立观察。"
+    }
+  ],
+  "execution": null,
+  "staleAfterExecution": false,
+  "digest": "7f6841763f89014452fcc773b2c6ebefd7e4679ff7b522d44c1d78dcaaaeeb36"
+}

@@ -1,0 +1,25 @@
+{
+  "label": "31-resume-preview",
+  "command": [
+    "node",
+    ".tiller/run.cjs",
+    "work",
+    "task",
+    "resume",
+    "20261019-t6-selfboot",
+    "downstream",
+    "--input",
+    "inputs/resume-downstream.json",
+    "--plan",
+    "--json"
+  ],
+  "startedAt": "2026-10-19T14:30:19.464Z",
+  "finishedAt": "2026-10-19T14:30:20.552Z",
+  "durationMs": 1079,
+  "exitCode": 2,
+  "signal": null,
+  "error": null,
+  "stdout": "{\"ok\":false,\"error\":{\"code\":\"INVALID_ARGUMENT\",\"message\":\"work task 需要 status/start/verify/resume 及一个工作标识。\"}}\n",
+  "stderr": "",
+  "pathNormalization": "Local root paths normalized; exact original retained in local observations."
+}

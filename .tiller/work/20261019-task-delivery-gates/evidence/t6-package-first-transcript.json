@@ -1,0 +1,126 @@
+{
+  "synthetic": true,
+  "projectRoot": "C:\\Users\\ADMINI~1\\AppData\\Local\\Temp\\tiller-package-NGDeyU\\中文 工程",
+  "commands": [
+    {
+      "args": [
+        "work",
+        "create",
+        "20261019-package-gates",
+        "--type",
+        "change-requirements",
+        "--title",
+        "Synthetic installed package gate checks"
+      ],
+      "status": 0,
+      "signal": null,
+      "stdout": "{\"ok\":true,\"root\":\"C:\\\\Users\\\\ADMINI~1\\\\AppData\\\\Local\\\\Temp\\\\tiller-package-NGDeyU\\\\中文 工程\",\"id\":\"20261019-package-gates\",\"status\":\"draft\",\"document\":\".tiller/work/20261019-package-gates/requirements.md\",\"source\":{\"repository\":\".\",\"path\":\".tiller/work/20261019-package-gates/requirements.md\"},\"notes\":\".tiller/work/20261019-package-gates/work.md\",\"scope\":{\"repositories\":[\".\"],\"targets\":[\"20261019-package-gates\"]},\"changed\":true,\"automaticTransition\":false}\n",
+      "stderr": ""
+    },
+    {
+      "args": [
+        "work",
+        "delivery-check",
+        "20261019-package-gates"
+      ],
+      "status": 1,
+      "signal": null,
+      "stdout": "{\"ok\":false,\"workId\":\"20261019-package-gates\",\"scope\":{\"repositories\":[\".\"],\"targets\":[\"20261019-package-gates\"]},\"revision\":0,\"planningRevision\":null,\"ready\":false,\"technicalReady\":false,\"operationAllowed\":false,\"issues\":[{\"code\":\"PLANNING_REQUIRED\",\"conditionId\":\"condition-4be47a90278d83c1bb6237ff\",\"message\":\"整体交付尚无已激活规划，无法核对必要任务及交付范围。\",\"nextAction\":\"补足该条件后重新预览，核对当前对象与证据。\",\"exceptionAllowed\":false}],\"blockingReasons\":[{\"code\":\"PLANNING_REQUIRED\",\"conditionId\":\"condition-4be47a90278d83c1bb6237ff\",\"message\":\"整体交付尚无已激活规划，无法核对必要任务及交付范围。\",\"nextAction\":\"补足该条件后重新预览，核对当前对象与证据。\",\"exceptionAllowed\":false}],\"warnings\":[],\"processEvidence\":{\"status\":\"unknown\",\"limitation\":\"仅判断受控记录，不认证未登记的宿主行为。\"},\"acceptance\":{\"status\":\"not-requested\",\"basisDigest\":\"198a35722425d4d84dabb4d052330c01af175af52990400224fcbcd158c63a50\",\"confirmed\":false,\"issues\":[]},\"exceptions\":[],\"inputs\":{\"checkpointRefs\":[],\"evidenceRefs\":[],\"exceptionRefs\":[]},\"basisDigest\":\"198a35722425d4d84dabb4d052330c01af175af52990400224fcbcd158c63a50\",\"requiredTasks\":[]}\n",
+      "stderr": ""
+    },
+    {
+      "args": [
+        "work",
+        "task",
+        "status",
+        "20261019-package-gates"
+      ],
+      "status": 1,
+      "signal": null,
+      "stdout": "{\"ok\":false,\"workId\":\"20261019-package-gates\",\"revision\":0,\"planningRevision\":null,\"ready\":false,\"technicalReady\":false,\"tasks\":[],\"blockingReasons\":[{\"code\":\"PLANNING_REQUIRED\",\"conditionId\":\"condition-e7a89678fab827aa19a3c681\",\"message\":\"尚未激活有效规划。\",\"nextAction\":\"补足该条件后重新预览，核对当前对象与证据。\",\"exceptionAllowed\":false}],\"issues\":[\"尚未激活有效规划。\"]}\n",
+      "stderr": ""
+    },
+    {
+      "args": [
+        "work",
+        "request-confirmation",
+        "20261019-package-gates",
+        "--input",
+        ".tiller/work/20261019-package-gates/request-package-requirements.json"
+      ],
+      "status": 0,
+      "signal": null,
+      "stdout": "{\"ok\":true,\"changed\":true,\"requestId\":\"package-requirements\",\"gate\":\"requirements\",\"status\":\"pending\",\"confirmed\":false,\"issues\":[\"等待用户确认。\"],\"sourceVerification\":\"not-independently-verified\",\"automaticTransition\":false,\"presentation\":\".tiller/work/20261019-package-gates/reviews/request-package-requirements/presentation.md\",\"limitation\":\"仅核对共享记录、内容与执行者所报复核；不能认证用户身份、自动放行或阻止绕过 CLI 的写入。\"}\n",
+      "stderr": ""
+    },
+    {
+      "args": [
+        "work",
+        "record-decision",
+        "20261019-package-gates",
+        "--input",
+        ".tiller/work/20261019-package-gates/decision-package-requirements.json"
+      ],
+      "status": 0,
+      "signal": null,
+      "stdout": "{\"ok\":true,\"changed\":true,\"requestId\":\"package-requirements\",\"gate\":\"requirements\",\"status\":\"confirmed\",\"confirmed\":true,\"issues\":[],\"sourceVerification\":\"not-independently-verified\",\"automaticTransition\":false,\"decisionId\":\"approve-package-requirements\",\"confirmationBasis\":\"reported-review\",\"limitation\":\"仅核对共享记录、内容与执行者所报复核；不能认证用户身份、自动放行或阻止绕过 CLI 的写入。\"}\n",
+      "stderr": ""
+    },
+    {
+      "args": [
+        "work",
+        "add",
+        "20261019-package-gates",
+        "--type",
+        "change-design",
+        "--requirements-request",
+        "package-requirements"
+      ],
+      "status": 0,
+      "signal": null,
+      "stdout": "{\"ok\":true,\"root\":\"C:\\\\Users\\\\ADMINI~1\\\\AppData\\\\Local\\\\Temp\\\\tiller-package-NGDeyU\\\\中文 工程\",\"id\":\"20261019-package-gates\",\"artifact\":\"design\",\"source\":{\"repository\":\".\",\"path\":\".tiller/work/20261019-package-gates/design.md\"},\"changed\":true,\"automaticTransition\":false}\n",
+      "stderr": ""
+    },
+    {
+      "args": [
+        "work",
+        "request-confirmation",
+        "20261019-package-gates",
+        "--input",
+        ".tiller/work/20261019-package-gates/request-package-design.json"
+      ],
+      "status": 0,
+      "signal": null,
+      "stdout": "{\"ok\":true,\"changed\":true,\"requestId\":\"package-design\",\"gate\":\"design\",\"status\":\"pending\",\"confirmed\":false,\"issues\":[\"等待用户确认。\"],\"sourceVerification\":\"not-independently-verified\",\"automaticTransition\":false,\"presentation\":\".tiller/work/20261019-package-gates/reviews/request-package-design/presentation.md\",\"limitation\":\"仅核对共享记录、内容与执行者所报复核；不能认证用户身份、自动放行或阻止绕过 CLI 的写入。\"}\n",
+      "stderr": ""
+    },
+    {
+      "args": [
+        "work",
+        "record-decision",
+        "20261019-package-gates",
+        "--input",
+        ".tiller/work/20261019-package-gates/decision-package-design.json"
+      ],
+      "status": 0,
+      "signal": null,
+      "stdout": "{\"ok\":true,\"changed\":true,\"requestId\":\"package-design\",\"gate\":\"design\",\"status\":\"confirmed\",\"confirmed\":true,\"issues\":[],\"sourceVerification\":\"not-independently-verified\",\"automaticTransition\":false,\"decisionId\":\"approve-package-design\",\"confirmationBasis\":\"reported-review\",\"limitation\":\"仅核对共享记录、内容与执行者所报复核；不能认证用户身份、自动放行或阻止绕过 CLI 的写入。\"}\n",
+      "stderr": ""
+    },
+    {
+      "args": [
+        "work",
+        "plan",
+        "register",
+        "20261019-package-gates",
+        "--plan",
+        "--input",
+        ".tiller/work/20261019-package-gates/register.json"
+      ],
+      "status": 1,
+      "signal": null,
+      "stdout": "{\"ok\":false,\"error\":{\"code\":\"INVALID_PLANNING\",\"message\":\"必要文档产物必须关联人工评审检查。\"}}\n",
+      "stderr": ""
+    }
+  ]
+}

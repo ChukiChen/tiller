@@ -1,0 +1,24 @@
+{
+  "label": "08-register-preview",
+  "command": [
+    "node",
+    ".tiller/run.cjs",
+    "work",
+    "plan",
+    "register",
+    "20261019-t6-selfboot",
+    "--input",
+    "inputs/register.json",
+    "--plan",
+    "--json"
+  ],
+  "startedAt": "2026-10-19T14:02:42.491Z",
+  "finishedAt": "2026-10-19T14:03:03.924Z",
+  "durationMs": 21429,
+  "exitCode": 0,
+  "signal": null,
+  "error": null,
+  "stdout": "{\"ok\":true,\"operationId\":\"register-t6\",\"planId\":\"a05f2597dc457e245a1a97c7c83f029a6e916dd658d63702cdd4a0e98099fb28\",\"basisDigest\":\"a05f2597dc457e245a1a97c7c83f029a6e916dd658d63702cdd4a0e98099fb28\",\"operationAllowed\":true,\"technicalReady\":false,\"blockingReasons\":[],\"changed\":false,\"revision\":0,\"planningRevision\":\"t6-one\",\"changes\":{\"added\":[\"foundation\",\"downstream\"],\"changed\":[],\"retainedCandidates\":[],\"removed\":[],\"removedRequirements\":[]},\"definitionPath\":\".tiller/work/20261019-t6-selfboot/planning/t6-one/definition.json\",\"reviewPath\":\".tiller/work/20261019-t6-selfboot/planning/t6-one/review.md\"}\n",
+  "stderr": "",
+  "pathNormalization": "Local root paths normalized; exact original retained in local observations."
+}

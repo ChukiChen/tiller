@@ -1,0 +1,7 @@
+{
+  "checkedAt": "2026-10-19T14:03:06.5064727Z",
+  "packageVersion": "0.4.0",
+  "checkedFiles": 58,
+  "mismatches": [],
+  "scope": "Installed candidate dist/resources/README/package bytes compared with frozen source snapshot; does not replace package smoke."
+}

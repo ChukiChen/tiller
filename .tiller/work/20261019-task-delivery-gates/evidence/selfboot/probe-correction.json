@@ -1,0 +1,6 @@
+{
+  "afterSha256": "a55552ce78f33310c5c7890f769bee390109eb5b7b509e083a3f6dd15737fbf3",
+  "observedAt": "2026-10-19T14:18:44.5401905Z",
+  "beforeSha256": "4b504db57d3693d492df09c3dba3f5c4af2ae4177311536d0e1c32eeca798828",
+  "reason": "Actual assertion failure and both gate rejections observed before correcting the expected candidate version."
+}

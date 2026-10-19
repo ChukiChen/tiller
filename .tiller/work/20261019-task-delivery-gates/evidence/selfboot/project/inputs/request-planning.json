@@ -1,0 +1,40 @@
+{
+  "requestId": "planning",
+  "gate": "planning",
+  "scope": {
+    "repositories": [
+      "."
+    ],
+    "targets": [
+      "T6 安装与顺序自举"
+    ]
+  },
+  "subjects": [
+    {
+      "repository": ".",
+      "path": ".tiller/work/20261019-t6-selfboot/planning/t6-one/definition.json"
+    },
+    {
+      "repository": ".",
+      "path": ".tiller/work/20261019-t6-selfboot/planning/t6-one/review.md"
+    },
+    {
+      "repository": ".",
+      "path": "authority/design.md"
+    },
+    {
+      "repository": ".",
+      "path": "authority/requirements.md"
+    },
+    {
+      "repository": ".",
+      "path": "authority/selfboot-scope.md"
+    }
+  ],
+  "upstream": [
+    "design"
+  ],
+  "reviewSummary": "细化真实已确认 T6 的受控安装、失败恢复与上下文交接验证。新机器展示晚于既有批准；authority/plan.md 是范围及条件不变的进度快照，不是原批准时的相同字节。",
+  "openIssues": [],
+  "nextAction": "只执行既有T6范围内的安装、失败恢复和接续验证。"
+}

@@ -10,6 +10,8 @@
 
 共同动作定义人工确认的边界：需求确认后设计、总体设计确认后形成并确认实施规划，再按任务细化必要规格并逐项实现验证；交付验收、合入和发布分别确认。每次切换环节均核对具体内容与实际用户决定；读取专项指引或生成模板不表示节点已通过。阶段内符合授权的工作自主推进。涉及代码交付时必读[隔离开发约定](core.md#隔离开发与评审合入)，核对管理方式、活动位置和操作权限。
 
+当前受控流程使用规划登记与激活、task start/verify/resume 和整体 delivery-check/delivery-ready；命令、输入示例及新记录契约见[使用指引](../usage.md)。记录由 CLI 维护，受控检查不认证用户身份、不自动执行后续任务，工程规则升级不转换旧工作记录。
+
 | 当前活动 | 执行指引 | 质量检查 |
 |---|---|---|
 | 接手已有项目或确定局部变更依据 | [已有项目接手](core.md#已有项目接手) | [验证依据](quality/verification.md) |
@@ -17,6 +19,7 @@
 | 形成总体、模块或变更需求 | [需求编写](activities/requirements.md) | [文档质量](quality/documents.md) |
 | 形成总体、模块或变更设计 | [设计编写](activities/design.md) | [文档质量](quality/documents.md) |
 | 形成并确认实施规划、拆分任务及核对依赖 | [实施规划与任务拆分](core.md#功能分块与实施安排) | [验证依据](quality/verification.md) |
+| 定义测试范围、维护长期用例或接入执行结果 | [测试与验证资料](core.md#测试与验证资料) | [验证依据](quality/verification.md) |
 | 修改代码、配置或测试 | [实现](activities/implementation.md) | [验证依据](quality/verification.md) |
 | 验收、交付、发布或交接 | [交付](activities/delivery.md) | [验证依据](quality/verification.md) |
 
