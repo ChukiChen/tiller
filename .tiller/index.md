@@ -19,6 +19,8 @@
 
 ## 已有资料
 
+- [轻量标准流程、旧审计清理与版本策略：工作记录](work/20261022-lightweight-flow/work.md)
+
 - [按任务类型选择与组合工作流程：改动收尾，核心资料与验证边界](work/20261020-typed-workflows/work.md)
 
 - [任务推进与交付门禁：技术验证完成、待验收](work/20261019-task-delivery-gates/work.md)

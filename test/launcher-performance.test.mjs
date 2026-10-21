@@ -60,7 +60,7 @@ test('launcher rejects a syntax error in a nonselected business module before ru
   cpSync(new URL('../dist', import.meta.url), join(install, 'dist'), { recursive: true });
   cpSync(new URL('../resources', import.meta.url), join(install, 'resources'), { recursive: true });
   writeFileSync(join(install, 'package.json'), JSON.stringify({ name: 'tiller', version: '0.5.0', type: 'module', bin: { tiller: 'dist/cli.js' } }));
-  writeFileSync(join(install, 'dist/workflow-transitions.js'), 'invalid JavaScript {{{\n');
+  writeFileSync(join(install, 'dist/repository-paths.js'), 'invalid JavaScript {{{\n');
   const target = join(root, 'must-not-initialize');
   const result = launch(root, ['init', target]);
   assert.equal(result.status, 1);

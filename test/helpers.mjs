@@ -1,10 +1,9 @@
 import assert from 'node:assert/strict';
-import { mkdtempSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
-import { workflowIntentDigest } from '../dist/workflow-policy.js';
 
 export const cliPath = fileURLToPath(new URL('../dist/cli.js', import.meta.url));
 
@@ -26,6 +25,30 @@ export function put(root, path, content) {
   mkdirSync(dirname(target), { recursive: true });
   writeFileSync(target, content);
   return target;
+}
+
+function hasRepositoryAncestor(pathname) {
+  let current = resolve(pathname);
+  while (true) {
+    if (existsSync(join(current, '.git')) || existsSync(join(current, 'HEAD'))) return true;
+    const parent = dirname(current);
+    if (parent === current) return false;
+    current = parent;
+  }
+}
+
+// Some CI sandboxes mark the system temp root as a repository. Keep tests that
+// exercise non-repository behavior isolated without weakening that check.
+export function repositoryFreeFixture(t) {
+  const candidates = process.platform === 'win32' ? [tmpdir()] : ['/dev/shm', tmpdir()];
+  const base = candidates.find(pathname => existsSync(pathname) && !hasRepositoryAncestor(pathname));
+  if (!base) {
+    t.skip('No temporary directory without a repository ancestor is available.');
+    return null;
+  }
+  const root = mkdtempSync(join(base, 'tiller-clean-'));
+  t.after(() => rmSync(resolve(root), { recursive: true, force: true }));
+  return root;
 }
 
 export function cli(root, ...args) {
@@ -87,44 +110,4 @@ export function gitRepository(root, name, separateGitDir) {
   assert.ifError(result.error);
   assert.equal(result.status, 0, result.stderr);
   return path;
-}
-
-// Synthetic user inputs for deterministic tests only; never used as real acceptance evidence.
-export function confirmFixture(root, id, subjects, requestId = 'accept-1', gate = 'acceptance') {
-  const base = `.tiller/work/${id}`;
-  const record = JSON.parse(readFileSync(join(root, base, 'record.json'), 'utf8'));
-  const definition = JSON.parse(readFileSync(join(root, record.workflow.path), 'utf8')).definition;
-  const stage = definition.stages.find(item => item.confirmations.includes(gate));
-  const references = subjects.map(path => ({ repository: '.', path }));
-  let documentBinding;
-  if (gate === 'acceptance') {
-    const document = references[0];
-    const contents = readFileSync(join(root, document.path), 'utf8');
-    const evidence = { repository: '.', path: `${base}/${requestId}-observation.md` };
-    put(root, evidence.path, `# Synthetic document observation\n\nRead ${document.path}: ${Buffer.byteLength(contents)} bytes.\n\n${contents}`);
-    references.push(evidence);
-    documentBinding = { document, evidence };
-  }
-  const inputPath = `${base}/${requestId}-input.json`;
-  put(root, inputPath, JSON.stringify({
-    requestId, gate, scope: { repositories: ['.'], targets: [id] },
-    workflowBinding: { workflowDigest: record.workflow.digest, intentDigest: workflowIntentDigest(record), ...(stage ? { stageId: stage.id } : {}) },
-    ...(documentBinding ? { documentBinding } : {}),
-    subjects: references, upstream: [],
-    reviewSummary: 'Synthetic review for automated tests', openIssues: [], nextAction: 'Record this scoped decision only',
-  }));
-  const request = success(cli(root, 'work', 'request-confirmation', id, '--input', inputPath));
-  const sourcePath = `${base}/${requestId}-user.md`;
-  put(root, sourcePath, '# Synthetic user input\nI accept this exact review for this test.\n');
-  const decisionPath = `${base}/${requestId}-decision.json`;
-  put(root, decisionPath, JSON.stringify({
-    decisionId: `${requestId}-yes`, requestId, outcome: 'approved', conditions: [],
-    source: {
-      kind: 'conversation', reference: { repository: '.', path: sourcePath },
-      quote: 'I accept this exact review for this test.', presentation: { repository: '.', path: request.presentation },
-    },
-    sourceReview: { reviewer: 'synthetic-test-reviewer', rationale: 'Matched the synthetic input to this exact request.', reviewedAt: new Date().toISOString() },
-  }));
-  success(cli(root, 'work', 'record-decision', id, '--input', decisionPath));
-  return requestId;
 }

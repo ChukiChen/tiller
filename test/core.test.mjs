@@ -8,8 +8,7 @@ import { test } from 'node:test';
 import { initialize, inspectProject, recoverProject, parseMetadata, readProjectMetadata, RESOURCE_VERSION, trackedContent, sha256 } from '../dist/core.js';
 import { assertSharedWritePaths } from '../dist/shared-paths.js';
 import { applyChanges, assertSafePath, readTextIfExists, withProjectLock } from '../dist/files.js';
-import { resumeWork } from '../dist/work.js';
-import { createWorkflowWork } from '../dist/workflow-work.js';
+import { repositoryFreeFixture } from './helpers.mjs';
 
 async function project(t) {
   const root = await mkdtemp(path.join(os.tmpdir(), 'tiller-core-'));
@@ -264,36 +263,6 @@ test('shared path checks reject ignored evidence while allowing non-Git projects
   await assert.rejects(assertSharedWritePaths(root, ['../outside']), /不安全/);
 });
 
-test('project index links remain editable without invalidating navigation or work resumption', async t => {
-  const root = await project(t);
-  await initialize({ root });
-  const scope = { repositories: ['.'], targets: ['draft-feature'] };
-  const source = { repository: '.', path: 'navigation-request.md' };
-  const quote = 'Create a requirements draft for navigation testing.';
-  await writeFile(path.join(root, source.path), `# Synthetic request\n${quote}\n`);
-  await createWorkflowWork(root, 'draft-feature', 'Feature requirements', {
-    operationId: 'create-navigation', expectedRevision: 0, workflow: 'requirements',
-    goal: '验证导航可编辑且当前工作可接续。', reason: '本测试仅建立需求草稿工作。', scope, impact: {},
-    basis: [{ reference: source, purpose: '明确合成测试目标与范围。' }],
-    actionSources: [{ actions: ['read', 'write-report'], reference: source, quote, scope }],
-    expectedOutputs: ['clarify-output', 'requirements-output'],
-    completionCriteria: ['导航修改不破坏接入有效性和工作读取。'],
-  });
-  const original = await readTextIfExists(root, '.tiller/index.md');
-  const updated = original + '\n## 当前工作\n\n- [功能需求工作](work/draft-feature/work.md)\n';
-  await writeFile(path.join(root, '.tiller/index.md'), updated);
-  assert.equal((await inspectProject(root)).ready, true);
-  assert.equal((await initialize({ root })).changed, false);
-  assert.equal(await readTextIfExists(root, '.tiller/index.md'), updated);
-  await assert.doesNotReject(resumeWork(root, 'draft-feature'));
-  await writeFile(path.join(root, '.tiller/index.md'), updated.replace('rules/index.md', 'rules/missing.md'));
-  assert.equal((await inspectProject(root)).ready, false);
-  await assert.doesNotReject(resumeWork(root, 'draft-feature'), 'Ordinary work reads do not inspect unrelated navigation resources.');
-  await writeFile(path.join(root, '.tiller/index.md'), '# Index without navigation markers\n');
-  assert.equal((await inspectProject(root)).ready, false);
-  await assert.rejects(initialize({ root }), /缺少 tiller 固定导航区段/);
-});
-
 
 test('only current resource metadata is readable and historical bytes remain untouched', async t => {
   const root = await project(t);
@@ -333,7 +302,8 @@ test('shared path checks honor ancestor ignores and reject bare repositories', a
 });
 
 test('shared path checks preserve fatal configuration and missing Git fallback failures', async t => {
-  const root = await project(t);
+  const root = repositoryFreeFixture(t);
+  if (!root) return;
   const parent = await project(t);
   await promisify(execFile)('git', ['init', '--quiet', parent]);
   const nested = path.join(parent, 'nested');

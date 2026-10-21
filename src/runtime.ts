@@ -59,7 +59,7 @@ export async function bindRuntime(inputRoot: string, currentCli: string): Promis
     if (original !== null) runtime.validateBinding(JSON.parse(original), root);
     const content = JSON.stringify({ schemaVersion: 1, projectRoot: root, cliPath: cli.cliPath }, null, 2) + '\n';
     if (content === original) return;
-    // Delivery locking can route to the anchor; this checkout still owns its local binding.
+    // The project checkout owns its local binding.
     await mkdir(await assertSafePath(root, '.tiller/local'), { recursive: true });
     await assertSafePath(root, '.tiller/local');
     const ignorePath = await assertSafePath(root, '.tiller/local/.gitignore');

@@ -7,7 +7,7 @@ import test from 'node:test';
 import { initialize, META } from '../dist/core.js';
 import { applyChanges, readTextIfExists, readTextInputs, verifyTextInputs, withProjectLock } from '../dist/files.js';
 import { assertSharedWritePaths, assertSharedWriteProofs } from '../dist/shared-paths.js';
-import { fixture, gitRepository, put } from './helpers.mjs';
+import { fixture, gitRepository, put, repositoryFreeFixture } from './helpers.mjs';
 
 async function project(t) {
   const root = fixture(t);
@@ -79,7 +79,8 @@ test('shared writes batch long path lists through one Git stdin request', async 
 });
 
 test('repository discovery avoids non-repository processes and notices later and ancestor repositories', async t => {
-  const root = fixture(t);
+  const root = repositoryFreeFixture(t);
+  if (!root) return;
   await initialize({root});
   put(root, 'shared.md', 'A shared source.\n');
   assert.equal(await countIgnore(root, () => assertSharedWritePaths(root, ['shared.md'])), 0);

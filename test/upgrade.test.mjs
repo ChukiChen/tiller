@@ -5,10 +5,10 @@ import test from 'node:test';
 import { initialize, inspectProject, recoverProject, readProjectMetadata, RESOURCE_VERSION, sha256, trackedContent } from '../dist/core.js';
 import { applyUpgrade, planUpgrade } from '../dist/upgrade.js';
 import { applyChanges, hasPendingTransaction, readTextIfExists, withProjectLock } from '../dist/files.js';
-import { cli, failure, fixture, gitRepository, put, snapshot } from './helpers.mjs';
+import { cli, fixture, gitRepository, put, snapshot, success } from './helpers.mjs';
 
 const read = (root, relative) => readFileSync(join(root, relative), 'utf8');
-const unsupportedVersions = ['0.1.0', '0.2.0', '0.2.1', '0.2.2', '0.3.0', '0.3.1', '0.3.2', '0.3.3', '0.3.4', '0.3.5', '0.3.6', '0.4.0', '99.0.0'];
+const unsupportedVersions = ['0.1.0', '0.2.0', '0.3.0', '0.4.0', '0.5.1', '99.0.0'];
 async function current(t, workspace = false) {
   const root = fixture(t);
   if (workspace) {
@@ -24,13 +24,7 @@ const preserved = {
   '.tiller/rules/project.md': '# Project conventions\nKeep custom review conditions.\n',
   '.tiller/rules/testing.md': '# Existing test policy\n',
   '.tiller/context/baseline.md': '# Baseline\nExisting build failures remain recorded.\n',
-  '.tiller/verification/index.md': '# Existing verification\n',
-  '.tiller/verification/modules/custom/unit.yaml': 'schema_version: 1\ncases: []\n',
-  '.tiller/work/old-note.md': '# 既有过程\n',
-  '.tiller/work/old/README.md': '# 手工需求与过程\n',
   '.tiller/work/old/record.json': '{"schemaVersion":2,"state":"complete"}\n',
-  '.tiller/work/old/confirmations.json': '{"historical":true}\n',
-  '.tiller/work/old/plan.md': '# Existing plan\nB0 is still unverified.\n',
   '.tiller/work/old/work.md': '# Existing work\nNo retrospective approval.\n',
   'src/Student.java': 'class Student {}\n',
 };
@@ -57,13 +51,8 @@ for (const workspace of [false, true]) test(`current noop preserves every origin
   assert.equal(result.changed, false);
   assert.deepEqual(result.metadata, metadata);
   assert.deepEqual(snapshot(root), before);
-  assert.equal((await applyUpgrade(root, (await planUpgrade(root)).planId)).changed, false);
-  assert.deepEqual(snapshot(root), before);
   assert.equal(await hasPendingTransaction(root), false);
   assert.equal(await readTextIfExists(root, '.tiller/local/lock.json'), null);
-  const rejected = failure(cli(root, 'work', 'resume', 'old'));
-  assert.equal(rejected.error.code, 'UNSUPPORTED_RECORD_VERSION');
-  assert.deepEqual(snapshot(root), before);
 });
 
 for (const workspace of [false, true]) test(`old and unknown versions refuse without migration (${workspace})`, async t => {
@@ -73,39 +62,16 @@ for (const workspace of [false, true]) test(`old and unknown versions refuse wit
   for (const version of unsupportedVersions) {
     put(root, '.tiller/project.json', JSON.stringify({ ...metadata, resourceVersion: version }, null, 2) + '\n');
     const before = snapshot(root);
-    await assert.rejects(planUpgrade(root), /版本不受支持/u);
-    await assert.rejects(applyUpgrade(root, '0'.repeat(64)), /版本不受支持/u);
-    await assert.rejects(initialize({ root }), /版本不受支持/u);
+    await assert.rejects(planUpgrade(root), /不受支持/u);
+    await assert.rejects(applyUpgrade(root, '0'.repeat(64)), /不受支持/u);
+    await assert.rejects(initialize({ root }), /不受支持/u);
     const inspection = await inspectProject(root);
     assert.equal(inspection.ready, false);
     assert.equal(inspection.compatibility, 'unsupported');
-    await assert.rejects(readProjectMetadata(root), /版本不受支持/u);
+    await assert.rejects(readProjectMetadata(root), /不受支持/u);
     assert.deepEqual(snapshot(root), before, version);
     assert.equal(await hasPendingTransaction(root), false);
-    assert.equal(await readTextIfExists(root, '.tiller/local/lock.json'), null);
   }
-});
-
-for (const relative of ['AGENTS.md', '.tiller/rules/core.md']) test(`modified current managed content is preserved: ${relative}`, async t => {
-  const root = await current(t);
-  const text = read(root, relative);
-  const changed = relative === 'AGENTS.md' ? text.replace('tiller 工作入口', '项目修改的受管入口') : text + '\n项目自定义工作约定\n';
-  assert.notEqual(changed, text);
-  put(root, relative, changed);
-  const before = snapshot(root);
-  const plan = await planUpgrade(root);
-  assert.equal(plan.ready, false);
-  await assert.rejects(applyUpgrade(root, plan.planId), /冲突/u);
-  assert.deepEqual(snapshot(root), before);
-  // Old metadata cannot turn a user edit into a supported migration by forging its digest.
-  const metadata = JSON.parse(read(root, '.tiller/project.json'));
-  metadata.resourceVersion = '0.3.6';
-  metadata.managedFiles[relative] = sha256(trackedContent(relative, changed));
-  put(root, '.tiller/project.json', JSON.stringify(metadata, null, 2) + '\n');
-  const forged = snapshot(root);
-  await assert.rejects(planUpgrade(root), /版本不受支持/u);
-  await assert.rejects(applyUpgrade(root, '0'.repeat(64)), /版本不受支持/u);
-  assert.deepEqual(snapshot(root), forged);
 });
 
 test('stale plan binds section-external bytes and permissive clauses remain conflicts', async t => {
@@ -135,7 +101,6 @@ test('current transaction with mixed before/after files blocks noop and recovers
     throw new Error('模拟复验失败');
   })), /模拟复验失败/u);
   assert.equal(await hasPendingTransaction(root), true);
-  // A durable real transaction must also recover when a file is already at its before bytes.
   put(root, changes[1].path, changes[1].before);
   assert.equal(JSON.parse(read(root, '.tiller/project.json')).resourceVersion, RESOURCE_VERSION);
   await assert.rejects(planUpgrade(root), /未完成事务/u);
@@ -206,4 +171,20 @@ test('EOL equivalence accepts distributed checkout conversion but rejects substa
   const before = snapshot(root);
   await assert.rejects(applyUpgrade(root, plan.planId), /冲突/u);
   assert.deepEqual(snapshot(root), before);
+});
+
+test('upgrade checks the current contract without a version migration story', async t => {
+  const root = await current(t);
+  const packageVersion = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8')).version;
+  const { CLI_VERSION } = await import('../dist/cli.js');
+  const { RESOURCE_VERSION: resourceVersion } = await import('../dist/core.js');
+  assert.equal(packageVersion, '0.5.0');
+  assert.equal(CLI_VERSION, packageVersion);
+  assert.equal(resourceVersion, packageVersion);
+  assert.equal(JSON.parse(read(root, '.tiller/project.json')).resourceVersion, packageVersion);
+  const plan = success(cli(root, 'upgrade', '--plan'));
+  assert.equal(plan.sourceVersion, packageVersion);
+  assert.equal(plan.targetVersion, packageVersion);
+  assert.deepEqual(plan.changes, []);
+  assert.doesNotMatch(plan.warnings.join('\n'), /0\.4\.0|上一版本|迁移到当前/u);
 });

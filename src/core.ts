@@ -9,7 +9,6 @@ import {
 } from './files.js';
 import type { FileChange, InitializeOptions, ProjectInspection, ProjectMetadata, ProjectMode } from './types.js';
 import type { TextReadInput } from './files.js';
-import { resolveRepositoryRoot } from './delivery-location.js';
 import { repositoryPath, validateRepositoryMappings } from './repository-paths.js';
 import { META, REQUIRED_MANAGED, RESOURCE_VERSION, SCHEMA_VERSION, SHARED_RESOURCES, parseMetadata } from './project-metadata.js';
 import { assertSharedWritePaths } from './shared-paths.js';
@@ -101,9 +100,8 @@ function appendSection(before: string | null, body: string, start: string, end: 
 }
 
 
-async function checkRepository(root: string, repository: string, relative?: string): Promise<string> {
-  const target = relative === undefined ? await resolveRepositoryRoot(root, repository)
-    : relative === '.' ? path.resolve(root) : await assertSafePath(root, relative);
+async function checkRepository(root: string, repository: string, relative: string): Promise<string> {
+  const target = relative === '.' ? path.resolve(root) : await assertSafePath(root, relative);
   if (!(await lstat(target)).isDirectory()) throw new Error(`仓库不是目录：${repository}`);
   const gitPath = await assertSafePath(target, '.git');
   const git = await lstat(gitPath);
@@ -285,7 +283,7 @@ async function inspectProjectState(root: string): Promise<ProjectInspection> {
     }
     for (const repository of result.metadata.repositories) {
       try {
-        const identity = await checkRepository(absoluteRoot, repository);
+        const identity = await checkRepository(absoluteRoot, repository, repositoryPath(result.metadata, repository));
         if (identities.has(identity)) throw new Error('仓库 Git 身份重复。');
         identities.add(identity);
       }

@@ -21,6 +21,6 @@ async function run(args) {
   });
   if (code) process.exit(code);
 }
-await run(['node_modules/typescript/bin/tsc']);
+await run(['scripts/build.mjs']);
 process.stdout.write(`Running ${files.length} test files with concurrency ${concurrency}.\n`);
 await run(['--test', `--test-concurrency=${concurrency}`, ...files.map(file => `test/${file}`)]);
