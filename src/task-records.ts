@@ -121,13 +121,14 @@ export function parseTaskReceipt(value: unknown): TaskReceipt {
 export function validateTaskHistory(state: PlanningState): void {
   const latest = new Map<string, TaskEvent>();
   const attempts = new Set<string>();
+  const receipts = new Map(state.operations.map(receipt => [receipt.operationId, receipt]));
+  let active: Extract<PlanningState['events'][number], { kind: 'planning-activated' }> | undefined;
   for (const event of state.events) {
-    if (event.kind === 'planning-activated') continue;
-    const receipt = state.operations.find(receipt => receipt.operationId === event.operationId);
+    if (event.kind === 'planning-activated') { active = event; continue; }
+    const receipt = receipts.get(event.operationId);
     const expectedKind = event.kind === 'task-started' ? 'task-start' : event.kind === 'task-resumed' ? 'task-resume' : 'task-verify';
     if (!receipt || !('taskId' in receipt) || receipt.kind !== expectedKind || receipt.taskId !== event.taskId || receipt.attemptId !== event.attemptId || receipt.eventSequence !== event.sequence || receipt.planningRevision !== event.planningRevision
       || receipt.technicalBasisDigest !== event.technicalBasisDigest || JSON.stringify(receipt.exceptions) !== JSON.stringify(event.exceptions) || JSON.stringify(receipt.failureReasons) !== JSON.stringify(event.failureReasons)) fail('任务事件与操作回执不一致。');
-    const active = state.events.slice(0, event.sequence - 1).filter(candidate => candidate.kind === 'planning-activated').at(-1);
     if (!active || active.revision !== event.planningRevision) fail('任务事件没有此前对应的活动规划。');
     if (event.exceptions?.some(binding => binding.reference.workId !== state.ownerWorkId) || event.failureReasons?.some(issue => issue.taskId !== undefined && issue.taskId !== event.taskId)) fail('任务例外归属身份不一致。');
     const prior = latest.get(event.taskId);

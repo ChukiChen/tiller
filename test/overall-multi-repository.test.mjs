@@ -3,14 +3,12 @@ import assert from 'node:assert/strict';
 import { existsSync, readFileSync, unlinkSync } from 'node:fs';
 import { join } from 'node:path';
 import { initialize } from '../dist/core.js';
-import { createWork, addWork } from '../dist/work.js';
-import { requestConfirmation } from '../dist/confirmations.js';
-import { readRegisteredPlanning, planningConfirmationSubjects } from '../dist/planning.js';
+import { readWorkflowControlSnapshot } from '../dist/workflow-stages.js';
 import { resolveRepositoryRoot } from '../dist/delivery-location.js';
 import { inspectTaskStatus } from '../dist/tasks.js';
 import { inspectWorkDelivery, planWorkDeliveryReady, applyWorkDeliveryReady, inspectDeliveryReceipt } from '../dist/overall-delivery.js';
 import { fixture, put, gitRepository } from './helpers.mjs';
-import { fixtureDecision, documentSelection } from './planning-helpers.mjs';
+import { setupPlanning, documentSelection } from './planning-helpers.mjs';
 import { activateTaskPlan } from './task-helpers.mjs';
 import { completeDeliveryTask, observeDelivery } from './overall-delivery-helpers.mjs';
 
@@ -22,21 +20,11 @@ async function setupTwoRepositories(t) {
   for (const repository of repositories) gitRepository(root, `repositories/${repository}`);
   await initialize({ root, mode: 'workspace', repositories: repositories.map(id => `repositories/${id}`) });
   const scope = { repositories: ['.', ...repositories], targets: [workId] };
-  await createWork(root, workId, 'Two required repository outputs', { type: 'change-requirements', scope });
-  const directory = `.tiller/work/${workId}`;
-  const requirements = { repository: '.', path: `${directory}/requirements.md` };
-  const design = { repository: '.', path: `${directory}/design.md` };
-  const standard = { repository: '.', path: `${directory}/standard.md` };
-  put(root, requirements.path, '# 共同交付需求\n\nREQ-1：两个业务仓库各有必要操作说明，任一个缺失都不能整体交付。\n');
-  put(root, standard.path, '# 开发规范\n\n逐仓库核对实际文件及证据，共同说明保持单一来源。\n');
-  const request = { scope, subjects: [requirements], upstream: [], reviewSummary: 'Synthetic review explicitly covers both required repositories.', openIssues: [], nextAction: 'Continue this isolated fixture.' };
-  await requestConfirmation(root, workId, { ...request, requestId: 'requirements', gate: 'requirements' });
-  await fixtureDecision(root, workId, 'requirements', 'approve-requirements');
-  await addWork(root, workId, { type: 'change-design', requirementsBasis: { workId, requestId: 'requirements' } });
-  put(root, design.path, '# 共同交付设计\n\n两个独立任务分别绑定业务仓库正文，整体检查同时读取两个必要产物。\n');
-  await requestConfirmation(root, workId, { ...request, requestId: 'design', gate: 'design', subjects: [design, standard], upstream: ['requirements'] });
-  await fixtureDecision(root, workId, 'design', 'approve-design');
-  const basis = { requirements: { workId, requestId: 'requirements', decisionId: 'approve-requirements' }, design: { workId, requestId: 'design', decisionId: 'approve-design' } };
+  const context = await setupPlanning(t, { root, workId, scope,
+    requirementsText: '# 共同交付需求\n\nREQ-1：两个业务仓库各有必要操作说明，任一个缺失都不能整体交付。\n',
+    designText: '# 共同交付设计\n\n两个独立任务分别绑定业务仓库正文，整体检查同时读取两个必要产物。\n',
+    standardText: '# 开发规范\n\n逐仓库核对实际文件及证据，共同说明保持单一来源。\n' });
+  const { requirements, design, standard, basis } = context;
   const tasks = repositories.map(repository => {
     const source = { repository, path: 'docs/result.md' };
     const checkId = `${repository}-review`;
@@ -54,17 +42,12 @@ async function setupTwoRepositories(t) {
     delivery: { requiredTasks: repositories, artifacts, verification, humanCheckpoints: [], openIssues: [] },
     changeReason: 'Explicitly require both business repositories and their combined current evidence.' };
   put(root, '.tiller/verification/config.json', JSON.stringify({ schemaVersion: 1, modules: [], requirements: plan.requirements, categories: verification.categories, suites: [] }));
-  return { root, workId, plan, observationSequence: 0,
-    task: id => plan.tasks.find(task => task.id === id),
+  Object.assign(context, { plan, observationSequence: 0,
+    task: id => context.plan.tasks.find(task => task.id === id),
+    refPath: async ref => ({ root: await resolveRepositoryRoot(root, ref.repository, workId), path: ref.path }),
     write: async (ref, text) => put(await resolveRepositoryRoot(root, ref.repository, workId), ref.path, text),
-    approvePlanning: async (revision, requestId) => {
-      const registered = await readRegisteredPlanning(root, workId, revision);
-      await requestConfirmation(root, workId, { ...request, requestId, gate: 'planning', subjects: planningConfirmationSubjects(workId, registered.record), upstream: ['design'] });
-      const decisionId = `approve-${requestId}`;
-      await fixtureDecision(root, workId, requestId, decisionId);
-      return { workId, requestId, decisionId };
-    },
-  };
+  });
+  return context;
 }
 
 test('one required business repository cannot mask another missing or stale output in overall delivery', async t => {
@@ -79,8 +62,8 @@ test('one required business repository cannot mask another missing or stale outp
   assert.ok(!partial.issues.some(issue => issue.code === 'TASK_NOT_VERIFIED' && issue.taskId === 'service-a'));
 
   await completeDeliveryTask(context, 'service-b');
-  const evidenceRefs = await observeDelivery(context);
-  const readyInput = { operationId: 'both-ready', expectedRevision: context.revision, evidenceRefs };
+  const delivery = await observeDelivery(context);
+  const readyInput = { operationId: 'both-ready', expected: await readWorkflowControlSnapshot(root, workId, true), ...delivery };
   const preview = await planWorkDeliveryReady(root, workId, readyInput);
   assert.equal(preview.technicalReady, true, JSON.stringify(preview.issues));
   assert.equal(preview.operationAllowed, true);

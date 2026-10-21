@@ -5,12 +5,14 @@ import { join } from 'node:path';
 import { initialize } from '../dist/core.js';
 import { requestConfirmation, recordDecision, checkGate, checkMergeGate } from '../dist/confirmations.js';
 import { fixture, put, snapshot } from './helpers.mjs';
+import { seedApprovedDevelopment } from './planning-helpers.mjs';
 
 const id = 'isolated-delivery';
 const directory = `.tiller/work/${id}`;
 const file = path => ({ repository: '.', path: `${directory}/${path}` });
 const evidence = file('checks.md');
-const specification = file('specification.md');
+const specification = file('design.md');
+const contexts = new Map();
 const registryPath = `${directory}/confirmations.json`;
 function binding() {
   return {
@@ -23,11 +25,12 @@ function binding() {
     }],
   };
 }
-function request(requestId, gate, overrides = {}) {
-  return { requestId, gate, scope: { repositories: ['.'], targets: [id] }, subjects: [specification], upstream: [], reviewSummary: '隔离测试确认对象，不代表真实批准。', openIssues: [], nextAction: '检查指定交付', ...overrides };
+function request(root, requestId, gate, overrides = {}) {
+  const context = contexts.get(root);
+  return { requestId, gate, workflowBinding: context.bindings[gate] ?? context.bindings.independent, scope: { repositories: ['.'], targets: [id] }, subjects: [gate === 'requirements' ? context.requirements : specification], upstream: [], reviewSummary: '隔离测试确认对象，不代表真实批准。', openIssues: [], nextAction: '检查指定交付', ...overrides };
 }
-function mergeRequest(requestId = 'merge', overrides = {}) {
-  return request(requestId, 'merge', { subjects: [evidence], upstream: ['design'], mergeBinding: binding(), ...overrides });
+function mergeRequest(root, requestId = 'merge', overrides = {}) {
+  return request(root, requestId, 'merge', { subjects: [evidence], upstream: ['design'], mergeBinding: binding(), ...overrides });
 }
 function decision(root, requestId, decisionId = `approve-${requestId}`, overrides = {}) {
   const reference = file(`source-${decisionId}.md`);
@@ -42,17 +45,22 @@ function decision(root, requestId, decisionId = `approve-${requestId}`, override
 async function setup(t) {
   const root = fixture(t);
   await initialize({ root });
-  put(root, `${directory}/work.md`, '# 隔离交付\n');
-  put(root, specification.path, '# 测试规格\n');
+  const context = await seedApprovedDevelopment(root, id, {
+    scope: { repositories: ['.'], targets: [id, 'other-target', 'other'] },
+    requirementsRequestId: 'baseline-requirements', designRequestId: 'baseline-design',
+    requirementsDecisionId: 'baseline-approve-requirements', designDecisionId: 'baseline-approve-design',
+  });
+  context.bindings = { requirements: await context.binding('requirements'), design: await context.binding('design'), independent: await context.binding() };
+  contexts.set(root, context);
   put(root, evidence.path, '# 检查结果\n\n隔离测试通过。\n');
-  await requestConfirmation(root, id, request('requirements', 'requirements'));
+  await requestConfirmation(root, id, request(root, 'requirements', 'requirements'));
   await recordDecision(root, id, decision(root, 'requirements'));
-  await requestConfirmation(root, id, request('design', 'design', { upstream: ['requirements'] }));
+  await requestConfirmation(root, id, request(root, 'design', 'design', { upstream: ['requirements'] }));
   await recordDecision(root, id, decision(root, 'design'));
   return root;
 }
 async function approvedMerge(root) {
-  await requestConfirmation(root, id, mergeRequest());
+  await requestConfirmation(root, id, mergeRequest(root));
   await recordDecision(root, id, decision(root, 'merge'));
 }
 
@@ -60,7 +68,7 @@ test('merge approval binds exact delivery versions and requires fresh runtime st
   const root = await setup(t);
   const current = binding();
   current.documentsVersion = `sha256:${current.documentsVersion}`;
-  await requestConfirmation(root, id, mergeRequest('merge', { mergeBinding: current }));
+  await requestConfirmation(root, id, mergeRequest(root, 'merge', { mergeBinding: current }));
   await recordDecision(root, id, decision(root, 'merge'));
   const checked = await checkMergeGate(root, id, 'merge', current);
   assert.equal(checked.confirmed, true);
@@ -68,7 +76,7 @@ test('merge approval binds exact delivery versions and requires fresh runtime st
   assert.equal(checked.sourceVerification, 'not-independently-verified');
   assert.equal(checked.automaticTransition, false);
   assert.equal((await checkGate(root, id, 'merge')).confirmed, false);
-  assert.equal(JSON.parse(readFileSync(join(root, registryPath), 'utf8')).schemaVersion, 3);
+  assert.equal(JSON.parse(readFileSync(join(root, registryPath), 'utf8')).schemaVersion, 4);
   assert.match(readFileSync(join(root, directory, 'reviews/request-merge/presentation.md'), 'utf8'), /"mergeBinding"/u);
 });
 
@@ -99,25 +107,25 @@ test('changed source, target, dependencies, checks, documents and review identit
 
 test('acceptance never implies merge and merge cannot omit scoped design or evidence snapshots', async t => {
   const root = await setup(t);
-  await requestConfirmation(root, id, request('acceptance', 'acceptance'));
+  await requestConfirmation(root, id, request(root, 'acceptance', 'acceptance', { subjects: [specification, evidence], documentBinding: { document: specification, evidence } }));
   await recordDecision(root, id, decision(root, 'acceptance'));
   await assert.rejects(checkMergeGate(root, id, 'acceptance', binding()), /独立的 merge/u);
-  await assert.rejects(requestConfirmation(root, id, mergeRequest('no-design', { upstream: ['acceptance'] })), /design/u);
-  await assert.rejects(requestConfirmation(root, id, mergeRequest('other-target', { scope: { repositories: ['.'], targets: ['other'] } })), /覆盖当前范围/u);
-  await assert.rejects(requestConfirmation(root, id, mergeRequest('no-evidence', { subjects: [specification] })), /检查证据必须列入/u);
-  await assert.rejects(requestConfirmation(root, id, mergeRequest('exception', { exception: {} })), /不能通过例外/u);
+  await assert.rejects(requestConfirmation(root, id, mergeRequest(root, 'no-design', { upstream: ['acceptance'] })), /design/u);
+  await assert.rejects(requestConfirmation(root, id, mergeRequest(root, 'other-target', { scope: { repositories: ['.'], targets: ['other'] } })), /覆盖当前范围/u);
+  await assert.rejects(requestConfirmation(root, id, mergeRequest(root, 'no-evidence', { subjects: [specification] })), /检查证据必须列入/u);
+  await assert.rejects(requestConfirmation(root, id, mergeRequest(root, 'exception', { exception: {} })), /不能通过例外/u);
   const outside = binding();
   outside.repositories[0].repository = 'other';
-  await assert.rejects(requestConfirmation(root, id, mergeRequest('outside', { mergeBinding: outside })), /超出请求仓库范围/u);
-  await assert.rejects(requestConfirmation(root, id, mergeRequest('missing', { mergeBinding: undefined })), /合入版本绑定/u);
+  await assert.rejects(requestConfirmation(root, id, mergeRequest(root, 'outside', { mergeBinding: outside })), /超出请求仓库范围/u);
+  await assert.rejects(requestConfirmation(root, id, mergeRequest(root, 'missing', { mergeBinding: undefined })), /合入版本绑定/u);
 });
 
 test('unresolved merge issues and revoked design keep merge blocked', async t => {
   const root = await setup(t);
-  await requestConfirmation(root, id, mergeRequest('merge', { openIssues: ['仍有阻断评审意见'] }));
+  await requestConfirmation(root, id, mergeRequest(root, 'merge', { openIssues: ['仍有阻断评审意见'] }));
   await recordDecision(root, id, decision(root, 'merge'));
   assert.equal((await checkMergeGate(root, id, 'merge', binding())).confirmed, false);
-  await requestConfirmation(root, id, mergeRequest('ready'));
+  await requestConfirmation(root, id, mergeRequest(root, 'ready'));
   await recordDecision(root, id, decision(root, 'ready'));
   assert.equal((await checkMergeGate(root, id, 'ready', binding())).confirmed, true);
   await recordDecision(root, id, decision(root, 'design', 'revoke-design', { outcome: 'revoked' }));
@@ -127,13 +135,13 @@ test('unresolved merge issues and revoked design keep merge blocked', async t =>
 test('several valid designs may jointly cover merge scope without allowing uncovered targets', async t => {
   const root = await setup(t);
   const otherScope = { repositories: ['.'], targets: ['other-target'] };
-  await requestConfirmation(root, id, request('requirements-other', 'requirements', { scope: otherScope }));
+  await requestConfirmation(root, id, request(root, 'requirements-other', 'requirements', { scope: otherScope }));
   await recordDecision(root, id, decision(root, 'requirements-other'));
-  await requestConfirmation(root, id, request('design-other', 'design', { scope: otherScope, upstream: ['requirements-other'] }));
+  await requestConfirmation(root, id, request(root, 'design-other', 'design', { scope: otherScope, upstream: ['requirements-other'] }));
   await recordDecision(root, id, decision(root, 'design-other'));
   const scope = { repositories: ['.'], targets: [id, 'other-target'] };
-  await assert.rejects(requestConfirmation(root, id, mergeRequest('missing-coverage', { scope })), /覆盖当前范围/u);
-  await requestConfirmation(root, id, mergeRequest('merge', { scope, upstream: ['design', 'design-other'] }));
+  await assert.rejects(requestConfirmation(root, id, mergeRequest(root, 'missing-coverage', { scope })), /覆盖当前范围/u);
+  await requestConfirmation(root, id, mergeRequest(root, 'merge', { scope, upstream: ['design', 'design-other'] }));
   await recordDecision(root, id, decision(root, 'merge'));
   assert.equal((await checkMergeGate(root, id, 'merge', binding())).confirmed, true);
 });
@@ -143,7 +151,7 @@ test('changed merge versions cannot reuse old approval as nonsemantic difference
   await approvedMerge(root);
   const next = binding();
   next.repositories[0].sourceOid = 'e'.repeat(40);
-  await requestConfirmation(root, id, mergeRequest('merge-next', { mergeBinding: next }));
+  await requestConfirmation(root, id, mergeRequest(root, 'merge-next', { mergeBinding: next }));
   const original = decision(root, 'merge', 'approve-merge');
   const reused = decision(root, 'merge-next', 'reuse-merge', {
     source: { ...original.source, presentation: file('reviews/request-merge-next/presentation.md') },
@@ -157,14 +165,14 @@ test('old and unknown confirmation versions reject reads and writes without migr
   await approvedMerge(root);
   const original = JSON.parse(readFileSync(join(root, registryPath), 'utf8'));
   const nextDecision = decision(root, 'design', 'new-design');
-  for (const version of [1, 2, 4]) {
+  for (const version of [1, 2, 3, 5]) {
     const bytes = JSON.stringify({ ...original, schemaVersion: version }, null, 4) + '\r\n';
     put(root, registryPath, bytes);
     const before = snapshot(root);
     const unsupported = { code: 'UNSUPPORTED_RECORD_VERSION' };
     await assert.rejects(checkGate(root, id, 'design'), unsupported);
     await assert.rejects(checkMergeGate(root, id, 'merge', binding()), unsupported);
-    await assert.rejects(requestConfirmation(root, id, mergeRequest('next')), unsupported);
+    await assert.rejects(requestConfirmation(root, id, mergeRequest(root, 'next')), unsupported);
     await assert.rejects(recordDecision(root, id, nextDecision), unsupported);
     assert.equal(readFileSync(join(root, registryPath), 'utf8'), bytes);
     assert.deepEqual(snapshot(root), before);

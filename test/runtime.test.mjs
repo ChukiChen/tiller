@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { mkdtemp, mkdir, writeFile, readFile, rm, copyFile, symlink } from 'node:fs/promises';
+import { mkdtemp, mkdir, writeFile, readFile, readdir, rm, copyFile, symlink } from 'node:fs/promises';
 import path from 'node:path';
 import { realpathSync } from 'node:fs';
 import os from 'node:os';
@@ -21,9 +21,18 @@ async function fixture(t) {
 }
 async function cli(dir, version = CLI_VERSION) {
   await mkdir(path.join(dir, 'dist'), { recursive: true });
-  await writeFile(path.join(dir, 'package.json'), JSON.stringify({ name: 'tiller', version, bin: { tiller: 'dist/cli.js' } }));
+  await writeFile(path.join(dir, 'package.json'), JSON.stringify({ name: 'tiller', version, type: 'module', bin: { tiller: 'dist/cli.js' } }));
   const file = path.join(dir, 'dist/cli.js');
-  await writeFile(file, `if(process.argv[2]==='--version'){console.log(${JSON.stringify(version)});process.exit(0);} process.stdout.write(JSON.stringify({ args:process.argv.slice(2), cwd:process.cwd(), input:require('node:fs').readFileSync(0,'utf8') })); process.exitCode=Number(process.env.TEST_EXIT||0);\n`);
+  await writeFile(file, `import { readFileSync, realpathSync } from 'node:fs';
+import { pathToFileURL } from 'node:url';
+export const CLI_VERSION = ${JSON.stringify(version)};
+export async function runCli(args = process.argv.slice(2)) {
+  if (args[0] === '--version') { console.log(CLI_VERSION); return; }
+  process.stdout.write(JSON.stringify({ args, cwd: process.cwd(), input: readFileSync(0, 'utf8') }));
+  process.exitCode = Number(process.env.TEST_EXIT || 0);
+}
+if (process.argv[1] && import.meta.url === pathToFileURL(realpathSync(process.argv[1])).href) await runCli();
+`);
   return file;
 }
 function launch(root, args = [], options = {}) {
@@ -48,6 +57,16 @@ test('registered CLI survives cold launch and preserves argv, stdin, cwd and exi
   assert.equal(await readFile(path.join(root, '.tiller/run.cjs'), 'utf8'), shared);
 });
 
+test('runtime binding checks current launcher bytes even after a successful status query', async t => {
+  const { base, root } = await fixture(t);
+  const target = await cli(path.join(base, 'installation'));
+  await runtimeStatus(root);
+  const launcher = path.join(root, '.tiller/run.cjs');
+  await writeFile(launcher, (await readFile(launcher, 'utf8')) + '\n// Changed before binding.\n');
+  await assert.rejects(bindRuntime(root, target), /共享启动器与工程登记摘要不符/u);
+  await assert.rejects(readFile(path.join(root, '.tiller/local/runtime.json')), error => error.code === 'ENOENT');
+});
+
 test('local installations are found without binding; stale and missing installations offer recovery', async t => {
   const { root } = await fixture(t);
   assert.equal((await runtimeStatus(root)).ready, false);
@@ -60,7 +79,7 @@ test('local installations are found without binding; stale and missing installat
   assert.equal(launch(root).status, 1);
 });
 
-for (const oldVersion of ['0.3.2', '0.3.3']) test(`current resources skip ${oldVersion} local installation and use the compatible bound CLI`, async t => {
+for (const oldVersion of ['0.3.2', '0.4.4', '9.9.9', '0.5.0-rc.1']) test(`current resources skip ${oldVersion} local installation and use the exact current bound CLI`, async t => {
   const { base, root } = await fixture(t);
   await cli(path.join(root, '.tiller/local/cli/node_modules/tiller'), oldVersion);
   const replacement = await cli(path.join(base, 'current-install'));
@@ -75,7 +94,7 @@ for (const oldVersion of ['0.3.2', '0.3.3']) test(`current resources skip ${oldV
   assert.equal(await readFile(path.join(root, '.tiller/project.json'), 'utf8'), metadata);
 });
 
-for (const oldVersion of ['0.3.2', '0.3.3']) test(`current resources reject ${oldVersion} CLI without changing installation or metadata`, async t => {
+for (const oldVersion of ['0.3.2', '0.4.4', '9.9.9', '0.5.0-rc.1']) test(`current resources reject ${oldVersion} CLI without changing installation or metadata`, async t => {
   const { root } = await fixture(t);
   const old = await cli(path.join(root, '.tiller/local/cli/node_modules/tiller'), oldVersion);
   const originalCli = await readFile(old, 'utf8');
@@ -90,22 +109,27 @@ for (const oldVersion of ['0.3.2', '0.3.3']) test(`current resources reject ${ol
   assert.equal(await readFile(path.join(root, '.tiller/project.json'), 'utf8'), metadata);
 });
 
-test('resource version 0.3.2 can still use its 0.3.2 CLI through the current resolver', async t => {
-  const { root } = await fixture(t);
-  // The runtime metadata schema is unchanged; retain the current launcher to
-  // verify its minimum is derived from the project rather than hard-coded.
-  const metadataPath = path.join(root, '.tiller/project.json');
-  const metadata = JSON.parse(await readFile(metadataPath, 'utf8'));
-  metadata.resourceVersion = '0.3.2';
-  await writeFile(metadataPath, JSON.stringify(metadata, null, 2) + '\n');
-  await cli(path.join(root, '.tiller/local/cli/node_modules/tiller'), '0.3.2');
-  const status = await runtimeStatus(root);
-  assert.equal(status.ready, true, status.issues.join('\n'));
-  assert.equal(status.version, '0.3.2');
-  const result = launch(root, ['--version']);
-  assert.equal(result.status, 0, result.stderr);
-  assert.equal(result.stdout.trim(), '0.3.2');
-});
+for (const resourceVersion of ['0.3.2', '0.4.4', '9.9.9']) for (const existing of [false, true]) {
+  test(`unsupported resources ${resourceVersion} preserve ${existing ? 'existing' : 'absent'} runtime binding`, async t => {
+    const { base, root } = await fixture(t);
+    const target = await cli(path.join(base, 'install'));
+    if (existing) await bindRuntime(root, target);
+    const record = path.join(root, '.tiller/local/runtime.json');
+    const original = existing ? await readFile(record, 'utf8') : null;
+    const metadataPath = path.join(root, '.tiller/project.json');
+    const metadata = JSON.parse(await readFile(metadataPath, 'utf8'));
+    metadata.resourceVersion = resourceVersion;
+    const bytes = JSON.stringify(metadata, null, 2) + '\n';
+    await writeFile(metadataPath, bytes);
+    assert.equal((await runtimeStatus(root)).ready, false);
+    assert.equal(launch(root, ['--version']).status, 1);
+    await assert.rejects(bindRuntime(root, target));
+    assert.equal(await readFile(metadataPath, 'utf8'), bytes);
+    if (existing) assert.equal(await readFile(record, 'utf8'), original);
+    else await assert.rejects(readFile(record), { code: 'ENOENT' });
+    assert.deepEqual((await readdir(path.join(root, '.tiller/local'))).filter(name => /^runtime-.*\.tmp$/u.test(name)), []);
+  });
+}
 
 test('malformed or foreign binding and link paths are preserved and rejected', async t => {
   const { base, root } = await fixture(t);
@@ -126,6 +150,7 @@ test('malformed or foreign binding and link paths are preserved and rejected', a
   await cli(path.join(outside, 'tiller'));
   await symlink(outside, linked, 'junction');
   assert.equal((await runtimeStatus(root)).ready, false);
+  await assert.rejects(bindRuntime(root, path.join(linked, 'tiller/dist/cli.js')), /链接/u);
 });
 
 test('real Git worktree resolves the registered main checkout without copied local data', async t => {
@@ -171,9 +196,9 @@ test('old resource directories cannot claim shared entry ready', async t => {
   const { base, root } = await fixture(t);
   const target = await cli(path.join(base, 'install'));
   await rm(path.join(root, '.tiller/run.cjs'));
-  const status = await bindRuntime(root, target);
-  assert.equal(status.ready, false);
-  assert.match(status.issues.join(' '), /启动器不存在/);
+  await assert.rejects(bindRuntime(root, target), /启动器不存在/u);
+  await assert.rejects(readFile(path.join(root, '.tiller/local/runtime.json')), { code: 'ENOENT' });
+  assert.deepEqual((await readdir(path.join(root, '.tiller/local'))).filter(name => /^runtime-.*\.tmp$/u.test(name)), []);
 });
 
 
@@ -221,4 +246,21 @@ test('binding creates checkout local directory even when delivery lock routes to
   assert.equal(status.ready, true);
   assert.equal(JSON.parse(await readFile(path.join(root, '.tiller/local/runtime.json'), 'utf8')).projectRoot, root);
   assert.equal(await readFile(path.join(root, '.tiller/local/.gitignore'), 'utf8'), '*\n');
+});
+
+
+test('binding rejects a changed launcher before replacing an existing local binding', async t => {
+  const { base, root } = await fixture(t);
+  const target = await cli(path.join(base, 'install'));
+  await bindRuntime(root, target);
+  const record = path.join(root, '.tiller/local/runtime.json');
+  const original = await readFile(record, 'utf8');
+  const replacement = await cli(path.join(base, 'replacement'));
+  const launcher = path.join(root, '.tiller/run.cjs');
+  const changed = 'invalid javascript {{{';
+  await writeFile(launcher, changed);
+  await assert.rejects(bindRuntime(root, replacement), /启动器.*摘要/u);
+  assert.equal(await readFile(record, 'utf8'), original);
+  assert.equal(await readFile(launcher, 'utf8'), changed);
+  assert.deepEqual((await readdir(path.join(root, '.tiller/local'))).filter(name => /^runtime-.*\.tmp$/u.test(name)), []);
 });

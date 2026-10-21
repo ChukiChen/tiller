@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { initialize } from '../dist/core.js';
-import { createWork } from '../dist/work.js';
+import { createWorkflowFixtureAt } from './workflow-fixtures.mjs';
 import { readDeliveryReceipt } from '../dist/overall-delivery.js';
 import { fixture, put, snapshot } from './helpers.mjs';
 
@@ -9,14 +9,15 @@ test('delivery receipts preserve work scope labels and reject unknown or contrad
   const root = fixture(t); const workId = 'receipt-shape';
   await initialize({ root, mode: 'project' });
   const scope = { repositories: ['.'], targets: ['交付范围：版本一'] };
-  await createWork(root, workId, 'Receipt parsing fixture', { type: 'change-requirements', scope });
+  await createWorkflowFixtureAt(root, workId, 'analysis', { scope });
   const path = `.tiller/work/${workId}/delivery-checks/ready.json`;
   const sha = 'a'.repeat(64);
   // A parser fixture, not a claim that a real delivery occurred.
-  const receipt = { schemaVersion: 1, workId, id: 'ready', operationId: 'ready', inputDigest: sha,
-    revision: 4, planningRevision: 'one', scope, checkedAt: '2026-10-19T00:00:00.000Z',
+  const receipt = { schemaVersion: 2, operation: 'delivery-ready', workId, id: 'ready', operationId: 'ready', inputDigest: sha,
+    controlSnapshot: { work: { revision: 1, sha256: sha }, stages: { revision: 4, sha256: sha }, tasks: null },
+    planningRevision: null, scope, checkedAt: '2026-10-19T00:00:00.000Z',
     basisDigest: sha, exceptionDigest: sha, planId: sha, operationAllowed: true, technicalReady: true,
-    disposition: 'ready', inputs: { checkpointRefs: [], evidenceRefs: [], exceptionRefs: [] } };
+    disposition: 'ready', inputs: { checkpointRefs: [], evidenceRefs: [], planningEvidenceRefs: [], exceptionRefs: [], checkMappings: [] } };
   put(root, path, JSON.stringify(receipt));
   assert.deepEqual((await readDeliveryReceipt(root, workId, 'ready')).scope, scope);
   for (const invalid of [

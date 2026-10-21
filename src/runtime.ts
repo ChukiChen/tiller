@@ -1,8 +1,8 @@
 import { createRequire } from 'node:module';
-import { realpath, open, rename, unlink, mkdir } from 'node:fs/promises';
+import { open, rename, unlink, mkdir } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { randomUUID } from 'node:crypto';
-import { parseMetadata, matchesManagedDigest } from './core.js';
+import { parseMetadata, matchesManagedDigest, readProjectMetadata } from './core.js';
 import { assertSafePath, readTextIfExists, withProjectLock } from './files.js';
 
 export interface RuntimeStatus {
@@ -18,27 +18,42 @@ const runtime = createRequire(import.meta.url)('../resources/run.cjs') as {
   validateBinding(value: unknown, root: string): unknown;
 };
 
+async function runtimeProject(root: string): Promise<string> {
+  const launcher = await readTextIfExists(root, '.tiller/run.cjs');
+  if (launcher === null) throw new Error('共享启动器不存在；保留现有工程，先核对当前资源安装。');
+  const metadataText = await readTextIfExists(root, '.tiller/project.json');
+  if (!metadataText) throw new Error('工程元信息不存在，无法验证共享启动器。');
+  const digest = parseMetadata(metadataText).managedFiles['.tiller/run.cjs'];
+  if (!digest || !matchesManagedDigest('.tiller/run.cjs', launcher, digest)) {
+    throw new Error('共享启动器与工程登记摘要不符；请核对修改后通过恢复修复，保留当前文件。');
+  }
+  await readProjectMetadata(root);
+  return JSON.stringify({ metadataText, launcher });
+}
+
 export async function runtimeStatus(root: string): Promise<RuntimeStatus> {
   const status = runtime.resolveRuntime(resolve(root));
-  try {
-    const launcher = await readTextIfExists(resolve(root), '.tiller/run.cjs');
-    if (launcher === null) {
-      return { ...status, ready: false, issues: [...status.issues, '共享启动器不存在；请显式升级工程资源后使用 node .tiller/run.cjs。'] };
-    }
-    const metadataText = await readTextIfExists(resolve(root), '.tiller/project.json');
-    if (!metadataText) throw new Error('工程元信息不存在，无法验证共享启动器。');
-    const digest = parseMetadata(metadataText).managedFiles['.tiller/run.cjs'];
-    if (!digest || !matchesManagedDigest('.tiller/run.cjs', launcher, digest)) {
-      throw new Error('共享启动器与工程登记摘要不符；请核对修改后通过升级或恢复修复，保留当前文件。');
-    }
-  } catch (error) { return { ...status, ready: false, issues: [...status.issues, (error as Error).message] }; }
+  try { await runtimeProject(resolve(root)); }
+  catch (error) { return { ...status, ready: false, issues: [...status.issues, (error as Error).message] }; }
   return status;
 }
 
 export async function bindRuntime(inputRoot: string, currentCli: string): Promise<RuntimeStatus> {
   const root = resolve(inputRoot);
-  const cli = runtime.validateCli(await realpath(currentCli));
+  async function inspectTarget() {
+    const project = await runtimeProject(root);
+    // Check the supplied path before resolving it so links cannot disappear from validation.
+    const cli = runtime.validateCli(currentCli);
+    if (await runtimeProject(root) !== project) throw new Error('绑定检查期间工程或启动器已变化，保留原文件。');
+    return { project, cli };
+  }
+  const expected = await inspectTarget();
+  async function recheckTarget() {
+    if (JSON.stringify(await inspectTarget()) !== JSON.stringify(expected)) throw new Error('绑定前工程、启动器或 CLI 已变化，保留原文件。');
+  }
   await withProjectLock(root, async () => {
+    await recheckTarget();
+    const cli = expected.cli;
     const relative = '.tiller/local/runtime.json';
     const original = await readTextIfExists(root, relative);
     if (original !== null) runtime.validateBinding(JSON.parse(original), root);
@@ -60,8 +75,9 @@ export async function bindRuntime(inputRoot: string, currentCli: string): Promis
     const temporaryRelative = `.tiller/local/runtime-${randomUUID()}.tmp`;
     const temporary = await assertSafePath(root, temporaryRelative);
     const file = await open(temporary, 'wx', 0o600);
-    try { await file.writeFile(content, 'utf8'); await file.sync(); } finally { await file.close(); }
     try {
+      try { await file.writeFile(content, 'utf8'); await file.sync(); } finally { await file.close(); }
+      await recheckTarget();
       if (await readTextIfExists(root, relative) !== original) throw new Error('本机 CLI 登记已变化，保留原文件。');
       await rename(temporary, await assertSafePath(root, relative));
     } finally { await unlink(temporary).catch(error => { if (error.code !== 'ENOENT') throw error; }); }

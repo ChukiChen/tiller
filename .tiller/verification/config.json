@@ -86,6 +86,55 @@
         "repository": ".",
         "path": ".tiller/specs/modules/verification/requirements.md"
       }
+    },
+    {
+      "source": {
+        "repository": ".",
+        "path": ".tiller/work/20261020-typed-workflows/requirements.md"
+      },
+      "id": "TW-01"
+    },
+    {
+      "source": {
+        "repository": ".",
+        "path": ".tiller/work/20261020-typed-workflows/requirements.md"
+      },
+      "id": "TW-02"
+    },
+    {
+      "source": {
+        "repository": ".",
+        "path": ".tiller/work/20261020-typed-workflows/requirements.md"
+      },
+      "id": "TW-03"
+    },
+    {
+      "source": {
+        "repository": ".",
+        "path": ".tiller/work/20261020-typed-workflows/requirements.md"
+      },
+      "id": "TW-04"
+    },
+    {
+      "source": {
+        "repository": ".",
+        "path": ".tiller/work/20261020-typed-workflows/requirements.md"
+      },
+      "id": "TW-05"
+    },
+    {
+      "source": {
+        "repository": ".",
+        "path": ".tiller/work/20261020-typed-workflows/requirements.md"
+      },
+      "id": "TW-06"
+    },
+    {
+      "source": {
+        "repository": ".",
+        "path": ".tiller/work/20261020-typed-workflows/requirements.md"
+      },
+      "id": "TW-07"
     }
   ],
   "categories": {
@@ -213,46 +262,6 @@
         {
           "repository": ".",
           "path": "src/work.ts"
-        },
-        {
-          "repository": ".",
-          "path": "resources/baselines/0.1.0.json"
-        },
-        {
-          "repository": ".",
-          "path": "resources/baselines/0.2.0.json"
-        },
-        {
-          "repository": ".",
-          "path": "resources/baselines/0.2.1.json"
-        },
-        {
-          "repository": ".",
-          "path": "resources/baselines/0.2.2.json"
-        },
-        {
-          "repository": ".",
-          "path": "resources/baselines/0.3.0.json"
-        },
-        {
-          "repository": ".",
-          "path": "resources/baselines/0.3.1.json"
-        },
-        {
-          "repository": ".",
-          "path": "resources/baselines/0.3.2.json"
-        },
-        {
-          "repository": ".",
-          "path": "resources/baselines/0.3.3.json"
-        },
-        {
-          "repository": ".",
-          "path": "resources/baselines/0.3.4.json"
-        },
-        {
-          "repository": ".",
-          "path": "resources/baselines/0.3.5.json"
         },
         {
           "repository": ".",
@@ -445,46 +454,6 @@
         },
         {
           "repository": ".",
-          "path": "resources/baselines/0.1.0.json"
-        },
-        {
-          "repository": ".",
-          "path": "resources/baselines/0.2.0.json"
-        },
-        {
-          "repository": ".",
-          "path": "resources/baselines/0.2.1.json"
-        },
-        {
-          "repository": ".",
-          "path": "resources/baselines/0.2.2.json"
-        },
-        {
-          "repository": ".",
-          "path": "resources/baselines/0.3.0.json"
-        },
-        {
-          "repository": ".",
-          "path": "resources/baselines/0.3.1.json"
-        },
-        {
-          "repository": ".",
-          "path": "resources/baselines/0.3.2.json"
-        },
-        {
-          "repository": ".",
-          "path": "resources/baselines/0.3.3.json"
-        },
-        {
-          "repository": ".",
-          "path": "resources/baselines/0.3.4.json"
-        },
-        {
-          "repository": ".",
-          "path": "resources/baselines/0.3.5.json"
-        },
-        {
-          "repository": ".",
           "path": "resources/entry.md"
         },
         {
@@ -674,46 +643,6 @@
         },
         {
           "repository": ".",
-          "path": "resources/baselines/0.1.0.json"
-        },
-        {
-          "repository": ".",
-          "path": "resources/baselines/0.2.0.json"
-        },
-        {
-          "repository": ".",
-          "path": "resources/baselines/0.2.1.json"
-        },
-        {
-          "repository": ".",
-          "path": "resources/baselines/0.2.2.json"
-        },
-        {
-          "repository": ".",
-          "path": "resources/baselines/0.3.0.json"
-        },
-        {
-          "repository": ".",
-          "path": "resources/baselines/0.3.1.json"
-        },
-        {
-          "repository": ".",
-          "path": "resources/baselines/0.3.2.json"
-        },
-        {
-          "repository": ".",
-          "path": "resources/baselines/0.3.3.json"
-        },
-        {
-          "repository": ".",
-          "path": "resources/baselines/0.3.4.json"
-        },
-        {
-          "repository": ".",
-          "path": "resources/baselines/0.3.5.json"
-        },
-        {
-          "repository": ".",
           "path": "resources/entry.md"
         },
         {
@@ -811,6 +740,2277 @@
         {
           "repository": ".",
           "path": "test/verification-cli.test.mjs"
+        }
+      ]
+    },
+    {
+      "timeoutMs": 600000,
+      "inputs": [
+        {
+          "repository": ".",
+          "path": ".tiller/project.json"
+        },
+        {
+          "repository": ".",
+          "path": ".tiller/rules/activities/delivery.md"
+        },
+        {
+          "repository": ".",
+          "path": ".tiller/rules/activities/design.md"
+        },
+        {
+          "repository": ".",
+          "path": ".tiller/rules/activities/implementation.md"
+        },
+        {
+          "repository": ".",
+          "path": ".tiller/rules/activities/requirements.md"
+        },
+        {
+          "repository": ".",
+          "path": ".tiller/rules/core.md"
+        },
+        {
+          "repository": ".",
+          "path": ".tiller/rules/index.md"
+        },
+        {
+          "repository": ".",
+          "path": ".tiller/rules/project.md"
+        },
+        {
+          "repository": ".",
+          "path": ".tiller/rules/quality/documents.md"
+        },
+        {
+          "repository": ".",
+          "path": ".tiller/rules/quality/verification.md"
+        },
+        {
+          "repository": ".",
+          "path": ".tiller/rules/testing.md"
+        },
+        {
+          "repository": ".",
+          "path": ".tiller/specs/modules/workflow/design.md"
+        },
+        {
+          "repository": ".",
+          "path": ".tiller/specs/modules/workflow/requirements.md"
+        },
+        {
+          "repository": ".",
+          "path": ".tiller/verification/config.json"
+        },
+        {
+          "repository": ".",
+          "path": ".tiller/work/20261020-typed-workflows/decisions.md"
+        },
+        {
+          "repository": ".",
+          "path": ".tiller/work/20261020-typed-workflows/delivery-guide.md"
+        },
+        {
+          "repository": ".",
+          "path": ".tiller/work/20261020-typed-workflows/design.md"
+        },
+        {
+          "repository": ".",
+          "path": ".tiller/work/20261020-typed-workflows/requirements.md"
+        },
+        {
+          "repository": ".",
+          "path": "AGENTS.md"
+        },
+        {
+          "repository": ".",
+          "path": "package-lock.json"
+        },
+        {
+          "repository": ".",
+          "path": "package.json"
+        },
+        {
+          "repository": ".",
+          "path": "README.md"
+        },
+        {
+          "repository": ".",
+          "path": "resources/entry.md"
+        },
+        {
+          "repository": ".",
+          "path": "resources/rules/activities/delivery.md"
+        },
+        {
+          "repository": ".",
+          "path": "resources/rules/activities/design.md"
+        },
+        {
+          "repository": ".",
+          "path": "resources/rules/activities/implementation.md"
+        },
+        {
+          "repository": ".",
+          "path": "resources/rules/activities/requirements.md"
+        },
+        {
+          "repository": ".",
+          "path": "resources/rules/core.md"
+        },
+        {
+          "repository": ".",
+          "path": "resources/rules/index.md"
+        },
+        {
+          "repository": ".",
+          "path": "resources/rules/quality/documents.md"
+        },
+        {
+          "repository": ".",
+          "path": "resources/rules/quality/verification.md"
+        },
+        {
+          "repository": ".",
+          "path": "resources/run.cjs"
+        },
+        {
+          "repository": ".",
+          "path": "resources/templates/change-design.md"
+        },
+        {
+          "repository": ".",
+          "path": "resources/templates/change-requirements.md"
+        },
+        {
+          "repository": ".",
+          "path": "resources/templates/module-design.md"
+        },
+        {
+          "repository": ".",
+          "path": "resources/templates/module-requirements.md"
+        },
+        {
+          "repository": ".",
+          "path": "resources/templates/product-design.md"
+        },
+        {
+          "repository": ".",
+          "path": "resources/templates/product-requirements.md"
+        },
+        {
+          "repository": ".",
+          "path": "resources/usage.md"
+        },
+        {
+          "repository": ".",
+          "path": "resources/workflows/analysis.json"
+        },
+        {
+          "repository": ".",
+          "path": "resources/workflows/bugfix.json"
+        },
+        {
+          "repository": ".",
+          "path": "resources/workflows/documentation.json"
+        },
+        {
+          "repository": ".",
+          "path": "resources/workflows/feature.json"
+        },
+        {
+          "repository": ".",
+          "path": "resources/workflows/improvement.json"
+        },
+        {
+          "repository": ".",
+          "path": "resources/workflows/migration.json"
+        },
+        {
+          "repository": ".",
+          "path": "resources/workflows/operations.json"
+        },
+        {
+          "repository": ".",
+          "path": "resources/workflows/requirements.json"
+        },
+        {
+          "repository": ".",
+          "path": "resources/workflows/research.json"
+        },
+        {
+          "repository": ".",
+          "path": "resources/workflows/review.json"
+        },
+        {
+          "repository": ".",
+          "path": "resources/workflows/validation.json"
+        },
+        {
+          "repository": ".",
+          "path": "scripts/lint.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "scripts/package-gates-smoke.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "scripts/package-smoke.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "scripts/test-suites.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "src/cli.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/confirmation-context.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/confirmations.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/core.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/delivery-actions.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/delivery-environment.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/delivery-git.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/delivery-location.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/delivery-types.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/files.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/gate-conditions.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/gate-exceptions.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/gate-issue.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/overall-delivery.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/planning-data.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/planning-types.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/planning.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/project-metadata.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/repository-input.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/repository-paths.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/review-adapters.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/runtime.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/shared-paths.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/task-artifacts.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/task-records.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/task-rules.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/tasks.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/types.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/upgrade.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/verification-cases.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/verification-runs.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/verification-selection.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/verification-yaml.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/work-history.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/work.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/workflow-catalog.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/workflow-delivery.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/workflow-dependencies.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/workflow-policy.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/workflow-stage-rules.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/workflow-stages.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/workflow-transitions.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/workflow-work.ts"
+        },
+        {
+          "repository": ".",
+          "path": "test/cli.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/commit-proof-contract.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/confirmation-delivery-context.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/confirmation-evaluation-performance.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/confirmation-material-performance.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/confirmation-write-performance.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/confirmations.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/core.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/delivery-actions.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/delivery-cli.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/delivery-environment.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/delivery-gate-bindings.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/delivery-git-performance.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/delivery-round-performance.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/delivery-sharing.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/file-path-performance.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/gates-cli.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/helpers.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/launcher-performance.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/merge-confirmations.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/overall-delivery-helpers.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/overall-delivery-records.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/overall-delivery-sharing.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/overall-delivery.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/overall-multi-repository.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/planning-helpers.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/planning-input-performance.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/planning-sharing.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/planning.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/project-inspection-performance.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/repository-delivery.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/repository-metadata-performance.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/repository-paths.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/repository-references.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/review-adapters.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/rules.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/runtime.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/shared-path-round-performance.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/suites.json"
+        },
+        {
+          "repository": ".",
+          "path": "test/task-artifacts.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/task-evaluation-performance.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/task-exceptions.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/task-helpers.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/task-node-evaluation.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/task-optional.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/task-records.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/task-rules.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/task-sharing.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/tasks.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/typed-confirmations.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/typed-work-delivery.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/typed-work-records.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/typed-workflow-cli.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/typed-workflow-integration.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/upgrade.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/usage-resources.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/verification-cases.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/verification-cli.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/verification-input-performance.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/verification-performance.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/verification-round-performance.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/verification-runs.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/verification-selection.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/verification-sharing.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/work-artifacts.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/work-cli.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/work-history.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/workflow-catalog.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/workflow-dependencies-bindings.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/workflow-dependencies-graph.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/workflow-dependencies-sharing.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/workflow-dependencies.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/workflow-dependency-fixtures.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/workflow-dependency-limits.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/workflow-development.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/workflow-fixtures.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/workflow-input-performance.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/workflow-policy-sharing.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/workflow-policy.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/workflow-stage-concurrency.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/workflow-stage-generations.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/workflow-stage-rules.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/workflow-stages-sharing.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/workflow-stages.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/workflow-transitions-sharing.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/workflow-transitions.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/workflow-verification.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/workflow-work-sharing.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "tsconfig.json"
+        }
+      ],
+      "command": "node",
+      "args": [
+        "-e",
+        "const{spawnSync}=require('node:child_process');for(const args of [['node_modules/typescript/bin/tsc'],['scripts/lint.mjs'],['node_modules/typescript/bin/tsc','--noEmit']]){const r=spawnSync(process.execPath,args,{stdio:'inherit',windowsHide:true});if(r.error)throw r.error;if(r.status!==0)process.exit(r.status??1)}"
+      ],
+      "id": "typed-quality",
+      "cwd": ".",
+      "repository": "."
+    },
+    {
+      "id": "typed-final",
+      "repository": ".",
+      "command": "node",
+      "cwd": ".",
+      "timeoutMs": 1800000,
+      "args": [
+        "scripts/test-suites.mjs",
+        "all"
+      ],
+      "inputs": [
+        {
+          "repository": ".",
+          "path": ".tiller/project.json"
+        },
+        {
+          "repository": ".",
+          "path": ".tiller/rules/activities/delivery.md"
+        },
+        {
+          "repository": ".",
+          "path": ".tiller/rules/activities/design.md"
+        },
+        {
+          "repository": ".",
+          "path": ".tiller/rules/activities/implementation.md"
+        },
+        {
+          "repository": ".",
+          "path": ".tiller/rules/activities/requirements.md"
+        },
+        {
+          "repository": ".",
+          "path": ".tiller/rules/core.md"
+        },
+        {
+          "repository": ".",
+          "path": ".tiller/rules/index.md"
+        },
+        {
+          "repository": ".",
+          "path": ".tiller/rules/project.md"
+        },
+        {
+          "repository": ".",
+          "path": ".tiller/rules/quality/documents.md"
+        },
+        {
+          "repository": ".",
+          "path": ".tiller/rules/quality/verification.md"
+        },
+        {
+          "repository": ".",
+          "path": ".tiller/rules/testing.md"
+        },
+        {
+          "repository": ".",
+          "path": ".tiller/specs/modules/workflow/design.md"
+        },
+        {
+          "repository": ".",
+          "path": ".tiller/specs/modules/workflow/requirements.md"
+        },
+        {
+          "repository": ".",
+          "path": ".tiller/verification/config.json"
+        },
+        {
+          "repository": ".",
+          "path": ".tiller/work/20261020-typed-workflows/decisions.md"
+        },
+        {
+          "repository": ".",
+          "path": ".tiller/work/20261020-typed-workflows/delivery-guide.md"
+        },
+        {
+          "repository": ".",
+          "path": ".tiller/work/20261020-typed-workflows/design.md"
+        },
+        {
+          "repository": ".",
+          "path": ".tiller/work/20261020-typed-workflows/requirements.md"
+        },
+        {
+          "repository": ".",
+          "path": "AGENTS.md"
+        },
+        {
+          "repository": ".",
+          "path": "package-lock.json"
+        },
+        {
+          "repository": ".",
+          "path": "package.json"
+        },
+        {
+          "repository": ".",
+          "path": "README.md"
+        },
+        {
+          "repository": ".",
+          "path": "resources/entry.md"
+        },
+        {
+          "repository": ".",
+          "path": "resources/rules/activities/delivery.md"
+        },
+        {
+          "repository": ".",
+          "path": "resources/rules/activities/design.md"
+        },
+        {
+          "repository": ".",
+          "path": "resources/rules/activities/implementation.md"
+        },
+        {
+          "repository": ".",
+          "path": "resources/rules/activities/requirements.md"
+        },
+        {
+          "repository": ".",
+          "path": "resources/rules/core.md"
+        },
+        {
+          "repository": ".",
+          "path": "resources/rules/index.md"
+        },
+        {
+          "repository": ".",
+          "path": "resources/rules/quality/documents.md"
+        },
+        {
+          "repository": ".",
+          "path": "resources/rules/quality/verification.md"
+        },
+        {
+          "repository": ".",
+          "path": "resources/run.cjs"
+        },
+        {
+          "repository": ".",
+          "path": "resources/templates/change-design.md"
+        },
+        {
+          "repository": ".",
+          "path": "resources/templates/change-requirements.md"
+        },
+        {
+          "repository": ".",
+          "path": "resources/templates/module-design.md"
+        },
+        {
+          "repository": ".",
+          "path": "resources/templates/module-requirements.md"
+        },
+        {
+          "repository": ".",
+          "path": "resources/templates/product-design.md"
+        },
+        {
+          "repository": ".",
+          "path": "resources/templates/product-requirements.md"
+        },
+        {
+          "repository": ".",
+          "path": "resources/usage.md"
+        },
+        {
+          "repository": ".",
+          "path": "resources/workflows/analysis.json"
+        },
+        {
+          "repository": ".",
+          "path": "resources/workflows/bugfix.json"
+        },
+        {
+          "repository": ".",
+          "path": "resources/workflows/documentation.json"
+        },
+        {
+          "repository": ".",
+          "path": "resources/workflows/feature.json"
+        },
+        {
+          "repository": ".",
+          "path": "resources/workflows/improvement.json"
+        },
+        {
+          "repository": ".",
+          "path": "resources/workflows/migration.json"
+        },
+        {
+          "repository": ".",
+          "path": "resources/workflows/operations.json"
+        },
+        {
+          "repository": ".",
+          "path": "resources/workflows/requirements.json"
+        },
+        {
+          "repository": ".",
+          "path": "resources/workflows/research.json"
+        },
+        {
+          "repository": ".",
+          "path": "resources/workflows/review.json"
+        },
+        {
+          "repository": ".",
+          "path": "resources/workflows/validation.json"
+        },
+        {
+          "repository": ".",
+          "path": "scripts/lint.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "scripts/package-gates-smoke.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "scripts/package-smoke.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "scripts/test-suites.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "src/cli.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/confirmation-context.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/confirmations.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/core.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/delivery-actions.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/delivery-environment.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/delivery-git.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/delivery-location.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/delivery-types.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/files.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/gate-conditions.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/gate-exceptions.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/gate-issue.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/overall-delivery.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/planning-data.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/planning-types.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/planning.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/project-metadata.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/repository-input.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/repository-paths.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/review-adapters.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/runtime.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/shared-paths.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/task-artifacts.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/task-records.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/task-rules.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/tasks.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/types.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/upgrade.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/verification-cases.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/verification-runs.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/verification-selection.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/verification-yaml.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/work-history.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/work.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/workflow-catalog.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/workflow-delivery.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/workflow-dependencies.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/workflow-policy.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/workflow-stage-rules.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/workflow-stages.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/workflow-transitions.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/workflow-work.ts"
+        },
+        {
+          "repository": ".",
+          "path": "test/cli.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/commit-proof-contract.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/confirmation-delivery-context.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/confirmation-evaluation-performance.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/confirmation-material-performance.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/confirmation-write-performance.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/confirmations.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/core.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/delivery-actions.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/delivery-cli.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/delivery-environment.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/delivery-gate-bindings.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/delivery-git-performance.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/delivery-round-performance.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/delivery-sharing.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/file-path-performance.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/gates-cli.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/helpers.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/launcher-performance.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/merge-confirmations.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/overall-delivery-helpers.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/overall-delivery-records.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/overall-delivery-sharing.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/overall-delivery.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/overall-multi-repository.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/planning-helpers.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/planning-input-performance.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/planning-sharing.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/planning.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/project-inspection-performance.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/repository-delivery.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/repository-metadata-performance.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/repository-paths.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/repository-references.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/review-adapters.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/rules.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/runtime.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/shared-path-round-performance.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/suites.json"
+        },
+        {
+          "repository": ".",
+          "path": "test/task-artifacts.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/task-evaluation-performance.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/task-exceptions.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/task-helpers.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/task-node-evaluation.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/task-optional.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/task-records.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/task-rules.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/task-sharing.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/tasks.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/typed-confirmations.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/typed-work-delivery.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/typed-work-records.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/typed-workflow-cli.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/typed-workflow-integration.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/upgrade.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/usage-resources.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/verification-cases.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/verification-cli.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/verification-input-performance.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/verification-performance.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/verification-round-performance.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/verification-runs.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/verification-selection.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/verification-sharing.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/work-artifacts.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/work-cli.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/work-history.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/workflow-catalog.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/workflow-dependencies-bindings.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/workflow-dependencies-graph.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/workflow-dependencies-sharing.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/workflow-dependencies.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/workflow-dependency-fixtures.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/workflow-dependency-limits.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/workflow-development.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/workflow-fixtures.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/workflow-input-performance.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/workflow-policy-sharing.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/workflow-policy.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/workflow-stage-concurrency.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/workflow-stage-generations.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/workflow-stage-rules.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/workflow-stages-sharing.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/workflow-stages.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/workflow-transitions-sharing.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/workflow-transitions.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/workflow-verification.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/workflow-work-sharing.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "tsconfig.json"
+        }
+      ]
+    },
+    {
+      "id": "typed-package",
+      "repository": ".",
+      "command": "node",
+      "args": [
+        "-e",
+        "const{spawnSync}=require('node:child_process');const{join,dirname}=require('node:path');const r=spawnSync(process.execPath,[join(dirname(process.execPath),'node_modules/npm/bin/npm-cli.js'),'run','test:package'],{stdio:'inherit',windowsHide:true});if(r.error)throw r.error;if(r.signal)throw new Error('Package verification terminated: '+r.signal);process.exit(r.status??1)"
+      ],
+      "cwd": ".",
+      "timeoutMs": 1800000,
+      "inputs": [
+        {
+          "repository": ".",
+          "path": ".tiller/project.json"
+        },
+        {
+          "repository": ".",
+          "path": ".tiller/rules/activities/delivery.md"
+        },
+        {
+          "repository": ".",
+          "path": ".tiller/rules/activities/design.md"
+        },
+        {
+          "repository": ".",
+          "path": ".tiller/rules/activities/implementation.md"
+        },
+        {
+          "repository": ".",
+          "path": ".tiller/rules/activities/requirements.md"
+        },
+        {
+          "repository": ".",
+          "path": ".tiller/rules/core.md"
+        },
+        {
+          "repository": ".",
+          "path": ".tiller/rules/index.md"
+        },
+        {
+          "repository": ".",
+          "path": ".tiller/rules/project.md"
+        },
+        {
+          "repository": ".",
+          "path": ".tiller/rules/quality/documents.md"
+        },
+        {
+          "repository": ".",
+          "path": ".tiller/rules/quality/verification.md"
+        },
+        {
+          "repository": ".",
+          "path": ".tiller/rules/testing.md"
+        },
+        {
+          "repository": ".",
+          "path": ".tiller/specs/modules/workflow/design.md"
+        },
+        {
+          "repository": ".",
+          "path": ".tiller/specs/modules/workflow/requirements.md"
+        },
+        {
+          "repository": ".",
+          "path": ".tiller/verification/config.json"
+        },
+        {
+          "repository": ".",
+          "path": ".tiller/work/20261020-typed-workflows/decisions.md"
+        },
+        {
+          "repository": ".",
+          "path": ".tiller/work/20261020-typed-workflows/delivery-guide.md"
+        },
+        {
+          "repository": ".",
+          "path": ".tiller/work/20261020-typed-workflows/design.md"
+        },
+        {
+          "repository": ".",
+          "path": ".tiller/work/20261020-typed-workflows/requirements.md"
+        },
+        {
+          "repository": ".",
+          "path": "AGENTS.md"
+        },
+        {
+          "repository": ".",
+          "path": "package-lock.json"
+        },
+        {
+          "repository": ".",
+          "path": "package.json"
+        },
+        {
+          "repository": ".",
+          "path": "README.md"
+        },
+        {
+          "repository": ".",
+          "path": "resources/entry.md"
+        },
+        {
+          "repository": ".",
+          "path": "resources/rules/activities/delivery.md"
+        },
+        {
+          "repository": ".",
+          "path": "resources/rules/activities/design.md"
+        },
+        {
+          "repository": ".",
+          "path": "resources/rules/activities/implementation.md"
+        },
+        {
+          "repository": ".",
+          "path": "resources/rules/activities/requirements.md"
+        },
+        {
+          "repository": ".",
+          "path": "resources/rules/core.md"
+        },
+        {
+          "repository": ".",
+          "path": "resources/rules/index.md"
+        },
+        {
+          "repository": ".",
+          "path": "resources/rules/quality/documents.md"
+        },
+        {
+          "repository": ".",
+          "path": "resources/rules/quality/verification.md"
+        },
+        {
+          "repository": ".",
+          "path": "resources/run.cjs"
+        },
+        {
+          "repository": ".",
+          "path": "resources/templates/change-design.md"
+        },
+        {
+          "repository": ".",
+          "path": "resources/templates/change-requirements.md"
+        },
+        {
+          "repository": ".",
+          "path": "resources/templates/module-design.md"
+        },
+        {
+          "repository": ".",
+          "path": "resources/templates/module-requirements.md"
+        },
+        {
+          "repository": ".",
+          "path": "resources/templates/product-design.md"
+        },
+        {
+          "repository": ".",
+          "path": "resources/templates/product-requirements.md"
+        },
+        {
+          "repository": ".",
+          "path": "resources/usage.md"
+        },
+        {
+          "repository": ".",
+          "path": "resources/workflows/analysis.json"
+        },
+        {
+          "repository": ".",
+          "path": "resources/workflows/bugfix.json"
+        },
+        {
+          "repository": ".",
+          "path": "resources/workflows/documentation.json"
+        },
+        {
+          "repository": ".",
+          "path": "resources/workflows/feature.json"
+        },
+        {
+          "repository": ".",
+          "path": "resources/workflows/improvement.json"
+        },
+        {
+          "repository": ".",
+          "path": "resources/workflows/migration.json"
+        },
+        {
+          "repository": ".",
+          "path": "resources/workflows/operations.json"
+        },
+        {
+          "repository": ".",
+          "path": "resources/workflows/requirements.json"
+        },
+        {
+          "repository": ".",
+          "path": "resources/workflows/research.json"
+        },
+        {
+          "repository": ".",
+          "path": "resources/workflows/review.json"
+        },
+        {
+          "repository": ".",
+          "path": "resources/workflows/validation.json"
+        },
+        {
+          "repository": ".",
+          "path": "scripts/lint.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "scripts/package-gates-smoke.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "scripts/package-smoke.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "scripts/test-suites.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "src/cli.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/confirmation-context.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/confirmations.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/core.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/delivery-actions.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/delivery-environment.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/delivery-git.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/delivery-location.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/delivery-types.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/files.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/gate-conditions.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/gate-exceptions.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/gate-issue.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/overall-delivery.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/planning-data.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/planning-types.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/planning.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/project-metadata.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/repository-input.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/repository-paths.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/review-adapters.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/runtime.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/shared-paths.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/task-artifacts.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/task-records.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/task-rules.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/tasks.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/types.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/upgrade.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/verification-cases.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/verification-runs.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/verification-selection.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/verification-yaml.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/work-history.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/work.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/workflow-catalog.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/workflow-delivery.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/workflow-dependencies.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/workflow-policy.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/workflow-stage-rules.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/workflow-stages.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/workflow-transitions.ts"
+        },
+        {
+          "repository": ".",
+          "path": "src/workflow-work.ts"
+        },
+        {
+          "repository": ".",
+          "path": "test/cli.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/commit-proof-contract.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/confirmation-delivery-context.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/confirmation-evaluation-performance.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/confirmation-material-performance.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/confirmation-write-performance.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/confirmations.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/core.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/delivery-actions.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/delivery-cli.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/delivery-environment.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/delivery-gate-bindings.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/delivery-git-performance.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/delivery-round-performance.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/delivery-sharing.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/file-path-performance.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/gates-cli.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/helpers.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/launcher-performance.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/merge-confirmations.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/overall-delivery-helpers.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/overall-delivery-records.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/overall-delivery-sharing.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/overall-delivery.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/overall-multi-repository.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/planning-helpers.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/planning-input-performance.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/planning-sharing.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/planning.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/project-inspection-performance.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/repository-delivery.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/repository-metadata-performance.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/repository-paths.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/repository-references.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/review-adapters.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/rules.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/runtime.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/shared-path-round-performance.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/suites.json"
+        },
+        {
+          "repository": ".",
+          "path": "test/task-artifacts.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/task-evaluation-performance.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/task-exceptions.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/task-helpers.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/task-node-evaluation.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/task-optional.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/task-records.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/task-rules.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/task-sharing.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/tasks.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/typed-confirmations.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/typed-work-delivery.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/typed-work-records.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/typed-workflow-cli.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/typed-workflow-integration.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/upgrade.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/usage-resources.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/verification-cases.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/verification-cli.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/verification-input-performance.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/verification-performance.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/verification-round-performance.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/verification-runs.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/verification-selection.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/verification-sharing.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/work-artifacts.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/work-cli.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/work-history.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/workflow-catalog.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/workflow-dependencies-bindings.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/workflow-dependencies-graph.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/workflow-dependencies-sharing.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/workflow-dependencies.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/workflow-dependency-fixtures.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/workflow-dependency-limits.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/workflow-development.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/workflow-fixtures.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/workflow-input-performance.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/workflow-policy-sharing.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/workflow-policy.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/workflow-stage-concurrency.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/workflow-stage-generations.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/workflow-stage-rules.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/workflow-stages-sharing.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/workflow-stages.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/workflow-transitions-sharing.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/workflow-transitions.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/workflow-verification.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "test/workflow-work-sharing.test.mjs"
+        },
+        {
+          "repository": ".",
+          "path": "tsconfig.json"
         }
       ]
     }

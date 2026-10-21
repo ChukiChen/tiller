@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import test from 'node:test';
+import { createWorkflowFixtureAt, startStage } from './workflow-fixtures.mjs';
 import { cli, fixture, put, success, failure, snapshot } from './helpers.mjs';
 
 test('verification CLI creates no business cases and check stays read-only', t => {
@@ -22,11 +23,11 @@ test('verification CLI creates no business cases and check stays read-only', t =
   assert.equal(cli(root, 'verification', 'check', '--suite', 'x').status, 2);
 });
 
-test('verification CLI binds explicit runs and distinguishes reported case evidence', t => {
+test('verification CLI binds explicit runs and distinguishes reported case evidence', async t => {
   const root = fixture(t);
   success(cli(root, 'init'));
   success(cli(root, 'verification', 'init'));
-  success(cli(root, 'work', 'create', '20261019-testing', '--title', 'Testing'));
+  const f = await createWorkflowFixtureAt(root, '20261019-testing', 'bugfix');
   put(root, 'design.md', '# Module design\n');
   put(root, 'requirements.md', '# Requirement\n');
   put(root, 'test.cjs', 'process.stdout.write("fixture passed\\n");\n');
@@ -55,9 +56,11 @@ cases:
         path: test.cjs
 `);
   success(cli(root, 'verification', 'check'));
-  const plan = success(cli(root, 'verification', 'run', '20261019-testing', '--suite', 'sample', '--plan'));
+  await startStage(f, 'reproduce');
+  put(root, 'run.json', JSON.stringify({ workflow: { stageId: 'reproduce', actions: ['test'], confirmationRefs: [] } }));
+  const plan = success(cli(root, 'verification', 'run', '20261019-testing', '--suite', 'sample', '--input', 'run.json', '--plan'));
   assert.match(plan.planId, /^[a-f0-9]{64}$/);
-  const executed = success(cli(root, 'verification', 'run', '20261019-testing', '--suite', 'sample', '--apply', plan.planId));
+  const executed = success(cli(root, 'verification', 'run', '20261019-testing', '--suite', 'sample', '--input', 'run.json', '--apply', plan.planId));
   assert.equal(executed.record.schemaVersion, 2);
   const beforeReport = cli(root, 'verification', 'report', '20261019-testing');
   assert.equal(beforeReport.status, 1, 'suite exit 0 alone cannot complete cases');
@@ -66,7 +69,7 @@ cases:
   success(cli(root, 'verification', 'report', '20261019-testing'));
   put(root, 'test.cjs', 'process.exitCode = 1;\n');
   assert.equal(cli(root, 'verification', 'report', '20261019-testing').status, 1);
-  assert.equal(cli(root, 'verification', 'run', '20261019-testing', '--suite', 'sample', '--apply', plan.planId).status, 1);
+  assert.equal(cli(root, 'verification', 'run', '20261019-testing', '--suite', 'sample', '--input', 'run.json', '--apply', plan.planId).status, 1);
   const recordPath = join(root, executed.path);
   const record = JSON.parse(readFileSync(recordPath, 'utf8'));
   const original = JSON.stringify({ ...record, schemaVersion: 1 }, null, 4) + '\r\n';
@@ -74,7 +77,7 @@ cases:
   const before = snapshot(root);
   for (const args of [
     ['report', '20261019-testing'],
-    ['run', '20261019-testing', '--suite', 'sample', '--plan'],
+    ['run', '20261019-testing', '--suite', 'sample', '--input', 'run.json', '--plan'],
     ['record', '20261019-testing', '--input', 'result.json'],
   ]) {
     const rejected = failure(cli(root, 'verification', ...args));

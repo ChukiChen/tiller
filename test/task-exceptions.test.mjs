@@ -15,7 +15,8 @@ async function approveException(context, taskId, operation, preview, name, overr
     reason: '隔离测试明确允许当前有限操作，缺口仍须保留。', allowedAction: operation,
     endCondition: 'basis-change-or-revocation', ...overrides };
   await requestConfirmation(context.root, context.workId, { requestId: name, gate: 'exception', scope: task.scope,
-    subjects: task.specifications.design, upstream: ['design'], exceptionBinding: binding,
+    workflowBinding: await context.binding('implementation'),
+    subjects: task.specifications.design, upstream: ['design', context.planningRequestId], exceptionBinding: binding,
     reviewSummary: '仅批准已列条件和对象摘要；不代表技术验证通过。', openIssues: preview.technicalIssues.map(issue => issue.message), nextAction: binding.allowedAction });
   await fixtureDecision(context.root, context.workId, name, `approve-${name}`);
   return { workId: context.workId, requestId: name, decisionId: `approve-${name}` };

@@ -4,6 +4,9 @@ import { readFileSync, symlinkSync } from 'node:fs';
 import { join } from 'node:path';
 import { initialize } from '../dist/core.js';
 import { requestConfirmation, recordDecision, checkGate, inspectConfirmations, assertAcceptance, readConfirmation } from '../dist/confirmations.js';
+import { createWorkflowWork, addWorkflowOutput } from '../dist/workflow-work.js';
+import { loadWorkflowPolicyContext } from '../dist/workflow-policy.js';
+import { WORKFLOW_FACTS } from '../dist/workflow-catalog.js';
 import { fixture, put, gitRepository } from './helpers.mjs';
 
 const workId = 'student-service';
@@ -11,16 +14,42 @@ const directory = `.tiller/work/${workId}`;
 const file = path => ({ repository: '.', path });
 const subject = file(`${directory}/requirements.md`);
 const evidence = file(`${directory}/verification.md`);
+let workflowBinding;
+async function createCurrentWork(root, repository = '.', requirement = subject) {
+  const repositories = repository === '.' ? ['.'] : ['.', repository];
+  put(root, 'intent.md', '# Synthetic request\nReview the declared documents within this scope.\n');
+  await createWorkflowWork(root, workId, '学生服务', {
+    operationId: 'create', expectedRevision: 0, workflow: 'feature', goal: '实现学生服务', reason: '明确功能开发范围',
+    scope: { repositories, targets: [workId] }, impact: Object.fromEntries(WORKFLOW_FACTS.map(key => [key, false])),
+    basis: [], actionSources: [{ actions: ['read', 'write-report', 'edit-documents', 'edit-code', 'test'], reference: file('intent.md'), quote: 'Review the declared documents within this scope.', scope: { repositories, targets: [workId] } }],
+    expectedOutputs: ['requirements-output'], completionCriteria: ['测试行为符合已确认需求'],
+  });
+  if (repository === '.') {
+    put(root, subject.path, '# 需求\n\n学号唯一，删除不存在的学生返回 false。\n');
+    put(root, evidence.path, '# 验证\n\n本测试仅演示确认记录，不模拟真实人工批准。\n');
+  }
+  const context = await loadWorkflowPolicyContext(root, workId);
+  workflowBinding = { workflowDigest: context.snapshot.digest, intentDigest: context.intentDigest };
+  await addWorkflowOutput(root, workId, { operationId: 'requirements-output', expectedRevision: 1, outputId: 'requirements-output', source: requirement });
+  if (repository === '.') {
+    put(root, `${directory}/design.md`, '# 设计\n以学号作为唯一标识。\n');
+    put(root, `${directory}/planning.md`, '# 规划\n先实现再验证边界。\n');
+    await addWorkflowOutput(root, workId, { operationId: 'design-output', expectedRevision: 2, outputId: 'design-output', source: file(`${directory}/design.md`) });
+    await addWorkflowOutput(root, workId, { operationId: 'planning-output', expectedRevision: 3, outputId: 'planning-output', source: file(`${directory}/planning.md`) });
+  }
+}
 async function setup(t) {
   const root = fixture(t);
   await initialize({ root });
-  put(root, `${directory}/work.md`, '# 学生服务\n\n目标为学生增删改查。\n');
-  put(root, subject.path, '# 需求\n\n学号唯一，删除不存在的学生返回 false。\n');
-  put(root, evidence.path, '# 验证\n\n本测试仅演示确认记录，不模拟真实人工批准。\n');
+  await createCurrentWork(root);
   return root;
 }
 function request(requestId, gate = 'requirements', overrides = {}) {
-  return { requestId, gate, scope: { repositories: ['.'], targets: ['student-service'] }, subjects: [subject], upstream: [], reviewSummary: '学号唯一，明确不存在时的返回值。', openIssues: [], nextAction: gate === 'requirements' ? '设计学生接口' : '继续当前交付', ...overrides };
+  return { requestId, gate, workflowBinding: { ...workflowBinding, ...(['requirements', 'design', 'planning'].includes(gate) ? { stageId: gate } : {}) },
+    scope: { repositories: ['.'], targets: ['student-service'] },
+    subjects: gate === 'acceptance' ? [subject, evidence] : [gate === 'design' || gate === 'planning' ? file(`${directory}/${gate}.md`) : subject],
+    ...(gate === 'acceptance' ? { documentBinding: { document: subject, evidence } } : {}),
+    upstream: [], reviewSummary: '学号唯一，明确不存在时的返回值。', openIssues: [], nextAction: gate === 'requirements' ? '设计学生接口' : '继续当前交付', ...overrides };
 }
 function decision(root, requestId, decisionId, outcome = 'approved', overrides = {}) {
   const reference = file(`${directory}/source-${decisionId}.md`);
@@ -33,7 +62,7 @@ function decision(root, requestId, decisionId, outcome = 'approved', overrides =
   };
 }
 
-test('handwritten work supports pending, reviewed approval, scoped design and acceptance without automatic execution', async t => {
+test('current typed work supports pending, reviewed approval, scoped design and acceptance without automatic execution', async t => {
   const root = await setup(t);
   assert.equal((await requestConfirmation(root, workId, request('requirements'))).status, 'pending');
   const input = decision(root, 'requirements', 'approve-requirements');
@@ -65,7 +94,7 @@ test('technical direction cannot bypass requirements and design is never accepta
   await requestConfirmation(root, workId, request('requirements'));
   await assert.rejects(requestConfirmation(root, workId, request('design', 'design', { upstream: ['requirements'] })), /上游确认未满足/u);
   await recordDecision(root, workId, decision(root, 'requirements', 'approved'));
-  await assert.rejects(requestConfirmation(root, workId, request('other-scope', 'design', { upstream: ['requirements'], scope: { repositories: ['.'], targets: ['billing'] } })), /缺少覆盖当前范围/u);
+  await assert.rejects(requestConfirmation(root, workId, request('other-scope', 'design', { upstream: ['requirements'], scope: { repositories: ['.'], targets: ['billing'] } })), /覆盖当前范围/u);
 });
 
 test('missing review, rejected, conditional and revoked decisions never pass; source identity cannot be self-declared', async t => {
@@ -105,7 +134,7 @@ test('acceptance must bind both the delivered document and evidence, and preserv
   const root = await setup(t);
   const result = await requestConfirmation(root, workId, request('acceptance', 'acceptance'));
   await recordDecision(root, workId, decision(root, 'acceptance', 'approved'));
-  await assert.rejects(assertAcceptance(root, workId, 'acceptance', subject.path, evidence.path), /同时绑定/u);
+  await assert.rejects(assertAcceptance(root, workId, 'acceptance', subject.path, 'other.md'), /对象|同时绑定/u);
   assert.equal((await requestConfirmation(root, workId, request('acceptance', 'acceptance'))).changed, false);
   await assert.rejects(requestConfirmation(root, workId, request('acceptance', 'acceptance', { reviewSummary: '另一个内容' })), /不同内容/u);
   put(root, result.presentation, '# 伪造展示\n\n未展示原需求。\n');
@@ -123,24 +152,26 @@ test('unsafe, ignored, unregistered and symlinked evidence is rejected', async t
   gitRepository(root, '.');
   put(root, '.gitignore', readFileSync(join(root, '.gitignore'), 'utf8') + '\nsecret.md\n');
   put(root, 'secret.md', 'Sensitive test fixture');
-  await assert.rejects(requestConfirmation(root, workId, request('ignored', 'requirements', { subjects: [file('secret.md')] })), /忽略/u);
+  await assert.rejects(requestConfirmation(root, workId, request('ignored', 'requirements', { subjects: [subject, file('secret.md')] })), /忽略/u);
   try { symlinkSync(join(root, directory), join(root, 'linked'), 'junction'); }
   catch (error) { if (error.code === 'EPERM') return; throw error; }
-  await assert.rejects(requestConfirmation(root, workId, request('linked', 'requirements', { subjects: [file('linked/requirements.md')] })), /符号链接/u);
+  await assert.rejects(requestConfirmation(root, workId, request('linked', 'requirements', { subjects: [subject, file('linked/requirements.md')] })), /符号链接/u);
 });
 
-test('managed repository evidence uses its own Git ignore rules and explicit repository identity', async t => {
+test('managed repository registration checks Git ignore rules while queries preserve explicit repository identity', async t => {
   const root = fixture(t);
   const repository = gitRepository(root, 'repository-a');
   await initialize({ root, mode: 'workspace', repositories: ['repository-a'] });
-  put(root, `${directory}/work.md`, '# 组合工作\n\n审阅仓库需求。\n');
   put(repository, 'requirements.md', '# 仓库需求\n\n学生学号唯一。\n');
+  await createCurrentWork(root, 'repository-a', { repository: 'repository-a', path: 'requirements.md' });
   const scoped = request('requirements', 'requirements', { scope: { repositories: ['repository-a'], targets: ['student-service'] }, subjects: [{ repository: 'repository-a', path: 'requirements.md' }] });
   assert.equal((await requestConfirmation(root, workId, scoped)).status, 'pending');
   put(repository, '.gitignore', 'requirements.md\n');
-  assert.equal((await checkGate(root, workId, 'requirements')).status, 'needs-review');
-  await assert.rejects(requestConfirmation(root, workId, request('alias', 'requirements', { subjects: [file('repository-a/requirements.md')] })), /仓库身份/u);
-  await assert.rejects(requestConfirmation(root, workId, request('case-alias', 'requirements', { subjects: [file('REPOSITORY-A/requirements.md')] })), /仓库身份/u);
+  assert.equal((await checkGate(root, workId, 'requirements')).status, 'pending');
+  await assert.rejects(requestConfirmation(root, workId, { ...scoped, requestId: 'ignored-registration' }), /忽略/u);
+  put(repository, '.gitignore', '# Ignore scenario completed\n');
+  await assert.rejects(requestConfirmation(root, workId, request('alias', 'requirements', { scope: { repositories: ['.', 'repository-a'], targets: [workId] }, subjects: [{ repository: 'repository-a', path: 'requirements.md' }, file('repository-a/requirements.md')] })), /仓库身份/u);
+  await assert.rejects(requestConfirmation(root, workId, request('case-alias', 'requirements', { scope: { repositories: ['.', 'repository-a'], targets: [workId] }, subjects: [{ repository: 'repository-a', path: 'requirements.md' }, file('REPOSITORY-A/requirements.md')] })), /仓库身份/u);
 });
 
 test('editorial re-review preserves original decision and snapshots, while source changes or revocation invalidate reuse', async t => {
@@ -210,7 +241,7 @@ test('planning requires a current covering design and never approves task specif
   await recordDecision(root, workId, decision(root, 'design', 'revoke-design', 'revoked'));
   assert.equal((await checkGate(root, workId, 'planning')).confirmed, false);
   assert.equal((await checkGate(root, workId, 'review-start')).confirmed, false);
-  assert.equal(JSON.parse(readFileSync(join(root, directory, 'confirmations.json'), 'utf8')).schemaVersion, 3);
+  assert.equal(JSON.parse(readFileSync(join(root, directory, 'confirmations.json'), 'utf8')).schemaVersion, 4);
 });
 
 test('new checkpoint and exception nodes require exact operation identities, bounded conditions and predecessors', async t => {

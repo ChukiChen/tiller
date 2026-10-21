@@ -4,7 +4,7 @@ import { createHash } from 'node:crypto';
 import { readFileSync, unlinkSync } from 'node:fs';
 import { join } from 'node:path';
 import { initialize } from '../dist/core.js';
-import { createWork } from '../dist/work.js';
+import { createWorkflowFixtureAt } from './workflow-fixtures.mjs';
 import { inspectTaskArtifacts } from '../dist/task-artifacts.js';
 import { checkpointDefinitionDigest } from '../dist/gate-conditions.js';
 import { fixture, put, snapshot, gitRepository } from './helpers.mjs';
@@ -24,7 +24,7 @@ async function setup(t, workspace = false) {
   else gitRepository(root, '.');
   await initialize({ root, mode: workspace ? 'workspace' : 'project', ...(workspace ? { repositories: ['business'] } : {}) });
   const scope = { repositories: workspace ? ['.', 'business'] : ['.'], targets: [workId] };
-  await createWork(root, workId, 'Artifact inspection', { type: 'change-requirements', scope });
+  await createWorkflowFixtureAt(root, workId, 'analysis', { scope });
   return { root, scope, inspect: (artifacts, references) => inspectTaskArtifacts(root, workId, artifacts, scope, references) };
 }
 

@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os';
 import { dirname, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
+import { workflowIntentDigest } from '../dist/workflow-policy.js';
 
 export const cliPath = fileURLToPath(new URL('../dist/cli.js', import.meta.url));
 
@@ -91,10 +92,25 @@ export function gitRepository(root, name, separateGitDir) {
 // Synthetic user inputs for deterministic tests only; never used as real acceptance evidence.
 export function confirmFixture(root, id, subjects, requestId = 'accept-1', gate = 'acceptance') {
   const base = `.tiller/work/${id}`;
+  const record = JSON.parse(readFileSync(join(root, base, 'record.json'), 'utf8'));
+  const definition = JSON.parse(readFileSync(join(root, record.workflow.path), 'utf8')).definition;
+  const stage = definition.stages.find(item => item.confirmations.includes(gate));
+  const references = subjects.map(path => ({ repository: '.', path }));
+  let documentBinding;
+  if (gate === 'acceptance') {
+    const document = references[0];
+    const contents = readFileSync(join(root, document.path), 'utf8');
+    const evidence = { repository: '.', path: `${base}/${requestId}-observation.md` };
+    put(root, evidence.path, `# Synthetic document observation\n\nRead ${document.path}: ${Buffer.byteLength(contents)} bytes.\n\n${contents}`);
+    references.push(evidence);
+    documentBinding = { document, evidence };
+  }
   const inputPath = `${base}/${requestId}-input.json`;
   put(root, inputPath, JSON.stringify({
     requestId, gate, scope: { repositories: ['.'], targets: [id] },
-    subjects: subjects.map(path => ({ repository: '.', path })), upstream: [],
+    workflowBinding: { workflowDigest: record.workflow.digest, intentDigest: workflowIntentDigest(record), ...(stage ? { stageId: stage.id } : {}) },
+    ...(documentBinding ? { documentBinding } : {}),
+    subjects: references, upstream: [],
     reviewSummary: 'Synthetic review for automated tests', openIssues: [], nextAction: 'Record this scoped decision only',
   }));
   const request = success(cli(root, 'work', 'request-confirmation', id, '--input', inputPath));

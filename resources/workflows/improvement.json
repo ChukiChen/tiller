@@ -1,0 +1,204 @@
+{
+  "schemaVersion": 1,
+  "id": "improvement",
+  "version": "1.0.0",
+  "title": "重构或性能优化",
+  "appliesTo": [
+    "改善结构或性能，明确保持的行为及实测指标。"
+  ],
+  "notApplicableTo": [
+    "不得顺带改变业务行为；新增行为应重新确认范围。"
+  ],
+  "stages": [
+    {
+      "id": "baseline",
+      "title": "当前基线与不变行为",
+      "dependsOn": [],
+      "consumes": [],
+      "produces": [
+        "baseline-output"
+      ],
+      "checks": [
+        "明确结构保持目标或性能指标，保存改动前回归和实测基线。"
+      ],
+      "confirmations": [],
+      "actions": [
+        "read",
+        "write-report",
+        "test"
+      ]
+    },
+    {
+      "id": "requirements",
+      "title": "目标与需求确认",
+      "dependsOn": [
+        "baseline"
+      ],
+      "consumes": [
+        "baseline-output"
+      ],
+      "produces": [
+        "requirements-output"
+      ],
+      "checks": [
+        "确认实际变更目标、边界、验收条件及有效来源。"
+      ],
+      "confirmations": [
+        "requirements"
+      ],
+      "actions": [
+        "read",
+        "write-report"
+      ],
+      "confirmationAt": "verify"
+    },
+    {
+      "id": "design",
+      "title": "方案设计确认",
+      "dependsOn": [
+        "requirements"
+      ],
+      "consumes": [
+        "requirements-output"
+      ],
+      "produces": [
+        "design-output"
+      ],
+      "checks": [
+        "展示设计与需求对应、取舍、风险和验证方式。"
+      ],
+      "confirmations": [
+        "design"
+      ],
+      "actions": [
+        "read",
+        "write-report"
+      ],
+      "confirmationAt": "verify"
+    },
+    {
+      "id": "planning",
+      "title": "实施规划确认",
+      "dependsOn": [
+        "design"
+      ],
+      "consumes": [
+        "design-output"
+      ],
+      "produces": [
+        "planning-output"
+      ],
+      "checks": [
+        "登记任务边界、依赖、需求覆盖和验证条件并确认；单任务仍需规划。"
+      ],
+      "confirmations": [
+        "planning"
+      ],
+      "actions": [
+        "read",
+        "write-report"
+      ],
+      "confirmationAt": "verify"
+    },
+    {
+      "id": "implementation",
+      "title": "实现",
+      "dependsOn": [
+        "planning"
+      ],
+      "consumes": [
+        "planning-output"
+      ],
+      "produces": [
+        "implementation-output"
+      ],
+      "checks": [
+        "使用已存在的 task start/verify/resume 推进开发任务；阶段声明不替代任务证据。"
+      ],
+      "confirmations": [],
+      "actions": [
+        "edit-code",
+        "test",
+        "write-report"
+      ]
+    },
+    {
+      "id": "verification",
+      "title": "实际验证",
+      "dependsOn": [
+        "implementation"
+      ],
+      "consumes": [
+        "implementation-output"
+      ],
+      "produces": [
+        "verification-output"
+      ],
+      "checks": [
+        "依据目标运行适用检查；失败和未覆盖项分别报告；交付与用户验收分开。",
+        "结构改进保留行为回归；性能改进提供同条件实测前后比较。"
+      ],
+      "confirmations": [],
+      "actions": [
+        "read",
+        "test",
+        "write-report"
+      ]
+    }
+  ],
+  "outputs": [
+    {
+      "id": "baseline-output",
+      "role": "baseline",
+      "title": "当前基线与不变行为",
+      "producer": "baseline"
+    },
+    {
+      "id": "requirements-output",
+      "role": "requirements",
+      "title": "目标与需求确认",
+      "producer": "requirements"
+    },
+    {
+      "id": "design-output",
+      "role": "design",
+      "title": "方案设计确认",
+      "producer": "design"
+    },
+    {
+      "id": "planning-output",
+      "role": "planning",
+      "title": "实施规划确认",
+      "producer": "planning"
+    },
+    {
+      "id": "implementation-output",
+      "role": "code",
+      "title": "实现",
+      "producer": "implementation"
+    },
+    {
+      "id": "verification-output",
+      "role": "verification",
+      "title": "实际验证",
+      "producer": "verification"
+    }
+  ],
+  "completion": {
+    "requiredStages": [
+      "verification"
+    ],
+    "requiredOutputs": [
+      "baseline-output",
+      "requirements-output",
+      "design-output",
+      "planning-output",
+      "implementation-output",
+      "verification-output"
+    ],
+    "checks": [
+      "产物与实际证据一致；未知影响和未覆盖范围如实记录；交付不自动表示用户接受或操作授权。"
+    ],
+    "result": "change-verified"
+  }
+}

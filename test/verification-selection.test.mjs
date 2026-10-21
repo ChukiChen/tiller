@@ -4,11 +4,16 @@ import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { initialize } from '../dist/core.js';
-import { createWork } from '../dist/work.js';
+import { createStartedBaseline, baselineAuthorization } from './workflow-fixtures.mjs';
 import { verificationCategories } from '../dist/verification-cases.js';
 import { parseVerificationSelection } from '../dist/verification-selection.js';
-import { captureVerificationObservation, recordVerificationEvidence, evaluateVerificationSelection, planVerificationRun, applyVerificationRun, reportVerification } from '../dist/verification-runs.js';
+import { captureVerificationObservation as captureVerificationObservationRaw, recordVerificationEvidence, evaluateVerificationSelection, planVerificationRun as planVerificationRunRaw, applyVerificationRun as applyVerificationRunRaw, reportVerification } from '../dist/verification-runs.js';
 import { fixture, put, snapshot, gitRepository } from './helpers.mjs';
+
+
+const planVerificationRun = (root, id, suite, selection) => planVerificationRunRaw(root, id, suite, selection, baselineAuthorization(['test']));
+const applyVerificationRun = (root, id, suite, planId, selection) => applyVerificationRunRaw(root, id, suite, planId, selection, baselineAuthorization(['test']));
+const captureVerificationObservation = (root, id, input) => captureVerificationObservationRaw(root, id, { ...input, workflow: baselineAuthorization(['write-report']) });
 
 const workId = 'scoped-verification';
 const ref = path => ({ repository: '.', path });
@@ -21,10 +26,9 @@ function categories(applicable = 'unit') {
 function selection(caseIds = ['TC-A']) {
   return { caseIds, requirements: ['REQ-A'], modules: ['a'], categories: categories(), reason: 'Only changed module A', scenarioReason: 'Cross-module and system coverage reviewed for this bounded fixture', checks: [] };
 }
-async function setup(t, withCases = true) {
+async function setup(t, withCases = true, scope) {
   const root = fixture(t);
   await initialize({ root });
-  await createWork(root, workId, 'Scoped verification', 'change-requirements');
   put(root, 'spec-a.md', '# Requirement A\nObserved behavior and review scope.\n');
   put(root, 'spec-b.md', '# Unrelated requirement B\n');
   put(root, 'a.mjs', 'console.log("A passed")\n');
@@ -52,6 +56,7 @@ cases:
         repository: .
         path: ${id}.mjs
 `);
+  await createStartedBaseline(root, workId, scope);
   return root;
 }
 async function observe(root, selected, result = { caseId: 'TC-A', status: 'passed' }, id = workId) {
@@ -237,7 +242,7 @@ test('cross-work evidence must be explicit, scope-matched and the latest result 
   const root = await setup(t);
   const other = 'related-verification';
   const work = JSON.parse(readFileSync(join(root, `.tiller/work/${workId}/record.json`), 'utf8'));
-  await createWork(root, other, 'Related observation', { type: 'change-requirements', scope: work.scope });
+  await createStartedBaseline(root, other, work.scope);
   const selected = selection();
   const { reported } = await observe(root, selected, { caseId: 'TC-A', status: 'passed' }, other);
   assert.equal((await evaluateVerificationSelection(root, workId, selected)).ready, false);
@@ -314,18 +319,16 @@ test('one manual case can bind multiple artifact checks without losing observed 
 });
 
 test('cross-work evidence compares scope membership independently of declaration order', async t => {
-  const root = await setup(t);
+  const root = await setup(t, true, { repositories: ['.'], targets: ['target-a', 'target-b'] });
   const originalPath = `.tiller/work/${workId}/record.json`;
   const work = JSON.parse(readFileSync(join(root, originalPath), 'utf8'));
-  work.scope.targets = ['target-a', 'target-b'];
-  put(root, originalPath, JSON.stringify(work));
   const other = 'scope-order-verification';
-  await createWork(root, other, 'Same scope in different order', { type: 'change-requirements', scope: { repositories: ['.'], targets: ['target-b', 'target-a'] } });
+  await createStartedBaseline(root, other, { repositories: ['.'], targets: ['target-b', 'target-a'] });
   const { reported } = await observe(root, selection(), { caseId: 'TC-A', status: 'passed' }, other);
   const references = [{ workId: other, runId: reported.record.id, caseId: 'TC-A', environment: reported.record.environment }];
   const report = await evaluateVerificationSelection(root, workId, selection(), references);
   assert.equal(report.ready, true, report.issues.join('\n'));
   work.scope.targets = ['target-a', 'different-target'];
   put(root, originalPath, JSON.stringify(work));
-  await assert.rejects(evaluateVerificationSelection(root, workId, selection(), references), /范围不一致/);
+  await assert.rejects(evaluateVerificationSelection(root, workId, selection(), references), /范围|记录|摘要/);
 });

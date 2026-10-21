@@ -1,4 +1,0 @@
-{
-  "encoding": "utf8",
-  "content": "/.tiller/local/\n/.omx\n/node_modules/\n/dist/\n/*.tgz\n\n# tiller:local:start\n/.tiller/local/\n# tiller:local:end\n"
-}

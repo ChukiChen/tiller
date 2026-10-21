@@ -1,0 +1,82 @@
+{
+  "schemaVersion": 1,
+  "id": "requirements",
+  "version": "1.0.0",
+  "title": "需求探索",
+  "appliesTo": [
+    "需要明确目标、约束、范围和验收标准。"
+  ],
+  "notApplicableTo": [
+    "本范围不进行设计、实现或发布。"
+  ],
+  "stages": [
+    {
+      "id": "clarify",
+      "title": "目标澄清",
+      "dependsOn": [],
+      "consumes": [],
+      "produces": [
+        "clarify-output"
+      ],
+      "checks": [
+        "核对目标、相关人、范围、现有依据和未知信息。"
+      ],
+      "confirmations": [],
+      "actions": [
+        "read",
+        "write-report"
+      ]
+    },
+    {
+      "id": "requirements",
+      "title": "需求整理与确认",
+      "dependsOn": [
+        "clarify"
+      ],
+      "consumes": [
+        "clarify-output"
+      ],
+      "produces": [
+        "requirements-output"
+      ],
+      "checks": [
+        "需求正文和未决事项已展示；确认绑定实际正文和范围。"
+      ],
+      "confirmations": [
+        "requirements"
+      ],
+      "actions": [
+        "read",
+        "write-report"
+      ],
+      "confirmationAt": "verify"
+    }
+  ],
+  "outputs": [
+    {
+      "id": "clarify-output",
+      "role": "clarify",
+      "title": "目标澄清",
+      "producer": "clarify"
+    },
+    {
+      "id": "requirements-output",
+      "role": "requirements",
+      "title": "需求整理与确认",
+      "producer": "requirements"
+    }
+  ],
+  "completion": {
+    "requiredStages": [
+      "requirements"
+    ],
+    "requiredOutputs": [
+      "clarify-output",
+      "requirements-output"
+    ],
+    "checks": [
+      "产物与实际证据一致；未知影响和未覆盖范围如实记录；交付不自动表示用户接受或操作授权。"
+    ],
+    "result": "requirements-confirmed"
+  }
+}

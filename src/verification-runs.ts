@@ -1,16 +1,26 @@
 import { createHash, randomUUID } from 'node:crypto';
 import { spawn } from 'node:child_process';
-import { lstat, readdir } from 'node:fs/promises';
+import { lstat, readdir, unlink } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { performance } from 'node:perf_hooks';
-import { assertSharedPaths } from './core.js';
-import { applyChanges, assertSafePath, readTextIfExists, validateRelativePath, withProjectLock } from './files.js';
+import { applyChanges, assertSafePath, readTextInputs, verifyTextInputs, readTextIfExists, validateRelativePath, withProjectLock } from './files.js';
 import { resolveRepositoryRoot, resolveWorkRoot } from './delivery-location.js';
-import { loadWorkRecord, validateWorkId } from './work.js';
-import { inspectVerification, readVerificationReference, readVerificationBinary, verificationCategories } from './verification-cases.js';
+import { loadWorkRecord, parseWorkRecord, validateWorkId } from './work.js';
+import { assertWorkflowPolicyContextCurrent } from './workflow-policy.js';
+import type { WorkflowPolicyContext } from './workflow-policy.js';
+import type { TextProof } from './files.js';
+import { assertVerificationDefinitionsCurrent, inspectVerification, readVerificationInputs, verificationCategories } from './verification-cases.js';
 import type { VerificationCase, VerificationConfig, VerificationReference, VerificationSuite } from './verification-cases.js';
+import {loadRepositoryInput, assertRepositoryInputCurrent, proveRepositoryInput} from './repository-input.js';
+import type {RepositoryInput} from './repository-input.js';
 import { assertVerificationInput, parseVerificationSelection } from './verification-selection.js';
 import type { VerificationSelection, VerificationCheck, VerificationInput, VerificationEvidenceReference, VerificationArtifactSnapshots } from './verification-selection.js';
+import { WORKFLOW_ACTIONS } from './workflow-catalog.js';
+import type { WorkflowAction } from './workflow-catalog.js';
+import { parseOperationBinding } from './confirmations.js';
+import type { ConfirmationReference, OperationBinding } from './confirmations.js';
+import { assertSharedWritePaths } from './shared-paths.js';
+import type { SharedWriteProof } from './shared-paths.js';
 export { parseVerificationSelection } from './verification-selection.js';
 export type { VerificationSelection } from './verification-selection.js';
 
@@ -32,6 +42,29 @@ interface RunRecord {
   bindings: Record<string, Binding>; evidence: Snapshot; captureId: string | null;
   environment: string; results: EvidenceResult[];
   execution: Execution | null; staleAfterExecution: boolean; digest: string;
+  authorization: VerificationAuthorization;
+}
+/** Immutable material for one operation; callers explicitly own its final verification. */
+export interface VerificationHistory {
+  readonly root: string; readonly workId: string; readonly records: readonly RunRecord[];
+  readonly names: readonly string[] | null;
+  readonly files: readonly { readonly path: string; readonly text: string | null }[];
+  latest(name: string, binding: Binding): RunRecord | undefined;
+  get(id: string): RunRecord | undefined;
+}
+function freezeData<T>(value: T): T {
+  if (value && typeof value === 'object' && !Object.isFrozen(value)) {
+    for (const item of Object.values(value)) freezeData(item);
+    Object.freeze(value);
+  }
+  return value;
+}
+export interface VerificationWorkflowInput {
+  stageId: string; taskId?: string; actions: WorkflowAction[]; confirmationRefs: ConfirmationReference[]; operationBinding?: OperationBinding;
+}
+export interface VerificationAuthorization {
+  input: VerificationWorkflowInput; attemptId: string; startBasisDigest: string;
+  workflowDigest: string; intentDigest: string; policyDigest: string; taskDigest?: string;
 }
 function fail(message: string): never { throw new Error(message); }
 function hash(value: string | Buffer): string { return createHash('sha256').update(value).digest('hex'); }
@@ -49,6 +82,57 @@ function object(value: unknown, allowed: string[]): Record<string, unknown> {
 function string(value: unknown, max = 4096): string {
   if (typeof value !== 'string' || !value.trim() || value.length > max || value.includes('\0')) fail('验证字段须为有界非空文本。');
   return value;
+}
+function workflowInput(value: unknown): VerificationWorkflowInput {
+  const item = object(value, ['stageId', 'taskId', 'actions', 'confirmationRefs', 'operationBinding']);
+  const stageId = string(item.stageId, 64);
+  if (!/^[a-z][a-z0-9-]{0,63}$/u.test(stageId)) fail('验证须指定固定流程中的阶段。');
+  if (!Array.isArray(item.actions) || !item.actions.length || item.actions.length > WORKFLOW_ACTIONS.length
+    || item.actions.some(action => !WORKFLOW_ACTIONS.includes(action)) || new Set(item.actions).size !== item.actions.length)
+    fail('验证须声明实际动作，不能由命令名称推断权限。');
+  if (!Array.isArray(item.confirmationRefs) || item.confirmationRefs.length > 128) fail('验证确认引用必须是有界数组。');
+  const confirmationRefs = item.confirmationRefs.map(value => {
+    const ref = object(value, ['workId', 'requestId', 'decisionId']);
+    const result = { workId: string(ref.workId, 64), requestId: string(ref.requestId, 64), decisionId: string(ref.decisionId, 64) };
+    Object.values(result).forEach(validateWorkId); return result;
+  });
+  if (new Set(confirmationRefs.map(canonical)).size !== confirmationRefs.length) fail('验证确认引用重复。');
+  const taskId = item.taskId === undefined ? undefined : string(item.taskId, 64);
+  if (taskId !== undefined) validateWorkId(taskId);
+  return { stageId, actions: [...item.actions] as WorkflowAction[], confirmationRefs,
+    ...(taskId === undefined ? {} : { taskId }),
+    ...(item.operationBinding === undefined ? {} : { operationBinding: parseOperationBinding(item.operationBinding) }) };
+}
+function authorization(value: unknown): VerificationAuthorization {
+  const item = object(value, ['input', 'attemptId', 'startBasisDigest', 'workflowDigest', 'intentDigest', 'policyDigest', 'taskDigest']);
+  const result = { input: workflowInput(item.input), attemptId: string(item.attemptId, 128),
+    startBasisDigest: string(item.startBasisDigest, 64), workflowDigest: string(item.workflowDigest, 64),
+    intentDigest: string(item.intentDigest, 64), policyDigest: string(item.policyDigest, 64),
+    ...(item.taskDigest === undefined ? {} : { taskDigest: string(item.taskDigest, 64) }) };
+  if ((result.input.taskId === undefined) !== (result.taskDigest === undefined)) fail('任务验证必须且只能绑定自己的任务定义摘要。');
+  if (result.taskDigest !== undefined && !/^[a-f0-9]{64}$/u.test(result.taskDigest)) fail('任务验证摘要无效。');
+  if ([result.startBasisDigest, result.workflowDigest, result.intentDigest, result.policyDigest].some(value => !/^[a-f0-9]{64}$/u.test(value)))
+    fail('验证授权摘要无效。');
+  return result;
+}
+/** Called only at action boundaries or for saved-result freshness, never by base(). */
+async function authorizeVerification(root: string, workId: string, value: unknown, reuseObservation = false): Promise<VerificationAuthorization> {
+  const input = workflowInput(value);
+  const { inspectWorkflowVerificationAuthorization } = await import('./workflow-stages.js');
+  return inspectWorkflowVerificationAuthorization(root, workId, input, { reuseObservation });
+}
+export function compareVerificationAuthorization(saved: VerificationAuthorization, current: VerificationAuthorization): boolean {
+  if (saved.input.taskId === undefined) return canonical(current) === canonical(saved);
+  const observed = (value: VerificationAuthorization) => ({
+    stageId: value.input.stageId, taskId: value.input.taskId, actions: value.input.actions,
+    operationBinding: value.input.operationBinding ?? null, workflowDigest: value.workflowDigest,
+    intentDigest: value.intentDigest, taskDigest: value.taskDigest,
+  });
+  return canonical(observed(current)) === canonical(observed(saved));
+}
+async function authorizationCurrent(root: string, workId: string, saved: VerificationAuthorization): Promise<boolean> {
+  try { return compareVerificationAuthorization(saved, await authorizeVerification(root, workId, saved.input, saved.input.taskId !== undefined)); }
+  catch { return false; }
 }
 function reference(value: unknown): VerificationReference {
   const ref = object(value, ['repository', 'path']);
@@ -83,21 +167,37 @@ function directory(workId: string): string { validateWorkId(workId); return `.ti
 function environment(): NodeJS.ProcessEnv {
   return Object.fromEntries(Object.entries(process.env).filter(([name]) => !/^GIT_/i.test(name)));
 }
-async function base(rootInput: string, workId: string) {
+async function base(rootInput: string, workId: string, suppliedSource?: RepositoryInput, owner?: WorkflowPolicyContext) {
   const root = await resolveWorkRoot(rootInput, workId);
-  const work = await loadWorkRecord(root, workId, true);
-  await records(root, workId);
-  const inspection = await inspectVerification(root, { definitionsOnly: true });
-  if (!inspection.ready || !inspection.config) fail(`验证目录尚未就绪：${inspection.issues.join('；')}`);
-  return { root, work, inspection, config: inspection.config, bindingCache: new Map<string, Binding>() };
+  const load = async () => {
+    if (owner && (owner.root !== root || owner.record.id !== workId || owner.recordText === undefined
+      || canonical(parseWorkRecord(owner.recordText, workId)) !== canonical(owner.record))) fail('验证工作输入不属于当前工程、工作或控制原文。');
+    const projectInputs = owner ? [] : await readTextInputs(root, ['.tiller/project.json']);
+    const work = owner ? {record: owner.record, original: owner.recordText!, paths: {record: `.tiller/work/${workId}/record.json`}} : await loadWorkRecord(root, workId);
+    const metadata = suppliedSource?.metadata ?? owner?.metadata;
+    const materials = suppliedSource?.materials ?? owner?.materials;
+    const inspection = await inspectVerification(root, { definitionsOnly: true, ...(metadata ? {metadata} : {}), ...(materials ? {materials} : {}) });
+    if (!inspection.ready || !inspection.config) fail(`验证目录尚未就绪：${inspection.issues.join('；')}`);
+    const source = suppliedSource ?? owner?.repositoryInput ?? await loadRepositoryInput(root, work.record.scope.repositories, workId, metadata, materials);
+    if (source.root !== root || source.workId !== workId) fail('验证仓库输入不属于当前工作。');
+    return { root, work, inspection, config: inspection.config, projectInputs, source, owner };
+  };
+  return load();
 }
-async function currentSnapshot(root: string, original: Snapshot): Promise<Snapshot> {
-  const current: Snapshot = {};
-  for (const ref of Object.keys(original)) {
-    try { current[ref] = hash(await readVerificationReference(root, fromKey(ref))); }
-    catch { current[ref] = 'unavailable'; }
+async function currentSnapshot(root: string, original: Snapshot, source?: RepositoryInput): Promise<Snapshot> {
+  const names = Object.keys(original);
+  if (!names.length) return {};
+  try {
+    const current = await readVerificationInputs(root, names.map(fromKey), source);
+    return Object.fromEntries(names.map((name, index) => [name, hash(current[index]!)]));
+  } catch {
+    const current: Snapshot = {};
+    for (const ref of names) {
+      try { current[ref] = hash((await readVerificationInputs(root, [fromKey(ref)], source))[0]!); }
+      catch { current[ref] = 'unavailable'; }
+    }
+    return current;
   }
-  return current;
 }
 async function cwdFor(root: string, workId: string, suite: VerificationSuite): Promise<string> {
   const repositoryRoot = await resolveRepositoryRoot(root, suite.repository, workId);
@@ -113,6 +213,32 @@ function defaultSelection(config: VerificationConfig, cases: VerificationCase[])
     reason: '显式执行套件或全局报告的登记范围。', scenarioReason: '默认报告保留全部目录范围；局部任务须传入经评审的选择。' };
 }
 type Context = Awaited<ReturnType<typeof base>>;
+/** Explicit operation-owned definitions, shared by declared selections only. */
+export type VerificationContexts = Map<string, Context>;
+async function contextFor(root: string, workId: string, contexts?: VerificationContexts, source?: RepositoryInput, owner?: WorkflowPolicyContext): Promise<Context> {
+  const existing = contexts?.get(workId);
+  if (existing) {
+    if (existing.root !== await resolveWorkRoot(root, workId) || existing.work.record.id !== workId) fail('验证上下文不属于当前工程或工作。');
+    if (owner && existing.work.original !== owner.recordText) fail('验证工作输入与本次上下文的控制原文不一致。');
+    return existing;
+  }
+  const loaded = await base(root, workId, source, owner);
+  contexts?.set(workId, loaded);
+  return loaded;
+}
+interface VerificationInputObservation { root: string; references: VerificationInput[]; values: Snapshot; allowUnavailable?: boolean; source?: RepositoryInput }
+function freshVerificationSource(input: RepositoryInput | undefined): RepositoryInput | undefined {
+  if (!input) return undefined;
+  const {materials: _materials, ...source} = input;
+  return source;
+}
+async function inputSnapshot(root: string, references: VerificationInput[], observed?: VerificationInputObservation[], sizes?: Map<string, number>, source?: RepositoryInput): Promise<Snapshot> {
+  const values = await readVerificationInputs(root, references, source);
+  references.forEach((ref, index) => sizes?.set(key(ref), Buffer.byteLength(values[index]!)));
+  const snapshot = Object.fromEntries(references.map((reference, index) => [key(reference), hash(values[index]!)]));
+  observed?.push({ root, references, values: snapshot, ...(source ? {source} : {}) });
+  return snapshot;
+}
 function identity(context: Context): string {
   return hash(canonical({ workId: context.work.record.id, scope: normalizedScope(context) }));
 }
@@ -120,10 +246,7 @@ function normalizedScope(context: Context) {
   const scope = context.work.record.scope;
   return { repositories: [...scope.repositories].sort(), targets: [...scope.targets].sort() };
 }
-async function bindingFor(context: Context, caseId: string | null, check: VerificationCheck | null, modules: string[] = [], caseChecks: VerificationCheck[] = []): Promise<Binding> {
-  const cacheKey = canonical({ caseId, check, modules, caseChecks });
-  const cached = context.bindingCache.get(cacheKey);
-  if (cached) return cached;
+function bindingDefinition(context: Context, caseId: string | null, check: VerificationCheck | null, modules: string[] = [], caseChecks: VerificationCheck[] = []) {
   const test = caseId === null ? null : context.inspection.cases.find(item => item.id === caseId);
   if (caseId !== null && !test) fail(`所选用例不存在：${caseId}`);
   const suiteId = check?.kind === 'execution' ? check.suite : test?.automation?.suite;
@@ -146,60 +269,190 @@ async function bindingFor(context: Context, caseId: string | null, check: Verifi
   });
   const references: VerificationInput[] = [...testedInputs, ...requirementDefinitions.map(item => item.source), ...moduleDefinitions.map(item => item.design)];
   references.push(...references.flatMap(ref => ref.provenance ? [ref.provenance] : []));
-  const inputs: Snapshot = {};
-  let total = 0;
+  const unique = new Map<string, VerificationInput>();
   for (const ref of references) {
     assertVerificationInput(ref);
     if (!scope.includes(ref.repository)) fail('受检输入或规格仓库超出工作范围。');
-    if (Object.hasOwn(inputs, key(ref))) continue;
-    const content = ref.binary ? await readVerificationBinary(context.root, { repository: ref.repository, path: ref.path }) : await readVerificationReference(context.root, { repository: ref.repository, path: ref.path });
-    total += Buffer.byteLength(content);
-    if (total > 64 * 1024 * 1024 || Object.keys(inputs).length >= 1000) fail('单项验证输入超过容量限制。');
-    inputs[key(ref)] = hash(content);
+    if (!unique.has(key(ref)) || ref.binary !== true) unique.set(key(ref), ref);
   }
-  const binding = { identity: identity(context), definition: hash(canonical({ test, suite, check: caseId === null ? check : null, caseChecks, requirements: requirementDefinitions, modules: moduleDefinitions })), inputs, check, caseChecks, caseId, modules };
-  context.bindingCache.set(cacheKey, binding);
-  return binding;
+  if (unique.size > 1000) fail('单项验证输入超过容量限制。');
+  return { definition: { identity: identity(context), definition: hash(canonical({ test, suite, check: caseId === null ? check : null, caseChecks, requirements: requirementDefinitions, modules: moduleDefinitions })), check, caseChecks, caseId, modules }, references: [...unique.values()] };
 }
-async function selectedBindings(context: Context, selection: VerificationSelection): Promise<Record<string, Binding>> {
+async function bindingFor(context: Context, caseId: string | null, check: VerificationCheck | null, modules: string[] = [], caseChecks: VerificationCheck[] = []): Promise<Binding> {
+  const prepared = bindingDefinition(context, caseId, check, modules, caseChecks);
+  return { ...prepared.definition, inputs: await inputSnapshot(context.root, prepared.references, undefined, undefined, context.source) };
+}
+function prepareSelectedBindings(context: Context, selection: VerificationSelection) {
   for (const id of selection.requirements) if (!context.config.requirements.some(item => item.id === id)) fail(`所选需求未登记：${id}`);
   for (const id of selection.modules) if (!context.config.modules.some(item => item.id === id)) fail(`所选模块未登记：${id}`);
-  const result: Record<string, Binding> = {};
-  for (const caseId of selection.caseIds) {
-    const checks = selection.checks.filter(check => check.caseId === caseId);
-    // All checks of a case bind the same complete observed object and definition.
-    result[`case:${caseId}`] = await bindingFor(context, caseId, null, [], checks);
+  const prepared = new Map<string, ReturnType<typeof bindingDefinition>>();
+  for (const caseId of selection.caseIds) prepared.set(`case:${caseId}`, bindingDefinition(context, caseId, null, [], selection.checks.filter(check => check.caseId === caseId)));
+  for (const check of selection.checks) prepared.set(`check:${check.id}`, bindingDefinition(context, check.caseId ?? null, check, check.caseId ? [] : selection.modules,
+    check.caseId ? selection.checks.filter(item => item.caseId === check.caseId) : []));
+  if (!prepared.size) fail('验证选择不能为空。');
+  return prepared;
+}
+async function loadBindings(context: Context, prepared: Map<string, ReturnType<typeof bindingDefinition>>, observed?: VerificationInputObservation[]): Promise<Record<string, Binding>> {
+  const unique = new Map<string, VerificationInput>();
+  for (const item of prepared.values()) for (const ref of item.references) if (!unique.has(key(ref)) || ref.binary !== true) unique.set(key(ref), ref);
+  const inputs: Snapshot = {}; const sizes = new Map<string, number>();
+  let batch: VerificationInput[] = []; let maximumBytes = 0;
+  const readBatch = async () => {
+    if (batch.length) Object.assign(inputs, await inputSnapshot(context.root, batch, observed, sizes, context.source));
+    batch = []; maximumBytes = 0;
+  };
+  for (const ref of unique.values()) {
+    const maximum = (ref.binary ? 64 : 4) * 1024 * 1024;
+    if (batch.length && maximumBytes + maximum > 64 * 1024 * 1024) await readBatch();
+    batch.push(ref); maximumBytes += maximum;
   }
-  for (const check of selection.checks) result[`check:${check.id}`] = await bindingFor(context, check.caseId ?? null, check, check.caseId ? [] : selection.modules,
-    check.caseId ? selection.checks.filter(item => item.caseId === check.caseId) : []);
-  if (!Object.keys(result).length) fail('验证选择不能为空。');
-  return result;
+  await readBatch();
+  for (const item of prepared.values()) if (item.references.reduce((total, ref) => total + sizes.get(key(ref))!, 0) > 64 * 1024 * 1024) fail('单项验证输入超过容量限制。');
+  return Object.fromEntries([...prepared].map(([name, item]) => [name, { ...item.definition,
+    inputs: Object.fromEntries(item.references.map(ref => [key(ref), inputs[key(ref)]!])) }]));
+}
+async function selectedBindings(context: Context, selection: VerificationSelection, observed?: VerificationInputObservation[]): Promise<Record<string, Binding>> {
+  return loadBindings(context, prepareSelectedBindings(context, selection), observed);
 }
 async function bindingCurrent(context: Context, binding: Binding): Promise<boolean> {
   try { return canonical(await bindingFor(context, binding.caseId, binding.check, binding.modules, binding.caseChecks)) === canonical(binding); }
   catch { return false; }
 }
 
-export async function planVerificationRun(rootInput: string, workId: string, suiteId: string, selectionInput?: unknown) {
+function verificationSharingReferences(context: Context, bindings: Record<string, Binding>, evidence: Snapshot = {}): VerificationReference[] {
+  const required = new Map<string, VerificationReference>();
+  const include = (ref: VerificationReference) => required.set(key(ref), ref);
+  for (const name of [...Object.keys(context.inspection.files), ...Object.keys(evidence)]) include(fromKey(name));
+  for (const binding of Object.values(bindings)) {
+    let references: VerificationInput[] = [];
+    try {
+      const prepared = bindingDefinition(context, binding.caseId, binding.check, binding.modules, binding.caseChecks);
+      if (prepared.definition.definition === binding.definition && prepared.definition.identity === binding.identity) references = prepared.references;
+    }
+    catch { /* Without a current declaration, no historical input receives a binary exemption. */ }
+    const binaryOutputs = new Set(references.filter(ref => ref.binary === true && ref.provenance).map(key));
+    for (const name of Object.keys(binding.inputs)) if (!binaryOutputs.has(name)) include(fromKey(name));
+    for (const ref of references) if (ref.binary !== true || !ref.provenance) include(ref);
+    for (const ref of references) if (ref.provenance) include(ref.provenance);
+  }
+  return [...required.values()];
+}
+async function collectSharingPaths(context: Context, references: readonly VerificationReference[], batches: Map<string, Set<string>>): Promise<void> {
+  const repositories = new Map<string, string>();
+  for (const ref of references) {
+    let repositoryRoot = repositories.get(ref.repository);
+    if (repositoryRoot === undefined) {
+      repositoryRoot = context.source.repositories.get(ref.repository) ?? await resolveRepositoryRoot(context.root, ref.repository, context.work.record.id);
+      repositories.set(ref.repository, repositoryRoot);
+    }
+    let paths = batches.get(repositoryRoot);
+    if (!paths) { paths = new Set(); batches.set(repositoryRoot, paths); }
+    paths.add(ref.path);
+  }
+}
+/** Registration checks shared sources at its write boundary, never during ordinary reads. */
+async function assertVerificationSharing(context: Context, bindings: Record<string, Binding>, evidence: Snapshot = {}): Promise<void> {
+  const batches = new Map<string, Set<string>>();
+  await collectSharingPaths(context, verificationSharingReferences(context, bindings, evidence), batches);
+  for (const [repositoryRoot, paths] of batches) await assertSharedWritePaths(repositoryRoot, [...paths]);
+}
+
+/** Write-boundary sharing check; authorization and evidence readiness remain the caller's responsibility. */
+export async function assertVerificationSelectionSharing(rootInput: string, workId: string, selectionInput: VerificationSelection,
+  evidenceRefs: VerificationEvidenceReference[], historyInput?: VerificationHistory,
+  options: {proofs?: SharedWriteProof[]; contexts?: VerificationContexts; source?: RepositoryInput; owner?: WorkflowPolicyContext} = {}): Promise<void> {
+  const context = await contextFor(rootInput, workId, options.contexts, options.source, options.owner);
+  const selection = parseVerificationSelection(selectionInput);
+  const prepared = prepareSelectedBindings(context, selection);
+  if (historyInput && (historyInput.root !== context.root || historyInput.workId !== workId)) fail('验证历史输入不属于当前工作。');
+  const batches = new Map<string, Set<string>>();
+  const sources = verificationSharingReferences(context, {});
+  for (const item of prepared.values()) for (const ref of item.references) {
+    if (ref.binary !== true || !ref.provenance) sources.push(ref);
+    if (ref.provenance) sources.push(ref.provenance);
+  }
+  type Owner = { context: Context; history: VerificationHistory; bindings: Record<string, Binding>; evidence: Snapshot; records: Set<string> };
+  const owners = new Map<string, Owner>();
+  const selectedNames = new Set<string>();
+  for (const raw of evidenceRefs) {
+    const data = object(raw, ['workId', 'runId', 'caseId', 'checkId', 'environment']);
+    const ownerId = string(data.workId, 64);
+    validateWorkId(ownerId);
+    const runId = string(data.runId, 36);
+    if ((data.caseId === undefined) === (data.checkId === undefined)) fail('证据引用必须明确一个用例或检查。');
+    const name = data.caseId === undefined ? `check:${string(data.checkId, 128)}` : `case:${string(data.caseId, 128)}`;
+    if (!prepared.has(name) || selectedNames.has(name)) fail('证据引用超出选择范围或存在歧义。');
+    selectedNames.add(name);
+    if (ownerId !== workId || data.environment !== undefined) string(data.environment);
+    let owner = owners.get(ownerId);
+    if (!owner) {
+      const ownerContext = ownerId === workId ? context : await contextFor(context.root, ownerId, options.contexts);
+      if (canonical(normalizedScope(ownerContext)) !== canonical(normalizedScope(context))) fail('跨工作证据范围不一致。');
+      const history = ownerId === workId && historyInput ? historyInput : await loadHistory(ownerContext.root, ownerId);
+      owner = { context: ownerContext, history, bindings: {}, evidence: {}, records: new Set() };
+      owners.set(ownerId, owner);
+    }
+    const record = owner.history.get(runId);
+    if (!record) fail('引用的验证记录不存在。');
+    if (data.environment !== undefined && record.environment !== data.environment) fail('显式证据引用的环境与结果不一致。');
+    const requested = prepared.get(name)!;
+    const related = relatedBindingNames(record, name, { ...requested.definition, inputs: {} });
+    if (!related.length) fail('引用的验证记录未覆盖所选检查。');
+    const capture = record.captureId ? owner.history.get(record.captureId) : undefined;
+    if (record.captureId && !capture) fail('引用的验证记录缺少采集来源。');
+    for (const entry of [record, ...(capture ? [capture] : [])]) {
+      owner.records.add(`${directory(ownerId)}/${entry.id}.json`);
+      for (const bindingName of related) {
+        const binding = entry.bindings[bindingName];
+        if (binding) owner.bindings[`${entry.id}::${bindingName}`] = binding;
+      }
+      for (const result of entry.results) if (related.includes(resultKey(result))) {
+        owner.evidence[key(result.evidence)] = entry.evidence[key(result.evidence)]!;
+      }
+    }
+  }
+  await collectSharingPaths(context, sources, batches);
+  for (const owner of owners.values()) {
+    const references = verificationSharingReferences(owner.context, owner.bindings, owner.evidence);
+    references.push(...[...owner.records].map(path => ({ repository: '.', path })));
+    await collectSharingPaths(owner.context, references, batches);
+  }
+  for (const selected of new Set([context, ...[...owners.values()].map(owner => owner.context)])) await assertRepositoryInputCurrent(selected.source);
+  for (const [repositoryRoot, paths] of batches) {
+    if (options.proofs) options.proofs.push({root: repositoryRoot, paths: [...paths]});
+    else await assertSharedWritePaths(repositoryRoot, [...paths]);
+  }
+}
+
+export async function planVerificationRun(rootInput: string, workId: string, suiteId: string, selectionInput?: unknown, workflow?: unknown) {
+  return prepareVerificationRun(rootInput, workId, suiteId, selectionInput, workflow);
+}
+async function prepareVerificationRun(rootInput: string, workId: string, suiteId: string, selectionInput?: unknown,
+  workflow?: unknown, historyInput?: VerificationHistory) {
   string(suiteId, 128);
   const context = await base(rootInput, workId);
+  if (historyInput) {
+    if (historyInput.root !== context.root || historyInput.workId !== workId) fail('验证历史输入不属于当前工作。');
+  } else await records(context.root, workId);
   const { root, work, inspection, config } = context;
   const suite = config.suites.find(item => item.id === suiteId);
   if (!suite) fail('测试套件未登记。');
-  if (work.record.schemaVersion !== 3 || !work.record.scope.repositories.includes(suite.repository)) fail('测试仓库超出工作范围。');
+  if (!work.record.scope.repositories.includes(suite.repository)) fail('测试仓库超出工作范围。');
   const cwd = await cwdFor(root, workId, suite);
   const selection = selectionInput === undefined ? defaultSelection(config, inspection.cases.filter(item => item.automation?.suite === suiteId)) : parseVerificationSelection(selectionInput);
   const caseIds = selection.caseIds;
   if (caseIds.some(id => inspection.cases.find(item => item.id === id)?.automation?.suite !== suiteId)
     || selection.checks.some(check => check.kind === 'manual' || (check.kind === 'execution' && check.suite !== suiteId))) fail('选择范围包含不属于执行套件的用例或检查。');
   const bindings = await selectedBindings(context, selection);
+  const allowed = await authorizeVerification(root, workId, workflow);
+  if (!allowed.input.actions.includes('test')) fail('执行测试套件必须声明 test 动作及其当前授权。');
   const files = Object.assign({}, ...Object.values(bindings).map(binding => binding.inputs)) as Snapshot;
   const command = suite.command === 'node' ? process.execPath : suite.command;
   const environmentHash = hash(canonical(environment()));
   const configuredInvocation = invocation({ repository: suite.repository, command: suite.command, args: suite.args, cwd: suite.cwd });
-  const binding = { root, workId, suite, command, cwd, bindings, caseIds, environmentHash };
+  const binding = { root, workId, suite, command, cwd, bindings, caseIds, environmentHash, authorization: allowed };
   return { ready: true, planId: hash(canonical(binding)), root, workId, suiteId, repository: suite.repository, cwd, command,
-    args: suite.args, invocation: configuredInvocation, timeoutMs: suite.timeoutMs, inputs: suite.inputs, files, bindings, selection, caseIds, environmentHash,
+    args: suite.args, invocation: configuredInvocation, timeoutMs: suite.timeoutMs, inputs: suite.inputs, files, bindings, selection, caseIds, environmentHash, authorization: allowed,
     limitation: '已配置命令是受信任程序，不是沙箱；可能修改文件或访问网络。超时只保证尝试终止直接子进程，不能保证后代进程退出。只绑定显式输入和目录引用，不能证明未声明依赖不变；进程成功不代表逐用例通过。' };
 }
 
@@ -254,6 +507,20 @@ function relatedBindingNames(record: RunRecord, name: string, binding: Binding):
   return Object.entries(record.bindings).filter(([candidate, value]) => candidate === name
     || (binding.caseId !== null && value.caseId === binding.caseId)).map(([candidate]) => candidate);
 }
+function indexHistory(history: readonly RunRecord[]) {
+  const byId = new Map<string, RunRecord>(); const byName = new Map<string, RunRecord>(); const byCase = new Map<string, RunRecord>();
+  for (const record of history) {
+    byId.set(record.id, record);
+    for (const [name, binding] of Object.entries(record.bindings)) {
+      byName.set(name, record);
+      if (binding.caseId !== null) byCase.set(binding.caseId, record);
+    }
+  }
+  return { byId, latest(name: string, binding: Binding) {
+    const named = byName.get(name); const related = binding.caseId === null ? undefined : byCase.get(binding.caseId);
+    return !named || (related && related.sequence > named.sequence) ? related : named;
+  } };
+}
 function parseSnapshot(value: unknown): Snapshot {
   if (!value || typeof value !== 'object' || Array.isArray(value) || Object.keys(value).length > 20000) fail('验证快照无效。');
   for (const [ref, digest] of Object.entries(value)) {
@@ -298,7 +565,8 @@ function parseRecord(text: string, workId: string, filename: string): RunRecord 
   if (raw && typeof raw === 'object' && !Array.isArray(raw) && (raw as Record<string, unknown>).schemaVersion !== 2) {
     throw Object.assign(new Error(`验证记录版本 ${String((raw as Record<string, unknown>).schemaVersion)} 不受支持；仅支持版本 2。请使用 tiller work create 新建工作并重新验证；旧记录不迁移、不删除，旧结果不自动继承。`), { code: 'UNSUPPORTED_RECORD_VERSION' });
   }
-  const data = object(raw, ['schemaVersion', 'id', 'workId', 'createdAt', 'sequence', 'source', 'suite', 'caseIds', 'bindings', 'evidence', 'captureId', 'environment', 'results', 'execution', 'staleAfterExecution', 'digest']);
+  const data = object(raw, ['schemaVersion', 'id', 'workId', 'createdAt', 'sequence', 'source', 'suite', 'caseIds', 'bindings', 'evidence', 'captureId', 'environment', 'results', 'execution', 'staleAfterExecution', 'digest', 'authorization']);
+  authorization(data.authorization);
   if (data.workId !== workId || !['executed', 'captured', 'reported'].includes(String(data.source))
     || typeof data.id !== 'string' || !/^[0-9a-f-]{36}$/.test(data.id) || filename !== `${data.id}.json`
     || typeof data.createdAt !== 'string' || !Number.isFinite(Date.parse(data.createdAt))
@@ -330,30 +598,61 @@ function parseRecord(text: string, workId: string, filename: string): RunRecord 
   if (digest !== hash(canonical(body))) fail('验证记录内容摘要不匹配。');
   return data as unknown as RunRecord;
 }
-async function records(root: string, workId: string): Promise<RunRecord[]> {
-  const relative = directory(workId); const dir = await assertSafePath(root, relative);
-  await assertSharedPaths(root, [relative]);
+async function readHistoryNames(root: string, workId: string): Promise<string[] | null> {
+  const dir = await assertSafePath(root, directory(workId));
   let names: string[];
-  try { names = await readdir(dir); } catch (cause) { if ((cause as NodeJS.ErrnoException).code === 'ENOENT') return []; throw cause; }
+  try { names = await readdir(dir); } catch (cause) { if ((cause as NodeJS.ErrnoException).code === 'ENOENT') return null; throw cause; }
   if (names.length > 10000) fail('验证记录数量过大。');
-  const result: RunRecord[] = [];
-  for (const name of names) {
-    if (!/^[0-9a-f-]{36}\.json$/.test(name)) fail('验证结果目录包含非标准记录。');
-    await assertSharedPaths(root, [`${relative}/${name}`]);
-    const text = await readTextIfExists(root, `${relative}/${name}`);
-    if (text === null) fail('验证记录在读取时消失。');
-    result.push(parseRecord(text, workId, name));
+  if (names.some(name => !/^[0-9a-f-]{36}\.json$/.test(name))) fail('验证结果目录包含非标准记录。');
+  return names.sort();
+}
+export async function assertVerificationHistoryCurrent(history: VerificationHistory, proofs?: TextProof[]): Promise<void> {
+  if (canonical(await readHistoryNames(history.root, history.workId)) !== canonical(history.names)) fail('验证历史目录成员在复核期间变化，请重新检查。');
+  if (proofs) {
+    proofs.push({root: history.root, inputs: history.files, control: true,
+      onChanged: () => fail('验证历史内容在复核期间变化，请重新检查。'),
+      verifyAfter: {key: history, run: async () => {
+        if (canonical(await readHistoryNames(history.root, history.workId)) !== canonical(history.names)) fail('验证历史目录成员在终态核对期间变化，请重新检查。');
+      }}});
+    return;
   }
+  try { await verifyTextInputs(history.root, [...history.files]); }
+  catch { fail('验证历史内容在复核期间变化，请重新检查。'); }
+  if (canonical(await readHistoryNames(history.root, history.workId)) !== canonical(history.names)) fail('验证历史目录成员在终态核对期间变化，请重新检查。');
+}
+async function loadHistory(root: string, workId: string): Promise<VerificationHistory> {
+  const relative = directory(workId); const names = await readHistoryNames(root, workId);
+  const files = await readTextInputs(root, (names ?? []).map(name => `${relative}/${name}`));
+  const result = files.map((file, index) => {
+    if (file.text === null) fail('验证记录在读取时消失。');
+    return parseRecord(file.text, workId, names![index]!);
+  });
   if (new Set(result.map(r => r.sequence)).size !== result.length) fail('验证记录序号重复。');
   result.sort((a, b) => a.sequence - b.sequence);
+  const byId = new Map(result.map(record => [record.id, record]));
   for (const record of result.filter(item => item.source === 'reported')) {
-    const capture = result.find(item => item.id === record.captureId);
+    const capture = byId.get(record.captureId!);
     if (!capture || capture.source === 'reported' || capture.sequence >= record.sequence || capture.environment !== record.environment) fail('结果缺少先前执行或观察输入记录。');
+    if (canonical(record.authorization) !== canonical(capture.authorization)) fail('结果不能重绑定采集时的阶段或操作授权。');
     for (const name of Object.keys(record.bindings)) {
       if (canonical(record.bindings[name]) !== canonical(capture.bindings[name])) fail('结果不能重采或改写受检输入。');
     }
   }
-  return result;
+  if (canonical(await readHistoryNames(root, workId)) !== canonical(names)) fail('验证历史目录成员在读取期间变化，请重新检查。');
+  const index = indexHistory(result);
+  return freezeData({ root, workId, records: result, names, files,
+    latest: (name: string, binding: Binding) => index.latest(name, binding), get: (id: string) => index.byId.get(id) });
+}
+export async function loadVerificationHistory(rootInput: string, workId: string, owner?: WorkflowPolicyContext): Promise<VerificationHistory> {
+  const root = await resolveWorkRoot(rootInput, workId);
+  if (owner) {
+    if (owner.root !== root || owner.record.id !== workId || owner.recordText === undefined
+      || canonical(parseWorkRecord(owner.recordText, workId)) !== canonical(owner.record)) fail('验证历史所有者与当前工作原文不一致。');
+  } else await loadWorkRecord(root, workId);
+  return loadHistory(root, workId);
+}
+async function records(root: string, workId: string): Promise<RunRecord[]> {
+  return structuredClone((await loadHistory(root, workId)).records) as RunRecord[];
 }
 /** Reads strict historical records without asserting that their tested inputs are still current. */
 export async function readVerificationRecords(rootInput: string, workId: string): Promise<RunRecord[]> {
@@ -361,53 +660,82 @@ export async function readVerificationRecords(rootInput: string, workId: string)
   await loadWorkRecord(root, workId);
   return records(root, workId);
 }
-async function newResultPath(root: string, workId: string, id: string): Promise<string> {
+async function newResultPath(root: string, workId: string, id: string, historyPaths: readonly string[] = []): Promise<string> {
   const path = `${directory(workId)}/${id}.json`;
-  await assertSharedPaths(root, [path]);
+  await assertSharedWritePaths(root, [...historyPaths, path]);
   if (await readTextIfExists(root, path) !== null) fail('验证结果目标已经存在，不能覆盖。');
   return path;
 }
-async function save(root: string, workId: string, body: Omit<RunRecord, 'schemaVersion' | 'id' | 'workId' | 'sequence' | 'createdAt' | 'digest'>, id = randomUUID()) {
-  const previous = await records(root, workId);
+async function save(root: string, workId: string, body: Omit<RunRecord, 'schemaVersion' | 'id' | 'workId' | 'sequence' | 'createdAt' | 'digest'>, id = randomUUID(), historyInput?: VerificationHistory, verifyInputs?: (phase: 'before' | 'after', expectedHistory: VerificationHistory) => Promise<void>) {
+  const history = historyInput ?? await loadHistory(root, workId);
+  const previous = history.records;
   const recordBody = { schemaVersion: 2 as const, id, workId, sequence: (previous.at(-1)?.sequence ?? 0) + 1, createdAt: new Date().toISOString(), ...body };
   const record: RunRecord = { ...recordBody, digest: hash(canonical(recordBody)) };
-  const path = await newResultPath(root, workId, id);
+  const path = await newResultPath(root, workId, id, history.files.map(file => file.path));
   const text = JSON.stringify(record, null, 2) + '\n'; parseRecord(text, workId, `${record.id}.json`);
-  await applyChanges(root, [{ path, before: null, after: text }], async () => assertSharedPaths(root, [path]));
+  await assertVerificationHistoryCurrent(history);
+  if (verifyInputs) await verifyInputs('before', history);
+  const writtenHistory = { ...history, names: [...(history.names ?? []), `${id}.json`].sort(), files: [...history.files, { path, text }] };
+  await applyChanges(root, [{ path, before: null, after: text }], async () => {
+    await assertVerificationHistoryCurrent(writtenHistory);
+  });
+  try { if (verifyInputs) await verifyInputs('after', writtenHistory); }
+  catch (error) {
+    if (await readTextIfExists(root, path) !== text) fail('验证写后检查失败且记录被外部修改，保留外部内容。');
+    await unlink(await assertSafePath(root, path));
+    throw error;
+  }
   return { path, record, limitation: '记录摘要用于发现意外修改，不是身份签名；报告和执行结果不代替人工验收，也不能证明宿主遵守了任务顺序。' };
 }
 
-export async function applyVerificationRun(rootInput: string, workId: string, suiteId: string, planId: string, selectionInput?: unknown) {
+export async function applyVerificationRun(rootInput: string, workId: string, suiteId: string, planId: string, selectionInput?: unknown, workflow?: unknown) {
   const root = await resolveWorkRoot(rootInput, workId);
   return withProjectLock(root, async () => {
-    const plan = await planVerificationRun(root, workId, suiteId, selectionInput);
-    if (plan.planId !== planId) fail('测试执行计划已变化，请重新预览。');
-    await records(root, workId);
     const id = randomUUID();
-    await newResultPath(root, workId, id);
+    const history = await loadHistory(root, workId);
+    await newResultPath(root, workId, id, history.files.map(file => file.path));
+    const plan = await prepareVerificationRun(root, workId, suiteId, selectionInput, workflow, history);
+    if (plan.planId !== planId) fail('测试执行计划已变化，请重新预览。');
+    await assertVerificationSharing(await base(root, workId), plan.bindings);
+    await assertVerificationHistoryCurrent(history);
     const execution = await execute(plan);
     let staleAfterExecution = true;
     try {
       const context = await base(root, workId);
-      staleAfterExecution = (await Promise.all(Object.values(plan.bindings).map(binding => bindingCurrent(context, binding)))).some(current => !current);
+      await assertVerificationSharing(context, plan.bindings);
+      staleAfterExecution = !await authorizationCurrent(root, workId, plan.authorization)
+        || (await Promise.all(Object.values(plan.bindings).map(binding => bindingCurrent(context, binding)))).some(current => !current);
+      await assertRepositoryInputCurrent(context.source);
     } catch { /* Preserve the actual execution even when it invalidated its own configuration. */ }
     const saved = await save(root, workId, { source: 'executed', suite: suiteId, caseIds: plan.caseIds, bindings: plan.bindings, evidence: {}, captureId: null,
-      environment: `sha256:${plan.environmentHash}`, results: [], execution, staleAfterExecution }, id);
+      environment: `sha256:${plan.environmentHash}`, results: [], execution, staleAfterExecution, authorization: plan.authorization }, id, history);
     return { ...saved, ready: execution.suitePassed && !staleAfterExecution };
   });
 }
 
 export async function captureVerificationObservation(rootInput: string, workId: string, input: unknown) {
-  const data = object(input, ['selection', 'environment']);
+  const data = object(input, ['selection', 'environment', 'workflow']);
   const selection = parseVerificationSelection(data.selection);
   if (selection.checks.some(check => check.kind === 'execution')) fail('执行检查必须通过实际套件运行采集；人工观察请使用 manual 检查。');
   const env = string(data.environment);
   const root = await resolveWorkRoot(rootInput, workId);
   return withProjectLock(root, async () => {
     const context = await base(root, workId);
-    const bindings = await selectedBindings(context, selection);
+    const history = await loadHistory(root, workId);
+    const observations: VerificationInputObservation[] = [];
+    const bindings = await selectedBindings(context, selection, observations);
+    const {loadWorkflowVerificationAuthorization} = await import('./workflow-stages.js');
+    const permission = await loadWorkflowVerificationAuthorization(root, workId, workflowInput(data.workflow));
+    const allowed = permission.authorization;
+    if (!allowed.input.actions.some(action => action === 'read' || action === 'write-report')) fail('观察采集须有当前读取或报告动作来源。');
     const saved = await save(root, workId, { source: 'captured', suite: null, caseIds: selection.caseIds, bindings, evidence: {}, captureId: null,
-      environment: env, results: [], execution: null, staleAfterExecution: false });
+      environment: env, results: [], execution: null, staleAfterExecution: false, authorization: allowed }, randomUUID(), history, async (_phase, expectedHistory) => {
+        await assertVerificationSharing(context, bindings);
+        await assertInputObservationsCurrent(observations);
+        await assertRepositoryInputCurrent(context.source);
+        await assertVerificationDefinitionsCurrent(root, context.inspection);
+        await permission.prove(expectedHistory);
+      });
     return { ...saved, ready: true, captureId: saved.record.id };
   });
 }
@@ -419,10 +747,15 @@ export async function recordVerificationEvidence(rootInput: string, workId: stri
   const root = await resolveWorkRoot(rootInput, workId);
   return withProjectLock(root, async () => {
     const context = await base(root, workId);
-    const history = await records(root, workId);
+    const historyInput = await loadHistory(root, workId);
+    const history = historyInput.records;
     const capture = history.find(record => record.id === captureId);
     if (!capture || capture.source === 'reported') fail('结果必须引用执行或观察当时的受检输入；先执行套件或采集观察输入。');
     if (capture.environment !== env) fail('结果环境与受检输入记录不一致。');
+    const {loadWorkflowVerificationAuthorization} = await import('./workflow-stages.js');
+    const permission = await loadWorkflowVerificationAuthorization(root, workId, capture.authorization.input,
+      {reuseObservation: capture.authorization.input.taskId !== undefined});
+    if (!compareVerificationAuthorization(capture.authorization, permission.authorization)) fail('观察所属阶段开始依据或实际授权已失效，不能继承旧许可登记结果。');
     const bindings: Record<string, Binding> = {};
     const files: Snapshot = {};
     for (const result of results) {
@@ -434,28 +767,138 @@ export async function recordVerificationEvidence(rootInput: string, workId: stri
       if ([...Object.keys(binding.inputs), ...Object.keys(context.inspection.files)].some(inputKey => inputKey.toLowerCase() === evidenceKey)) fail('验证证据必须独立于配置、用例定义及被验证输入。');
       if (!context.work.record.scope.repositories.includes(result.evidence.repository)) fail('结果或证据仓库超出工作范围。');
       bindings[name] = binding;
-      files[key(result.evidence)] = hash(await readVerificationReference(root, result.evidence));
+      files[key(result.evidence)] = hash((await readVerificationInputs(root, [result.evidence], context.source))[0]!);
     }
-    if (canonical(await currentSnapshot(root, files)) !== canonical(files)) fail('记录期间验证依据发生变化。');
+    if (canonical(await currentSnapshot(root, files, context.source)) !== canonical(files)) fail('记录期间验证依据发生变化。');
     const staleAfterExecution = (await Promise.all(Object.values(bindings).map(binding => bindingCurrent(context, binding)))).some(current => !current);
     const saved = await save(root, workId, { source: 'reported', suite: capture.suite, caseIds: results.flatMap(r => r.caseId ? [r.caseId] : []), bindings, evidence: files, captureId,
-      environment: env, results, execution: null, staleAfterExecution });
+      environment: env, results, execution: null, staleAfterExecution, authorization: capture.authorization }, randomUUID(), historyInput, async (_phase, expectedHistory) => {
+        await assertVerificationSharing(context, bindings, files);
+        if (canonical(await currentSnapshot(root, files, context.source)) !== canonical(files)) fail('记录期间验证依据发生变化。');
+        await assertRepositoryInputCurrent(context.source);
+        await assertVerificationDefinitionsCurrent(root, context.inspection);
+        await permission.prove(expectedHistory);
+      });
     return { ...saved, ready: true };
   });
 }
 
 type EvaluatedState = { status: Outcome | 'stale'; recordId: string | null; source: string | null; workId: string; inputs: Snapshot };
+export type VerificationAuthorizationReader = (root: string, workId: string, saved: VerificationAuthorization) => Promise<boolean>;
+export interface VerificationEvaluationOptions { owner?: WorkflowPolicyContext; source?: RepositoryInput; contexts?: VerificationContexts; authorization?: VerificationAuthorizationReader; inputs?: VerificationEvaluationInput; historyInput?: VerificationHistory; history?: 'selected' | 'all'; taskId?: string; workflow?: { stageId: string; attemptId: string } }
+type VerificationRow = {
+  name: string; binding: Binding; requested: VerificationEvidenceReference | undefined; ownerWorkId: string;
+  latest: RunRecord | undefined; actual: Binding | undefined; result: EvidenceResult | undefined; capture: RunRecord | undefined;
+  evidenceCurrent: boolean; authorizationCurrent: boolean; bindingCurrent: boolean;
+};
+export interface VerificationEvaluationInput {
+  readonly context: Context; readonly workId: string; readonly selection: VerificationSelection;
+  readonly evidenceRefs: VerificationEvidenceReference[]; readonly artifactSnapshots: VerificationArtifactSnapshots | undefined;
+  readonly options: VerificationEvaluationOptions; readonly expected: Record<string, Binding>;
+  readonly rows: VerificationRow[]; readonly histories: VerificationHistory[]; readonly observations: VerificationInputObservation[];
+  readonly runs: { id: string; sequence: number; source: string; suite: string | null; stale: boolean; execution: Execution | null }[];
+  readonly contexts: readonly Context[];
+  readonly authorizations: readonly { root: string; workId: string; saved: VerificationAuthorization; current: boolean }[];
+}
 export async function evaluateVerificationSelection(rootInput: string, workId: string, selectionInput: unknown,
-  evidenceRefs: VerificationEvidenceReference[] = [], artifactSnapshots?: VerificationArtifactSnapshots) {
-  const selection = parseVerificationSelection(selectionInput);
-  const context = await base(rootInput, workId);
-  const expected = await selectedBindings(context, selection);
-  const history = await records(context.root, workId);
-  const issues: string[] = [];
-  const warnings: string[] = [];
-  const states = new Map<string, EvaluatedState>();
-  const references: VerificationEvidenceReference[] = [];
-  const external = new Map<string, { context: Context; history: RunRecord[] }>();
+  evidenceRefs: VerificationEvidenceReference[] = [], artifactSnapshots?: VerificationArtifactSnapshots,
+  options: VerificationEvaluationOptions = {}) {
+  const input = options.inputs ?? await loadVerificationEvaluationInput(rootInput, workId, selectionInput, evidenceRefs, artifactSnapshots, options);
+  if (input.context.root !== await resolveWorkRoot(rootInput, workId) || input.workId !== workId || canonical(input.selection) !== canonical(parseVerificationSelection(selectionInput))
+    || canonical(input.evidenceRefs) !== canonical(evidenceRefs) || canonical(input.artifactSnapshots ?? null) !== canonical(artifactSnapshots ?? null)
+    || canonical({ history: input.options.history ?? 'all', taskId: input.options.taskId, workflow: input.options.workflow })
+      !== canonical({ history: options.history ?? 'all', taskId: options.taskId, workflow: options.workflow })) fail('验证输入不属于当前求值对象。');
+  const result = evaluateVerificationInput(input);
+  if (!options.inputs) await assertVerificationEvaluationInputCurrent(input);
+  return result;
+}
+async function assertInputObservationsCurrent(observations: readonly VerificationInputObservation[], proofs?: TextProof[]): Promise<void> {
+  const groups = new Map<string, {root: string; source: RepositoryInput | undefined; allowUnavailable: boolean; references: Map<string, VerificationInput>; values: Snapshot}>();
+  const expected = new Map<string, string>();
+  for (const observed of observations) {
+    const groupKey = canonical([observed.root, observed.source?.workId ?? null, observed.allowUnavailable === true]);
+    let group = groups.get(groupKey);
+    if (!group) {
+      group = {root: observed.root, source: observed.source, allowUnavailable: observed.allowUnavailable === true, references: new Map(), values: {}};
+      groups.set(groupKey, group);
+    }
+    for (const ref of observed.references) {
+      const name = key(ref); const identity = canonical([observed.source?.repositories.get(ref.repository) ?? observed.root, name]);
+      const value = observed.values[name]!;
+      if (expected.has(identity) && expected.get(identity) !== value) fail('验证求值依据在读取期间变化，请重新检查。');
+      expected.set(identity, value); group.values[name] = value;
+      if (!group.references.has(name) || !ref.binary) group.references.set(name, ref);
+    }
+  }
+  const batches: VerificationInputObservation[] = [];
+  for (const group of groups.values()) {
+    let references: VerificationInput[] = []; let bytes = 0;
+    const flush = () => {
+      if (references.length) batches.push({root: group.root, references, allowUnavailable: group.allowUnavailable, ...(group.source ? {source: group.source} : {}),
+        values: Object.fromEntries(references.map(ref => [key(ref), group.values[key(ref)]!]))});
+      references = []; bytes = 0;
+    };
+    for (const ref of group.references.values()) {
+      const maximum = (ref.binary ? 64 : 4) * 1024 * 1024;
+      if (references.length && bytes + maximum > 64 * 1024 * 1024) flush();
+      references.push(ref); bytes += maximum;
+    }
+    flush();
+  }
+  for (const observed of batches) {
+    if (proofs && observed.source && observed.references.every(ref => !ref.binary
+      && observed.source!.repositories.has(ref.repository) && observed.values[key(ref)] !== 'unavailable')) {
+      for (const ref of observed.references) proofs.push({root: observed.source.repositories.get(ref.repository)!,
+        inputs: [{path: ref.path, sha256: observed.values[key(ref)]!}], maxBytes: 4 * 1024 * 1024,
+        onChanged: () => fail('验证求值依据在读取期间变化，请重新检查。')});
+      continue;
+    }
+    const freshSource = freshVerificationSource(observed.source);
+    if (observed.allowUnavailable) {
+      if (canonical(await currentSnapshot(observed.root, observed.values, freshSource)) !== canonical(observed.values))
+        fail('验证求值依据在读取期间变化，请重新检查。');
+      continue;
+    }
+    const values = await readVerificationInputs(observed.root, observed.references, freshSource);
+    if (values.some((value, index) => hash(value) !== observed.values[key(observed.references[index]!)])) fail('验证求值依据在读取期间变化，请重新检查。');
+  }
+}
+export async function assertVerificationEvaluationInputCurrent(input: VerificationEvaluationInput): Promise<void> {
+  await assertVerificationEvaluationInputsCurrent([input]);
+}
+/** One independent proof boundary for all selections, with no retained proof results. */
+export async function assertVerificationEvaluationInputsCurrent(inputs: readonly VerificationEvaluationInput[], histories: readonly VerificationHistory[] = [], expectedHistory?: VerificationHistory, proofs?: TextProof[]): Promise<void> {
+  const grants = new Map(inputs.flatMap(input => input.authorizations).map(grant => [canonical(grant), grant]));
+  for (const grant of grants.values()) {
+    if (await authorizationCurrent(grant.root, grant.workId, grant.saved) !== grant.current)
+      fail('验证授权在读取期间变化，请重新检查。');
+  }
+  const observations = new Map(inputs.flatMap(input => input.observations).map(observed => [canonical(observed), observed]));
+  await assertInputObservationsCurrent([...observations.values()], proofs);
+  const selectedHistories = [...histories, ...inputs.flatMap(input => input.histories)].map(history =>
+    expectedHistory && history.root === expectedHistory.root && history.workId === expectedHistory.workId ? expectedHistory : history);
+  for (const history of new Set(selectedHistories)) await assertVerificationHistoryCurrent(history, proofs);
+  for (const context of new Set(inputs.flatMap(input => input.contexts))) {
+    await proveRepositoryInput(context.source, proofs);
+    if (context.owner) await assertWorkflowPolicyContextCurrent(context.owner, proofs);
+    await verifyTextInputs(context.root, [...context.projectInputs, { path: context.work.paths.record, text: context.work.original }], {}, proofs, true);
+    await assertVerificationDefinitionsCurrent(context.root, context.inspection, proofs);
+  }
+}
+export async function loadVerificationEvaluationInput(rootInput: string, workId: string, selectionInput: unknown,
+  evidenceRefs: VerificationEvidenceReference[] = [], artifactSnapshots?: VerificationArtifactSnapshots,
+  options: VerificationEvaluationOptions = {}): Promise<VerificationEvaluationInput> {
+  const context = await contextFor(rootInput, workId, options.contexts, options.source, options.owner);
+  return loadEvaluationInContext(context, workId, parseVerificationSelection(selectionInput), evidenceRefs, artifactSnapshots, options);
+}
+async function loadEvaluationInContext(context: Context, workId: string, selection: VerificationSelection,
+  evidenceRefs: VerificationEvidenceReference[] = [], artifactSnapshots?: VerificationArtifactSnapshots,
+  options: VerificationEvaluationOptions = {}): Promise<VerificationEvaluationInput> {
+  const prepared = prepareSelectedBindings(context, selection);
+  const currentHistory = options.historyInput ?? await loadHistory(context.root, workId);
+  if (currentHistory.root !== context.root || currentHistory.workId !== workId) fail('验证历史输入不属于当前工作。');
+  type Owner = { context: Context; history: VerificationHistory; definitions: Map<string, ReturnType<typeof bindingDefinition>> };
+  const owners = new Map<string, Owner>([[workId, { context, history: currentHistory, definitions: new Map(prepared) }]]);
   const explicit = new Map<string, VerificationEvidenceReference>();
   for (const raw of evidenceRefs) {
     const ref = object(raw, ['workId', 'runId', 'caseId', 'checkId', 'environment']);
@@ -463,45 +906,103 @@ export async function evaluateVerificationSelection(rootInput: string, workId: s
     if (ref.workId !== workId || ref.environment !== undefined) string(ref.environment);
     if ((ref.caseId === undefined) === (ref.checkId === undefined)) fail('证据引用必须明确一个用例或检查。');
     const name = ref.caseId === undefined ? `check:${string(ref.checkId, 128)}` : `case:${string(ref.caseId, 128)}`;
-    if (!expected[name] || explicit.has(name)) fail('证据引用超出选择范围或存在歧义。');
+    if (!prepared.has(name) || explicit.has(name)) fail('证据引用超出选择范围或存在歧义。');
     explicit.set(name, raw);
   }
-  for (const [name, binding] of Object.entries(expected)) {
-    let owner = context; let candidates = history;
-    const requested = explicit.get(name);
-    if (requested && requested.workId !== workId) {
-      let loaded = external.get(requested.workId);
-      if (!loaded) {
-        const other = await base(context.root, requested.workId);
-        loaded = { context: other, history: await records(other.root, requested.workId) };
-        external.set(requested.workId, loaded);
-      }
-      if (canonical(normalizedScope(loaded.context)) !== canonical(normalizedScope(context))) fail('跨工作证据范围不一致。');
-      if (history.some(record => relatedBindingNames(record, name, binding).length)) fail('当前工作与跨工作证据均有尝试，无法安全判断更新顺序；请在当前工作重新验证。');
-      owner = loaded.context; candidates = loaded.history;
+  for (const id of new Set([...explicit.values()].map(ref => ref.workId).filter(id => id !== workId))) {
+    const other = await contextFor(context.root, id, options.contexts);
+    if (canonical(normalizedScope(other)) !== canonical(normalizedScope(context))) fail('跨工作证据范围不一致。');
+    owners.set(id, { context: other, history: await loadHistory(other.root, id), definitions: new Map() });
+  }
+  const rowDefinitions = [...prepared].map(([name, entry]) => {
+    const requested = explicit.get(name); const owner = owners.get(requested?.workId ?? workId)!;
+    const binding = { ...entry.definition, inputs: {} };
+    if (owner.context !== context && currentHistory.latest(name, binding)) fail('当前工作与跨工作证据均有尝试，无法安全判断更新顺序；请在当前工作重新验证。');
+    const latest = owner.history.latest(name, binding);
+    if (latest && requested?.environment !== undefined && requested.environment !== latest.environment) fail('显式证据引用的环境与结果不一致。');
+    const related = latest ? relatedBindingNames(latest, name, binding) : [];
+    const actual = latest ? latest.bindings[name] ?? latest.bindings[related[0]!]! : undefined;
+    const results = latest?.results.filter(item => related.includes(resultKey(item))) ?? [];
+    const result = results.find(item => item.status !== 'passed') ?? results.find(item => resultKey(item) === name) ?? results[0];
+    return { name, requested, owner, latest, actual, result, capture: latest?.captureId ? owner.history.get(latest.captureId) : latest };
+  });
+  const observations = new Map<string, { owner: Owner; record: RunRecord }>();
+  for (const row of rowDefinitions) if (row.latest) observations.set(`${row.owner.context.work.record.id}::${row.latest.id}`, { owner: row.owner, record: row.latest });
+  if (options.history !== 'selected') for (const record of currentHistory.records) observations.set(`${workId}::${record.id}`, { owner: owners.get(workId)!, record });
+  const grants = new Map<string, { owner: Context; saved: VerificationAuthorization }>();
+  for (const { owner, record } of observations.values()) {
+    grants.set(canonical({ workId: owner.context.work.record.id, authorization: record.authorization }), { owner: owner.context, saved: record.authorization });
+    for (const saved of Object.values(record.bindings)) {
+      try { owner.definitions.set(`saved:${canonical(saved)}`, bindingDefinition(owner.context, saved.caseId, saved.check, saved.modules, saved.caseChecks)); }
+      catch { /* A removed definition is a stale historical binding. */ }
     }
-    const latest = candidates.filter(record => relatedBindingNames(record, name, binding).length).at(-1);
+  }
+  const authorizationStates = new Map<string, boolean>();
+  for (const [name, grant] of grants) authorizationStates.set(name, await (options.authorization ?? authorizationCurrent)(grant.owner.root, grant.owner.work.record.id, grant.saved));
+  const observationsOfInputs: VerificationInputObservation[] = [];
+  const bindings = new Map<string, Record<string, Binding>>(); const evidence = new Map<string, Snapshot>();
+  for (const [id, owner] of owners) {
+    let currentBindings: Record<string, Binding>;
+    try { currentBindings = await loadBindings(owner.context, owner.definitions, observationsOfInputs); }
+    catch {
+      // Missing former inputs make their historical bindings stale. Current
+      // selection inputs remain mandatory and still report a load failure.
+      currentBindings = id === workId ? await loadBindings(owner.context, prepared, observationsOfInputs) : {};
+      for (const [name, definition] of owner.definitions) if (name.startsWith('saved:')) {
+        try { Object.assign(currentBindings, await loadBindings(owner.context, new Map([[name, definition]]), observationsOfInputs)); }
+        catch { /* Preserve stale status for unavailable historical inputs. */ }
+      }
+    }
+    bindings.set(id, currentBindings);
+    const files = Object.assign({}, ...[...observations.values()].filter(item => item.owner === owner).map(item => item.record.evidence)) as Snapshot;
+    const currentEvidence = await currentSnapshot(owner.context.root, files, owner.context.source);
+    evidence.set(id, currentEvidence);
+    observationsOfInputs.push({root: owner.context.root, references: Object.keys(currentEvidence).map(fromKey),
+      values: currentEvidence, allowUnavailable: true, source: owner.context.source});
+  }
+  const expected = Object.fromEntries([...prepared.keys()].map(name => [name, bindings.get(workId)![name]!]));
+  const bindingIsCurrent = (id: string, saved: Binding) => canonical(bindings.get(id)![`saved:${canonical(saved)}`] ?? null) === canonical(saved);
+  const authorizationIsCurrent = (id: string, record: RunRecord) => authorizationStates.get(canonical({ workId: id, authorization: record.authorization })) === true;
+  const rows = rowDefinitions.map(row => {
+    const id = row.owner.context.work.record.id;
+    return { name: row.name, binding: expected[row.name]!, requested: row.requested, ownerWorkId: id, latest: row.latest, actual: row.actual, result: row.result, capture: row.capture,
+      evidenceCurrent: !row.result || evidence.get(id)![key(row.result.evidence)] === row.latest!.evidence[key(row.result.evidence)],
+      authorizationCurrent: !!row.latest && authorizationIsCurrent(id, row.latest), bindingCurrent: !!row.actual && bindingIsCurrent(id, row.actual) };
+  });
+  const runs = (options.history === 'selected' ? [] : currentHistory.records).map(record => ({
+    id: record.id, sequence: record.sequence, source: record.source, suite: record.suite, execution: record.execution,
+    stale: record.staleAfterExecution || Object.entries(record.evidence).some(([ref, digest]) => evidence.get(workId)![ref] !== digest)
+      || !authorizationIsCurrent(workId, record) || Object.values(record.bindings).some(saved => !bindingIsCurrent(workId, saved)),
+  }));
+  const { inputs: _inputs, historyInput: _historyInput, authorization: _authorization, contexts: _contexts, source: _source, owner: _owner, ...evaluationOptions } = options;
+  return freezeData({ context, workId, selection, evidenceRefs: structuredClone(evidenceRefs), artifactSnapshots: structuredClone(artifactSnapshots),
+    options: structuredClone(evaluationOptions), expected, rows, histories: [...owners.values()].map(owner => owner.history), observations: observationsOfInputs, runs,
+    contexts: [...owners.values()].map(owner => owner.context),
+    authorizations: options.authorization ? [] : [...grants].map(([name, grant]) => ({root: grant.owner.root, workId: grant.owner.work.record.id,
+      saved: grant.saved, current: authorizationStates.get(name)!})) });
+}
+/** Pure evaluation: no file access, Git calls, authorization lookup, or ambient input. */
+export function evaluateVerificationInput(input: VerificationEvaluationInput) {
+  const { context, workId, selection, artifactSnapshots, options, expected, rows, runs } = input;
+  const issues: string[] = []; const warnings: string[] = []; const references: VerificationEvidenceReference[] = [];
+  const states = new Map<string, EvaluatedState>();
+  for (const row of rows) {
+    const { name, binding, requested, latest, actual, result, capture, ownerWorkId } = row;
     let status: EvaluatedState['status'] = 'not-run';
     if (requested && latest?.id !== requested.runId) issues.push(`${name} 引用的结果不是最新尝试，不能挑选历史通过。`);
-    if (latest) {
-      if (requested?.environment !== undefined && requested.environment !== latest.environment) fail('显式证据引用的环境与结果不一致。');
-      const related = relatedBindingNames(latest, name, binding);
-      const actual = latest.bindings[name] ?? latest.bindings[related[0]!]!;
+    if (latest && actual) {
       const comparable = { ...actual, identity: binding.identity, check: binding.caseId === null ? actual.check : binding.check };
-      const results = latest.results.filter(item => related.includes(resultKey(item)));
-      const result = results.find(item => item.status !== 'passed') ?? results.find(item => resultKey(item) === name) ?? results[0];
-      const evidenceSnapshot = result ? { [key(result.evidence)]: latest.evidence[key(result.evidence)]! } : {};
-      const evidenceCurrent = canonical(await currentSnapshot(owner.root, evidenceSnapshot)) === canonical(evidenceSnapshot);
-      const capture = latest.captureId ? candidates.find(record => record.id === latest.captureId) : latest;
-      const stale = latest.staleAfterExecution || capture?.staleAfterExecution || !evidenceCurrent
-        || !await bindingCurrent(owner, actual) || canonical(comparable) !== canonical(binding);
+      const stale = latest.staleAfterExecution || capture?.staleAfterExecution || !row.evidenceCurrent || !row.authorizationCurrent
+        || !!(latest.authorization.input.taskId !== undefined && options.workflow)
+        || !!(options.taskId !== undefined && (latest.authorization.input.taskId !== options.taskId || ownerWorkId !== workId))
+        || !!(options.workflow && (ownerWorkId !== workId || latest.authorization.input.stageId !== options.workflow.stageId || latest.authorization.attemptId !== options.workflow.attemptId))
+        || !row.bindingCurrent || canonical(comparable) !== canonical(binding);
       const executionFailed = capture?.execution !== null && capture?.execution !== undefined && !capture.execution.suitePassed;
-      status = stale ? 'stale' : executionFailed ? 'failed' : result?.status
-        ?? (actual.check?.kind === 'execution' && latest.execution?.suitePassed ? 'passed' : 'not-run');
+      status = stale ? 'stale' : executionFailed ? 'failed' : result?.status ?? (actual.check?.kind === 'execution' && latest.execution?.suitePassed ? 'passed' : 'not-run');
       if (requested && latest.id !== requested.runId) status = 'stale';
-      if (status === 'passed') references.push({ workId: owner.work.record.id, runId: latest.id, environment: latest.environment,
+      if (status === 'passed') references.push({ workId: ownerWorkId, runId: latest.id, environment: latest.environment,
         ...(name.startsWith('case:') ? { caseId: name.slice(5) } : { checkId: name.slice(6) }) });
-      states.set(name, { status, recordId: latest.id, source: latest.source, workId: owner.work.record.id, inputs: actual.inputs });
+      states.set(name, { status, recordId: latest.id, source: latest.source, workId: ownerWorkId, inputs: actual.inputs });
     } else states.set(name, { status, recordId: null, source: null, workId, inputs: {} });
     if (status !== 'passed') issues.push(`${name} 尚未通过：${status}。`);
   }
@@ -542,14 +1043,9 @@ export async function evaluateVerificationSelection(rootInput: string, workId: s
   for (const test of context.inspection.cases) if (!selection.caseIds.includes(test.id)) warnings.push(`范围外用例未纳入本次判断：${test.id}。`);
   for (const requirement of context.config.requirements) if (!selection.requirements.includes(requirement.id)) warnings.push(`范围外需求未检查覆盖：${requirement.id}。`);
   for (const category of verificationCategories) if (context.config.categories[category].applicability === 'pending') warnings.push(`全局类别 ${category} 待明确；本次依据选择范围判断。`);
-  const runs = [];
-  for (const record of history) {
-    const stale = record.staleAfterExecution || canonical(await currentSnapshot(context.root, record.evidence)) !== canonical(record.evidence)
-      || (await Promise.all(Object.values(record.bindings).map(binding => bindingCurrent(context, binding)))).some(current => !current);
-    runs.push({ id: record.id, sequence: record.sequence, source: record.source, suite: record.suite, stale, execution: record.execution });
-  }
   const basisDigest = hash(canonical({ selection, expected, evidenceRefs: references, cases, checks, issues, artifactSnapshots: artifactSnapshots ?? null }));
   return { root: context.root, workId, ready: !issues.length, issues, warnings, selection, categories, requirements, cases, checks, runs, evidenceRefs: references, basisDigest,
+    historyScope: options.history ?? 'all',
     artifactCoverage: artifactSnapshots === undefined ? 'not-supplied' : 'checked', automaticTransition: false,
     limitation: '输入采集证明当时登记的版本，不认证执行者或追认过去观察。人工/外部结果须在所绑定对象上实际重新核对；套件成功不等于用例通过。显式输入不能证明未声明依赖完整，产物覆盖须由调用方提供当前完整快照。' };
 }
@@ -557,9 +1053,18 @@ export async function evaluateVerificationSelection(rootInput: string, workId: s
 export async function reportVerification(rootInput: string, workId: string, selectionInput?: unknown) {
   if (selectionInput !== undefined) return evaluateVerificationSelection(rootInput, workId, selectionInput);
   const context = await base(rootInput, workId);
-  const selection = defaultSelection(context.config, context.inspection.cases);
-  selection.requirements = context.config.requirements.map(item => item.id);
-  selection.modules = context.config.modules.map(item => item.id);
-  if (!selection.caseIds.length) return { root: context.root, workId, ready: false, issues: ['没有可验证用例；纯文档检查须提供显式选择。'], cases: [], runs: [], requirements: [], categories: [], automaticTransition: false };
-  return evaluateVerificationSelection(context.root, workId, selection);
+  {
+    const selection = defaultSelection(context.config, context.inspection.cases);
+    selection.requirements = context.config.requirements.map(item => item.id);
+    selection.modules = context.config.modules.map(item => item.id);
+    if (!selection.caseIds.length) {
+      await records(context.root, workId);
+      await assertVerificationDefinitionsCurrent(context.root, context.inspection);
+      return { root: context.root, workId, ready: false, issues: ['没有可验证用例；纯文档检查须提供显式选择。'], cases: [], runs: [], requirements: [], categories: [], automaticTransition: false };
+    }
+    const input = await loadEvaluationInContext(context, workId, parseVerificationSelection(selection));
+    const result = evaluateVerificationInput(input);
+    await assertVerificationEvaluationInputCurrent(input);
+    return result;
+  }
 }

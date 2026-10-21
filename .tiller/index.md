@@ -19,6 +19,8 @@
 
 ## 已有资料
 
+- [按任务类型选择与组合工作流程：改动收尾，核心资料与验证边界](work/20261020-typed-workflows/work.md)
+
 - [任务推进与交付门禁：技术验证完成、待验收](work/20261019-task-delivery-gates/work.md)
 - [长期测试用例与验证范围](verification/index.md)
 - [测试用例与验证证据管理](work/20261019-testing-verification/work.md)
@@ -43,18 +45,20 @@
 - [work/initial-delivery/work.md](work/initial-delivery/work.md)
 - [rules/project.md](rules/project.md)
 - [首个交付验证](work/initial-delivery/verification.md)
-- [宿主文档接续验证](work/initial-delivery/host-verification.md)
+- [宿主文档接续验证](work/initial-delivery/verification.md#宿主接续验证)
 - [关键节点人工确认工作](work/human-confirmation/work.md)
 - [人工确认实现与接口](work/human-confirmation/implementation.md)
 - [人工确认验证记录](work/human-confirmation/verification.md)
-- [人工确认交付待验收](work/human-confirmation/reviews/request-acceptance-020/presentation.md)
 - [统一通用入口](work/20261015-unify-entry/work.md)
 - [工作记录约定与阶段产物设计](work/20261015-work-artifacts/work.md)
 - [隔离开发与评审合入工作](work/20261015-isolated-delivery/work.md)
 - [隔离开发与评审合入实施](work/20261015-isolated-delivery/implementation.md)
-- [隔离开发与评审合入验证](work/20261015-isolated-delivery/implementation-verification.md)
-- [隔离交付 0.3.0 待验收](work/20261015-isolated-delivery/reviews/request-acceptance-isolated-delivery-030/presentation.md)
+- [隔离开发与评审合入验证](work/20261015-isolated-delivery/verification.md#实现验证记录)
 - [隔离开发与评审合入设计](specs/modules/workflow/design.md#11-隔离开发与评审合入)
 - [独立管理仓库分组布局](work/20261016-repository-layout/work.md)
 
 - [使用入口与本机命令定位](work/20261016-usage-entry/work.md)
+
+## 历史工作资料精简
+
+按用户要求，已提交的历史工作目录仅保留核心依据与结果摘要，原机器回执、过程日志和审阅快照直接删除且不备份。目录用于查阅历史，不作为当前 CLI 可恢复工作或未完成操作队列；当前候选的验证边界见任务类型流程工作。

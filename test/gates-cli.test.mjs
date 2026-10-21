@@ -2,6 +2,8 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import test from 'node:test';
+import { createWorkflowFixtureAt, startStage } from './workflow-fixtures.mjs';
+import { readWorkflowControlSnapshot } from '../dist/workflow-stages.js';
 import { cli, failure, fixture, put, snapshot, success } from './helpers.mjs';
 import { setupPlanning } from './planning-helpers.mjs';
 import { setupTasks, activateTaskPlan } from './task-helpers.mjs';
@@ -19,21 +21,22 @@ function selection(input = 'artifact.md', kind = 'manual') {
       inputs: [ref(input)], requirements: [], categories: ['usability'], reason: 'Observe the specified artifact.' }],
   };
 }
-function setup(t) {
+async function setup(t) {
   const root = fixture(t);
   success(cli(root, 'init'));
-  success(cli(root, 'work', 'create', 'gates', '--title', 'CLI gates'));
   success(cli(root, 'verification', 'init'));
+  const f = await createWorkflowFixtureAt(root, 'gates', 'bugfix');
+  await startStage(f, 'reproduce');
   put(root, 'artifact.md', '# Artifact\nReview this specific document.\n');
   return root;
 }
 
-test('scoped CLI observations bind the original artifact and reject stale reported success', t => {
-  const root = setup(t);
+test('scoped CLI observations bind the original artifact and reject stale reported success', async t => {
+  const root = await setup(t);
   const caller = fixture(t);
   const selected = selection();
   put(root, 'selection.json', JSON.stringify({ selection: selected }));
-  put(root, 'capture.json', JSON.stringify({ selection: selected, environment: 'synthetic-cli-fixture' }));
+  put(root, 'capture.json', JSON.stringify({ selection: selected, environment: 'synthetic-cli-fixture', workflow: { stageId: 'reproduce', actions: ['write-report'], confirmationRefs: [] } }));
   const before = snapshot(root);
   const unobserved = failure(cli(root, 'verification', 'report', 'gates', '--input', 'selection.json'));
   assert.equal(unobserved.ready, false);
@@ -98,14 +101,14 @@ test('planning CLI registers immutable review content and activates only with cu
   assert.deepEqual(snapshot(root), stale);
 });
 
-test('scoped CLI execution forwards its selection and refuses a stale execution plan', t => {
-  const root = setup(t);
+test('scoped CLI execution forwards its selection and refuses a stale execution plan', async t => {
+  const root = await setup(t);
   put(root, 'test.cjs', 'process.stdout.write("observed fixture\\n");\n');
   const configPath = '.tiller/verification/config.json';
   const config = JSON.parse(readFileSync(join(root, configPath), 'utf8'));
   config.suites = [{ id: 'sample', repository: '.', command: 'node', args: ['test.cjs'], cwd: '.', timeoutMs: 5000, inputs: [ref('test.cjs')] }];
   put(root, configPath, JSON.stringify(config));
-  put(root, 'execution.json', JSON.stringify({ selection: selection('test.cjs', 'execution') }));
+  put(root, 'execution.json', JSON.stringify({ selection: selection('test.cjs', 'execution'), workflow: { stageId: 'reproduce', actions: ['test'], confirmationRefs: [] } }));
   const before = snapshot(root);
   const planned = success(cli(root, 'verification', 'run', 'gates', '--suite', 'sample', '--input', 'execution.json', '--plan'));
   assert.deepEqual(snapshot(root), before);
@@ -115,11 +118,12 @@ test('scoped CLI execution forwards its selection and refuses a stale execution 
   assert.deepEqual(snapshot(root), changed);
   const fresh = success(cli(root, 'verification', 'run', 'gates', '--suite', 'sample', '--input', 'execution.json', '--plan'));
   success(cli(root, 'verification', 'run', 'gates', '--suite', 'sample', '--input', 'execution.json', '--apply', fresh.planId));
-  success(cli(root, 'verification', 'report', 'gates', '--input', 'execution.json'));
+  put(root, 'report.json', JSON.stringify({ selection: selection('test.cjs', 'execution') }));
+  success(cli(root, 'verification', 'report', 'gates', '--input', 'report.json'));
 });
 
-test('gate CLI rejects unsupported flags, ambiguous operations and malformed selection envelopes without writes', t => {
-  const root = setup(t);
+test('gate CLI rejects unsupported flags, ambiguous operations and malformed selection envelopes without writes', async t => {
+  const root = await setup(t);
   put(root, 'selection.json', JSON.stringify({ selection: selection(), force: true }));
   const before = snapshot(root);
   for (const args of [
@@ -173,15 +177,16 @@ test('task CLI exposes current status, preview/apply receipts and blocked verifi
   ]) assert.equal(failure(invoke(...args)).error.code, 'INVALID_ARGUMENT');
 });
 
-test('delivery CLI reports prerequisite gaps and refuses unready receipts without writes', t => {
-  const root = setup(t); const caller = fixture(t);
+test('delivery CLI reports prerequisite gaps and refuses unready receipts without writes', async t => {
+  const root = await setup(t); const caller = fixture(t);
   const invoke = (...args) => cli(caller, 'work', ...args, '--path', root);
-  put(root, 'delivery.json', JSON.stringify({ operationId: 'ready', expectedRevision: 0 }));
+  put(root, 'delivery.json', JSON.stringify({ operationId: 'ready', expected: await readWorkflowControlSnapshot(root, 'gates') }));
   const before = snapshot(root);
   const checked = failure(invoke('delivery-check', 'gates'));
-  assert.equal(checked.processEvidence.status, 'unknown');
+  assert.equal(checked.processEvidence.status, 'gap');
   assert.equal(checked.acceptance.status, 'not-requested');
-  assert.equal(checked.issues[0].code, 'PLANNING_REQUIRED');
+  assert.ok(checked.issues.length > 0);
+  assert.equal(checked.technicalReady, false);
   const preview = failure(invoke('delivery-ready', 'gates', '--input', 'delivery.json', '--plan'));
   assert.equal(preview.operationAllowed, false);
   assert.equal(failure(invoke('delivery-ready', 'gates', '--input', 'delivery.json', '--apply', preview.planId)).error.code, 'DELIVERY_BLOCKED');

@@ -5,9 +5,11 @@ import path from 'node:path';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { test } from 'node:test';
-import { initialize, inspectProject, recoverProject, assertSharedPaths } from '../dist/core.js';
+import { initialize, inspectProject, recoverProject, parseMetadata, readProjectMetadata, RESOURCE_VERSION, trackedContent, sha256 } from '../dist/core.js';
+import { assertSharedWritePaths } from '../dist/shared-paths.js';
 import { applyChanges, assertSafePath, readTextIfExists, withProjectLock } from '../dist/files.js';
-import { createWork, resumeWork } from '../dist/work.js';
+import { resumeWork } from '../dist/work.js';
+import { createWorkflowWork } from '../dist/workflow-work.js';
 
 async function project(t) {
   const root = await mkdtemp(path.join(os.tmpdir(), 'tiller-core-'));
@@ -31,6 +33,32 @@ test('initialization preserves content and repeated initialization is a no-op', 
   assert.equal(await readFile(path.join(root, '.tiller/project.json'), 'utf8'), original);
   await writeFile(path.join(root, 'AGENTS.md'), (await readFile(path.join(root, 'AGENTS.md'), 'utf8')) + '\nUser addition\n');
   assert.equal((await initialize({ root })).ready, true);
+});
+
+test('initialization digests tolerate managed line-ending conversion but reject content changes', async t => {
+  const root = await project(t);
+  const initial = await initialize({ root });
+  const originalMetadata = await readFile(path.join(root, '.tiller/project.json'), 'utf8');
+  for (const [relative, digest] of Object.entries(initial.metadata.managedFiles)) {
+    const text = await readFile(path.join(root, relative), 'utf8');
+    assert.equal(digest, sha256(trackedContent(relative, text).replaceAll('\r\n', '\n')), relative);
+  }
+  for (const style of ['mixed', 'crlf', 'lf']) {
+    for (const relative of Object.keys(initial.metadata.managedFiles)) {
+      const file = path.join(root, relative);
+      const text = (await readFile(file, 'utf8')).replaceAll('\r\n', '\n');
+      let line = 0;
+      await writeFile(file, text.replace(/\n/gu, () => style === 'crlf' || (style === 'mixed' && line++ % 2) ? '\r\n' : '\n'));
+    }
+    const inspected = await inspectProject(root);
+    assert.equal(inspected.ready, true, `${style}: ${inspected.issues.join('; ')}`);
+    assert.equal((await initialize({ root })).changed, false);
+    assert.equal(await readFile(path.join(root, '.tiller/project.json'), 'utf8'), originalMetadata);
+  }
+  const agents = path.join(root, 'AGENTS.md');
+  await writeFile(agents, (await readFile(agents, 'utf8')).replace('# tiller 工作入口', '# Changed entry'));
+  assert.equal((await inspectProject(root)).ready, false);
+  await assert.rejects(initialize({ root }), /内容已变化/u);
 });
 
 test('workspace limits repository scope and never changes repository content', async t => {
@@ -160,11 +188,14 @@ test('git ignore conflicts are detected before shared files are written', async 
 test('schema validation refuses missing resource baselines and malicious recovery targets', async t => {
   const root = await project(t);
   await initialize({ root });
-  const metadata = JSON.parse(await readFile(path.join(root, '.tiller/project.json'), 'utf8'));
+  const originalMetadata = await readFile(path.join(root, '.tiller/project.json'), 'utf8');
+  const metadata = JSON.parse(originalMetadata);
   metadata.managedFiles = {};
   await writeFile(path.join(root, '.tiller/project.json'), JSON.stringify(metadata));
   assert.equal((await inspectProject(root)).ready, false);
   await assert.rejects(initialize({ root }), /受管文件依据/);
+  await assert.rejects(recoverProject(root), /受管文件依据/);
+  await writeFile(path.join(root, '.tiller/project.json'), originalMetadata);
   await writeFile(path.join(root, 'business.txt'), 'keep');
   await writeFile(path.join(root, '.tiller/local/transaction.json'), JSON.stringify({
     schemaVersion: 1, changes: [{ path: 'business.txt', before: 'tampered', after: 'keep' }],
@@ -225,20 +256,31 @@ test('local ignore negations cannot expose transaction originals before root ign
 
 test('shared path checks reject ignored evidence while allowing non-Git projects', async t => {
   const root = await project(t);
-  await assertSharedPaths(root, ['private/review.md']);
+  await assertSharedWritePaths(root, ['private/review.md']);
   await promisify(execFile)('git', ['init', '--quiet', root]);
   await writeFile(path.join(root, '.gitignore'), 'private/\n');
-  await assert.rejects(assertSharedPaths(root, ['private/review.md']), /共享资料被 Git 忽略/);
-  await assertSharedPaths(root, ['.tiller/work/review/evidence.md']);
-  await assert.rejects(assertSharedPaths(root, ['../outside']), /不安全/);
+  await assert.rejects(assertSharedWritePaths(root, ['private/review.md']), /共享资料被 Git 忽略/);
+  await assertSharedWritePaths(root, ['.tiller/work/review/evidence.md']);
+  await assert.rejects(assertSharedWritePaths(root, ['../outside']), /不安全/);
 });
 
 test('project index links remain editable without invalidating navigation or work resumption', async t => {
   const root = await project(t);
   await initialize({ root });
-  await createWork(root, 'draft-feature', 'Feature requirements');
+  const scope = { repositories: ['.'], targets: ['draft-feature'] };
+  const source = { repository: '.', path: 'navigation-request.md' };
+  const quote = 'Create a requirements draft for navigation testing.';
+  await writeFile(path.join(root, source.path), `# Synthetic request\n${quote}\n`);
+  await createWorkflowWork(root, 'draft-feature', 'Feature requirements', {
+    operationId: 'create-navigation', expectedRevision: 0, workflow: 'requirements',
+    goal: '验证导航可编辑且当前工作可接续。', reason: '本测试仅建立需求草稿工作。', scope, impact: {},
+    basis: [{ reference: source, purpose: '明确合成测试目标与范围。' }],
+    actionSources: [{ actions: ['read', 'write-report'], reference: source, quote, scope }],
+    expectedOutputs: ['clarify-output', 'requirements-output'],
+    completionCriteria: ['导航修改不破坏接入有效性和工作读取。'],
+  });
   const original = await readTextIfExists(root, '.tiller/index.md');
-  const updated = original + '\n## 当前工作\n\n- [功能需求](work/draft-feature/requirements.md)\n';
+  const updated = original + '\n## 当前工作\n\n- [功能需求工作](work/draft-feature/work.md)\n';
   await writeFile(path.join(root, '.tiller/index.md'), updated);
   assert.equal((await inspectProject(root)).ready, true);
   assert.equal((await initialize({ root })).changed, false);
@@ -246,8 +288,75 @@ test('project index links remain editable without invalidating navigation or wor
   await assert.doesNotReject(resumeWork(root, 'draft-feature'));
   await writeFile(path.join(root, '.tiller/index.md'), updated.replace('rules/index.md', 'rules/missing.md'));
   assert.equal((await inspectProject(root)).ready, false);
-  await assert.rejects(resumeWork(root, 'draft-feature'), /接入文件内容已变化/);
+  await assert.doesNotReject(resumeWork(root, 'draft-feature'), 'Ordinary work reads do not inspect unrelated navigation resources.');
   await writeFile(path.join(root, '.tiller/index.md'), '# Index without navigation markers\n');
   assert.equal((await inspectProject(root)).ready, false);
   await assert.rejects(initialize({ root }), /缺少 tiller 固定导航区段/);
+});
+
+
+test('only current resource metadata is readable and historical bytes remain untouched', async t => {
+  const root = await project(t);
+  const initialized = await initialize({ root });
+  assert.equal(RESOURCE_VERSION, '0.5.0');
+  assert.equal(initialized.metadata.resourceVersion, RESOURCE_VERSION);
+  assert.deepEqual(initialized.metadata.repositoryPaths, {});
+  assert.equal(initialized.compatibility, 'read-write');
+  const filename = path.join(root, '.tiller/project.json');
+  const current = JSON.parse(await readFile(filename, 'utf8'));
+  for (const resourceVersion of ['0.1.0', '0.2.0', '0.2.1', '0.2.2', '0.3.0', '0.3.1', '0.3.2', '0.3.3', '0.3.4', '0.3.5', '0.3.6', '0.4.0', '99.0.0']) {
+    const original = JSON.stringify({ ...current, resourceVersion });
+    await writeFile(filename, original);
+    assert.throws(() => parseMetadata(original), /版本不受支持/u);
+    const inspection = await inspectProject(root);
+    assert.equal(inspection.ready, false);
+    assert.equal(inspection.compatibility, 'unsupported');
+    await assert.rejects(readProjectMetadata(root), /版本不受支持/u);
+    await assert.rejects(initialize({ root }), /版本不受支持/u);
+    assert.equal(await readFile(filename, 'utf8'), original);
+    assert.equal(await readTextIfExists(root, '.tiller/local/lock.json'), null);
+    assert.equal(await readTextIfExists(root, '.tiller/local/transaction.json'), null);
+  }
+});
+
+test('shared path checks honor ancestor ignores and reject bare repositories', async t => {
+  const parent = await project(t);
+  await promisify(execFile)('git', ['init', '--quiet', parent]);
+  const nested = path.join(parent, 'nested');
+  await mkdir(nested);
+  await writeFile(path.join(parent, '.gitignore'), 'nested/private/\n');
+  await assert.rejects(assertSharedWritePaths(nested, ['private/evidence.md']), /共享资料被 Git 忽略/u);
+  await assertSharedWritePaths(nested, ['public/evidence.md']);
+  const bare = await project(t);
+  await promisify(execFile)('git', ['init', '--quiet', '--bare', bare]);
+  await assert.rejects(assertSharedWritePaths(bare, ['shared.md']), /work tree/u);
+});
+
+test('shared path checks preserve fatal configuration and missing Git fallback failures', async t => {
+  const root = await project(t);
+  const parent = await project(t);
+  await promisify(execFile)('git', ['init', '--quiet', parent]);
+  const nested = path.join(parent, 'nested');
+  await mkdir(nested);
+  const malformed = path.join(root, 'malformed.gitconfig');
+  await writeFile(malformed, '[broken\n');
+  const prior = { PATH: process.env.PATH, GIT_CONFIG_GLOBAL: process.env.GIT_CONFIG_GLOBAL, GIT_CONFIG_NOSYSTEM: process.env.GIT_CONFIG_NOSYSTEM };
+  try {
+    process.env.GIT_CONFIG_GLOBAL = malformed;
+    process.env.GIT_CONFIG_NOSYSTEM = '1';
+    await assert.rejects(assertSharedWritePaths(root, ['shared.md']), /bad config/u);
+    if (prior.GIT_CONFIG_GLOBAL === undefined) delete process.env.GIT_CONFIG_GLOBAL;
+    else process.env.GIT_CONFIG_GLOBAL = prior.GIT_CONFIG_GLOBAL;
+    process.env.PATH = path.join(root, 'missing-executables');
+    await writeFile(path.join(root, '.gitignore'), '/.tiller/local/\n');
+    await assertSharedWritePaths(root, ['shared.md']);
+    await writeFile(path.join(root, '.gitignore'), 'private/\n');
+    await assert.rejects(assertSharedWritePaths(root, ['shared.md']), /Git 不可用/u);
+    await assert.rejects(assertSharedWritePaths(nested, ['shared.md']), /Git 不可用/u);
+  } finally {
+    for (const [key, value] of Object.entries(prior)) {
+      if (value === undefined) delete process.env[key];
+      else process.env[key] = value;
+    }
+  }
 });

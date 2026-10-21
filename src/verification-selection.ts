@@ -52,7 +52,8 @@ export function assertVerificationInput(ref: VerificationReference): void {
   const path = ref.path.toLowerCase();
   if (path.split('/').some(part => ['.git', 'node_modules'].includes(part))
     || /(?:^|\/)\.tiller\/local(?:\/|$)/u.test(path)
-    || /(?:^|\/)\.tiller\/work\/[^/]+\/(?:(?:work\.md|plan\.md|record\.json|tasks\.json|confirmations\.json|delivery\.json)$|(?:verification-runs|delivery-checks|reviews|planning)(?:\/|$))/u.test(path)
+    || /(?:^|\/)\.tiller\/workflow-policy(?:\/|$)/u.test(path)
+    || /(?:^|\/)\.tiller\/work\/[^/]+\/(?:(?:work\.md|plan\.md|record\.json|tasks\.json|confirmations\.json|delivery\.json)$|(?:verification-runs|delivery-checks|reviews|planning|workflow|stages|transitions)(?:\/|$))/u.test(path)
     || /(?:^|\/)\.tiller\/project\.json$/u.test(path)) throw new Error('验证输入不能引用可变控制资料、结果自身或本机内部数据。');
 }
 export function parseVerificationSelection(value: unknown): VerificationSelection {

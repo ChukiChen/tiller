@@ -4,10 +4,10 @@ import type { ConfirmationReference, Scope } from './confirmations.js';
 import type { HumanCheckpoint } from './planning-types.js';
 import { readVerificationReference } from './verification-cases.js';
 
-export interface GateIssue {
-  code: string; conditionId: string; message: string; nextAction: string; exceptionAllowed: boolean;
-  taskId?: string; artifactId?: string; caseId?: string;
-}
+import { gateIssue } from './gate-issue.js';
+export { gateIssue } from './gate-issue.js';
+export type { GateIssue } from './gate-issue.js';
+import type { GateIssue } from './gate-issue.js';
 export interface GateConfirmationBinding {
   reference: ConfirmationReference; requestFingerprint: string; decisionFingerprint: string;
 }
@@ -18,13 +18,6 @@ export function checkpointDefinitionDigest(checkpoint: HumanCheckpoint): string 
       return left < right ? -1 : left > right ? 1 : 0;
     });
   return createHash('sha256').update(JSON.stringify({ id: checkpoint.id, operation: checkpoint.operation, purpose: checkpoint.purpose, subjects })).digest('hex');
-}
-export function gateIssue(code: string, message: string,
-  identity: { taskId?: string; artifactId?: string; caseId?: string; exceptionAllowed?: boolean } = {},
-  nextAction = '补足该条件后重新预览，核对当前对象与证据。'): GateIssue {
-  const { exceptionAllowed = false, ...subject } = identity;
-  const suffix = createHash('sha256').update(JSON.stringify({ code, ...subject, message })).digest('hex').slice(0, 24);
-  return { code, conditionId: `condition-${suffix}`, message, nextAction, exceptionAllowed, ...subject };
 }
 export async function inspectCheckpoints(root: string, workId: string, scope: Scope,
   operation: 'start' | 'verify' | 'delivery-ready', taskId: string | undefined,

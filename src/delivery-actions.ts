@@ -2,9 +2,10 @@ import { createHash, randomUUID } from 'node:crypto';
 import { lstat, mkdir, readFile, readdir, realpath, rename, unlink, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { assertSafePath, validateRelativePath } from './files.js';
-import { checkGate, checkMergeGate, inspectBoundDelivery, type MergeBinding } from './confirmations.js';
-import { loadDeliveryContext, saveDeliveryRecord, withDeliveryLock, rebindDeliveryAfterCleanup } from './delivery-environment.js';
-import { git } from './delivery-git.js';
+import { assertConfirmationSharing, checkGate, checkMergeGate, inspectBoundDelivery, type ConfirmationReference, type MergeBinding } from './confirmations.js';
+import { assertSharedWritePaths } from './shared-paths.js';
+import { withDeliveryContext, saveDeliveryRecord, withDeliveryLock, rebindDeliveryAfterCleanup } from './delivery-environment.js';
+import { git, readGitFiles } from './delivery-git.js';
 import type { DeliveryContext, DeliveryRepository } from './delivery-types.js';
 import { assertProviderRemote, ReviewAdapter, validateProvider, type ReviewObject, type ReviewProvider } from './review-adapters.js';
 
@@ -65,12 +66,13 @@ const local = (id: string, suffix: string): string => `.tiller/local/delivery/${
 async function readJson<T>(root: string, relative: string): Promise<T> { return JSON.parse(await readFile(await assertSafePath(root, relative), 'utf8')) as T; }
 /** Content-addressed approved material, also usable when the management root has no Git. */
 export async function deliveryDocumentsVersion(root: string, id: string): Promise<{ version: string; files: { repository: string; path: string; sha256: string }[] }> {
-  return documentsVersion(await loadDeliveryContext(root, id));
+  return withDeliveryContext(root, id, documentsVersion);
 }
 export async function verifyDeliveryDocuments(root: string, id: string) {
-  const context = await loadDeliveryContext(root, id);
+  return withDeliveryContext(root, id, async context => {
   const material = await documentsVersion(context);
   return { ...material, commits: await verifyCommittedDocuments(context, material.files) };
+  });
 }
 async function documentsVersion(context: DeliveryContext): Promise<{ version: string; files: { repository: string; path: string; sha256: string }[] }> {
   type MaterialFile = { repository: string; path: string; sha256: string; snapshot: string };
@@ -118,17 +120,23 @@ async function documentsVersion(context: DeliveryContext): Promise<{ version: st
 }
 async function verifyCommittedDocuments(context: DeliveryContext, files: { repository: string; path: string; sha256: string }[]): Promise<Record<string, string>> {
   const versions: Record<string, string> = {};
+  const repositories = new Map<string, typeof files>();
   for (const file of files) {
-    const binding = context.bindings[file.repository];
+    const selected = repositories.get(file.repository) ?? [];
+    selected.push(file); repositories.set(file.repository, selected);
+  }
+  for (const [repository, selected] of repositories) {
+    const binding = context.bindings[repository];
     // A non-Git management root deliberately uses the immutable material manifest.
-    if (!binding && file.repository === '.' && context.record.mode === 'workspace') continue;
+    if (!binding && repository === '.' && context.record.mode === 'workspace') continue;
     if (!binding) throw new Error('批准资料缺少 Git 交付定位。');
-    const head = versions[file.repository] ?? (await git(binding.root, ['rev-parse', 'HEAD'])).trim();
-    versions[file.repository] = head;
-    let committed: string;
-    try { committed = await git(binding.root, ['show', `${head}:${file.path}`]); }
-    catch { throw new Error(`已批准资料尚未包含在该仓库提交中：${file.repository}:${file.path}`); }
-    if (hash(committed) !== file.sha256) throw new Error(`已批准资料与实际交付提交不一致：${file.repository}:${file.path}`);
+    const head = (await git(binding.root, ['rev-parse', 'HEAD'])).trim();
+    versions[repository] = head;
+    const committed = await readGitFiles(binding.root, head, selected.map(file => file.path), bytes => hash(bytes.toString('utf8')), false);
+    for (const file of selected) {
+      if (!committed.has(file.path)) throw new Error(`已批准资料尚未包含在该仓库提交中：${repository}:${file.path}`);
+      if (committed.get(file.path) !== file.sha256) throw new Error(`已批准资料与实际交付提交不一致：${repository}:${file.path}`);
+    }
   }
   return versions;
 }
@@ -168,8 +176,10 @@ async function remoteHead(root: string, name: string, branch: string): Promise<s
   if (rows.length !== 1 || rows[0]!.split(/\s+/u)[1] !== `refs/heads/${branch}`) throw new Error('远端分支查询不唯一。');
   return oid(rows[0]!.split(/\s+/u)[0]);
 }
-async function localState(root: string): Promise<unknown> {
-  const paths = [...new Set((await git(root, ['ls-files', '-z', '--cached', '--others', '--exclude-standard'])).split('\0').filter(Boolean))].sort();
+async function localState(root: string, contentPaths?: readonly string[]): Promise<unknown> {
+  const paths = contentPaths === undefined
+    ? [...new Set((await git(root, ['ls-files', '-z', '--cached', '--others', '--exclude-standard'])).split('\0').filter(Boolean))].sort()
+    : [...contentPaths].sort();
   const files: [string, string | null][] = [];
   for (const p of paths) {
     cleanPath(p); const full = await assertSafePath(root, p);
@@ -212,7 +222,12 @@ async function deliveryReadiness(context: DeliveryContext): Promise<Record<strin
 }
 async function snapshot(context: DeliveryContext, action: DeliveryAction, input: DeliveryActionInput): Promise<unknown> {
   const { repo, root } = repository(context, input);
-  const state = await localState(root) as { head: string; branch: string };
+  if (action === 'commit' && (!Array.isArray(input.files) || !input.files.length || new Set(input.files).size !== input.files.length))
+    throw new Error('提交须列出不重复的精确文件。');
+  // Immutable commits and approved documents bind push/review/merge objects.
+  // Commit binds its explicit bytes; cleanup/reconciliation preserve the full tree.
+  const contents = action === 'commit' ? input.files : action === 'cleanup' || action === 'reconcile' ? undefined : [];
+  const state = await localState(root, contents) as { head: string; branch: string };
   if (state.branch !== repo.branch && action !== 'reconcile') throw new Error('活动分支已漂移。');
   const auth = await authorization(context, action, input, repo);
   const gate = await checkGate(context.recordRoot, context.workId, context.record.designRequest);
@@ -226,16 +241,16 @@ async function snapshot(context: DeliveryContext, action: DeliveryAction, input:
     extra.targetHead = await remoteHead(root, remote.name, repo.target);
   }
   if (action === 'commit') {
-    if (!Array.isArray(input.files) || !input.files.length || new Set(input.files).size !== input.files.length) throw new Error('提交须列出不重复的精确文件。');
+    const selected = input.files!;
     text(input.message, '提交信息');
-    for (const file of input.files) { cleanPath(file); await assertSafePath(root, file); }
+    for (const file of selected) { cleanPath(file); await assertSafePath(root, file); }
     const confirmations = await readJson<{ requests: { gate: string }[] }>(context.recordRoot, `.tiller/work/${context.workId}/confirmations.json`);
-    if (confirmations.requests.some(r => r.gate === 'merge') && input.files.some(file => file.startsWith(`.tiller/work/${context.workId}/`))) {
+    if (confirmations.requests.some(r => r.gate === 'merge') && selected.some(file => file.startsWith(`.tiller/work/${context.workId}/`))) {
       throw new Error('固定合入源版本后的控制记录须另行归档，不得混入待合入分支。');
     }
     if ((await git(root, ['diff', '--cached', '--name-only', '-z'])).length) throw new Error('暂存区已有变更；先协调，不能夹带或覆盖。');
     const all = new Set((await git(root, ['ls-files', '-z', '--cached', '--others', '--exclude-standard'])).split('\0'));
-    if (input.files.some(file => !all.has(file))) throw new Error('文件清单包含目录、忽略文件或不存在的路径。');
+    if (selected.some(file => !all.has(file))) throw new Error('文件清单包含目录、忽略文件或不存在的路径。');
   }
   if (action === 'push' && oid(input.oid) !== state.head) throw new Error('推送 OID 必须等于当前活动 HEAD。');
   if (action === 'review') {
@@ -332,6 +347,25 @@ async function archivedControlChanges(context: DeliveryContext, repo: DeliveryRe
   const allowed = `.tiller/work/${context.workId}/`;
   const sourceRoot = context.bindings[repo.id]!.sourceRoot;
   const registered = new Set(['work.md', 'record.json', 'delivery.json', 'confirmations.json'].map(name => allowed + name));
+  const { readWorkRecordText, parseWorkflowWorkRecord, loadWorkflowSnapshot, readWorkflowControlText } = await import('./workflow-work.js');
+  const workText = await readWorkRecordText(context.recordRoot, context.workId);
+  if (workText === null) throw new Error('归档缺少当前工作记录。');
+  const work = parseWorkflowWorkRecord(JSON.parse(workText), context.workId);
+  await loadWorkflowSnapshot(context.recordRoot, work);
+  registered.add(work.workflow.path);
+  const stagePath = `${allowed}stages/state.json`;
+  const stageText = await readWorkflowControlText(context.recordRoot, stagePath, 2 * 1024 * 1024);
+  if (stageText !== null) {
+    const { parseWorkflowStageState } = await import('./workflow-stages.js');
+    parseWorkflowStageState(JSON.parse(stageText), context.workId); registered.add(stagePath);
+  }
+  for (const operation of work.operations) {
+    const paths = operation.kind === 'links-change'
+      ? await (await import('./workflow-dependencies.js')).workflowLinkArchivePaths(context.recordRoot, context.workId, operation.operationId)
+      : operation.kind === 'workflow-change'
+        ? await (await import('./workflow-transitions.js')).workflowTransitionArchivePaths(context.recordRoot, context.workId, operation.operationId) : [];
+    for (const filename of paths) registered.add(filename);
+  }
   const { loadPlanningState, readRegisteredPlanning } = await import('./planning.js');
   // Register exact parsed control records; a directory prefix is never deletion authority.
   try {
@@ -473,11 +507,29 @@ function reviewBody(input: DeliveryActionInput, operationId: string): string {
 
 export async function planDeliveryAction(root: string, id: string, action: DeliveryAction, value: unknown): Promise<ActionPlan> {
   if (!['commit', 'push', 'review', 'merge', 'reconcile', 'cleanup'].includes(action)) throw new Error('交付动作无效。');
-  const input = inputValue(value); const context = await loadDeliveryContext(root, id);
+  const input = inputValue(value);
+  return withDeliveryContext(root, id, async context => {
   const state = await snapshot(context, action, input); const planId = randomUUID();
   const plan: ActionPlan = { schemaVersion: 1, planId, action, workId: id, input, snapshot: state, fingerprint: hash({ action, input, state }) };
   await localWrite(context.anchorRoot, local(id, `action-plans/${planId}.json`), plan);
   return plan;
+  });
+}
+
+/** Shared authorization and receipt storage must be available before any external effect. */
+async function assertActionSharing(context: DeliveryContext, action: DeliveryAction, input: DeliveryActionInput): Promise<void> {
+  const files = [`.tiller/work/${context.workId}/delivery.json`];
+  if (action !== 'reconcile' && input.authorization) files.push(input.authorization.source.path);
+  await assertSharedWritePaths(context.recordRoot, files);
+  if (action === 'commit' && input.files) await assertSharedWritePaths(repository(context, input).root, input.files);
+  if (action === 'reconcile' || action === 'cleanup') return;
+  const references: ConfirmationReference[] = [];
+  for (const requestId of new Set([context.record.designRequest, ...(action === 'merge' && input.requestId ? [input.requestId] : [])])) {
+    const gate = await checkGate(context.recordRoot, context.workId, requestId);
+    if (gate.decisionId) references.push({ workId: context.workId, requestId, decisionId: gate.decisionId });
+  }
+  if (action === 'merge') references.push(...(input.binding?.deliveryExceptionRefs ?? []));
+  await assertConfirmationSharing(context.recordRoot, references);
 }
 
 export async function applyDeliveryAction(root: string, id: string, action: DeliveryAction, value: unknown, planId: string): Promise<Record<string, unknown>> {
@@ -485,6 +537,7 @@ export async function applyDeliveryAction(root: string, id: string, action: Deli
   if (!/^[0-9a-f-]{36}$/u.test(planId)) throw new Error('计划标识无效。');
   return withDeliveryLock(root, id, async context => {
     const plan = await readJson<ActionPlan>(context.anchorRoot, local(id, `action-plans/${planId}.json`));
+    await assertActionSharing(context, action, input);
     const state = await snapshot(context, action, input);
     if (plan.action !== action || plan.workId !== id || plan.fingerprint !== hash({ action, input, state }) || hash(plan.input) !== hash(input)) throw new Error('计划已过期或输入、授权、对象发生变化；重新生成计划。');
     const { repo, root: checkout } = repository(context, input);

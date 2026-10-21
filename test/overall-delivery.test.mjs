@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { inspectWorkDelivery, planWorkDeliveryReady, applyWorkDeliveryReady, readDeliveryReceipt, inspectDeliveryReceipt } from '../dist/overall-delivery.js';
+import { readWorkflowControlSnapshot } from '../dist/workflow-stages.js';
 import { setupTasks, activateTaskPlan } from './task-helpers.mjs';
 import { completeDeliveryTask, observeDelivery, addDeliveryCheckpoint, approveDeliveryCheckpoint, approveDeliveryException } from './overall-delivery-helpers.mjs';
 
@@ -16,7 +17,7 @@ test('overall delivery requires completed tasks, combination evidence and checkp
   assert.equal(unknown.technicalReady, false);
   assert.equal(unknown.operationAllowed, false);
   assert.equal(unknown.acceptance.status, 'not-evaluated');
-  assert.equal(unknown.processEvidence.status, 'unknown');
+  assert.equal(unknown.processEvidence.status, 'gap');
   assert.equal(existsSync(controlPath(context, 'tasks.json')), false);
   assert.equal(existsSync(controlPath(context, 'delivery-checks')), false);
   await activateTaskPlan(context);
@@ -24,7 +25,7 @@ test('overall delivery requires completed tasks, combination evidence and checkp
   assert.equal(missingTasks.technicalReady, false);
   assert.equal(missingTasks.processEvidence.status, 'gap');
   assert.ok(missingTasks.issues.length > 0);
-  const blockedInput = { operationId: 'blocked-ready', expectedRevision: context.revision };
+  const blockedInput = { operationId: 'blocked-ready', expected: await readWorkflowControlSnapshot(root, workId, true) };
   const blocked = await planWorkDeliveryReady(root, workId, blockedInput);
   assert.equal(blocked.operationAllowed, false);
   await assert.rejects(applyWorkDeliveryReady(root, workId, blockedInput, blocked.planId));
@@ -33,12 +34,12 @@ test('overall delivery requires completed tasks, combination evidence and checkp
   await completeDeliveryTask(context);
   const missingCombination = await inspectWorkDelivery(root, workId);
   assert.equal(missingCombination.technicalReady, false, 'Task evidence cannot substitute for the separately declared overall checks');
-  const evidenceRefs = await observeDelivery(context);
-  const missingCheckpoint = await inspectWorkDelivery(root, workId, { evidenceRefs });
+  const delivery = await observeDelivery(context);
+  const missingCheckpoint = await inspectWorkDelivery(root, workId, delivery);
   assert.equal(missingCheckpoint.technicalReady, false);
   assert.ok(missingCheckpoint.issues.some(issue => issue.code === 'CHECKPOINT_REQUIRED'));
   const checkpointRefs = [await approveDeliveryCheckpoint(context)];
-  const refs = { evidenceRefs, checkpointRefs };
+  const refs = { ...delivery, checkpointRefs };
   const ready = await inspectWorkDelivery(root, workId, refs);
   assert.equal(ready.technicalReady, true, JSON.stringify(ready.issues));
   assert.equal(ready.operationAllowed, true);
@@ -46,8 +47,8 @@ test('overall delivery requires completed tasks, combination evidence and checkp
   assert.equal(ready.acceptance.status, 'not-evaluated');
   assert.deepEqual(ready.scope, context.plan.scope);
   const tasksBefore = readFileSync(controlPath(context, 'tasks.json'), 'utf8');
-  const input = { operationId: 'ready-current', expectedRevision: context.revision, ...refs };
-  await assert.rejects(planWorkDeliveryReady(root, workId, { ...input, operationId: 'stale-revision', expectedRevision: context.revision - 1 }), { code: 'REVISION_CONFLICT' });
+  const input = { operationId: 'ready-current', expected: await readWorkflowControlSnapshot(root, workId, true), ...refs };
+  await assert.rejects(planWorkDeliveryReady(root, workId, { ...input, operationId: 'stale-revision', expected: { ...input.expected, tasks: { ...input.expected.tasks, revision: input.expected.tasks.revision - 1 } } }), { code: 'REVISION_CONFLICT' });
   const preview = await planWorkDeliveryReady(root, workId, input);
   assert.equal(preview.operationAllowed, true);
   assert.equal(existsSync(controlPath(context, 'delivery-checks')), false, 'A ready preview must remain read-only');
@@ -56,7 +57,7 @@ test('overall delivery requires completed tasks, combination evidence and checkp
   assert.equal(applied.id, input.operationId);
   assert.equal(applied.technicalReady, true);
   assert.equal(applied.acceptance.status, 'not-evaluated');
-  assert.equal(applied.revision, context.revision);
+  assert.deepEqual(applied.controlSnapshot, input.expected);
   assert.equal(readFileSync(controlPath(context, 'tasks.json'), 'utf8'), tasksBefore);
   const receiptPath = controlPath(context, `delivery-checks/${input.operationId}.json`);
   const receiptText = readFileSync(receiptPath, 'utf8');
@@ -92,14 +93,14 @@ test('workspace delivery uses registered repository objects and explicit excepti
   addDeliveryCheckpoint(context);
   await activateTaskPlan(context);
   await completeDeliveryTask(context);
-  const evidenceRefs = await observeDelivery(context);
-  const gap = await inspectWorkDelivery(root, workId, { evidenceRefs });
+  const delivery = await observeDelivery(context);
+  const gap = await inspectWorkDelivery(root, workId, delivery);
   assert.equal(gap.technicalReady, false);
   assert.equal(gap.operationAllowed, false);
   assert.ok(gap.scope.repositories.includes('business'));
   assert.ok(gap.issues.every(issue => issue.code === 'CHECKPOINT_REQUIRED'), JSON.stringify(gap.issues));
   const exceptionRefs = [await approveDeliveryException(context, gap)];
-  const refs = { evidenceRefs, exceptionRefs };
+  const refs = { ...delivery, exceptionRefs };
   const allowed = await inspectWorkDelivery(root, workId, refs);
   assert.equal(allowed.technicalReady, false);
   assert.equal(allowed.operationAllowed, true, JSON.stringify(allowed.blockingReasons));
@@ -107,7 +108,7 @@ test('workspace delivery uses registered repository objects and explicit excepti
   assert.ok(allowed.issues.some(issue => issue.code === 'CHECKPOINT_REQUIRED'));
   assert.equal(allowed.blockingReasons.length, 0);
   assert.ok(allowed.exceptions.length > 0);
-  const input = { operationId: 'ready-exception', expectedRevision: context.revision, ...refs };
+  const input = { operationId: 'ready-exception', expected: await readWorkflowControlSnapshot(root, workId, true), ...refs };
   const preview = await planWorkDeliveryReady(root, workId, input);
   const receipt = await applyWorkDeliveryReady(root, workId, input, preview.planId);
   assert.equal(receipt.operationAllowed, true);

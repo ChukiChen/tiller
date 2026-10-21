@@ -1,17 +1,19 @@
 # 独立管理仓库分组布局
 
+> 历史工作资料：已按用户要求直接精简且不备份，仅保留核心文档。原机器记录、审批快照、逐轮测试输出和过程文件已删除；以下结果保留当时范围，不作为当前候选的验证结论或可恢复的受控工作，也不是后续执行队列。
+
 ## 目标与授权
 
 2026-10-16，用户在审阅 repositories/ 分组、标识与位置分离方案后要求“按这个来调整当前实现”。按真实来源登记需求和设计确认，允许范围内实现、兼容及验证；不包含项目提交、推送、验收或发布。
 
 ## 依据与产物
 
-- [实际来源](user-source.md)
+- [实际来源](decisions.md#用户指令)
 - [变更需求](requirements.md)
 - [变更设计](design.md)
 - [实施计划](plan.md)
 - [实现验证](verification.md)
-- [待验收对象](reviews/request-acceptance-repository-layout/presentation.md)
+- 待验收对象（原过程文件已清理）
 - [工程初始化设计](../../specs/modules/initialization/design.md)
 - [工作推进设计](../../specs/modules/workflow/design.md#112-两种目录与资料归属)
 

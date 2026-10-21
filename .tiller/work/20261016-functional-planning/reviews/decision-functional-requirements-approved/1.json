@@ -1,4 +1,0 @@
-{
-  "encoding": "utf8",
-  "content": "# 确认请求 functional-requirements\n\n请审阅以下具体范围、对象、未决事项和下一步。批准只适用于本请求。\n\n```json\n{\n  \"requestId\": \"functional-requirements\",\n  \"gate\": \"requirements\",\n  \"scope\": {\n    \"repositories\": [\n      \".\"\n    ],\n    \"targets\": [\n      \"20261016-functional-planning\"\n    ]\n  },\n  \"reviewSummary\": \"对应前述功能分块与空项目骨架方案及用户开始优化调整指令。\",\n  \"openIssues\": [],\n  \"nextAction\": \"细化规则落地方案并执行已授权调整。\",\n  \"subjects\": [\n    {\n      \"repository\": \".\",\n      \"path\": \".tiller/work/20261016-functional-planning/requirements.md\",\n      \"sha256\": \"641c165fa0a8e279906833547343dbc6f7baa0e9aae4337e935ae40ef95e075d\",\n      \"snapshot\": \".tiller/work/20261016-functional-planning/reviews/request-functional-requirements/0.json\"\n    }\n  ],\n  \"upstream\": [],\n  \"exception\": null\n}\n```\n"
-}

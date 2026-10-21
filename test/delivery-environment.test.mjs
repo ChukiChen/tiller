@@ -3,13 +3,16 @@ import assert from 'node:assert/strict';
 import { readFileSync, readdirSync, unlinkSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { initialize } from '../dist/core.js';
-import { requestConfirmation, recordDecision, checkGate } from '../dist/confirmations.js';
+import { requestConfirmation, checkGate } from '../dist/confirmations.js';
 import { planDeliveryPreparation, applyDeliveryPreparation, loadDeliveryContext, saveDeliveryRecord, deliveryStatus, withDeliveryLock } from '../dist/delivery-environment.js';
 import { resolveWorkRoot, resolveRepositoryRoot, withDeliveryLocation } from '../dist/delivery-location.js';
 import { git } from '../dist/delivery-git.js';
-import { createWork, resumeWork, readWorkReference } from '../dist/work.js';
-import { fixture, put, gitRepository } from './helpers.mjs';
+import { resumeWork, readWorkReference } from '../dist/work.js';
+import { fixture, put, gitRepository, snapshot } from './helpers.mjs';
 
+import { seedApprovedDevelopment } from './planning-helpers.mjs';
+
+const seeded = new Map();
 const id = '20261015-isolation';
 const directory = `.tiller/work/${id}`;
 async function commit(root, message = 'test baseline') {
@@ -22,16 +25,12 @@ async function initGit(root) {
   await git(root, ['config', 'core.autocrlf', 'false']);
 }
 async function approve(root, repositories) {
-  if (!existsSync(join(root, `${directory}/record.json`))) await createWork(root, id, 'Delivery fixture', { type: 'change-requirements', scope: { repositories, targets: [id] } });
-  put(root, `${directory}/work.md`, '# Fixture work\n');
-  put(root, `${directory}/requirements.md`, '# Fixture requirements\n');
-  put(root, `${directory}/design.md`, '# Fixture design\n');
-  for (const gate of ['requirements', 'design']) {
-    const requestId = `approve-${gate}`;
-    await requestConfirmation(root, id, { requestId, gate, scope: { repositories, targets: [id] }, subjects: [{ repository: '.', path: `${directory}/${gate}.md` }], upstream: gate === 'design' ? ['approve-requirements'] : [], reviewSummary: 'Synthetic isolated environment test.', openIssues: [], nextAction: 'Exercise the fixture only.' });
-    put(root, `${directory}/${gate}-source.md`, '# Synthetic source\nApproved for this test only.\n');
-    await recordDecision(root, id, { decisionId: `yes-${gate}`, requestId, outcome: 'approved', conditions: [], source: { kind: 'conversation', reference: { repository: '.', path: `${directory}/${gate}-source.md` }, quote: 'Approved for this test only.', presentation: { repository: '.', path: `${directory}/reviews/request-${requestId}/presentation.md` } }, sourceReview: { reviewer: 'Test', rationale: 'Synthetic decision matching this fixture, not real user approval.', reviewedAt: new Date().toISOString() } });
-  }
+  const result = await seedApprovedDevelopment(root, id, {
+    scope: { repositories, targets: [id] }, title: 'Delivery fixture',
+    requirementsRequestId: 'approve-requirements', designRequestId: 'approve-design',
+    requirementsDecisionId: 'yes-requirements', designDecisionId: 'yes-design',
+  });
+  seeded.set(root, result); return result;
 }
 function preparation(repositories) {
   return { schemaVersion: 1, designRequest: 'approve-design', repositories: repositories.map(repository => ({ id: repository, base: 'HEAD', branch: `codex/${id}`, target: 'main' })) };
@@ -68,7 +67,9 @@ test('project prepares a worktree, preserves source bytes, redirects records and
   assert.equal((await applyDeliveryPreparation(root, id, input, plan.planId)).changed, false);
   await withDeliveryLock(result.recordRoot, id, async context => assert.equal(context.anchorRoot, root));
   const originalRegistry = readFileSync(join(root, `${directory}/confirmations.json`), 'utf8');
-  await requestConfirmation(root, id, { requestId: 'accept-isolated', gate: 'acceptance', scope: { repositories: ['.'], targets: [id] }, subjects: [{ repository: '.', path: `${directory}/design.md` }], upstream: ['approve-design'], reviewSummary: 'Synthetic post-handoff check.', openIssues: [], nextAction: 'Await fixture approval.' });
+  const acceptanceEvidence = { repository: '.', path: `${directory}/acceptance-evidence.md` };
+  put(result.recordRoot, acceptanceEvidence.path, '# Actual fixture check\nReviewed the isolated design document after handoff.\n');
+  await requestConfirmation(root, id, { workflowBinding: await seeded.get(root).binding(), documentBinding: { document: { repository: '.', path: `${directory}/design.md` }, evidence: acceptanceEvidence }, requestId: 'accept-isolated', gate: 'acceptance', scope: { repositories: ['.'], targets: [id] }, subjects: [{ repository: '.', path: `${directory}/design.md` }, acceptanceEvidence], upstream: ['approve-design'], reviewSummary: 'Synthetic post-handoff check.', openIssues: [], nextAction: 'Await fixture approval.' });
   assert.equal(readFileSync(join(root, `${directory}/confirmations.json`), 'utf8'), originalRegistry);
   assert.match(readFileSync(join(result.recordRoot, `${directory}/confirmations.json`), 'utf8'), /accept-isolated/u);
   put(result.recordRoot, 'code.txt', 'implemented\n');
@@ -147,7 +148,7 @@ test('untracked approval materials must be explicitly handed over', async t => {
   function files(dir, prefix) {
     return readdirSync(dir, { withFileTypes: true }).flatMap(entry => entry.isDirectory() ? files(join(dir, entry.name), `${prefix}/${entry.name}`) : [`${prefix}/${entry.name}`]);
   }
-  input.repositories[0].transfers = files(join(root, directory), directory).map(path => ({ path, operation: 'add' }));
+  input.repositories[0].transfers = [...files(join(root, directory), directory), 'instruction.md', '.tiller/verification/config.json'].map(path => ({ path, operation: 'add' }));
   const plan = await planDeliveryPreparation(root, id, input);
   const result = await applyDeliveryPreparation(root, id, input, plan.planId);
   assert.equal((await checkGate(result.recordRoot, id, 'approve-design')).confirmed, true);
@@ -166,10 +167,16 @@ test('design changes, credentials, ignored content and occupied branches are rej
   const otherScope = JSON.parse(workBytes);
   otherScope.scope.targets = ['another-goal'];
   put(root, `${directory}/record.json`, JSON.stringify(otherScope));
-  await assert.rejects(planDeliveryPreparation(root, id, input), /目标范围/u);
+  const changedScope = snapshot(root);
+  await assert.rejects(planDeliveryPreparation(root, id, input), /动作来源范围超出工作/u);
+  assert.deepEqual(snapshot(root), changedScope);
+  assert.equal(existsSync(join(root, '.tiller/local/worktrees', id)), false);
   put(root, `${directory}/record.json`, workBytes);
   put(root, `${directory}/design.md`, '# Changed design\n');
+  const changedDesign = snapshot(root);
   await assert.rejects(planDeliveryPreparation(root, id, input), /设计确认未满足/u);
+  assert.deepEqual(snapshot(root), changedDesign);
+  assert.equal(existsSync(join(root, '.tiller/local/worktrees', id)), false);
 });
 
 for (const grouped of [false, true]) for (const gitManager of [true, false]) {
@@ -185,7 +192,6 @@ for (const grouped of [false, true]) for (const gitManager of [true, false]) {
     await commit(business);
     if (gitManager) await initGit(root);
     await initialize({ root, mode: 'workspace', repositories: grouped ? [repositoryPath, 'repositories/repository-b'] : ['repository-a'] });
-    if (grouped) await createWork(root, id, 'Grouped delivery fixture', { type: 'change-requirements', scope: { repositories: ['.', 'repository-a'], targets: [id] } });
     await approve(root, ['.', 'repository-a']);
     if (gitManager) await commit(root);
     const input = preparation(gitManager ? ['.', 'repository-a'] : ['repository-a']);

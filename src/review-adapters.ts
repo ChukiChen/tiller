@@ -121,9 +121,16 @@ export class ReviewAdapter {
     for (let page = 1; page <= 100; page++) {
       const raw = await this.request('GET', `${this.collection}?${new URLSearchParams({ ...query, per_page: '100', page: String(page) })}`);
       if (!Array.isArray(raw)) throw new Error('评审查询结果无效。');
-      for (const item of raw) {
-        const row = obj(item); const review = await this.get(String(p.kind === 'github' ? row.number : row.iid));
-        if (review.source === source && review.target === target) output.push(review);
+      for (let start = 0; start < raw.length; start += 4) {
+        const ids = raw.slice(start, start + 4).map(item => {
+          const row = obj(item);
+          return reviewId(String(p.kind === 'github' ? row.number : row.iid));
+        });
+        const reviews = await Promise.allSettled(ids.map(id => this.get(id)));
+        for (const result of reviews) {
+          if (result.status === 'rejected') throw result.reason;
+          if (result.value.source === source && result.value.target === target) output.push(result.value);
+        }
       }
       if (raw.length < 100) return output;
     }

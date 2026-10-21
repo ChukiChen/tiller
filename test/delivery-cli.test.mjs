@@ -3,28 +3,12 @@ import assert from 'node:assert/strict';
 import { readFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { initialize } from '../dist/core.js';
-import { createWork, addWork } from '../dist/work.js';
-import { requestConfirmation, recordDecision } from '../dist/confirmations.js';
+import { seedApprovedDevelopment } from './planning-helpers.mjs';
 import { git } from '../dist/delivery-git.js';
 import { fixture, put, cli, success, failure } from './helpers.mjs';
 
 const id = '20261015-cli-delivery';
 const base = `.tiller/work/${id}`;
-
-async function approve(root, gate) {
-  const request = await requestConfirmation(root, id, {
-    requestId: gate, gate, scope: { repositories: ['.'], targets: [id] },
-    subjects: [{ repository: '.', path: `${base}/${gate}.md` }],
-    upstream: gate === 'design' ? ['requirements'] : [],
-    reviewSummary: 'Synthetic CLI fixture only', openIssues: [], nextAction: 'Exercise this test',
-  });
-  put(root, `${base}/${gate}-source.md`, 'Synthetic fixture approval.\n');
-  await recordDecision(root, id, {
-    decisionId: `yes-${gate}`, requestId: gate, outcome: 'approved', conditions: [],
-    source: { kind: 'conversation', reference: { repository: '.', path: `${base}/${gate}-source.md` }, quote: 'Synthetic fixture approval.', presentation: { repository: '.', path: request.presentation } },
-    sourceReview: { reviewer: 'synthetic', rationale: 'Synthetic input for this exact fixture', reviewedAt: new Date().toISOString() },
-  });
-}
 
 test('packaged command routes prepared work, uses caller input and commits only an authorized file', async t => {
   const root = fixture(t);
@@ -33,12 +17,8 @@ test('packaged command routes prepared work, uses caller input and commits only 
   await git(root, ['config', 'user.name', 'Synthetic']);
   await git(root, ['config', 'user.email', 'test@example.invalid']);
   await initialize({ root });
-  await createWork(root, id, 'CLI delivery fixture', 'module-requirements');
-  put(root, `${base}/requirements.md`, '# Requirement\nUnique student ID.\n');
-  await approve(root, 'requirements');
-  await addWork(root, id, { type: 'module-design', requirementsBasis: { workId: id, requestId: 'requirements' } });
-  put(root, `${base}/design.md`, '# Design\nMap keyed by ID.\n');
-  await approve(root, 'design');
+  await seedApprovedDevelopment(root, id, { requirementsRequestId: 'requirements', designRequestId: 'design',
+    requirementsDecisionId: 'yes-requirements', designDecisionId: 'yes-design' });
   await git(root, ['add', '--all']);
   await git(root, ['commit', '-m', 'Establish synthetic baseline']);
   const input = { schemaVersion: 1, designRequest: 'design', repositories: [{ id: '.', base: 'main', target: 'main', branch: `codex/${id}` }] };
