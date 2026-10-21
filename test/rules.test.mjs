@@ -4,6 +4,7 @@ import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import test from 'node:test';
 import { cli, fixture, success } from './helpers.mjs';
+import { ENTRY_START, ENTRY_END, RESOURCE_VERSION, trackedContent, matchesManagedDigest } from '../dist/core.js';
 
 const resources = fileURLToPath(new URL('../resources/', import.meta.url));
 const read = (path) => readFileSync(join(resources, path), 'utf8');
@@ -11,9 +12,10 @@ const read = (path) => readFileSync(join(resources, path), 'utf8');
 // These checks guard shipped guidance and installation, not actual AI compliance.
 test('entry exposes human checkpoints without relying only on a linked rule', () => {
   const entry = read('entry.md');
-  assert.match(entry, /需求.*用户确认.*设计/);
-  assert.match(entry, /设计.*用户确认.*代码与测试/);
-  assert.match(entry, /交付验收与发布分别确认/);
+  assert.match(entry, /功能开发及适用的变更阶段仍先确认需求、设计和规划，再编写代码与测试/);
+  assert.match(entry, /分析、审查可按明确请求调查并交付报告，不自动修复/);
+  assert.match(entry, /交付、验收和发布分别判断/);
+  assert.match(entry, /类型名称、任务简单或一般授权不能减免适用节点/);
   const core = read('rules/core.md');
   assert.doesNotMatch(core, /已有授权无需逐阶段重复确认/);
   assert.match(core, /小任务.*不能自行免除确认/);
@@ -98,18 +100,23 @@ test('entry and reading chain expose work contracts without permitting merged sp
   success(cli(root, 'init'));
   const entry = readFileSync(join(root, 'AGENTS.md'), 'utf8');
   assert.match(entry, /必须使用对应命令创建或登记/);
-  for (const filename of ['work.md', 'requirements.md', 'design.md', 'record.json', 'README.md']) {
+  for (const filename of ['work.md', 'record.json', 'README.md']) {
     assert.ok(entry.includes(`\`${filename}\``), filename);
   }
+  assert.match(entry, /产物按图按需建立或引用/);
+  assert.match(entry, /适用的需求和设计分别维护，不为分析或审查补造规格/);
   assert.match(entry, /record\.json.*不自行编造/);
   assert.match(entry, /README\.md.*不能替代上述产物/);
   assert.match(read('rules/index.md'), /必读其中的\[工作记录约定\]/);
   const core = read('rules/core.md');
+  assert.match(core, /`requirements\.md`、`design\.md`.*按活动需要生成.*需求有效确认后才能补充对应设计/);
   assert.equal((core.match(/^## 工作记录约定$/gm) ?? []).length, 1);
   assert.match(core, /简单工作仅可合并.*过程信息.*需求与设计保持分开/);
   assert.match(core, /工程资源升级独立进行，不迁移工作记录/);
-  assert.match(core, /不回填历史批准、不自动批准设计/);
-  assert.match(core, /单个产物交付完成不表示整项软件工作完成/);
+  assert.match(core, /当前确认与事件按真实顺序重新建立，不复制旧批准或完成状态/);
+  assert.match(core, /登记引用不表示文档合格或用户已确认/);
+  assert.match(read('rules/activities/delivery.md'), /一个产物完成不等于整项软件交付完成/);
+  assert.match(core, /单份文档验收.*不代替整体交付绑定/);
   for (const directory of ['activities', 'quality']) {
     for (const filename of readdirSync(join(resources, 'rules', directory))) {
       assert.match(read(`rules/${directory}/${filename}`), /\[工作记录约定\]\(\.\.\/core\.md#工作记录约定\)/);
@@ -117,14 +124,22 @@ test('entry and reading chain expose work contracts without permitting merged sp
   }
 });
 
-test('tiller uses the same single managed entry as a newly initialized project', (t) => {
+test('current initialization and fixed management each preserve their registered single entry', (t) => {
   const root = fixture(t);
   success(cli(root, 'init'));
   const normalize = text => text.replaceAll('\r\n', '\n');
   const installed = readFileSync(join(root, 'AGENTS.md'), 'utf8');
   const self = readFileSync(new URL('../AGENTS.md', import.meta.url), 'utf8');
-  assert.equal(normalize(self), normalize(installed), 'self-hosted entry must not maintain a second generic body');
-  assert.equal((installed.match(/<!-- tiller:entry:start -->/g) ?? []).length, 1);
+  const installedMetadata = JSON.parse(readFileSync(join(root, '.tiller/project.json'), 'utf8'));
+  const selfMetadata = JSON.parse(readFileSync(new URL('../.tiller/project.json', import.meta.url), 'utf8'));
+  assert.equal(installedMetadata.resourceVersion, RESOURCE_VERSION);
+  assert.equal(selfMetadata.resourceVersion, '0.4.0', 'fixed management resources must not be upgraded with the candidate');
+  assert.equal(normalize(installed).trim(), `${ENTRY_START}\n${normalize(read('entry.md')).trimEnd()}\n${ENTRY_END}`);
+  for (const [label, entry, metadata] of [['current', installed, installedMetadata], ['management', self, selfMetadata]]) {
+    const section = trackedContent('AGENTS.md', entry);
+    assert.equal(normalize(entry).trim(), normalize(section), `${label}: no second generic body outside the managed entry`);
+    assert.ok(matchesManagedDigest('AGENTS.md', section, metadata.managedFiles['AGENTS.md']), `${label} ${metadata.resourceVersion}: entry differs from its registered managed digest`);
+  }
   const before = installed;
   success(cli(root, 'init'));
   assert.equal(readFileSync(join(root, 'AGENTS.md'), 'utf8'), before);

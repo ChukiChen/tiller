@@ -1,13 +1,17 @@
 import test, { after } from 'node:test';
 import assert from 'node:assert/strict';
-import { cpSync, existsSync, readFileSync } from 'node:fs';
+import { cpSync, existsSync, readFileSync, unlinkSync } from 'node:fs';
+import fs from 'node:fs/promises';
+import {syncBuiltinESMExports} from 'node:module';
 import { join } from 'node:path';
 import { initialize } from '../dist/core.js';
-import { createWork } from '../dist/work.js';
+import { seedApprovedDevelopment } from './planning-helpers.mjs';
 import { requestConfirmation, recordDecision } from '../dist/confirmations.js';
 import { planDeliveryPreparation, applyDeliveryPreparation, loadDeliveryContext } from '../dist/delivery-environment.js';
 import { planDeliveryAction, applyDeliveryAction, deliveryDocumentsVersion, verifyDeliveryDocuments } from '../dist/delivery-actions.js';
 import { git } from '../dist/delivery-git.js';
+import { readWorkflowControlSnapshot } from '../dist/workflow-stages.js';
+import { planWorkflowLinks, applyWorkflowLinks } from '../dist/workflow-dependencies.js';
 import { fixture, put, gitRepository } from './helpers.mjs';
 
 const id = '20261015-actions';
@@ -20,15 +24,8 @@ async function baseFixture() {
   await git(root, ['config', 'user.email', 'synthetic@example.invalid']);
   await git(root, ['config', 'core.autocrlf', 'false']);
   await initialize({ root });
-  await createWork(root, id, 'Delivery actions fixture');
-  put(root, `${directory}/work.md`, '# Test work\n');
+  await seedApprovedDevelopment(root, id, { scope: { repositories: ['.'], targets: [id] }, title: 'Delivery actions fixture' });
   put(root, `${directory}/authorization.md`, '# Synthetic authorization\nAllow the explicitly listed fixture actions.\n');
-  for (const gate of ['requirements', 'design']) {
-    put(root, `${directory}/${gate}.md`, `# Synthetic ${gate}\n`);
-    await requestConfirmation(root, id, { requestId: gate, gate, scope: { repositories: ['.'], targets: [id] }, subjects: [{ repository: '.', path: `${directory}/${gate}.md` }], upstream: gate === 'design' ? ['requirements'] : [], reviewSummary: 'Test-only presentation.', openIssues: [], nextAction: 'Test isolated actions.' });
-    put(root, `${directory}/${gate}-source.md`, 'Synthetic scoped approval.\n');
-    await recordDecision(root, id, { decisionId: `approve-${gate}`, requestId: gate, outcome: 'approved', conditions: [], source: { kind: 'conversation', reference: { repository: '.', path: `${directory}/${gate}-source.md` }, quote: 'Synthetic scoped approval.', presentation: { repository: '.', path: `${directory}/reviews/request-${gate}/presentation.md` } }, sourceReview: { reviewer: 'Fixture', rationale: 'Synthetic approval only.', reviewedAt: new Date().toISOString() } });
-  }
   put(root, 'code.txt', 'original\n');
   put(root, 'other.txt', 'untouched\n');
   await git(root, ['add', '--all']);
@@ -70,6 +67,24 @@ test('explicit commit stages only selected file, preserves unrelated changes and
   assert.match(await git(root, ['ls-remote', 'origin', `refs/heads/codex/${id}`]), new RegExp(result.oid));
   const record = (await loadDeliveryContext(root, id)).record;
   assert.equal(record.events.at(-1).action, 'push');
+});
+
+test('a selected commit proves its file bytes without reading unrelated working-tree bodies', async t => {
+  const {root, checkout} = await setup(t);
+  put(checkout, 'code.txt', 'selected change\n');
+  put(checkout, 'other.txt', 'independent uncommitted work\n');
+  const nativeRead = fs.readFile; let otherReads = 0; let selectedReads = 0;
+  fs.readFile = async function(file, ...args) {
+    if (String(file) === join(checkout, 'other.txt')) otherReads++;
+    if (String(file) === join(checkout, 'code.txt')) selectedReads++;
+    return nativeRead.call(this, file, ...args);
+  };
+  syncBuiltinESMExports();
+  try {
+    await planDeliveryAction(root, id, 'commit', input('commit', {files: ['code.txt'], message: 'Scoped contents'}));
+    assert.ok(selectedReads > 0, 'The selected bytes must be observed.');
+    assert.equal(otherReads, 0, 'Unrelated working-tree bodies are outside this commit.');
+  } finally { fs.readFile = nativeRead; syncBuiltinESMExports(); }
 });
 
 test('changed content and changed authorization invalidate plans without committing', async t => {
@@ -140,17 +155,33 @@ test('cleanup restores only archived controls and preserves exact receipts at du
   put(checkout, 'code.txt', 'delivery\n');
   const committed = await act(root, 'commit', input('commit', { files: ['code.txt'], message: 'Keep delivery evidence recoverable' }));
   await act(root, 'push', input('push', { remote: 'origin', oid: committed.oid }));
+  const links = { operationId: 'archive-links', expected: await readWorkflowControlSnapshot(checkout, id), links: [] };
+  const linksPlan = await planWorkflowLinks(checkout, id, links);
+  await applyWorkflowLinks(checkout, id, links, linksPlan.planId);
+  const statePath = `${directory}/stages/state.json`;
+  put(checkout, statePath, readFileSync(join(checkout, statePath), 'utf8') + '\n');
   // Synthetic external archival step: the source is outside the disposable local tree.
   cpSync(join(checkout, directory), join(root, directory), { recursive: true });
   const before = JSON.parse(readFileSync(join(root, directory, 'delivery.json'), 'utf8'));
   const value = input('cleanup', { removeWorktree: true, remote: 'origin' });
   value.authorization.actions.push('remove-worktree');
+  const receiptPath = `${directory}/workflow/links/archive-links.json`;
+  const receipt = readFileSync(join(checkout, receiptPath), 'utf8');
+  const invalidReceipt = JSON.stringify({ ...JSON.parse(receipt), revision: 999 });
+  for (const location of [root, checkout]) put(location, receiptPath, invalidReceipt);
+  await assert.rejects(planDeliveryAction(root, id, 'cleanup', value), /关联历史回执/u);
+  for (const location of [root, checkout]) put(location, receiptPath, receipt);
+  const unregistered = `${directory}/workflow/links/unregistered.json`;
+  for (const location of [root, checkout]) put(location, unregistered, receipt);
+  await assert.rejects(planDeliveryAction(root, id, 'cleanup', value), /未登记/u);
+  for (const location of [root, checkout]) unlinkSync(join(location, unregistered));
   const result = await act(root, 'cleanup', value);
   assert.equal(result.removedWorktree, true);
   assert.equal(existsSync(checkout), false);
   const after = JSON.parse(readFileSync(join(root, directory, 'delivery.json'), 'utf8'));
   assert.deepEqual(after.events.slice(0, before.events.length), before.events);
   assert.equal(after.events.at(-1).action, 'cleanup');
+  assert.equal(readFileSync(join(root, receiptPath), 'utf8'), receipt);
   assert.match(await git(root, ['branch', '--list', `codex/${id}`]), /codex/u);
 });
 
@@ -212,7 +243,7 @@ test('document manifest is stable, content based and rejects modified approved d
   const initial = await deliveryDocumentsVersion(root, id);
   assert.match(initial.version, /^sha256:[a-f0-9]{64}$/u);
   assert.ok(initial.files.length > 2);
-  assert.ok(initial.files.some(file => file.path.endsWith('/design-source.md')));
+  assert.ok(initial.files.some(file => file.path.endsWith('/source-approve-design.md')));
   assert.ok(initial.files.some(file => file.path.includes('/reviews/request-design/')));
   const snapshotPath = initial.files.find(file => file.path.endsWith('/reviews/request-design/0.json')).path;
   const snapshotBytes = readFileSync(join(checkout, snapshotPath), 'utf8');
@@ -251,14 +282,7 @@ test('non-Git management documents use verified immutable snapshots without inve
   await git(business, ['add', '--all']);
   await git(business, ['commit', '-m', 'Enable no-Git manager fixture']);
   await initialize({ root, mode: 'workspace', repositories: ['business'] });
-  await createWork(root, id, 'Management fixture', { type: 'change-requirements', scope: { repositories: ['.', 'business'], targets: [id] } });
-  put(root, `${directory}/work.md`, '# Non-Git management\n');
-  for (const gate of ['requirements', 'design']) {
-    put(root, `${directory}/${gate}.md`, `# ${gate}\n`);
-    await requestConfirmation(root, id, { requestId: gate, gate, scope: { repositories: ['.', 'business'], targets: [id] }, subjects: [{ repository: '.', path: `${directory}/${gate}.md` }], upstream: gate === 'design' ? ['requirements'] : [], reviewSummary: 'Synthetic workspace scope.', openIssues: [], nextAction: 'Test snapshot identity.' });
-    put(root, `${directory}/${gate}-source.md`, 'Synthetic scoped approval.\n');
-    await recordDecision(root, id, { decisionId: `approve-${gate}`, requestId: gate, outcome: 'approved', conditions: [], source: { kind: 'conversation', reference: { repository: '.', path: `${directory}/${gate}-source.md` }, quote: 'Synthetic scoped approval.', presentation: { repository: '.', path: `${directory}/reviews/request-${gate}/presentation.md` } }, sourceReview: { reviewer: 'Fixture', rationale: 'Synthetic scope only.', reviewedAt: new Date().toISOString() } });
-  }
+  await seedApprovedDevelopment(root, id, { scope: { repositories: ['.', 'business'], targets: [id] }, title: 'Management fixture' });
   const input = { schemaVersion: 1, designRequest: 'design', repositories: [{ id: 'business', base: 'HEAD', branch: `codex/${id}`, target: 'main' }] };
   const plan = await planDeliveryPreparation(root, id, input);
   await applyDeliveryPreparation(root, id, input, plan.planId);

@@ -1,0 +1,170 @@
+{
+  "schemaVersion": 1,
+  "id": "research",
+  "version": "1.0.0",
+  "title": "技术调研与实验",
+  "appliesTo": [
+    "比较技术选择，或开展已授权的本地隔离实验。"
+  ],
+  "notApplicableTo": [
+    "写入、配置、付费或外部系统实验不能从调研类型推导许可。"
+  ],
+  "stages": [
+    {
+      "id": "question",
+      "title": "研究问题和比较维度",
+      "dependsOn": [],
+      "consumes": [],
+      "produces": [
+        "question-output"
+      ],
+      "checks": [
+        "明确研究问题、评价指标、环境和隔离边界。",
+        "writesData 指业务或环境持久数据写入；已明确授权且隔离的本地临时实验产物由 local-experiment 表达，不计入 writesData；生产、凭据、外部服务等影响仍分别核对。"
+      ],
+      "confirmations": [],
+      "actions": [
+        "read",
+        "write-report"
+      ]
+    },
+    {
+      "id": "experiment-plan",
+      "title": "副作用实验计划与操作授权",
+      "dependsOn": [
+        "question"
+      ],
+      "consumes": [
+        "question-output"
+      ],
+      "produces": [
+        "experiment-plan-output"
+      ],
+      "checks": [
+        "展示具体对象、写入/环境/费用/外部影响、恢复条件及真实操作来源。"
+      ],
+      "confirmations": [
+        "operation"
+      ],
+      "actions": [
+        "read",
+        "write-report"
+      ],
+      "when": {
+        "any": [
+          {
+            "fact": "experimentSideEffects",
+            "equals": true
+          },
+          {
+            "fact": "production",
+            "equals": true
+          },
+          {
+            "fact": "writesData",
+            "equals": true
+          },
+          {
+            "fact": "credentials",
+            "equals": true
+          },
+          {
+            "fact": "irreversible",
+            "equals": true
+          },
+          {
+            "fact": "externalService",
+            "equals": true
+          }
+        ]
+      },
+      "confirmationAt": "start"
+    },
+    {
+      "id": "investigate",
+      "title": "调查或隔离实验",
+      "dependsOn": [
+        "question",
+        "experiment-plan"
+      ],
+      "consumes": [
+        "question-output"
+      ],
+      "produces": [
+        "investigate-output"
+      ],
+      "checks": [
+        "核对实验副作用与相应授权；隔离实验临时产物和结果正常保存。",
+        "只允许明确授权且无外部副作用的隔离实验临时产物；超出隔离边界的写入、配置或付费标记 experimentSideEffects，不能用临时文件名规避。"
+      ],
+      "confirmations": [],
+      "actions": [
+        "read",
+        "local-experiment",
+        "write-report"
+      ]
+    },
+    {
+      "id": "report",
+      "title": "比较结论",
+      "dependsOn": [
+        "investigate"
+      ],
+      "consumes": [
+        "investigate-output"
+      ],
+      "produces": [
+        "report-output"
+      ],
+      "checks": [
+        "记录比较证据、实验环境、限制和推荐适用条件。"
+      ],
+      "confirmations": [],
+      "actions": [
+        "read",
+        "write-report"
+      ]
+    }
+  ],
+  "outputs": [
+    {
+      "id": "question-output",
+      "role": "question",
+      "title": "研究问题和比较维度",
+      "producer": "question"
+    },
+    {
+      "id": "experiment-plan-output",
+      "role": "experiment-plan",
+      "title": "副作用实验计划与操作授权",
+      "producer": "experiment-plan"
+    },
+    {
+      "id": "investigate-output",
+      "role": "investigate",
+      "title": "调查或隔离实验",
+      "producer": "investigate"
+    },
+    {
+      "id": "report-output",
+      "role": "research",
+      "title": "比较结论",
+      "producer": "report"
+    }
+  ],
+  "completion": {
+    "requiredStages": [
+      "report"
+    ],
+    "requiredOutputs": [
+      "question-output",
+      "experiment-plan-output",
+      "investigate-output",
+      "report-output"
+    ],
+    "checks": [
+      "产物与实际证据一致；未知影响和未覆盖范围如实记录；交付不自动表示用户接受或操作授权。"
+    ],
+    "result": "report-delivered"
+  }
+}

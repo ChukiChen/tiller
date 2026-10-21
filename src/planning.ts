@@ -1,15 +1,19 @@
 import { createHash } from 'node:crypto';
-import { lstat } from 'node:fs/promises';
-import { assertSharedPaths, requireReadyProject } from './core.js';
-import { applyChanges, assertSafePath, hasPendingTransaction, readTextIfExists, validateRelativePath, withProjectLock } from './files.js';
-import { resolveRepositoryRoot, resolveWorkRoot, withDeliveryLocation } from './delivery-location.js';
+import { readProjectMetadata } from './core.js';
+import { applyChanges, hasPendingTransaction, readTextIfExists, validateRelativePath, withProjectLock, assertSafePaths, readTextInputs, verifyTextInputs } from './files.js';
+import { resolveRepositoryRootsFromMetadata, resolveWorkRoot, withDeliveryLocation } from './delivery-location.js';
 import { repositoryPath } from './repository-paths.js';
-import { readConfirmation } from './confirmations.js';
-import type { ConfirmationReference, FileRef, Scope } from './confirmations.js';
-import { loadWorkRecord, validateWorkId, validateWorkScope } from './work.js';
+import { readConfirmations, assertConfirmationSharing, loadConfirmationReadBatch, assertConfirmationReadBatchCurrent } from './confirmations.js';
+import { assertSharedRegistrationReferences } from './workflow-work.js';
+import type { ConfirmationReference, ConfirmationRead, ReadonlyConfirmation, ConfirmationReadBatch, FileRef, Scope } from './confirmations.js';
+import { loadWorkRecord, parseWorkRecord, validateWorkId, validateWorkScope } from './work.js';
 import { parseVerificationSelection } from './verification-selection.js';
 import type { VerificationSelection } from './verification-selection.js';
-import type { FileChange } from './types.js';
+import type { FileChange, ProjectMetadata } from './types.js';
+import type { TextProof, TextReadInput } from './files.js';
+import type { WorkflowPolicyContext } from './workflow-policy.js';
+import {proveRepositoryInput} from './repository-input.js';
+import type {RepositoryInput} from './repository-input.js';
 import type { HumanCheckpoint, PlanningActivationInput, PlanningArtifact, PlanningBoundFile, PlanningChanges, PlanningDefinition, PlanningReceipt, PlanningRegistrationInput, PlanningState, PlanningTask, RegisteredPlanning } from './planning-types.js';
 import { parseTaskEvent, parseTaskReceipt, validateTaskHistory } from './task-records.js';
 export type * from './planning-types.js';
@@ -44,13 +48,9 @@ function integer(value: unknown): number {
   if (!Number.isSafeInteger(value) || Number(value) < 0) fail('expectedRevision/序号必须是非负整数。');
   return Number(value);
 }
-export function planningDigest(value: unknown): string { return createHash('sha256').update(canonicalPlanning(value)).digest('hex'); }
+import { planningDigest } from './planning-data.js';
+export { planningDigest, canonicalPlanning } from './planning-data.js';
 const digest = planningDigest;
-export function canonicalPlanning(value: unknown): string {
-  if (Array.isArray(value)) return `[${value.map(canonicalPlanning).join(',')}]`;
-  if (value && typeof value === 'object') return `{${Object.entries(value).sort(([a], [b]) => a.localeCompare(b)).map(([key, child]) => `${JSON.stringify(key)}:${canonicalPlanning(child)}`).join(',')}}`;
-  return JSON.stringify(value);
-}
 function json(value: unknown): string { return JSON.stringify(value, null, 2) + '\n'; }
 function hashText(value: string): string { return createHash('sha256').update(value).digest('hex'); }
 function key(reference: FileRef): string { return `${reference.repository}::${reference.path}`; }
@@ -232,23 +232,27 @@ export function parsePlanningState(contents: string, workId: string): PlanningSt
 }
 export async function loadPlanningState(rootInput: string, workId: string) {
   const root = await resolveWorkRoot(rootInput, workId);
-  await loadWorkRecord(root, workId);
+  const work = await loadWorkRecord(root, workId);
   if (await hasPendingTransaction(root)) fail('存在未完成事务，请先恢复。');
-  const path = `.tiller/work/${id(workId)}/tasks.json`; await assertSharedPaths(root, [path]);
+  const path = `.tiller/work/${id(workId)}/tasks.json`; await assertSafePaths(root, [path]);
   const original = await readTextIfExists(root, path);
-  return { root, path, original, state: original === null ? emptyState(workId) : parsePlanningState(original, workId) };
+  return { root, path, original, work, state: original === null ? emptyState(workId) : parsePlanningState(original, workId) };
 }
 function render(record: RegisteredPlanning): string {
   return `# 实施规划 ${record.plan.revision}\n\n本规划登记不表示已确认；任务规格缺口仍须补足，候选保留不代表当前证据有效。\n\n## 修订与保留核对\n\n\`\`\`json\n${json({ reason: record.plan.changeReason, changes: record.changes })}\`\`\`\n\n## 任务、交付与待细化事项\n\n\`\`\`json\n${json(record.plan)}\`\`\`\n\n## 内容依据\n\n\`\`\`json\n${json({ definitionDigest: record.definitionDigest, taskDigests: record.taskDigests, specificationFiles: record.specificationFiles, confirmationBindings: record.confirmationBindings })}\`\`\`\n`;
 }
 function taskDigests(plan: PlanningDefinition, files: PlanningBoundFile[], bindings: RegisteredPlanning['confirmationBindings']): Record<string, string> {
   const result: Record<string, string> = {};
+  const tasks = new Map(plan.tasks.map(task => [task.id, task]));
+  const boundFiles = files.map(file => ({ file, identity: key(file) }));
+  const boundApprovals = bindings.map(binding => ({ binding, identity: digest(binding.reference) }));
   function calculate(task: PlanningTask): string {
     if (result[task.id]) return result[task.id]!;
-    const refs = [...Object.values(task.specifications).flat(), ...plan.requirements.filter(req => task.requirementIds.includes(req.id)).map(req => req.source)];
-    const approvals = Object.values(task.basis).filter((ref): ref is ConfirmationReference => ref !== null);
-    const dependencies = task.dependencies.map(dep => ({ taskId: dep.taskId, digest: calculate(plan.tasks.find(parent => parent.id === dep.taskId)!) }));
-    result[task.id] = digest({ task, files: files.filter(file => refs.some(ref => key(ref) === key(file))), approvals: bindings.filter(binding => approvals.some(ref => digest(ref) === digest(binding.reference))), dependencies });
+    const requirementIds = new Set(task.requirementIds);
+    const refs = new Set([...Object.values(task.specifications).flat(), ...plan.requirements.filter(req => requirementIds.has(req.id)).map(req => req.source)].map(key));
+    const approvals = new Set(Object.values(task.basis).filter((ref): ref is ConfirmationReference => ref !== null).map(ref => digest(ref)));
+    const dependencies = task.dependencies.map(dep => ({ taskId: dep.taskId, digest: calculate(tasks.get(dep.taskId)!) }));
+    result[task.id] = digest({ task, files: boundFiles.filter(file => refs.has(file.identity)).map(file => file.file), approvals: boundApprovals.filter(binding => approvals.has(binding.identity)).map(binding => binding.binding), dependencies });
     return result[task.id]!;
   }
   for (const task of plan.tasks) calculate(task);
@@ -265,37 +269,56 @@ function parseRegistered(contents: string, workId: string, revision: string): Re
   if (record.definitionDigest !== digest(plan) || digest(item.taskDigests) !== digest(record.taskDigests)) fail('规划定义或任务内容摘要不匹配。');
   return record;
 }
-export async function readRegisteredPlanning(rootInput: string, workId: string, revision: string) {
-  const root = await resolveWorkRoot(rootInput, workId); await loadWorkRecord(root, workId);
-  const locations = paths(workId, revision); await assertSharedPaths(root, [locations.definition, locations.review]);
-  const original = await readTextIfExists(root, locations.definition);
+export async function readRegisteredPlanning(rootInput: string, workId: string, revision: string, work?: Awaited<ReturnType<typeof loadWorkRecord>>, materials?: TextReadInput) {
+  const root = await resolveWorkRoot(rootInput, workId); if (!work) await loadWorkRecord(root, workId);
+  const locations = paths(workId, revision); await assertSafePaths(root, [locations.definition, locations.review]);
+  const original = await readTextIfExists(root, locations.definition, materials);
   if (original === null) fail('规划版本尚未登记。', 'PLANNING_NOT_FOUND');
   const record = parseRegistered(original, workId, revision);
-  const review = await readTextIfExists(root, locations.review);
+  const review = await readTextIfExists(root, locations.review, materials);
   if (review !== render(record)) fail('不可变规划审阅视图已变化或缺失。', 'CONTENT_CHANGED');
   return { root, definitionPath: locations.definition, reviewPath: locations.review, original, record };
 }
-async function sharedReference(root: string, ref: FileRef, scope: Scope, requireContents: boolean): Promise<string | null> {
+function assertPlanningReference(metadata: ProjectMetadata, ref: FileRef, scope: Scope): void {
   if (!scope.repositories.includes(ref.repository)) fail('规划依据引用超出仓库范围。');
-  const metadata = await requireReadyProject(root, { write: false });
   if (ref.repository !== '.' && !metadata.repositories.includes(ref.repository)) fail('规划引用未登记仓库。');
   const boundaries = metadata.repositories.map(repository => repositoryPath(metadata, repository).toLowerCase());
   if (metadata.mode === 'workspace') boundaries.push('repositories');
   if (ref.repository === '.' && boundaries.some(boundary => ref.path.toLowerCase() === boundary || ref.path.toLowerCase().startsWith(`${boundary}/`))) fail('业务仓库对象必须使用其登记身份。');
-  const repositoryRoot = await resolveRepositoryRoot(root, ref.repository);
-  const filename = await assertSafePath(repositoryRoot, ref.path);
-  if (!requireContents) return null;
-  await assertSharedPaths(repositoryRoot, [ref.path]);
-  const stat = await lstat(filename);
-  if (!stat.isFile() || stat.size > 4 * 1024 * 1024) fail('规格文件必须为不超过 4 MiB 的普通文件。');
-  const contents = await readTextIfExists(repositoryRoot, ref.path);
-  if (contents === null || !contents.trim()) fail(`规格依据缺失或为空：${key(ref)}`);
-  return contents;
 }
-async function inspectDefinition(root: string, workId: string, plan: PlanningDefinition) {
-  const work = await loadWorkRecord(root, workId);
+function planningBasisReferences(plan: PlanningDefinition): ConfirmationReference[] {
+  const references = [plan.basis.requirements, plan.basis.design,
+    ...plan.tasks.flatMap(task => Object.values(task.basis).filter((reference): reference is ConfirmationReference => reference !== null))];
+  return [...new Map(references.map(reference => [digest(reference), reference])).values()];
+}
+interface PlanningDefinitionInputs {
+  repositoryInput?: RepositoryInput;
+  materials?: TextReadInput;
+  work?: Awaited<ReturnType<typeof loadWorkRecord>>;
+  metadata?: ProjectMetadata;
+  approvals?: ReadonlyConfirmation<ConfirmationRead>[];
+  proofs?: ((observations?: TextProof[]) => Promise<void>)[];
+}
+async function assertPlanningSharing(root: string, workId: string, work: Awaited<ReturnType<typeof loadWorkRecord>>,
+  plan: PlanningDefinition, specifications: PlanningBoundFile[], approvals: ConfirmationReference[]): Promise<void> {
+  await assertSharedRegistrationReferences(root, workId, [
+    ...specifications,
+    ...[work.paths.record, work.paths.notes, work.record.workflow.path, '.tiller/project.json'].map(path => ({ repository: '.', path })),
+    ...[...work.record.basis, ...work.record.actionSources].map(source => source.reference),
+  ]);
+  for (const related of new Set(plan.tasks.flatMap(task => task.relatedWorks))) if (related !== workId) {
+    const relatedRoot = await resolveWorkRoot(root, related);
+    await assertSharedRegistrationReferences(relatedRoot, related, [{ repository: '.', path: `.tiller/work/${related}/record.json` }]);
+  }
+  await assertConfirmationSharing(root, approvals);
+}
+async function inspectDefinition(root: string, workId: string, plan: PlanningDefinition, supplied: PlanningDefinitionInputs = {}) {
+  const work = supplied.work ?? await loadWorkRecord(root, workId);
+  const metadata = supplied.metadata ?? await readProjectMetadata(root);
   if (plan.ownerWorkId !== workId || !covered(plan.scope, work.record.scope)) fail('规划归属或范围与登记工作不符。');
-  const cache = new Map<string, Awaited<ReturnType<typeof readConfirmation>>>();
+  const basisReferences = planningBasisReferences(plan);
+  const approvals = supplied.approvals ?? await readConfirmations(root, basisReferences);
+  const approvalInputs = new Map(approvals.map(approval => [digest(approval.reference), approval]));
   const refs = new Map<string, FileRef>();
   const referenceNames = new Map<string, string>();
   function addReference(ref: FileRef) {
@@ -305,12 +328,9 @@ async function inspectDefinition(root: string, workId: string, plan: PlanningDef
   }
   const approvedHashes = new Map<string, string>();
   for (const requirement of plan.requirements) addReference(requirement.source);
-  async function approval(ref: ConfirmationReference, gate: 'requirements' | 'design', scope: Scope, subjects: FileRef[]) {
-    const identity = digest(ref); let checked = cache.get(identity);
-    if (!checked) {
-      const sourceRoot = await resolveWorkRoot(root, ref.workId); await loadWorkRecord(sourceRoot, ref.workId);
-      checked = await readConfirmation(root, ref); cache.set(identity, checked);
-    }
+  function approval(ref: ConfirmationReference, gate: 'requirements' | 'design', scope: Scope, subjects: FileRef[]) {
+    const checked = approvalInputs.get(digest(ref));
+    if (!checked) fail('规划确认没有包含在声明的本次输入中。', 'CONFIRMATION_REQUIRED');
     if (!checked.check.confirmed || checked.request.gate !== gate || !covered(scope, { repositories: [...checked.request.scope.repositories], targets: [...checked.request.scope.targets] })) fail(`规划 ${gate} 确认无效或未覆盖范围。`, 'CONFIRMATION_REQUIRED');
     if (subjects.some(subject => !checked.request.subjects.some(file => key(file) === key(subject)))) fail('确认未绑定所采用的规格正文。');
     for (const subject of checked.request.subjects) {
@@ -323,31 +343,87 @@ async function inspectDefinition(root: string, workId: string, plan: PlanningDef
       addReference(subject);
     }
   }
-  await approval(plan.basis.requirements, 'requirements', plan.scope, plan.requirements.map(req => req.source));
-  await approval(plan.basis.design, 'design', plan.scope, []);
+  approval(plan.basis.requirements, 'requirements', plan.scope, plan.requirements.map(req => req.source));
+  approval(plan.basis.design, 'design', plan.scope, []);
+  const relatedInputs = new Map<string, Awaited<ReturnType<typeof loadWorkRecord>>>([[workId, work]]);
+  for (const related of new Set(plan.tasks.flatMap(task => task.relatedWorks))) if (related !== workId) {
+    const relatedRoot = await resolveWorkRoot(root, related);
+    relatedInputs.set(related, await loadWorkRecord(relatedRoot, related));
+  }
   for (const task of plan.tasks) {
-    for (const related of task.relatedWorks) {
-      const relatedRoot = await resolveWorkRoot(root, related); const relatedWork = await loadWorkRecord(relatedRoot, related);
-      if (!covered(task.scope, relatedWork.record.scope)) fail(`关联工作 ${related} 未覆盖任务范围。`);
-    }
-    for (const gate of ['requirements', 'design'] as const) if (task.basis[gate]) await approval(task.basis[gate]!, gate, task.scope, gate === 'design' ? [...task.specifications.design, ...task.specifications.standards] : task.specifications.requirements);
+    for (const related of task.relatedWorks) if (!covered(task.scope, relatedInputs.get(related)!.record.scope)) fail(`关联工作 ${related} 未覆盖任务范围。`);
+    for (const gate of ['requirements', 'design'] as const) if (task.basis[gate]) approval(task.basis[gate]!, gate, task.scope,
+      gate === 'design' ? [...task.specifications.design, ...task.specifications.standards] : task.specifications.requirements);
     for (const ref of Object.values(task.specifications).flat()) addReference(ref);
   }
   for (const ref of refs.values()) assertContentPath(ref);
+  // Future outputs need not exist yet, but their repository identity and existing path components must be safe.
+  const futureReferences = new Map<string, { ref: FileRef; scope: Scope }>();
+  function futureReference(ref: FileRef, scope: Scope): void {
+    // Validate each occurrence before deduplicating: the same path can be legal
+    // for one task and outside another task's scope.
+    if (!scope.repositories.includes(ref.repository)) fail('规划依据引用超出仓库范围。');
+    const identity = JSON.stringify([ref.repository, ref.path]);
+    if (!futureReferences.has(identity)) futureReferences.set(identity, { ref, scope });
+  }
+  for (const task of plan.tasks) for (const ref of [...task.artifacts.flatMap(artifactReferences), ...task.humanCheckpoints.flatMap(checkpoint => checkpoint.subjects), ...verificationReferences(task.verification)]) futureReference(ref, task.scope);
+  for (const ref of [...plan.delivery.artifacts.flatMap(artifactReferences), ...plan.delivery.humanCheckpoints.flatMap(checkpoint => checkpoint.subjects), ...verificationReferences(plan.delivery.verification)]) futureReference(ref, plan.scope);
+  const specificationReferences = [...refs.values()].sort((a, b) => key(a).localeCompare(key(b)));
+  for (const ref of specificationReferences) assertPlanningReference(metadata, ref, plan.scope);
+  for (const { ref, scope } of futureReferences.values()) assertPlanningReference(metadata, ref, scope);
+  const repositories = [...new Set([...specificationReferences.map(ref => ref.repository), ...[...futureReferences.values()].map(entry => entry.ref.repository)])];
+  const repositoryRoots = supplied.repositoryInput ? new Map(repositories.map(repository => {
+    const actual = supplied.repositoryInput!.repositories.get(repository);
+    if (!actual || supplied.repositoryInput!.root !== root || supplied.repositoryInput!.workId !== workId) fail('规划仓库未包含在当前显式工作输入中。');
+    return [repository, actual] as const;
+  })) : await resolveRepositoryRootsFromMetadata(root, repositories, metadata, workId);
+  const textInputs: { root: string; inputs: Awaited<ReturnType<typeof readTextInputs>> }[] = [];
+  const specificationTexts = new Map<string, string>();
+  for (const [repository, repositoryRoot] of repositoryRoots) {
+    const specifications = specificationReferences.filter(ref => ref.repository === repository);
+    const inputs = await readTextInputs(repositoryRoot, specifications.map(ref => ref.path), { maxBytes: 4 * 1024 * 1024 }, supplied.materials);
+    textInputs.push({ root: repositoryRoot, inputs });
+    for (const input of inputs) {
+      if (input.text === null || !input.text.trim()) fail(`规格依据缺失或为空：${key({ repository, path: input.path })}`);
+      specificationTexts.set(key({ repository, path: input.path }), input.text);
+    }
+    await assertSafePaths(repositoryRoot, [...futureReferences.values()].filter(entry => entry.ref.repository === repository).map(entry => entry.ref.path));
+  }
   const specificationFiles: PlanningBoundFile[] = [];
   let totalBytes = 0;
-  for (const ref of [...refs.values()].sort((a, b) => key(a).localeCompare(key(b)))) {
-    const contents = (await sharedReference(root, ref, plan.scope, true))!;
+  for (const ref of specificationReferences) {
+    const contents = specificationTexts.get(key(ref))!;
     const sha256 = hashText(contents);
     if (approvedHashes.has(key(ref)) && approvedHashes.get(key(ref)) !== sha256) fail(`当前工作采用的规格与来源确认快照不一致：${key(ref)}`, 'CONTENT_CHANGED');
     totalBytes += Buffer.byteLength(contents);
     if (totalBytes > 64 * 1024 * 1024) fail('规划规格依据总计超过 64 MiB。');
     specificationFiles.push({ ...ref, sha256 });
   }
-  // Future outputs need not exist yet, but their repository identity and existing path components must be safe.
-  for (const task of plan.tasks) for (const ref of [...task.artifacts.flatMap(artifactReferences), ...task.humanCheckpoints.flatMap(checkpoint => checkpoint.subjects), ...verificationReferences(task.verification)]) await sharedReference(root, ref, task.scope, false);
-  for (const ref of [...plan.delivery.artifacts.flatMap(artifactReferences), ...plan.delivery.humanCheckpoints.flatMap(checkpoint => checkpoint.subjects), ...verificationReferences(plan.delivery.verification)]) await sharedReference(root, ref, plan.scope, false);
-  const confirmationBindings = [...cache.values()].map(checked => ({ reference: { ...checked.reference }, requestFingerprint: checked.requestFingerprint, decisionFingerprint: checked.decisionFingerprint })).sort((a, b) => digest(a.reference).localeCompare(digest(b.reference)));
+  const prove = async (observations?: TextProof[]) => {
+    for (const observed of textInputs) await verifyTextInputs(observed.root, observed.inputs, { maxBytes: 4 * 1024 * 1024 }, observations);
+    const remaining = async () => {
+      if (!supplied.repositoryInput) {
+        const currentRoots = await resolveRepositoryRootsFromMetadata(root, [...repositoryRoots.keys()], metadata, workId);
+        if ([...repositoryRoots].some(([repository, expected]) => currentRoots.get(repository) !== expected)) fail('规划仓库位置已变化。', 'CONTENT_CHANGED');
+        if (digest(await readProjectMetadata(root)) !== digest(metadata)) fail('规划仓库登记已变化。', 'CONTENT_CHANGED');
+      }
+      for (const [repository, repositoryRoot] of repositoryRoots)
+        await assertSafePaths(repositoryRoot, [...futureReferences.values()].filter(entry => entry.ref.repository === repository).map(entry => entry.ref.path));
+      for (const [related, input] of relatedInputs) {
+        const actualRoot = await resolveWorkRoot(root, related);
+        const current = await loadWorkRecord(actualRoot, related);
+        if (current.original !== input.original) fail('规划关联工作已变化。', 'CONTENT_CHANGED');
+      }
+    };
+    if (supplied.repositoryInput) await proveRepositoryInput(supplied.repositoryInput, observations);
+    if (observations) observations.push({root, inputs: [], verifyAfter: {key: futureReferences, run: remaining}});
+    else await remaining();
+  };
+  if (supplied.proofs) supplied.proofs.push(prove);
+  else for (const observed of textInputs) await verifyTextInputs(observed.root, observed.inputs, { maxBytes: 4 * 1024 * 1024 });
+  const confirmationBindings = basisReferences.map(reference => approvalInputs.get(digest(reference))!)
+    .map(checked => ({ reference: { ...checked.reference }, requestFingerprint: checked.requestFingerprint, decisionFingerprint: checked.decisionFingerprint }))
+    .sort((a, b) => digest(a.reference).localeCompare(digest(b.reference)));
   return { specificationFiles, confirmationBindings, taskDigests: taskDigests(plan, specificationFiles, confirmationBindings), workIdentity: { id: work.record.id, scope: work.record.scope } };
 }
 
@@ -377,11 +453,11 @@ function replay(state: PlanningState, kind: PlanningReceipt['kind'], input: { op
 export async function assertNoDeliveryOperation(root: string, workId: string, operationId: string): Promise<void> {
   if (await readTextIfExists(root, `.tiller/work/${id(workId)}/delivery-checks/${id(operationId)}.json`) !== null) fail('相同 operationId 已存在整体交付回执路径，不能重复用于规划或任务操作。', 'OPERATION_CONFLICT');
 }
-async function checkView(root: string, workId: string, state: PlanningState): Promise<string | null> {
-  const view = `.tiller/work/${workId}/plan.md`; await assertSharedPaths(root, [view]);
+async function checkView(root: string, workId: string, state: PlanningState, work?: Awaited<ReturnType<typeof loadWorkRecord>>): Promise<string | null> {
+  const view = `.tiller/work/${workId}/plan.md`; await assertSafePaths(root, [view]);
   const text = await readTextIfExists(root, view);
   if (state.activePlanning) {
-    const registered = await readRegisteredPlanning(root, workId, state.activePlanning.revision);
+    const registered = await readRegisteredPlanning(root, workId, state.activePlanning.revision, work);
     if (text !== render(registered.record)) fail('当前 plan.md 与已激活规划不一致；请核对手工改动。', 'CONTENT_CHANGED');
   } else if (text !== null) fail('plan.md 已有未登记内容；不能覆盖为生成视图。', 'CONTENT_CHANGED');
   return text;
@@ -392,11 +468,11 @@ async function prepareRegistration(root: string, workId: string, input: Planning
   await assertNoDeliveryOperation(root, workId, input.operationId);
   if (input.expectedRevision !== loaded.state.revision) fail('expectedRevision 已过期，请重新检查规划。', 'REVISION_CONFLICT');
   const locations = paths(workId, input.plan.revision);
-  await assertSharedPaths(root, [locations.definition, locations.review]);
+  await assertSafePaths(root, [locations.definition, locations.review]);
   if (await readTextIfExists(root, locations.definition) !== null || await readTextIfExists(root, locations.review) !== null) fail('规划 revision 已存在；必须使用新版本，不能覆盖旧规划。', 'REVISION_EXISTS');
-  const view = await checkView(root, workId, loaded.state);
-  const inspected = await inspectDefinition(root, workId, input.plan);
-  const previous = loaded.state.activePlanning ? (await readRegisteredPlanning(root, workId, loaded.state.activePlanning.revision)).record : null;
+  const view = await checkView(root, workId, loaded.state, loaded.work);
+  const inspected = await inspectDefinition(root, workId, input.plan, { work: loaded.work });
+  const previous = loaded.state.activePlanning ? (await readRegisteredPlanning(root, workId, loaded.state.activePlanning.revision, loaded.work)).record : null;
   const changes = difference(previous, input.plan, inspected.taskDigests);
   const basisDigest = digest({ action: 'register', input, state: loaded.original, inspected, changes, view });
   return { loaded, prior: undefined, candidate: { inspected, changes, basisDigest, locations } };
@@ -418,7 +494,7 @@ export async function savePlanningState(root: string, workId: string, expectedOr
   if (current !== null) parsePlanningState(current, workId);
   if (current !== expectedOriginal) fail('任务记录在写入前发生变化。', 'CONTENT_CHANGED');
   const after = json(state); parsePlanningState(after, workId);
-  await assertSharedPaths(root, [path, ...changes.map(change => change.path)]);
+  await assertSafePaths(root, [path, ...changes.map(change => change.path)]);
   await validate?.();
   if (await readTextIfExists(root, path) !== expectedOriginal) fail('任务记录在提交前发生变化。', 'CONTENT_CHANGED');
   await applyChanges(root, [...changes, { path, before: expectedOriginal, after }], async () => {
@@ -452,6 +528,8 @@ export async function applyPlanningRegistration(rootInput: string, workId: strin
     await savePlanningState(root, workId, prepared.loaded.original, state, [
       { path: candidate.locations.definition, before: null, after: json(record) }, { path: candidate.locations.review, before: null, after: render(record) },
     ], async () => {
+      await assertPlanningSharing(root, workId, prepared.loaded.work, input.plan,
+        candidate.inspected.specificationFiles, planningBasisReferences(input.plan));
       const fresh = await prepareRegistration(root, workId, input);
       if (fresh.candidate?.basisDigest !== planId) fail('规划依据在提交前发生变化。', 'CONTENT_CHANGED');
     });
@@ -462,12 +540,18 @@ export function planningConfirmationSubjects(workId: string, record: RegisteredP
   const location = paths(workId, record.plan.revision);
   return [{ repository: '.', path: location.definition }, { repository: '.', path: location.review }, ...record.specificationFiles.map(({ repository, path }) => ({ repository, path }))];
 }
-async function checkPlanningApproval(root: string, workId: string, record: RegisteredPlanning, approval: ConfirmationReference) {
+async function checkPlanningApproval(root: string, workId: string, record: RegisteredPlanning, approval: ConfirmationReference, work?: Awaited<ReturnType<typeof loadWorkRecord>>, proofs?: ((observations?: TextProof[]) => Promise<void>)[], batches?: ConfirmationReadBatch[], owner?: WorkflowPolicyContext) {
   if (approval.workId !== workId) fail('规划激活须使用归属工作的 planning 确认。', 'CONFIRMATION_REQUIRED');
-  const checked = await readConfirmation(root, approval);
+  const references = [...new Map([...planningBasisReferences(record.plan), approval].map(reference => [digest(reference), reference])).values()];
+  const batch = proofs ? await loadConfirmationReadBatch(root, references, owner) : null;
+  if (batch) batches?.push(batch);
+  if (batch?.errors.length) fail(batch.errors.map(error => error.message).join('；'), 'CONFIRMATION_REQUIRED');
+  const approvals = batch ? [...batch.reads] : await readConfirmations(root, references);
+  const checked = approvals.find(value => digest(value.reference) === digest(approval))!;
   if (!checked.check.confirmed || checked.request.gate !== 'planning' || !covered(record.plan.scope, { repositories: [...checked.request.scope.repositories], targets: [...checked.request.scope.targets] })) fail(`规划尚未有效确认：${checked.check.issues.join('；')}`, 'CONFIRMATION_REQUIRED');
   if (planningConfirmationSubjects(workId, record).some(subject => !checked.request.files.some(file => key(file) === key(subject)))) fail('planning 确认必须绑定不可变规划、审阅视图及全部规格正文。', 'CONFIRMATION_REQUIRED');
-  const inspected = await inspectDefinition(root, workId, record.plan);
+  const inspected = await inspectDefinition(root, workId, record.plan, { ...(work ? { work } : {}), ...(owner?.repositoryInput ? {repositoryInput: owner.repositoryInput} : {}), ...(owner?.materials ? {materials: owner.materials} : {}), ...(owner?.metadata ? {metadata: owner.metadata} : {}), approvals, ...(proofs ? {proofs} : {}) });
+  if (proofs && batch) proofs.push(observations => assertConfirmationReadBatchCurrent(batch, observations));
   if (digest(inspected.specificationFiles) !== digest(record.specificationFiles) || digest(inspected.confirmationBindings) !== digest(record.confirmationBindings)) fail('已登记规划的规格或确认依据已变化；请登记新修订。', 'CONTENT_CHANGED');
   return { confirmation: { ...approval }, requestFingerprint: checked.requestFingerprint, decisionFingerprint: checked.decisionFingerprint, inspected };
 }
@@ -476,10 +560,10 @@ async function prepareActivation(root: string, workId: string, input: PlanningAc
   if (prior) return { loaded, prior, candidate: null };
   await assertNoDeliveryOperation(root, workId, input.operationId);
   if (loaded.state.revision !== input.expectedRevision) fail('expectedRevision 已过期，请重新检查规划。', 'REVISION_CONFLICT');
-  const registered = await readRegisteredPlanning(root, workId, input.revision);
-  const view = await checkView(root, workId, loaded.state);
-  const approval = await checkPlanningApproval(root, workId, registered.record, input.confirmation);
-  const previous = loaded.state.activePlanning ? (await readRegisteredPlanning(root, workId, loaded.state.activePlanning.revision)).record : null;
+  const registered = await readRegisteredPlanning(root, workId, input.revision, loaded.work);
+  const view = await checkView(root, workId, loaded.state, loaded.work);
+  const approval = await checkPlanningApproval(root, workId, registered.record, input.confirmation, loaded.work);
+  const previous = loaded.state.activePlanning ? (await readRegisteredPlanning(root, workId, loaded.state.activePlanning.revision, loaded.work)).record : null;
   const changes = difference(previous, registered.record.plan, registered.record.taskDigests);
   if (digest(changes) !== digest(registered.record.changes)) fail('活动基线与登记时不同，修订差异需重新展示；请登记新规划。', 'CONTENT_CHANGED');
   const basisDigest = digest({ action: 'activate', input, state: loaded.original, registration: registered.original, view, approval });
@@ -508,24 +592,86 @@ export async function applyPlanningActivation(rootInput: string, workId: string,
     state.events.push(event);
     state.activePlanning = { revision: input.revision, confirmation: input.confirmation, definitionDigest: event.definitionDigest, eventSequence: event.sequence };
     await savePlanningState(root, workId, prepared.loaded.original, state, [{ path: paths(workId, input.revision).view, before: candidate.view, after: render(candidate.registered.record) }], async () => {
+      await assertPlanningSharing(root, workId, prepared.loaded.work, candidate.registered.record.plan,
+        candidate.registered.record.specificationFiles, [...planningBasisReferences(candidate.registered.record.plan), input.confirmation]);
       const fresh = await prepareActivation(root, workId, input);
       if (fresh.candidate?.basisDigest !== planId) fail('规划确认或依据在提交前发生变化。', 'CONTENT_CHANGED');
     });
     return { ...receipt, changed: true, changes: candidate.changes, eventSequence: event.sequence };
   }));
 }
-/** Current effective planning, not a technical completion assertion. Historical records remain readable separately. */
-export async function loadActivePlanning(rootInput: string, workId: string) {
+export type PlanningStateInput = Awaited<ReturnType<typeof loadPlanningState>>;
+function checkedPlanningStateInput(root: string, workId: string, input: PlanningStateInput): PlanningStateInput {
+  const directory = `.tiller/work/${id(workId)}`;
+  try {
+    const state = input.original === null ? emptyState(workId) : parsePlanningState(input.original, workId);
+    const record = parseWorkRecord(input.work.original, workId);
+    if (input.root !== root || input.path !== `${directory}/tasks.json`
+      || input.work.paths.directory !== directory || input.work.paths.record !== `${directory}/record.json`
+      || input.work.paths.notes !== `${directory}/work.md`
+      || digest(state) !== digest(input.state) || digest(record) !== digest(input.work.record)) {
+      fail('规划状态输入不属于当前工程、工作或原文。', 'PLANNING_INPUT_CHANGED');
+    }
+    return { ...input, state, work: { ...input.work, record } };
+  } catch {
+    fail('规划状态输入不属于当前工程、工作或原文。', 'PLANNING_INPUT_CHANGED');
+  }
+}
+/** Current effective planning. Supplied observations are revalidated by their owner at its commit/return boundary. */
+export async function loadActivePlanningInput(rootInput: string, workId: string, stateInput?: PlanningStateInput, owner?: WorkflowPolicyContext) {
   const root = await resolveWorkRoot(rootInput, workId);
   return withDeliveryLocation(root, workId, async () => {
-    const loaded = await loadPlanningState(root, workId);
+    const loaded = stateInput ? checkedPlanningStateInput(root, workId, stateInput) : await loadPlanningState(root, workId);
+    if (owner && (owner.root !== root || owner.record.id !== workId || owner.recordText !== loaded.work.original)) fail('规划所有者输入不属于当前工作原文。', 'PLANNING_INPUT_CHANGED');
+    if (stateInput) {
+      if (await hasPendingTransaction(root)) fail('存在未完成事务，请先恢复。');
+      await assertSafePaths(root, [loaded.path, loaded.work.paths.record, loaded.work.paths.notes]);
+    }
     if (!loaded.state.activePlanning) fail('尚未激活有效规划。', 'PLANNING_REQUIRED');
     const active = loaded.state.activePlanning;
-    const registered = await readRegisteredPlanning(root, workId, active.revision);
+    const registered = await readRegisteredPlanning(root, workId, active.revision, loaded.work, owner?.materials);
     if (active.definitionDigest !== registered.record.definitionDigest) fail('活动规划摘要与不可变定义不符。', 'CONTENT_CHANGED');
     const issues: string[] = [];
-    try { await checkView(root, workId, loaded.state); await checkPlanningApproval(root, workId, registered.record, active.confirmation); }
+    const proofs: ((observations?: TextProof[]) => Promise<void>)[] = [];
+    const confirmationBatches: ConfirmationReadBatch[] = [];
+    const viewPath = `.tiller/work/${workId}/plan.md`;
+    const view = await readTextIfExists(root, viewPath, owner?.materials);
+    try {
+      if (view !== render(registered.record)) fail('当前 plan.md 与已激活规划不一致；请核对手工改动。', 'CONTENT_CHANGED');
+      await checkPlanningApproval(root, workId, registered.record, active.confirmation, loaded.work, proofs, confirmationBatches, owner);
+    }
     catch (error) { issues.push((error as Error).message); }
-    return { root, state: loaded.state, stateText: loaded.original, registration: registered.record, definitionPath: registered.definitionPath, reviewPath: registered.reviewPath, ready: issues.length === 0, issues, technicalReady: false, automaticTransition: false };
+    const proveMaterials = async (observations?: TextProof[]) => {
+      for (const prove of proofs) await prove(observations);
+      await verifyTextInputs(root, [{path: registered.definitionPath, text: registered.original},
+        {path: registered.reviewPath, text: render(registered.record)}, {path: viewPath, text: view}], {}, observations, true);
+    };
+    const result = { root, state: loaded.state, stateText: loaded.original, registration: registered.record, definitionPath: registered.definitionPath, reviewPath: registered.reviewPath, ready: issues.length === 0, issues, technicalReady: false, automaticTransition: false, proveMaterials };
+    // Internal observations are not part of CLI output, planning identity or receipts.
+    return Object.defineProperty(result, 'confirmationBatches', {value: confirmationBatches}) as typeof result & {confirmationBatches: ConfirmationReadBatch[]};
   });
+}
+/** Standalone callers own their return boundary; graph owners prove the declared input once. */
+export async function loadActivePlanning(rootInput: string, workId: string, stateInput?: PlanningStateInput) {
+  const input = await loadActivePlanningInput(rootInput, workId, stateInput);
+  if (input.ready) {
+    try { await input.proveMaterials(); }
+    catch (error) { input.ready = false; input.issues.push((error as Error).message); }
+  }
+  return input;
+}
+/** Independent planning proof for a commit; stage/task graphs are not evaluated here. */
+export async function assertActivePlanningCurrent(input: Awaited<ReturnType<typeof loadActivePlanning>>, observations?: TextProof[]): Promise<void> {
+  if (input.ready) {
+    await input.proveMaterials(observations);
+    const workId = input.registration.plan.ownerWorkId;
+    if (await resolveWorkRoot(input.root, workId) !== input.root
+      || await readTextIfExists(input.root, `.tiller/work/${workId}/tasks.json`) !== input.stateText)
+      fail('活动规划控制记录在读取后变化。', 'CONTENT_CHANGED');
+    return;
+  }
+  const actual = await loadActivePlanning(input.root, input.registration.plan.ownerWorkId);
+  if (actual.root !== input.root || actual.stateText !== input.stateText || digest(actual.registration) !== digest(input.registration)
+    || actual.definitionPath !== input.definitionPath || actual.reviewPath !== input.reviewPath || digest(actual.issues) !== digest(input.issues))
+    fail('活动规划或其确认依据在读取后变化。', 'CONTENT_CHANGED');
 }

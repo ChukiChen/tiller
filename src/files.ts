@@ -1,8 +1,10 @@
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { lstat, mkdir, open, readFile, rename, unlink } from 'node:fs/promises';
 import path from 'node:path';
 import type { FileChange } from './types.js';
 import { resolveDeliveryLockRoot } from './delivery-location.js';
+import { META, parseMetadata } from './project-metadata.js';
+import { assertSharedWritePaths } from './shared-paths.js';
 
 export type { FileChange } from './types.js';
 
@@ -29,44 +31,217 @@ export function validateRelativePath(relative: string): void {
 
 /** Resolve only project-relative paths; reject links at every existing component. */
 export async function assertSafePath(root: string, relative: string): Promise<string> {
-  validateRelativePath(relative);
+  return (await assertSafePaths(root, [relative]))[0]!;
+}
+
+export interface ResolvedInputPath {
+  target: string;
+  stat: Awaited<ReturnType<typeof lstat>> | null;
+}
+
+/** Resolve a declared batch, visiting each common parent only once within this call. */
+export async function inspectSafePaths(root: string, relatives: readonly string[]): Promise<ResolvedInputPath[]> {
+  relatives.forEach(validateRelativePath);
+  if (!relatives.length) return [];
   const absoluteRoot = path.resolve(root);
   const rootStat = await lstat(absoluteRoot);
   if (rootStat.isSymbolicLink() || !rootStat.isDirectory()) {
     throw new Error(`工程根目录必须是普通目录：${absoluteRoot}`);
   }
-  let current = absoluteRoot;
-  const parts = relative.split('/');
-  for (const [index, part] of parts.entries()) {
-    current = path.join(current, part);
-    try {
-      const stat = await lstat(current);
-      if (stat.isSymbolicLink()) throw new Error(`拒绝通过符号链接访问：${current}`);
-      if (index < parts.length - 1 && !stat.isDirectory()) {
-        throw new Error(`父路径不是目录：${current}`);
+  const visited = new Map<string, Promise<Awaited<ReturnType<typeof lstat>> | null>>();
+  return mapInputBatch(relatives, async relative => {
+    let current = absoluteRoot;
+    let finalStat: Awaited<ReturnType<typeof lstat>> | null = null;
+    const parts = relative.split('/');
+    for (const [index, part] of parts.entries()) {
+      current = path.join(current, part);
+      let pending = visited.get(current);
+      if (pending === undefined) {
+        pending = lstat(current).catch(error => { if (!isMissing(error)) throw error; return null; });
+        visited.set(current, pending);
       }
+      const stat = await pending;
+      if (stat === null) break;
+      if (stat.isSymbolicLink()) throw new Error(`拒绝通过符号链接访问：${current}`);
+      if (index < parts.length - 1 && !stat.isDirectory()) throw new Error(`父路径不是目录：${current}`);
       if (stat.isFile() && stat.nlink > 1) throw new Error(`拒绝操作硬链接文件：${current}`);
-    } catch (error) {
-      if (isMissing(error)) break;
-      throw error;
+      if (index === parts.length - 1) finalStat = stat;
     }
-  }
-  return path.join(absoluteRoot, ...parts);
+    return { target: path.join(absoluteRoot, ...parts), stat: finalStat };
+  });
 }
 
-export async function readTextIfExists(root: string, relative: string): Promise<string | null> {
-  const target = await assertSafePath(root, relative);
-  try {
-    const stat = await lstat(target);
-    if (!stat.isFile() || stat.isSymbolicLink()) throw new Error(`不是普通文件：${relative}`);
-    const bytes = await readFile(target);
-    const text = bytes.toString('utf8');
-    if (!Buffer.from(text, 'utf8').equals(bytes)) throw new Error(`文件不是有效 UTF-8：${relative}`);
-    return text;
-  } catch (error) {
-    if (isMissing(error)) return null;
-    throw error;
+/** Preserve sequential I/O; gains come from declaring each common input once. */
+async function mapInputBatch<T, R>(inputs: readonly T[], read: (value: T, index: number) => Promise<R>): Promise<R[]> {
+  const results: R[] = [];
+  for (const [index, input] of inputs.entries()) results.push(await read(input, index));
+  return results;
+}
+
+export async function assertSafePaths(root: string, relatives: readonly string[]): Promise<string[]> {
+  return (await inspectSafePaths(root, relatives)).map(input => input.target);
+}
+
+export interface TextInput {
+  path: string;
+  text: string | null;
+}
+
+export interface TextInputOptions { maxBytes?: number }
+
+function validateTextLimit(maxBytes: number | undefined): void {
+  if (maxBytes !== undefined && (!Number.isSafeInteger(maxBytes) || maxBytes < 0)) throw new Error('maxBytes 必须为非负安全整数。');
+}
+
+/** Explicit provisional bytes owned by one operation. Proofs always read independently. */
+export class TextReadInput {
+  private readonly roots = new Map<string, Map<string, {value: Promise<TextInput>; maximum: number}>>();
+
+  async read(root: string, relatives: readonly string[], options: TextInputOptions): Promise<TextInput[]> {
+    validateTextLimit(options.maxBytes); relatives.forEach(validateRelativePath);
+    const absolute = path.resolve(root); const entries = this.roots.get(absolute) ?? new Map();
+    this.roots.set(absolute, entries);
+    const missing = [...new Set(relatives)].filter(relative => !entries.has(relative));
+    if (missing.length) {
+      const loaded = readTextInputs(absolute, missing, options);
+      for (const [index, relative] of missing.entries()) {
+        const entry = {value: loaded.then(values => ({...values[index]!})), maximum: options.maxBytes ?? Infinity};
+        entries.set(relative, entry);
+        void entry.value.catch(() => { if (entries.get(relative) === entry) entries.delete(relative); });
+      }
+    }
+    const result: TextInput[] = [];
+    for (const relative of relatives) {
+      const entry = entries.get(relative)!;
+      entry.maximum = Math.min(entry.maximum, options.maxBytes ?? Infinity);
+      const input = await entry.value;
+      if (input.text !== null && options.maxBytes !== undefined && Buffer.byteLength(input.text) > options.maxBytes)
+        throw new Error(`文件超过读取大小限制：${relative}（最多 ${options.maxBytes} 字节）。`);
+      result.push({...input});
+    }
+    return result;
   }
+
+  async proofs(): Promise<TextProof[]> {
+    const proofs: TextProof[] = [];
+    for (const [root, entries] of this.roots) for (const entry of entries.values()) {
+      const input = await entry.value;
+      proofs.push({root, inputs: [{...input}], ...(Number.isFinite(entry.maximum) ? {maxBytes: entry.maximum} : {}),
+        control: input.path.endsWith('.json')});
+    }
+    return proofs;
+  }
+
+  declared(root: string, relative: string): Promise<TextInput> | undefined {
+    return this.roots.get(path.resolve(root))?.get(relative)?.value.then(input => ({...input}));
+  }
+}
+
+export interface TextProof {
+  root: string; inputs: readonly (TextInput | {path: string; sha256: string | null})[];
+  maxBytes?: number; control?: boolean; onChanged?: () => never;
+  verifyAfter?: {key: object; run: () => Promise<void>};
+}
+/** A single boundary declares all expected bytes before doing any proof I/O.
+ * Materials precede controls; duplicate declarations retain the strictest bound.
+ */
+export async function proveTextInputs(proofs: readonly TextProof[]): Promise<void> {
+  type Entry = {path: string; expected: string | null; maxBytes?: number; control: boolean; onChanged: (() => never) | undefined};
+  const roots = new Map<string, Map<string, Entry>>();
+  for (const proof of proofs) {
+    validateTextLimit(proof.maxBytes);
+    const root = path.resolve(proof.root); const entries = roots.get(root) ?? new Map<string, Entry>();
+    roots.set(root, entries);
+    for (const input of proof.inputs) {
+      const expected = 'sha256' in input ? input.sha256 : input.text === null ? null : createHash('sha256').update(input.text).digest('hex');
+      const observedMaximum = 'text' in input ? Math.max(4 * 1024 * 1024, input.text === null ? 0 : Buffer.byteLength(input.text)) : Infinity;
+      const prior = entries.get(input.path);
+      if (prior && prior.expected !== expected) throw Object.assign(new Error('同一边界的材料声明不一致，请重新检查。'), {code: 'INPUT_CHANGED'});
+      entries.set(input.path, {path: input.path, expected, control: !!proof.control || !!prior?.control,
+        maxBytes: Math.min(proof.maxBytes ?? observedMaximum, prior?.maxBytes ?? Infinity), onChanged: proof.onChanged ?? prior?.onChanged});
+    }
+  }
+  for (const control of [false, true]) for (const [root, entries] of roots) {
+    const groups = new Map<number, Entry[]>();
+    for (const entry of entries.values()) if (entry.control === control) {
+      const maximum = entry.maxBytes ?? Infinity; const group = groups.get(maximum) ?? [];
+      group.push(entry); groups.set(maximum, group);
+    }
+    for (const [maximum, group] of groups) {
+      const size = Number.isFinite(maximum) ? Math.max(1, Math.floor(64 * 1024 * 1024 / Math.max(1, maximum))) : 1;
+      for (let offset = 0; offset < group.length; offset += size) {
+        const batch = group.slice(offset, offset + size);
+        const options = Number.isFinite(maximum) ? {maxBytes: maximum} : {};
+        let actual: TextInput[];
+        try { actual = await readTextInputs(root, batch.map(entry => entry.path), options); }
+        catch (error) {
+          // Preserve a domain's change error when an observed file becomes unreadable.
+          for (const entry of batch) if (entry.onChanged) {
+            try { await readTextInputs(root, [entry.path], options); } catch { entry.onChanged(); }
+          }
+          throw error;
+        }
+        for (const [index, input] of actual.entries()) {
+          const expected = batch[index]!;
+          const sha256 = input.text === null ? null : createHash('sha256').update(input.text).digest('hex');
+          if (sha256 !== expected.expected) {
+            expected.onChanged?.();
+            throw Object.assign(new Error(`操作依据已变化，请重新执行：${input.path}`), {code: 'INPUT_CHANGED'});
+          }
+        }
+      }
+    }
+  }
+  const checked = new Set<object>();
+  for (const proof of proofs) if (proof.verifyAfter && !checked.has(proof.verifyAfter.key)) {
+    checked.add(proof.verifyAfter.key); await proof.verifyAfter.run();
+  }
+}
+
+/** Collect operation inputs explicitly. No result survives this invocation. */
+export async function readTextInputs(root: string, relatives: readonly string[], options: TextInputOptions = {}, materials?: TextReadInput): Promise<TextInput[]> {
+  if (materials) return materials.read(root, relatives, options);
+  const { maxBytes } = options;
+  validateTextLimit(maxBytes);
+  const unique = [...new Set(relatives)];
+  const paths = await inspectSafePaths(root, unique);
+  const inputs: TextInput[] = await mapInputBatch(paths, async (input, index) => {
+    const relative = unique[index]!;
+    if (input.stat === null) {
+      return { path: relative, text: null };
+    }
+    if (!input.stat.isFile()) throw new Error(`不是普通文件：${relative}`);
+    if (maxBytes !== undefined && input.stat.size > maxBytes) throw new Error(`文件超过读取大小限制：${relative}（最多 ${maxBytes} 字节）。`);
+    let text: string | null = null;
+    try {
+      const bytes = await readFile(input.target);
+      if (maxBytes !== undefined && bytes.byteLength > maxBytes) throw new Error(`文件超过读取大小限制：${relative}（最多 ${maxBytes} 字节）。`);
+      text = bytes.toString('utf8');
+      if (!Buffer.from(text, 'utf8').equals(bytes)) throw new Error(`文件不是有效 UTF-8：${relative}`);
+    } catch (error) {
+      if (!isMissing(error)) throw error;
+    }
+    return { path: relative, text };
+  });
+  if (unique.length === relatives.length) return inputs;
+  const byPath = new Map(inputs.map(input => [input.path, input.text]));
+  return relatives.map(relative => ({ path: relative, text: byPath.get(relative)! }));
+}
+
+/** Revalidate precisely the inputs a caller used at its return or commit boundary. */
+export async function verifyTextInputs(root: string, inputs: readonly TextInput[], options: TextInputOptions = {}, proofs?: TextProof[], control = false): Promise<void> {
+  validateTextLimit(options.maxBytes);
+  if (proofs) { proofs.push({root, inputs, ...options, control}); return; }
+  const current = await readTextInputs(root, inputs.map(input => input.path), options);
+  for (const [index, input] of current.entries()) {
+    if (input.text !== inputs[index]!.text) {
+      throw Object.assign(new Error(`操作依据已变化，请重新执行：${input.path}`), { code: 'INPUT_CHANGED' });
+    }
+  }
+}
+
+export async function readTextIfExists(root: string, relative: string, inputs?: TextReadInput): Promise<string | null> {
+  return (await readTextInputs(root, [relative], {}, inputs))[0]!.text;
 }
 
 async function ensureLocal(root: string): Promise<void> {
@@ -204,9 +379,17 @@ export async function applyChanges(root: string, changes: FileChange[], verify?:
   const effective = changes.filter(change => change.before !== change.after);
   if (!effective.length) return;
   validateChanges(effective);
-  for (const change of effective) {
-    if (await readTextIfExists(root, change.path) !== change.before) throw new Error(`文件已变化：${change.path}`);
+  const metadataText = await readTextIfExists(root, META);
+  if (metadataText !== null) parseMetadata(metadataText);
+  const metadataChange = effective.find(change => change.path === META);
+  if (metadataChange) parseMetadata(metadataChange.after);
+  const current = await readTextInputs(root, effective.map(change => change.path));
+  for (const [index, input] of current.entries()) {
+    if (input.text !== effective[index]!.before) throw new Error(`文件已变化：${input.path}`);
   }
+  await assertSharedWritePaths(root, effective.map(change => change.path));
+  // Metadata is an operation prerequisite, including for writes that do not edit it.
+  if (await readTextIfExists(root, META) !== metadataText) throw new Error('工程元信息已变化，请重新执行。');
   await ensureLocal(root);
   const journalPath = await assertSafePath(root, JOURNAL);
   const journal = await open(journalPath, 'wx', 0o600);
@@ -221,6 +404,8 @@ export async function applyChanges(root: string, changes: FileChange[], verify?:
 
 /** Caller holds the lock. Validate every file before undoing any transaction writes. */
 export async function recoverChanges(root: string): Promise<boolean> {
+  const metadataText = await readTextIfExists(root, META);
+  if (metadataText !== null) parseMetadata(metadataText);
   const original = await readTextIfExists(root, JOURNAL);
   if (original === null) return false;
   let journal: { schemaVersion?: unknown; changes?: unknown };

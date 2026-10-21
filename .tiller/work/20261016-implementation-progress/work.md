@@ -1,5 +1,7 @@
 # tiller 实现进度记录
 
+> 历史工作资料：已按用户要求直接精简且不备份，仅保留核心文档。原机器记录、审批快照、逐轮测试输出和过程文件已删除；以下结果保留当时范围，不作为当前候选的验证结论或可恢复的受控工作，也不是后续执行队列。
+
 核对日期：2026-10-19。0.3.5 已提交并推送；独立工作树在未提交的 0.3.6 测试管理基础上实现 0.4.0 门禁候选，当前增量未提交、未推送。当前进展以[门禁工作](../20261019-task-delivery-gates/work.md)及其[验证记录](../20261019-task-delivery-gates/verification.md)为详细来源；[0.3.6 测试管理工作](../20261019-testing-verification/work.md)及下文旧版本结果保留其当时验证范围。
 
 ## 目标与授权
@@ -12,7 +14,7 @@
 
 0.4.0 候选已实现规划登记与确认激活、逐任务开始/验证/接续、实际产物及验证证据绑定、整体交付检查与就绪回执，以及限定例外和同对象验收/发布绑定。T1～T6 技术交付已验证，用户待验收；T6 保留原全量失败与修后定向复验的区别，不报告为一次全量全部通过。详见[门禁工作](../20261019-task-delivery-gates/work.md)和[分阶段验证](../20261019-task-delivery-gates/verification.md)。
 
-两必要业务仓库的追加回归已通过，覆盖一仓成功不能掩盖另一仓缺项或漂移；受控临时工程的真实 AI 自举已完成失败、拒绝、修复、执行者交接接续及整体检查，ready 后复查保持有效，用户验收未请求。详细证据分别见[覆盖复核及补测](../20261019-task-delivery-gates/evidence/t6-coverage-review.md)和[真实自举报告](../20261019-task-delivery-gates/selfboot.md)。这不代替外部测试工程验收、跨操作系统验证或完整产品质量验收。
+两必要业务仓库的追加回归已通过，覆盖一仓成功不能掩盖另一仓缺项或漂移；受控临时工程的真实 AI 自举已完成失败、拒绝、修复、执行者交接接续及整体检查，ready 后复查保持有效，用户验收未请求。详细证据分别见覆盖复核及补测（原过程文件已清理）和[真实自举报告](../20261019-task-delivery-gates/verification.md#真实执行与接续验证)。这不代替外部测试工程验收、跨操作系统验证或完整产品质量验收。
 
 历史 0.3.6 测试管理增量新增九类适用性、模块/跨模块/系统 YAML 用例、原生程序入口、执行计划与快照、逐用例外部证据登记及按类缺口报告。当时整库回归 228 项通过，最后补充另复验 14 项，最终安装包 18 项通过，自身与 Node.js/Python 原生入口已实测；当时长期目录登记 9 个验证模块用例，其中 8 项有明确结果、真实 AI 用例未执行。来源见[0.3.6 验证](../20261019-testing-verification/verification.md)；这些历史数量不替代 0.4.0 候选验证，也不因后来新增自举而改写原用例状态。
 
@@ -41,21 +43,21 @@
 | 能力及关联需求 | 实现位置 | 证据与边界 |
 |---|---|---|
 | 接入、范围、内容保护、重复执行与恢复：INIT-01～08、12 | [core.ts](../../../src/core.ts)、[files.ts](../../../src/files.ts) | [首个交付验证](../initial-delivery/verification.md)；[分组布局验证](../20261016-repository-layout/verification.md)。规则语义冲突仍需人工协调 |
-| 版本检查与资源升级：INIT-09～10、RULE-08 | [upgrade.ts](../../../src/upgrade.ts)、[资源基线](../../../resources/baselines) | [0.4.0 候选资源升级及保护核对](../20261019-task-delivery-gates/verification.md)；[0.3.4 历史验证](../20261016-project-onboarding/verification.md)保留当时范围。资源基线与严格拒绝旧工作记录是两条独立边界 |
+| 版本检查与资源升级：INIT-09～10、RULE-08 | [upgrade.ts](../../../src/upgrade.ts)、旧版资源基线（已按当前版本政策移除） | [0.4.0 候选资源升级及保护核对](../20261019-task-delivery-gates/verification.md)；[0.3.4 历史验证](../20261016-project-onboarding/verification.md)保留当时范围。资源基线与严格拒绝旧工作记录是两条独立边界 |
 | 使用入口及平台适应：INIT-05、11、13 | [runtime.ts](../../../src/runtime.ts)、[启动器](../../../resources/run.cjs)、[使用指引](../../../resources/usage.md) | [使用入口验证](../20261016-usage-entry/verification.md)。含真实 Git worktree、中文空格路径及换行转换；其他操作系统未实测 |
 | 文档工作与产物：FLOW-01、07、13、14、16，RULE-04、07 | [work.ts](../../../src/work.ts)、[work-history.ts](../../../src/work-history.ts)、[六类模板](../../../resources/templates) | [工作产物验证](../20261015-work-artifacts/verification.md)。每项工作一个主需求和一个主设计；任意多产物及其他环节模板未实现 |
 | 人工确认及变化检查：FLOW-04、06、09、12、15，RULE-03、05、06、09 | [confirmations.ts](../../../src/confirmations.ts)、[共同规则](../../../resources/rules/core.md) | [确认机制验证](../human-confirmation/verification.md)。含需求等待与新上下文接续的行为观察；来源复核不等于身份认证 |
-| 两种方式的隔离与恢复：FLOW-07、08、17、19，RULE-11 | [环境准备](../../../src/delivery-environment.ts)、[位置解析](../../../src/delivery-location.ts)、[交付动作](../../../src/delivery-actions.ts) | [隔离交付验证](../20261015-isolated-delivery/implementation-verification.md)。临时仓库及本机远端测试通过，实际业务组合仍待验收 |
+| 两种方式的隔离与恢复：FLOW-07、08、17、19，RULE-11 | [环境准备](../../../src/delivery-environment.ts)、[位置解析](../../../src/delivery-location.ts)、[交付动作](../../../src/delivery-actions.ts) | [隔离交付验证](../20261015-isolated-delivery/verification.md#实现验证记录)。临时仓库及本机远端测试通过，实际业务组合仍待验收 |
 | 提交、推送、评审及合入检查：FLOW-09、12、18，RULE-11 | [交付动作](../../../src/delivery-actions.ts)、[平台适配](../../../src/review-adapters.ts) | 同上。GitHub/GitLab 经模拟验证，未用真实账号写入验证；当前适配不能原子保护源和目标，拒绝自动合入，人工平台操作后核对事实 |
 | 规划、任务门禁及当前有效性：FLOW-15、20～24 | [planning.ts](../../../src/planning.ts)、[tasks.ts](../../../src/tasks.ts)、[task-artifacts.ts](../../../src/task-artifacts.ts) | [门禁分阶段验证](../20261019-task-delivery-gates/verification.md)：T1～T6 技术交付已验证；规划确认不代替详细规格批准，真实事件保留，变化后重核 |
-| 范围验证、整体交付与例外：VERIFY-05～09 | [verification-selection.ts](../../../src/verification-selection.ts)、[verification-runs.ts](../../../src/verification-runs.ts)、[overall-delivery.ts](../../../src/overall-delivery.ts)、[gate-exceptions.ts](../../../src/gate-exceptions.ts) | [覆盖及限制](../20261019-task-delivery-gates/evidence/t6-coverage-review.md)：复用同一证据评估，套件成功不冒充用例通过；例外保留技术失败，技术就绪不自动验收 |
+| 范围验证、整体交付与例外：VERIFY-05～09 | [verification-selection.ts](../../../src/verification-selection.ts)、[verification-runs.ts](../../../src/verification-runs.ts)、[overall-delivery.ts](../../../src/overall-delivery.ts)、[gate-exceptions.ts](../../../src/gate-exceptions.ts) | 覆盖及限制（原过程文件已清理）：复用同一证据评估，套件成功不冒充用例通过；例外保留技术失败，技术就绪不自动验收 |
 | 执行指引与结果表达：FLOW-02～05、10～12，RULE-01～10 | [规则资源](../../../resources/rules)、[通用入口](../../../resources/entry.md) | 已分发共同、活动及质量规则。计划选择、语义判断、发布交接及反馈主要依赖人与 AI 执行，不等于自动调度已实现；多宿主一致行为待验证 |
 
 功能分块增量（FLOW-20、FLOW-21、RULE-12）已落实到 0.3.3 共同规则、入口、活动指引和设计模板提示，见[本次工作](../20261016-functional-planning/work.md)。可读计划由人与 AI 维护，未增加自动任务拆分、依赖调度或骨架生成器，真实行为待验证。
 
 项目接手与规范增量（FLOW-22、FLOW-23、RULE-13）已落实到 0.3.4 总体及模块规格、通用规则、活动入口和设计模板，见[接手与规范工作](../20261016-project-onboarding/work.md)。已有项目先调查及建立基线，补足确认整体依据后增量开发；新项目规范随总体设计形成、随骨架落实检查。未新增代码自动逆向、规范自动生成或项目检查执行器，实际业务场景遵循效果待验证。
 
-0.3.5 将实施规划明确为总体设计与任务执行之间的环节，骨架作为普通任务；当时规划版本与确认来源、需求覆盖、依赖、即时验证和历史偏差按可读规则维护，尚无规划确认专用类型或任务状态机，见[历史工作](../20261017-implementation-planning/work.md)。学生项目暴露的事前骨架验证和逐任务放行不足也保留为当时事实。后续 0.4.0 候选已增加规划确认与任务状态，并取得[新受控自举证据](../20261019-task-delivery-gates/selfboot.md)；它不改写旧项目历史，也不表示外部学生项目已经重新验证。
+0.3.5 将实施规划明确为总体设计与任务执行之间的环节，骨架作为普通任务；当时规划版本与确认来源、需求覆盖、依赖、即时验证和历史偏差按可读规则维护，尚无规划确认专用类型或任务状态机，见[历史工作](../20261017-implementation-planning/work.md)。学生项目暴露的事前骨架验证和逐任务放行不足也保留为当时事实。后续 0.4.0 候选已增加规划确认与任务状态，并取得[新受控自举证据](../20261019-task-delivery-gates/verification.md#真实执行与接续验证)；它不改写旧项目历史，也不表示外部学生项目已经重新验证。
 
 ## 验证、验收与发布状态
 

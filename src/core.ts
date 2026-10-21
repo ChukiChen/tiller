@@ -4,33 +4,26 @@ import { lstat, mkdir, readFile, readdir, realpath } from 'node:fs/promises';
 import path from 'node:path';
 import { promisify } from 'node:util';
 import {
-  applyChanges, assertSafePath, hasPendingTransaction, readTextIfExists,
+  applyChanges, assertSafePath, hasPendingTransaction, readTextIfExists, readTextInputs,
   recoverChanges, validateRelativePath, withProjectLock,
 } from './files.js';
 import type { FileChange, InitializeOptions, ProjectInspection, ProjectMetadata, ProjectMode } from './types.js';
+import type { TextReadInput } from './files.js';
 import { resolveRepositoryRoot } from './delivery-location.js';
 import { repositoryPath, validateRepositoryMappings } from './repository-paths.js';
+import { META, REQUIRED_MANAGED, RESOURCE_VERSION, SCHEMA_VERSION, SHARED_RESOURCES, parseMetadata } from './project-metadata.js';
+import { assertSharedWritePaths } from './shared-paths.js';
+
+export { META, RESOURCE_VERSION, SCHEMA_VERSION, RULES, SHARED_RESOURCES, parseMetadata } from './project-metadata.js';
 
 export type { InitializeOptions, ProjectInspection, ProjectMetadata, ProjectMode } from './types.js';
 
-export const SCHEMA_VERSION = 1;
-export const RESOURCE_VERSION = '0.4.0';
 export const ENTRY_START = '<!-- tiller:entry:start -->';
 export const ENTRY_END = '<!-- tiller:entry:end -->';
 export const INDEX_START = '<!-- tiller:index:start -->';
 export const INDEX_END = '<!-- tiller:index:end -->';
 export const IGNORE_START = '# tiller:local:start';
 export const IGNORE_END = '# tiller:local:end';
-export const META = '.tiller/project.json';
-export const RULES = [
-  'rules/index.md', 'rules/core.md',
-  'rules/activities/requirements.md', 'rules/activities/design.md',
-  'rules/activities/implementation.md', 'rules/activities/delivery.md',
-  'rules/quality/documents.md', 'rules/quality/verification.md',
-] as const;
-export const SHARED_RESOURCES = [...RULES, 'usage.md', 'run.cjs'] as const;
-const LEGACY_MANAGED = ['AGENTS.md', '.gitignore', '.tiller/index.md', ...RULES.map(name => `.tiller/${name}`)];
-const REQUIRED_MANAGED = ['AGENTS.md', '.gitignore', '.tiller/index.md', ...SHARED_RESOURCES.map(name => `.tiller/${name}`)];
 const EOL_EQUIVALENT_MANAGED = new Set(REQUIRED_MANAGED);
 const execFileAsync = promisify(execFile);
 
@@ -107,30 +100,6 @@ function appendSection(before: string | null, body: string, start: string, end: 
   return `${before ?? ''}${before ? (before.endsWith('\n') ? '\n' : '\n\n') : ''}${block}\n`;
 }
 
-export function parseMetadata(text: string): ProjectMetadata {
-  let value: unknown;
-  try { value = JSON.parse(text); } catch { throw new Error('工程元信息不是有效 JSON。'); }
-  if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('工程元信息格式无效。');
-  const data = value as Record<string, unknown>;
-  if (data.schemaVersion !== SCHEMA_VERSION || !['0.1.0', '0.2.0', '0.2.1', '0.2.2', '0.3.0', '0.3.1', '0.3.2', '0.3.3', '0.3.4', '0.3.5', '0.3.6', RESOURCE_VERSION].includes(String(data.resourceVersion))) {
-    throw new Error('工程格式或资源版本不受支持；保留现状，请使用兼容版本或显式迁移方案。');
-  }
-  if (data.mode !== 'project' && data.mode !== 'workspace') throw new Error('工程管理方式无效。');
-  if (!Array.isArray(data.repositories) || !data.repositories.every(item => typeof item === 'string')) {
-    throw new Error('工程仓库清单格式无效。');
-  }
-  validateRepositoryMappings(data as unknown as ProjectMetadata);
-  if (typeof data.createdAt !== 'string' || !Number.isFinite(Date.parse(data.createdAt))) throw new Error('工程创建时间无效。');
-  if (!data.managedFiles || typeof data.managedFiles !== 'object' || Array.isArray(data.managedFiles)) {
-    throw new Error('受管文件依据缺失。');
-  }
-  const managed = data.managedFiles as Record<string, unknown>;
-  const requiredManaged = ['0.3.2', '0.3.3', '0.3.4', '0.3.5', '0.3.6', RESOURCE_VERSION].includes(String(data.resourceVersion)) ? REQUIRED_MANAGED : LEGACY_MANAGED;
-  if (Object.keys(managed).length !== requiredManaged.length ||
-      requiredManaged.some(name => !Object.hasOwn(managed, name) || typeof managed[name] !== 'string' ||
-        !/^[0-9a-f]{64}$/u.test(managed[name] as string))) throw new Error('受管文件依据不完整或含不支持的文件。');
-  return data as unknown as ProjectMetadata;
-}
 
 async function checkRepository(root: string, repository: string, relative?: string): Promise<string> {
   const target = relative === undefined ? await resolveRepositoryRoot(root, repository)
@@ -221,57 +190,13 @@ export function ignoreRepository(repository: string): string {
 
 export function repositoryIgnorePatterns(metadata: Pick<ProjectMetadata, 'repositories' | 'repositoryPaths'>): string[] {
   return [...new Set(metadata.repositories.map(id => {
-    const relative = metadata.repositoryPaths?.[id] ?? id;
+    const relative = metadata.repositoryPaths[id]!;
     return ignoreRepository(relative.startsWith('repositories/') ? 'repositories' : relative);
   }))];
 }
 
-export async function assertSharedPaths(root: string, paths: string[]): Promise<void> {
-  if (!paths.length) return;
-  for (const relative of paths) await assertSafePath(root, relative);
-  try {
-    await execFileAsync('git', ['rev-parse', '--is-inside-work-tree'], {
-      cwd: root, env: gitEnvironment(), windowsHide: true, timeout: 10000,
-    });
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
-      const ignore = await readTextIfExists(root, '.gitignore');
-      const patterns = ignore?.split(/\r?\n/u).map(line => line.trim()).filter(line => line && !line.startsWith('#')) ?? [];
-      // Without Git, only the known local-only rule can be established as harmless.
-      if (patterns.some(line => line !== '/.tiller/local/')) {
-        throw new Error('Git 不可用，无法核对现有忽略规则是否排除共享资料；请先检查忽略配置。');
-      }
-      // The selected project can itself be nested inside a larger Git worktree.
-      let ancestor = path.resolve(root);
-      while (true) {
-        try {
-          await lstat(path.join(ancestor, '.git'));
-          throw new Error('Git 不可用，无法核对 Git 工程的共享资料忽略状态。');
-        } catch (markerError) {
-          if ((markerError as NodeJS.ErrnoException).code !== 'ENOENT') throw markerError;
-        }
-        const parent = path.dirname(ancestor);
-        if (parent === ancestor) break;
-        ancestor = parent;
-      }
-      return;
-    }
-    if ((error as { stderr?: string }).stderr?.includes('not a git repository')) return;
-    throw new Error(`无法核对共享资料的 Git 状态：${(error as Error).message}`);
-  }
-  try {
-    const { stdout } = await execFileAsync('git', ['check-ignore', '--no-index', '--', ...paths], {
-      cwd: root, env: gitEnvironment(), windowsHide: true, timeout: 10000,
-    });
-    if (stdout.trim()) throw new Error(`共享资料被 Git 忽略，未修改现有规则：${stdout.trim().split(/\r?\n/u).join('、')}`);
-  } catch (error) {
-    if ((error as { code?: unknown }).code === 1) return;
-    throw error;
-  }
-}
-
 async function checkSharedIgnore(root: string, managed: string[] = REQUIRED_MANAGED): Promise<void> {
-  await assertSharedPaths(root, [META, ...managed]);
+  await assertSharedWritePaths(root, [META, ...managed]);
 }
 
 export function buildIndexSection(mode: ProjectMode): string {
@@ -327,7 +252,7 @@ async function buildIndex(root: string, mode: ProjectMode, repositories: string[
   return `${lines.join('\n')}\n`;
 }
 
-export async function inspectProject(root: string): Promise<ProjectInspection> {
+async function inspectProjectState(root: string): Promise<ProjectInspection> {
   const absoluteRoot = path.resolve(root);
   const result: ProjectInspection = {
     root: absoluteRoot, initialized: false, ready: false, metadata: null, issues: [], hostVerification: 'not-verified',
@@ -342,13 +267,13 @@ export async function inspectProject(root: string): Promise<ProjectInspection> {
     }
     result.initialized = true;
     result.metadata = parseMetadata(text);
-    result.compatibility = result.metadata.resourceVersion === RESOURCE_VERSION ? 'read-write' : 'read-only';
+    result.compatibility = 'read-write';
     if (await hasPendingTransaction(absoluteRoot)) result.issues.push('存在未完成事务，请先执行 tiller recover。');
-    for (const [relative, digest] of Object.entries(result.metadata.managedFiles)) {
+    const managed = await readTextInputs(absoluteRoot, Object.keys(result.metadata.managedFiles));
+    for (const { path: relative, text: current } of managed) {
       try {
-        const current = await readTextIfExists(absoluteRoot, relative);
         if (current === null) result.issues.push(`接入文件缺失：${relative}`);
-        else if (!matchesManagedDigest(relative, trackedContent(relative, current), digest)) result.issues.push(`接入文件内容已变化：${relative}`);
+        else if (!matchesManagedDigest(relative, trackedContent(relative, current), result.metadata.managedFiles[relative]!)) result.issues.push(`接入文件内容已变化：${relative}`);
       } catch (error) { result.issues.push((error as Error).message); }
     }
     const identities = new Set<string>();
@@ -373,13 +298,21 @@ export async function inspectProject(root: string): Promise<ProjectInspection> {
   return result;
 }
 
-export async function requireReadyProject(root: string, options: { write?: boolean } = {}): Promise<ProjectMetadata> {
-  const result = await inspectProject(root);
-  if (!result.ready || !result.metadata) throw new Error(result.issues.join('\n'));
-  if (options.write !== false && result.compatibility !== 'read-write') {
-    throw new Error('旧版工程仅支持只读检查与接续；新写入需要先预览并显式应用 tiller upgrade。');
-  }
-  return result.metadata;
+export async function inspectProject(root: string): Promise<ProjectInspection> {
+  return inspectProjectState(root);
+}
+
+/** Read only the current metadata contract. Whole-project health is an explicit inspection. */
+export async function readProjectMetadata(root: string, inputs?: TextReadInput): Promise<ProjectMetadata> {
+  const metadata = await readRepositoryMetadata(root, inputs);
+  if (metadata === null) throw new Error('工程尚未初始化。');
+  return metadata;
+}
+
+/** Optional metadata for repository positioning; no retained results or hidden inspection. */
+export async function readRepositoryMetadata(root: string, inputs?: TextReadInput): Promise<ProjectMetadata | null> {
+  const text = await readTextIfExists(root, META, inputs);
+  return text === null ? null : parseMetadata(text);
 }
 
 export async function initialize(options: InitializeOptions): Promise<ProjectInspection & { changed: boolean }> {
@@ -414,24 +347,24 @@ export async function initialize(options: InitializeOptions): Promise<ProjectIns
       const before = await readTextIfExists(root, relative);
       if (before !== null && !equivalentManagedContent(relative, before, content)) throw new Error(`已有文件与分发资源冲突，未覆盖：${relative}`);
       changes.push({ path: relative, before, after: before ?? content });
-      managedFiles[relative] = sha256(content);
+      managedFiles[relative] = sha256(normalizedManagedContent(relative, content));
     }
     const entry = await readFile(new URL('../resources/entry.md', import.meta.url), 'utf8');
     if (!entry.trim()) throw new Error('分发入口资源为空。');
     const agentsBefore = await readTextIfExists(root, 'AGENTS.md');
     const agentsAfter = appendSection(agentsBefore, entry, ENTRY_START, ENTRY_END);
     changes.push({ path: 'AGENTS.md', before: agentsBefore, after: agentsAfter });
-    managedFiles['AGENTS.md'] = sha256(trackedContent('AGENTS.md', agentsAfter));
+    managedFiles['AGENTS.md'] = sha256(normalizedManagedContent('AGENTS.md', trackedContent('AGENTS.md', agentsAfter)));
     const ignoreBefore = await readTextIfExists(root, '.gitignore');
     const ignoreBody = ['/.tiller/local/', ...repositoryIgnorePatterns({ repositories, repositoryPaths })].join('\n');
     const ignoreAfter = appendSection(ignoreBefore, ignoreBody, IGNORE_START, IGNORE_END);
     changes.push({ path: '.gitignore', before: ignoreBefore, after: ignoreAfter });
-    managedFiles['.gitignore'] = sha256(trackedContent('.gitignore', ignoreAfter));
+    managedFiles['.gitignore'] = sha256(normalizedManagedContent('.gitignore', trackedContent('.gitignore', ignoreAfter)));
     const indexBefore = await readTextIfExists(root, '.tiller/index.md');
     const indexAfter = await buildIndex(root, mode, repositories, repositoryPaths);
     if (indexBefore !== null && indexBefore !== indexAfter) throw new Error('已有 .tiller/index.md 需要协调接入，未覆盖原有索引。');
     changes.push({ path: '.tiller/index.md', before: indexBefore, after: indexAfter });
-    managedFiles['.tiller/index.md'] = sha256(trackedContent('.tiller/index.md', indexAfter));
+    managedFiles['.tiller/index.md'] = sha256(normalizedManagedContent('.tiller/index.md', trackedContent('.tiller/index.md', indexAfter)));
     const metadata: ProjectMetadata = {
       schemaVersion: SCHEMA_VERSION, resourceVersion: RESOURCE_VERSION, mode, repositories, repositoryPaths,
       managedFiles, createdAt: new Date().toISOString(),
@@ -446,5 +379,7 @@ export async function initialize(options: InitializeOptions): Promise<ProjectIns
 
 export async function recoverProject(root: string): Promise<{ root: string; recovered: boolean }> {
   const absoluteRoot = path.resolve(root);
+  const metadataText = await readTextIfExists(absoluteRoot, META);
+  if (metadataText !== null) parseMetadata(metadataText);
   return withProjectLock(absoluteRoot, async () => ({ root: absoluteRoot, recovered: await recoverChanges(absoluteRoot) }));
 }

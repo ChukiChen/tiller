@@ -1,0 +1,135 @@
+{
+  "schemaVersion": 1,
+  "id": "review",
+  "version": "1.0.0",
+  "title": "审查与评估",
+  "appliesTo": [
+    "按已授权范围和标准评估现有产物。"
+  ],
+  "notApplicableTo": [
+    "发现问题不自动修复；审查报告不等于用户验收批准。"
+  ],
+  "stages": [
+    {
+      "id": "scope",
+      "title": "范围与标准",
+      "dependsOn": [],
+      "consumes": [],
+      "produces": [
+        "scope-output"
+      ],
+      "checks": [
+        "核对实际对象版本、范围、评估标准及只读授权。"
+      ],
+      "confirmations": [],
+      "actions": [
+        "read",
+        "write-report"
+      ]
+    },
+    {
+      "id": "inspection",
+      "title": "检查",
+      "dependsOn": [
+        "scope"
+      ],
+      "consumes": [
+        "scope-output"
+      ],
+      "produces": [
+        "inspection-output"
+      ],
+      "checks": [
+        "以实际证据定位问题和影响，避免将假设当作事实。"
+      ],
+      "confirmations": [],
+      "actions": [
+        "read",
+        "write-report"
+      ]
+    },
+    {
+      "id": "recheck",
+      "title": "复核",
+      "dependsOn": [
+        "inspection"
+      ],
+      "consumes": [
+        "inspection-output"
+      ],
+      "produces": [
+        "recheck-output"
+      ],
+      "checks": [
+        "独立复核发现的触发条件、严重度和建议。"
+      ],
+      "confirmations": [],
+      "actions": [
+        "read",
+        "write-report"
+      ]
+    },
+    {
+      "id": "report",
+      "title": "审查报告",
+      "dependsOn": [
+        "recheck"
+      ],
+      "consumes": [
+        "recheck-output"
+      ],
+      "produces": [
+        "report-output"
+      ],
+      "checks": [
+        "分别列出发现、假设、未覆盖部分及证据；不得自动修复或接受。"
+      ],
+      "confirmations": [],
+      "actions": [
+        "read",
+        "write-report"
+      ]
+    }
+  ],
+  "outputs": [
+    {
+      "id": "scope-output",
+      "role": "scope",
+      "title": "范围与标准",
+      "producer": "scope"
+    },
+    {
+      "id": "inspection-output",
+      "role": "inspection",
+      "title": "检查",
+      "producer": "inspection"
+    },
+    {
+      "id": "recheck-output",
+      "role": "recheck",
+      "title": "复核",
+      "producer": "recheck"
+    },
+    {
+      "id": "report-output",
+      "role": "review",
+      "title": "审查报告",
+      "producer": "report"
+    }
+  ],
+  "completion": {
+    "requiredStages": [
+      "report"
+    ],
+    "requiredOutputs": [
+      "scope-output",
+      "inspection-output",
+      "recheck-output",
+      "report-output"
+    ],
+    "checks": [
+      "产物与实际证据一致；未知影响和未覆盖范围如实记录；交付不自动表示用户接受或操作授权。"
+    ],
+    "result": "report-delivered"
+  }
+}

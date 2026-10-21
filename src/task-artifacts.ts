@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
 import { lstat, readFile, readdir } from 'node:fs/promises';
-import { assertSharedPaths, requireReadyProject } from './core.js';
-import { assertSafePath } from './files.js';
+import { readProjectMetadata } from './core.js';
+import { assertSafePath, assertSafePaths } from './files.js';
 import { resolveRepositoryRoot, resolveWorkRoot, withDeliveryLocation } from './delivery-location.js';
 import { repositoryPath } from './repository-paths.js';
 import { loadWorkRecord, contentIssues } from './work.js';
@@ -51,7 +51,7 @@ export async function inspectTaskArtifacts(rootInput: string, workId: string, ar
   const root = await resolveWorkRoot(rootInput, workId);
   return withDeliveryLocation(root, workId, async () => {
     const work = await loadWorkRecord(root, workId);
-    const metadata = await requireReadyProject(root, { write: false });
+    const metadata = await readProjectMetadata(root);
     if (!scope.repositories.every(repo => work.record.scope.repositories.includes(repo))
       || !scope.targets.every(target => work.record.scope.targets.includes(target))) throw new Error('产物检查范围超出当前工作。');
     const roots = new Map<string, string>();
@@ -107,7 +107,8 @@ export async function inspectTaskArtifacts(rootInput: string, workId: string, ar
             const separator = name.indexOf('::');
             if (separator < 1 || !/^[a-f0-9]{64}$/u.test(sha256)) throw new Error('引用产物快照格式无效。');
             const ref = { repository: name.slice(0, separator), path: name.slice(separator + 2) };
-            if (hash(await capture(ref, selected, true)) !== sha256) throw Object.assign(new Error('来源任务产物在核对期间发生变化。'), { code: 'STALE_REFERENCED_ARTIFACT' });
+            await capture(ref, selected, true);
+            if (selected[key(ref)] !== sha256) throw Object.assign(new Error('来源任务产物在核对期间发生变化。'), { code: 'STALE_REFERENCED_ARTIFACT' });
           }
         } else if (artifact.type === 'document') {
           const content = await capture(artifact.source, selected);
@@ -145,7 +146,7 @@ export async function inspectTaskArtifacts(rootInput: string, workId: string, ar
       }
     }
     for (const [repository, files] of shared) {
-      try { await assertSharedPaths(roots.get(repository)!, [...files]); }
+      try { await assertSafePaths(roots.get(repository)!, [...files]); }
       catch { issues.push(gateIssue('UNSHARED_ARTIFACT', `仓库 ${repository} 中必要的共享产物或来源被忽略或不可安全读取。`)); }
     }
     return { snapshots, issues, warnings, basisDigest: planningDigest({ artifacts, snapshots, issues, warnings }) };

@@ -72,3 +72,51 @@ test('platform error response and transport failures do not expose credentials o
   globalThis.fetch = async () => new Response('secret invalid JSON body', { status: 200 });
   await assert.rejects(new ReviewAdapter(github).get('7'), error => /有效 JSON/u.test(error.message) && !error.message.includes('secret'));
 });
+
+test('review lookup bounds concurrent detail reads and preserves order and identity checks', async t => {
+  let active = 0;
+  let maximum = 0;
+  let substituted = false;
+  mockFetch(t, async url => {
+    if (url.includes('?')) return Array.from({ length: 9 }, (_, index) => ({ number: index + 1 }));
+    const number = Number(url.split('/').at(-1));
+    active++;
+    maximum = Math.max(maximum, active);
+    try {
+      await new Promise(resolve => setTimeout(resolve, 5));
+      return pull({ number, html_url: `https://github.com/example/project/pull/${number}`,
+        ...(substituted && number === 3 ? { base: { ref: 'main', sha: oid, repo: { full_name: 'other/project' } } } : {}) });
+    } finally { active--; }
+  });
+  const adapter = new ReviewAdapter(github);
+  const reviews = await adapter.find('codex/work', 'main');
+  assert.deepEqual(reviews.map(review => review.id), Array.from({ length: 9 }, (_, index) => String(index + 1)));
+  assert.ok(maximum > 1 && maximum <= 4, `Expected bounded concurrent reads, got ${maximum}`);
+  substituted = true;
+  await assert.rejects(adapter.find('codex/work', 'main'), /仓库/u);
+});
+
+test('review lookup validates the whole next batch before starting its detail reads', async t => {
+  let details = 0;
+  mockFetch(t, url => {
+    if (url.includes('?')) return [{ number: 1 }, null];
+    details++;
+    return pull({ number: 1, html_url: 'https://github.com/example/project/pull/1' });
+  });
+  await assert.rejects(new ReviewAdapter(github).find('codex/work', 'main'), /平台响应格式无效/u);
+  assert.equal(details, 0);
+});
+
+test('a failed concurrent review batch waits for its other reads before returning', async t => {
+  let finished = 0;
+  mockFetch(t, async url => {
+    if (url.includes('?')) return [{ number: 1 }, { number: 2 }, { number: 3 }];
+    const number = Number(url.split('/').at(-1));
+    if (number === 1) throw new Error('synthetic failure');
+    await new Promise(resolve => setTimeout(resolve, 10));
+    finished++;
+    return pull({ number, html_url: `https://github.com/example/project/pull/${number}` });
+  });
+  await assert.rejects(new ReviewAdapter(github).find('codex/work', 'main'), /结果未知/u);
+  assert.equal(finished, 2);
+});

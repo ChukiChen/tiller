@@ -1,12 +1,15 @@
 import { createHash, randomUUID } from 'node:crypto';
 import { lstat, mkdir, open, readFile, readdir, rename, unlink } from 'node:fs/promises';
 import path from 'node:path';
-import { checkGate } from './confirmations.js';
-import { META, requireReadyProject, sha256 } from './core.js';
+import { assertConfirmationSharing, checkGate, type ConfirmationReference } from './confirmations.js';
+import { assertSharedWritePaths } from './shared-paths.js';
+import { META, readProjectMetadata, sha256 } from './core.js';
 import { applyChanges, assertSafePath, readTextIfExists, validateRelativePath, withProjectLock } from './files.js';
-import { git } from './delivery-git.js';
+import { git, readGitFiles } from './delivery-git.js';
 import { repositoryPath } from './repository-paths.js';
 import { parseWorkRecord } from './work.js';
+import { loadWorkflowSnapshot, readWorkRecordText } from './workflow-work.js';
+import { assertWorkflowActivationCurrent } from './workflow-policy.js';
 import {
   bindingPath, gitIdentity, locateDelivery, parseDeliveryLocation,
   runWithDeliveryBinding, samePath, validateWorkId, withoutDeliveryBinding,
@@ -111,37 +114,32 @@ async function sourceState(root: string): Promise<string> {
   return sha256(await git(root, ['status', '--porcelain=v1', '-z', '--untracked-files=all']) + await git(root, ['diff', '--binary', 'HEAD', '--']));
 }
 
-async function treeEntry(root: string, base: string, filename: string): Promise<{ mode: string; oid: string } | null> {
-  const result = await git(root, ['ls-tree', '-z', base, '--', filename]);
-  if (!result) return null;
-  const match = /^(\d+) blob ([a-f0-9]+)\t([^\0]+)\0$/u.exec(result);
-  if (!match || match[3] !== filename || match[1] !== '100644') throw new Error(`交接不支持目录、子模块、链接或执行位变化：${filename}`);
-  return { mode: match[1], oid: match[2]! };
-}
-
-async function blobDigest(root: string, oid: string): Promise<string> {
-  // The helper returns UTF-8; reject lossy/binary handoff instead of silently changing bytes.
-  const content = await git(root, ['cat-file', 'blob', oid]);
+function blobDigest(bytes: Buffer): string {
+  // Reject lossy/binary handoff instead of silently changing bytes.
+  const content = bytes.toString('utf8');
   if (content.includes('\uFFFD') || content.includes('\0')) throw new Error('二进制交接暂不支持；请先形成获授权的基线提交。');
   return sha256(content);
 }
 
-async function checkDesign(root: string, id: string, requestId: string, repositories: string[]): Promise<void> {
+async function checkDesign(root: string, id: string, requestId: string, repositories: string[]): Promise<ConfirmationReference> {
   const gate = await checkGate(root, id, requestId);
-  if (gate.gate !== 'design' || !gate.confirmed) throw new Error(`设计确认未满足：${gate.issues.join('；')}`);
+  if (gate.gate !== 'design' || !gate.confirmed || !gate.decisionId) throw new Error(`设计确认未满足：${gate.issues.join('；')}`);
   const registry = JSON.parse((await readTextIfExists(root, `.tiller/work/${id}/confirmations.json`))!) as { requests: { requestId: string; scope: { repositories: string[]; targets: string[] } }[] };
   const request = registry.requests.find(item => item.requestId === requestId);
   if (!request || repositories.some(repo => !request.scope.repositories.includes(repo))) throw new Error('设计确认未覆盖准备仓库范围。');
-  const workText = await readTextIfExists(root, `.tiller/work/${id}/record.json`);
+  const workText = await readWorkRecordText(root, id);
   if (!workText) throw Object.assign(new Error('交付需要当前格式的工作登记；请先创建新工作。'), { code: 'WORK_NOT_FOUND' });
   const work = parseWorkRecord(workText, id);
+  await loadWorkflowSnapshot(root, work);
+  await assertWorkflowActivationCurrent(root, work);
   if (repositories.some(repo => !work.scope.repositories.includes(repo))) throw new Error('交付仓库超出登记工作范围。');
   const targets = work.scope.targets;
   if (!Array.isArray(targets) || !targets.length || targets.some(target => typeof target !== 'string' || !request.scope.targets.includes(target))) throw new Error('设计确认未覆盖登记工作的目标范围。');
+  return { workId: id, requestId, decisionId: gate.decisionId };
 }
 
 async function planContents(root: string, id: string, input: DeliveryPreparationInput): Promise<Omit<PreparationPlan, 'planId'>> {
-  const metadata = await requireReadyProject(root);
+  const metadata = await readProjectMetadata(root);
   if (await readTextIfExists(root, `.tiller/work/${id}/delivery.json`)) throw new Error('已有交付记录但缺少有效本机绑定；请恢复定位，不能创建第二份历史。');
   await checkDesign(root, id, input.designRequest, input.repositories.map(item => item.id));
   let managerGit = false;
@@ -182,6 +180,7 @@ async function planContents(root: string, id: string, input: DeliveryPreparation
         sourceIndex.set(match[3]!, previous);
       }
     }
+    const baseline = await readGitFiles(sourceRoot, base, (supplied.transfers ?? []).map(item => item.path), blobDigest);
     for (const transfer of supplied.transfers ?? []) {
       const indexed = sourceIndex.get(transfer.path);
       if (indexed && (indexed.length !== 1 || indexed[0] !== '100644:0')) throw new Error(`交接不支持索引冲突、执行位、子模块或链接：${transfer.path}`);
@@ -190,10 +189,9 @@ async function planContents(root: string, id: string, input: DeliveryPreparation
         throw error;
       });
       if (ignored) throw new Error(`不能交接被忽略的文件：${transfer.path}`);
-      const entry = await treeEntry(sourceRoot, base, transfer.path);
       const source = await regularBytes(sourceRoot, transfer.path);
       if (source && (source.includes(0) || !Buffer.from(source.toString('utf8'), 'utf8').equals(source))) throw new Error('二进制交接暂不支持；请先形成获授权的基线提交。');
-      const before = entry ? await blobDigest(sourceRoot, entry.oid) : null;
+      const before = baseline.get(transfer.path) ?? null;
       const after = source ? digest(source) : null;
       if ((transfer.operation === 'add' && (before !== null || after === null)) ||
           (transfer.operation === 'modify' && (before === null || after === null || before === after)) ||
@@ -220,12 +218,18 @@ async function planContents(root: string, id: string, input: DeliveryPreparation
       for (const child of Object.values(value)) collectReferences(child);
     };
     collectReferences(JSON.parse(registryText!));
+    collectReferences(parseWorkRecord((await readWorkRecordText(root, id))!, id));
+    const sources = new Map<string, string>();
     for (const filename of required) {
       const source = await regularBytes(root, filename);
       const transfer = owner.transfers.find(item => item.path === filename);
       if (transfer?.after === (source ? digest(source) : null)) continue;
-      const entry = await treeEntry(root, owner.base, filename);
-      if (!source || !entry || await blobDigest(root, entry.oid) !== digest(source)) throw new Error(`活动资料未包含在基线或交接清单中：${filename}`);
+      if (!source) throw new Error(`活动资料未包含在基线或交接清单中：${filename}`);
+      sources.set(filename, digest(source));
+    }
+    const baseline = await readGitFiles(root, owner.base, [...sources.keys()], blobDigest);
+    for (const [filename, source] of sources) {
+      if (baseline.get(filename) !== source) throw new Error(`活动资料未包含在基线或交接清单中：${filename}`);
     }
   }
   return { schemaVersion: 1, action: 'prepare', workId: id, anchorRoot: root, recordRoot, mode: metadata.mode,
@@ -267,6 +271,7 @@ async function verifyPreparedRepository(repo: RepositoryPlan): Promise<void> {
 }
 
 async function copyTransfers(repo: RepositoryPlan): Promise<void> {
+  await assertSharedWritePaths(repo.root, repo.transfers.map(transfer => transfer.path));
   for (const transfer of repo.transfers) {
     const source = await regularBytes(repo.sourceRoot, transfer.path);
     if ((source ? digest(source) : null) !== transfer.after) throw new Error(`交接来源已变化：${transfer.path}`);
@@ -286,6 +291,7 @@ async function copyTransfers(repo: RepositoryPlan): Promise<void> {
       await rename(await assertSafePath(repo.root, temporary), filename);
     }
   }
+  await assertSharedWritePaths(repo.root, repo.transfers.map(transfer => transfer.path));
 }
 
 export async function applyDeliveryPreparation(rootInput: string, id: string, value: unknown, planId: string) {
@@ -308,8 +314,9 @@ export async function applyDeliveryPreparation(rootInput: string, id: string, va
     if (storedId !== planId || sha256(JSON.stringify(contents)) !== planId || plan.inputDigest !== sha256(JSON.stringify(input)) ||
         plan.workId !== id || !await samePath(plan.anchorRoot, root)) throw new Error('准备计划、输入或工程身份不一致。');
     if (sha256((await readTextIfExists(root, META)) ?? '') !== plan.metadataDigest) throw new Error('工程元信息已变化，重新准备。');
-    const metadata = await requireReadyProject(root);
-    await checkDesign(root, id, input.designRequest, input.repositories.map(item => item.id));
+    const metadata = await readProjectMetadata(root);
+    const design = await checkDesign(root, id, input.designRequest, input.repositories.map(item => item.id));
+    await assertConfirmationSharing(root, [design]);
     const journalName = `.tiller/local/delivery/${id}/preparation.json`;
     const savedJournal = await readTextIfExists(root, journalName);
     const journal: { schemaVersion: 1; planId: string; state: string; created: string[]; creating?: string; error?: string } = savedJournal ? JSON.parse(savedJournal) : { schemaVersion: 1, planId, state: 'running', created: [] };
@@ -326,6 +333,7 @@ export async function applyDeliveryPreparation(rootInput: string, id: string, va
         const bytes = await regularBytes(repo.sourceRoot, transfer.path);
         if ((bytes ? digest(bytes) : null) !== transfer.after) throw new Error('交接来源已变化，计划过期。');
       }
+      await assertSharedWritePaths(repo.sourceRoot, repo.transfers.map(transfer => transfer.path));
     }
     await localWrite(root, journalName, journal);
     try {
@@ -357,8 +365,9 @@ export async function applyDeliveryPreparation(rootInput: string, id: string, va
       const location: DeliveryLocation = { schemaVersion: 1, anchorRoot: root, recordRoot: plan.recordRoot, workId: id,
         mode: plan.mode, state: 'active', bindings: Object.fromEntries(plan.repositories.map(repo => [repo.id, { root: repo.root, sourceRoot: repo.sourceRoot, commonDir: repo.commonDir }])) };
       await runWithDeliveryBinding(location, async () => {
-        await requireReadyProject(plan.recordRoot);
-        await checkDesign(plan.recordRoot, id, input.designRequest, input.repositories.map(item => item.id));
+        await readProjectMetadata(plan.recordRoot);
+        const currentDesign = await checkDesign(plan.recordRoot, id, input.designRequest, input.repositories.map(item => item.id));
+        await assertConfirmationSharing(plan.recordRoot, [currentDesign]);
       });
       const record: DeliveryRecord = { schemaVersion: 2, workId: id, mode: plan.mode, designRequest: input.designRequest,
         createdAt: new Date().toISOString(), repositories: plan.repositories.map(repo => ({ id: repo.id, role: repo.role, base: repo.base, branch: repo.branch, target: repo.target, ...(repo.remote ? { remote: repo.remote } : {}) })),
@@ -398,12 +407,19 @@ export async function applyDeliveryPreparation(rootInput: string, id: string, va
   });
 }
 
+/** Keep one freshly resolved delivery identity for the complete read/preview operation. */
+export async function withDeliveryContext<T>(root: string, id: string, callback: (context: DeliveryContext) => Promise<T>): Promise<T> {
+  const location = await locateDelivery(root, id);
+  if (!location) throw new Error('尚未准备隔离交付环境，或本机定位尚未恢复。');
+  return runWithDeliveryBinding(location, async () => callback(await loadDeliveryContext(location.recordRoot, id)));
+}
 export async function loadDeliveryContext(root: string, id: string): Promise<DeliveryContext> {
   const location = await locateDelivery(root, id);
   if (!location) throw new Error('尚未准备隔离交付环境，或本机定位尚未恢复。');
-  const workText = await readTextIfExists(location.recordRoot, `.tiller/work/${id}/record.json`);
+  const workText = await readWorkRecordText(location.recordRoot, id);
   if (!workText) throw Object.assign(new Error('交付需要当前格式的工作登记。'), { code: 'WORK_NOT_FOUND' });
   const work = parseWorkRecord(workText, id);
+  await loadWorkflowSnapshot(location.recordRoot, work);
   const text = await readTextIfExists(location.recordRoot, `.tiller/work/${id}/delivery.json`);
   if (!text) throw new Error('活动交付记录缺失，不能生成第二份历史。');
   const record = JSON.parse(text) as DeliveryRecord;
@@ -422,9 +438,10 @@ export async function loadDeliveryContext(root: string, id: string): Promise<Del
 /** Caller holds the anchor lock; shared record uses the existing recoverable transaction writer. */
 export async function saveDeliveryRecord(context: DeliveryContext, record: DeliveryRecord): Promise<void> {
   if (record.schemaVersion !== 2 || record.workId !== context.workId) throw new Error('交付记录身份无效。');
-  const workText = await readTextIfExists(context.recordRoot, `.tiller/work/${context.workId}/record.json`);
+  const workText = await readWorkRecordText(context.recordRoot, context.workId);
   if (!workText) throw Object.assign(new Error('交付需要当前格式的工作登记。'), { code: 'WORK_NOT_FOUND' });
   const work = parseWorkRecord(workText, context.workId);
+  await loadWorkflowSnapshot(context.recordRoot, work);
   if (record.repositories.some(repo => !work.scope.repositories.includes(repo.id))) throw new Error('交付仓库超出登记工作范围。');
   const filename = `.tiller/work/${context.workId}/delivery.json`;
   const before = await readTextIfExists(context.recordRoot, filename);

@@ -14,7 +14,7 @@ AI 能够快速生成代码，但软件开发还需要解决三个问题：
 
 ## 如何开展工作
 
-开发者提出目标和使用场景，与 AI 逐步形成需求和设计。默认先确认具体需求，再形成设计；总体设计确认后形成并确认实施规划与任务拆分，再按任务补足必要规格、实现、验证。骨架是空项目的首个普通任务，已有项目复用基础。前置任务必要验证未通过时，不进入依赖任务。交付由用户验收，发布另行确认。不同任务可精简文档和复用有效确认，但 AI 不能因为任务简单就跳过确认。文档可以独立交付，工作也可以中断后继续。
+先明确本次交付目标、影响和授权，选择对应流程并说明理由、必要阶段和完成条件。分析可以结束于有证据的结论，审查可以结束于报告，不强制产生代码、PR 或发布。功能开发及适用的变更阶段仍须有效需求、设计和规划确认，再逐任务实际开始、实现和验证；前置未验证时不能进入依赖任务。类型名称、文件数和“简单任务”都不自动减免确认或授予权限。交付事实、用户验收和发布授权分别判断。
 
 tiller 用工程文件保存这些依据：总体与模块规格持续维护，单次工作记录保存本次变化和过程。规则说明如何推进和检查，模板帮助组织产物，CLI 执行接入、记录和检查等确定性操作。
 
@@ -22,11 +22,9 @@ tiller 用工程文件保存这些依据：总体与模块规格持续维护，�
 
 ## 当前进展
 
-当前已实现工程接入、六类文档模板、同一工作逐步补充需求与设计、已有规格引用，以及确认请求、来源复核和内容失效检查。CLI 支持规划登记与激活、任务开始/验证/接续、明确验证选择、整体交付检查及有限例外消费。单仓库与独立管理支持隔离开发、授权提交与推送、MR/PR 适配、合入确认及恢复清理；自动合入的能力限制见下文。文档交付与整体验收分别记录，技术就绪不代替用户验收。
+当前支持十一类内置流程、项目声明式扩展、固定流程快照、阶段开始/验证/接续、通用输出登记、跨工作依赖及显式转换。开发阶段复用规划与任务机制，其他流程按自身条件交付。确认、验证、隔离交付和恢复继续核对实际对象及来源。
 
-0.3.4 补齐已有项目接手和项目开发规范的流程：已有项目先调查现状与验证基线，复用或补足总体规格及规范，再进入增量开发；新项目在总体设计阶段明确项目规范，骨架任务中落实必要检查。局部任务明确范围并保留必要确认。实际调查、规范编写和项目检查由执行者完成，CLI 不自动逆向业务或运行质量检查。完整开发调度、身份认证和宿主直接写入拦截尚未实现。
-
-0.3.5 将实施规划明确为总体设计与任务执行之间的环节；当前实现进一步保存 planning 确认、不可变规划修订及逐任务事件。前置未有效验证时阻断依赖任务；已开始任务的依据变化后须 resume。CLI 不自动编写代码、运行全部测试或调度下一任务，也不能认证宿主是否在受控入口之外执行过操作。旧记录保留原位并拒绝推进，不自动补造历史批准或开始事件。
+CLI 保存和检查受控事实，不自动猜测类型、认证用户身份、执行后续阶段或阻止宿主直接修改。命令成功不代表实际内容充分、全部测试通过或用户验收。完整类型、输入和只读分析链见[使用指引](resources/usage.md#独立分析示例)。
 
 ## 本地运行与安装
 
@@ -37,7 +35,7 @@ npm ci
 npm run check
 node dist/cli.js --help
 npm pack
-npm install -g ./tiller-0.4.0.tgz
+npm install -g ./tiller-0.5.0.tgz
 ```
 
 当前包尚未发布到 npm 注册表。上面的安装来自本地打包结果，不依赖注册表中同名软件。`npm run test:package` 会执行打包、隔离安装、命令入口和中文路径验证。
@@ -49,7 +47,7 @@ tiller init .
 tiller status .
 ```
 
-初始化自动提供 `.tiller/usage.md` 使用指引和 `.tiller/run.cjs` 固定入口，`AGENTS.md` 与资料索引会引导读取。0.3.2 开始，在工程根目录可直接调用：
+初始化自动提供 `.tiller/usage.md` 使用指引和 `.tiller/run.cjs` 固定入口，`AGENTS.md` 与资料索引会引导读取。在工程根目录可直接调用：
 
 ```sh
 node .tiller/run.cjs --help
@@ -57,7 +55,7 @@ node .tiller/run.cjs runtime status
 node .tiller/run.cjs status
 ```
 
-启动器使用本工程安装或本机登记，并在已验证的 Git worktree 中复用同仓库的可用安装。CLI 初始化和升级应用后登记当前实际 CLI；更换安装后可用已知 CLI 执行 `runtime bind --path <工程目录>`。安装路径只保存在 `.tiller/local/runtime.json`；指引与启动器随仓库共享，换机器后按指引恢复安装，不隐式联网下载。旧工程须使用新 CLI 显式升级才能取得固定入口。
+启动器使用本工程安装或本机登记，并在已验证的 Git worktree 中复用同仓库的可用安装。CLI 初始化和升级应用后登记当前实际 CLI；更换安装后可用已知 CLI 执行 `runtime bind --path <工程目录>`。安装路径只保存在 `.tiller/local/runtime.json`；指引与启动器随仓库共享，换机器后按指引恢复安装，不隐式联网下载。当前仅接受明确的 0.5.0 程序与资源运行契约；旧工程保留原件，不自动升级或改版本号接续。
 
 独立管理工程中的业务仓库须已存在，推荐集中放在 `repositories/` 下：
 
@@ -75,234 +73,45 @@ tiller init ./management-project --mode workspace --repo repositories/service-a 
 
 命令接入通用 `AGENTS.md` 区段、规则、资料索引及版本信息，保留既有入口、规格和项目规则；不会克隆、移动或修改业务仓库。缺少实际内容的资料目录按需创建。重复接入须使用同一模式与仓库范围。
 
-0.3.1 将仓库标识与存放路径分开：上述工程登记 `service-a`、`service-b`，其 `repositoryPaths` 分别指向 `repositories/service-a`、`repositories/service-b`。工作范围、文档引用与交付输入继续使用标识 `service-a`，不要填整个目录路径。管理仓库忽略 `/repositories/`，业务仓库各自独立提交。
+仓库标识与存放路径分开：上述工程登记 `service-a`、`service-b`，其 `repositoryPaths` 分别指向 `repositories/service-a`、`repositories/service-b`。工作范围、文档引用与交付输入继续使用标识 `service-a`，不要填整个目录路径。管理仓库忽略 `/repositories/`，业务仓库各自独立提交。
 
-简写 `--repo service-a` 支持约定分组目录，只有旧直接子目录存在时兼容该位置；两处同时存在时须明确选择 `repositories/service-a` 或 `./service-a`。旧工程通过 `upgrade --plan` / `--apply` 升级时保留原路径，不自动移动仓库或改写历史引用。不支持任意多层路径或越界定位。
+当前契约支持明确登记的直接子目录和分组目录两种布局。简写 `--repo service-a` 在两处同时存在时须明确选择 `repositories/service-a` 或 `./service-a`；已初始化工程不静默改映射或移动仓库。不支持任意多层路径或越界定位。
 
-通用入口的维护来源是 `resources/entry.md`；tiller 自身和新工程均安装这份内容。目标工程已有 `AGENTS.md` 时保留自定义正文，只追加或显式升级 tiller 标记区段。详细资料维护规则通过入口链接到 `.tiller/rules/`，不另外维护一份通用正文。
+通用入口的维护来源是 `resources/entry.md`；tiller 自身和新工程均安装这份内容。目标工程已有 `AGENTS.md` 时保留自定义正文，按当前契约接入 tiller 标记区段，冲突时保留原文并拒绝覆盖。详细资料维护规则通过入口链接到 `.tiller/rules/`，不另外维护一份通用正文。
 
 索引的固定导航区段、入口中的 tiller 区段以及通用规则有内容依据；区段外的项目资料与索引链接可正常维护。修改受管内容或遇到不支持的版本时，CLI 保留现状并报告冲突，不自动升级。项目专属规则放在 `.tiller/rules/project.md` 等独立文件中。
 
 写入中断后执行 `tiller recover <path>`，命令先核对全部文件，再恢复尚未发生后续编辑的事务。存在冲突时保留文件和本机恢复记录；本机记录不替代共享工作进展。
 
-上述已支持的旧版工程保持只读兼容，重复 `init` 不会升级。使用目标版本的 CLI 先预览资源差异，处理冲突后，用返回的计划标识执行：
+当前程序与资源契约为 0.5.0，正式发布前不提供旧版成功解析、接续或自动迁移。旧/未知格式明确拒绝，用户文件原样保留。upgrade 仅提供当前资源无变更检查；不修复冲突或改写历史。具体安装恢复及版本边界见[使用指引](resources/usage.md#更新)。
 
-```sh
-tiller upgrade . --plan
-tiller upgrade . --apply <plan-id>
-```
+## 工作、阶段与产物
 
-计划绑定预览时的实际内容，内容变化后必须重新预览。用户修改过的受管资源保留并报告冲突，区段外内容、自定义规则、历史工作和业务源码不会被升级覆盖。旧的完成记录不转换为人工批准。
+新工作明确选择 workflow，登记目标、理由、范围、影响、依据、动作来源、预期输出和完成条件；未知影响不自动当作低风险。work.md 保存过程，产物按固定图创建或引用；六类需求/设计模板只影响文档骨架。现有工作先检查当前事实再接续，不补造批准或开始事件。
 
-## 文档工作
+[使用指引](resources/usage.md#独立分析示例)集中维护完整 JSON 和命令示例，展示 analysis 从 scope 到 report 的真实观察及整体回执链。其他流程先读取其定义与适用规则，不为满足不适用门槛制造需求、设计或 tasks.json。单纯登记产物不能完成阶段。
 
-新工作目录推荐 `YYYYMMDD-主题`，日期取创建日，例如 `20261015-student-service`。主题使用简短的小写英文和连字符；同日多个工作用不同主题或后缀区分。接续不更新日期，已有无日期目录继续兼容。CLI 按传入的完整标识创建，不自动补日期或重命名。
+项目扩展和工作转换须预览实际差异，必要时取得精确范围/政策变更批准；跨工作关联绑定生产者的当前阶段与产物。分析完成不授权修复，审查报告不等于验收，流程转换不继承旧代际的执行许可。详见[扩展、关联与显式转换](resources/usage.md#扩展关联与显式转换)。
 
-```sh
-tiller work create 20261015-product-outline --title "产品总体需求" --type product-requirements
-tiller work resume 20261015-product-outline
-tiller work check 20261015-product-outline
-```
+## 确认、开发任务与交付
 
-先编写草稿、更新 `work.md` 并保存实际评审依据，再展示给用户。支持总体、模块和变更三级的需求及设计，共六类模板；准确类型见 `tiller --help`。可用 `--path <root>` 指定工程，各命令支持 `--json`。创建设计模板还需 `--requirements-work <id> --requirements-request <request-id>` 指向有效需求确认；需求变化后该设计工作会提示复核。
+确认必须对应真实用户决定、当前内容和范围，包含当前流程/意图绑定及适用阶段；来源文件和复核记录不能认证身份。需求、设计、planning、scope、operation、checkpoint、exception、acceptance、merge、release 各有具体语义，不能互相代替。展示内容之后再记录实际决定，不能用沉默、AI 自述或历史文件存在代替批准。详见[人工确认](resources/usage.md#请求与记录人工确认)。
 
-工作目录内 `work.md` 是过程入口，`requirements.md`、`design.md` 按需生成，`record.json` 由命令维护。`README.md` 可作辅助说明，不能替代这些文件；简单工作可以合并计划、进度和检查摘要，需求与设计仍分别维护。每项工作管理一个主需求和一个主设计，涉及多个模块时通过主文档引用模块规格。
+开发阶段在真实前置阶段及规划确认/激活后，明确委托当前规划中的任务。task start/resume 建立实际开始依据；验证 capture/run 绑定 stageId 和 taskId，任务证据不能冒充阶段证据。task verify 不自动完成外层阶段。无依赖且仍有效的任务证据可按当前范围和权限核对后保留；授权撤销、代际变化和任务移阶段须重新核对。完整边界见[规划、任务与整体交付](resources/usage.md#规划任务与整体交付)。
 
-需求确认后，在原工作补充设计，无需再次 create：
+工作 revision、阶段 expectedStageRevision、任务 revision 各自独立；delivery-ready 与流程转换使用真实控制快照 expected。预览不产生许可，应用使用同一输入及实际 planId，变化后重新预览；历史回执只证明当时操作。分别报告 technicalReady、operationAllowed、processEvidence 和 acceptance；明确例外不改写技术失败，也不传递为合入或发布许可。
 
-```sh
-tiller work add 20261015-product-outline --type product-design --requirements-request requirements-1
-```
+代码交付保留仓库身份、隔离目录、精确文件清单、真实授权、源/目标 OID、资料版本和恢复保护。commit/push/review 可在具体持续授权内用于进行中工作；实际合入与发布各需具体对象的确认。当前适配缺少源与目标双重原子校验，自动合入仍明确拒绝。结果未知先 reconcile，多仓库部分成功不自动回滚；清理前保存唯一成果和记录，分别核对副本及分支删除授权。输入和限制集中见[隔离开发与评审交付](resources/usage.md#隔离开发与评审交付)。
 
-已有需求或设计可通过 `create --input` 或 `add --input` 登记引用，保留源文件。输入示例：
-
-```json
-{
-  "type": "product-requirements",
-  "scope": { "repositories": ["."], "targets": ["20261015-product-outline"] },
-  "source": { "repository": ".", "path": ".tiller/specs/requirements.md" }
-}
-```
-
-省略 `source` 则按模板生成文档，可用此方式指定非默认范围；`--input` 与 `--type` 及命令行需求依据参数互斥。设计输入还需 `requirementsBasis: {workId, requestId}`。同一工作补充产物不能改变既定范围，也不能把同一混合文件登记为需求与设计。确认必须覆盖相应需求对象、当前内容及工作范围；范围标签匹配不替代业务语义复核。
-
-草稿形成长期规格时仍需协调单一来源，没有自动提升或移动正文的命令。新会话从工程入口读取规则和记录，用 `resume` 核对全部已登记产物、缺口和确认状态。
-
-`check` 的 `ready` 表示文档结构与相关记录检查结果，不表示用户批准。`resume` 同时呈现确认节点与失效原因；旧格式记录明确拒绝推进，不作为当前已验收依据。
-
-## 检查与接入已有工作
-
-```sh
-tiller work inspect --all
-tiller work inspect 20261015-product-outline
-```
-
-检查不要求先有机器登记；会区分缺少工作入口、未登记、不支持的旧格式和已登记文件丢失。额外 README 可以保留，尚未登记或要求的未来设计不会被当作缺失。检查只读，不自动重命名或推断历史批准。
-
-当前不提供 `work adopt` 或记录迁移入口。旧工作和确认原件保持原位；用新的工作标识 `work create`，通过 `source` 明确引用仍适用的需求或设计，再按当前对象重新核对确认。混合文档先整理角色，不由命令推断拆分。工程资源 `upgrade` 不改写旧工作记录。
-
-接入的历史设计缺少当前有效需求依据时，先取得真实需求确认，再显式关联：
-
-```sh
-tiller work bind 20261015-product-outline --artifact design --requirements-work 20261015-product-outline --requirements-request requirements-1
-```
-
-关联保留历史，不改正文或倒推批准；采用该设计进入实现仍需对应设计确认。
-
-## 请求与记录人工确认
-
-复杂输入保存在工程内 JSON 文件中，使用 `--input` 读取。下例是需求确认请求，可保存为 `.tiller/work/20261015-product-outline/request.json`：
-
-```json
-{
-  "requestId": "requirements-1",
-  "gate": "requirements",
-  "scope": { "repositories": ["."], "targets": ["20261015-product-outline"] },
-  "subjects": [{ "repository": ".", "path": ".tiller/work/20261015-product-outline/requirements.md" }],
-  "upstream": [],
-  "reviewSummary": "请确认本次产品目标、范围、核心行为和验收条件。",
-  "openIssues": [],
-  "nextAction": "形成对应的总体设计"
-}
-```
-
-```sh
-tiller work request-confirmation 20261015-product-outline --input .tiller/work/20261015-product-outline/request.json
-tiller work check-gate 20261015-product-outline --request requirements-1
-```
-
-请求保存内容快照并返回 `presentation` 审阅文件。展示该文件及其对应正文后等待用户决定；存在关键未决项时应先解决，不为了通过而把 `openIssues` 填为空。节点包括 `requirements`、`design`、`planning`、`checkpoint`、`exception`、`acceptance`、`merge`、`release`。设计引用需求，planning 引用设计，checkpoint 引用 planning，exception 引用设计；发布须引用同一整体交付对象的验收。`upstream` 填请求标识，任务/规划中的确认引用则包含 `workId/requestId/decisionId`。独立管理的业务文件使用稳定仓库标识，不能借管理根身份绕过共享检查。
-
-用户实际作出决定后，保存必要的原话和展示依据，再记录决定。以下字段示意须用真实内容填写，不能直接作为批准依据：
-
-```json
-{
-  "decisionId": "requirements-decision-1",
-  "requestId": "requirements-1",
-  "outcome": "approved",
-  "conditions": [],
-  "source": {
-    "kind": "conversation",
-    "reference": { "repository": ".", "path": ".tiller/work/20261015-product-outline/user-decision.md" },
-    "quote": "这里填写用户实际作出的决定原话",
-    "presentation": { "repository": ".", "path": ".tiller/work/20261015-product-outline/reviews/request-requirements-1/presentation.md" }
-  },
-  "sourceReview": {
-    "reviewer": "实际核对者",
-    "rationale": "说明如何核对真实用户输入与本次展示内容及范围",
-    "reviewedAt": "2026-10-15T00:00:00.000Z"
-  }
-}
-```
-
-```sh
-tiller work record-decision 20261015-product-outline --input .tiller/work/20261015-product-outline/decision.json
-tiller work check-gate 20261015-product-outline --request requirements-1
-```
-
-时间同样填写实际 UTC 时间。支持批准、拒绝、有条件决定和撤销：`approved`、`rejected`、`conditional`、`revoked`。有条件决定保留条件并等待核对；不能自动把条件字符串视为已满足。缺少实际来源复核时可以保存待核对记录，但节点不会通过。源文件、展示内容、产物或上游发生变化后重新检查，保留原请求与决定，不覆盖历史。
-
-交付时另建 `acceptance` 请求，其审阅对象必须包含实际文档和评审依据。用户验收及来源复核完成后才能执行：
-
-```sh
-tiller work complete 20261015-product-outline --artifact requirements --evidence .tiller/work/20261015-product-outline/review.md --acceptance acceptance-1
-```
-
-多产物工作必须用 `--artifact requirements|design` 明确完成对象；单文档交付不表示整项开发完成。接受草稿交付不等于确认需求内容；需求批准也不能代替交付验收。确认记录标明 `reported-review` 和来源未独立认证，`automaticTransition` 始终为 `false`。CLI 能检查记录、内容与引用，并拒绝自身入口中缺少前置条件的操作；它不能证明记录者是人，也不能阻止 AI 绕过 CLI 直接写代码。跨工具接续仍需核对真实用户来源。
-
-## 隔离开发与评审交付
-
-0.3.0 增加 `work prepare`、`commit`、`push`、`review`、`merge`、`reconcile`、`cleanup` 和 `delivery-status`。写操作先生成计划，再携带相同输入应用计划；计划过期或范围、授权发生变化时拒绝执行。需求与设计须先有对应有效确认，不能用创建环境替代确认。
-
-单仓库的活动目录是 `.tiller/local/worktrees/<work-id>/`，资料和代码随本仓库分支维护。独立管理在同一工作目录下分别使用 `management/` 与 `repositories/<repository-id>/`，共同记录只维护一份，各业务仓库分别提交和评审；没有 Git 的管理根继续保存共同资料并以内容摘要标识版本。独立管理只涉及一个业务仓库时也不切换模式。
-
-例如，在已确认设计且存在 `main` 基线的工程中保存准备输入：
-
-```json
-{
-  "schemaVersion": 1,
-  "designRequest": "design-1",
-  "repositories": [
-    {
-      "id": ".",
-      "base": "main",
-      "branch": "codex/20261015-student-service",
-      "target": "main",
-      "remote": "origin",
-      "transfers": []
-    }
-  ]
-}
-```
-
-`base` 和 `target` 必须实际存在并符合本次范围。未提交的必要资料逐文件加入 `transfers`，条目为 `{"path":"相对路径","operation":"add|modify|delete"}`，重命名用删除及新增表达；不自动复制全部未跟踪文件。尚无基线提交时须先明确基线，不自动提交。独立管理的 Git 管理仓库使用 `id: "."`，业务仓库使用初始化登记的名字，分别列出自己的基线与分支。
-
-```sh
-tiller work prepare 20261015-student-service --input .tiller/local/prepare.json --plan
-tiller work prepare 20261015-student-service --input .tiller/local/prepare.json --apply <plan-id>
-tiller work delivery-status 20261015-student-service
-```
-
-从主目录或活动 checkout 接续时，命令按工作绑定定位共同记录。`--input` 相对 `--path`，未指定时相对当前目录；不要把本机绑定或凭据提交到仓库。状态返回活动位置、仓库状态和当前资料摘要，不代表用户已验收。
-
-提交输入包含精确文件清单和授权来源，例如：
-
-```json
-{
-  "schemaVersion": 1,
-  "repository": ".",
-  "files": ["src/student.ts"],
-  "message": "Keep student identifiers unique\n\nTested: student service checks",
-  "authorization": {
-    "actions": ["commit"],
-    "repository": ".",
-    "branch": "codex/20261015-student-service",
-    "target": "main",
-    "source": {
-      "path": ".tiller/work/20261015-student-service/git-authorization.md",
-      "quote": "用户实际授权的原话"
-    },
-    "sourceReview": {
-      "reviewer": "实际复核者",
-      "rationale": "原话与当前仓库、分支和动作范围的对应依据",
-      "reviewedAt": "2026-10-15T00:00:00.000Z"
-    }
-  }
-}
-```
-
-该例仅说明输入格式，不能作为授权。来源需由执行者根据真实决定记录；CLI 只检查记录和内容，不认证人类身份。推送另需 `remote`、完整 `oid` 及匹配远端的授权；不默认强推。各动作共用 `--input --plan` / `--input --apply <plan-id>` 调用方式。
-
-评审输入包含 `operation`（create/update/attach）、`remote`、`provider`、当前 `documentsVersion`；创建时还需 `title`、`body`，更新或接入时需 `reviewId`。`documentsVersion` 使用 delivery-status 返回的 `documents.version`。平台配置示例为 `{"kind":"github","apiUrl":"https://api.github.com","project":"owner/repository","tokenEnv":"GITHUB_TOKEN"}`；GitLab 使用对应 API 地址及项目路径。令牌从指定环境变量读取，不写入共享资料或输入 JSON。
-
-合入请求使用 `gate: "merge"`，引用有效设计并提供 `mergeBinding`，逐仓库绑定评审对象、源和目标 OID、目标分支、依赖、检查证据及资料版本。`merge` 与验收、发布分别判断；平台创建 MR 或测试通过不表示合入获准。内置 GitHub/GitLab 适配当前不提供源与目标双重原子校验，因此自动合入明确拒绝；按平台保护及实际人工确认完成后，通过 `reconcile` 核对事实，不能把查询成功冒充获授权合入。
-
-结果未知时保留操作标识，使用 reconcile 先核对；不要重新创建评审或重放推送。清理须先归档共享资料、核对未保存成果并分别授权移除副本和删除分支；本地清理不默认删除远端对象。
-
-机器记录严格接受当前格式：工作记录与确认记录为版本 3，验证运行与 Git 交付记录为版本 2，规划/任务及整体就绪回执为版本 1。未知版本或字段拒绝，不按缺省值补历史。上述版本指 CLI 维护的记录，不要求给每个命令输入添加 `schemaVersion`；例如规划注册输入没有该字段，内部 `plan` 才有。旧确认不迁移，也不把历史验收变成合入批准。
-
-## 规划、任务与整体交付
-
-```sh
-node .tiller/run.cjs work plan register <work-id> --input registration.json --plan
-node .tiller/run.cjs work plan register <work-id> --input registration.json --apply <plan-id>
-node .tiller/run.cjs work plan activate <work-id> --input activation.json --plan
-node .tiller/run.cjs work plan activate <work-id> --input activation.json --apply <plan-id>
-node .tiller/run.cjs work task status <work-id>
-node .tiller/run.cjs work task start <work-id> --task <task-id> --input operation.json --plan
-node .tiller/run.cjs work task verify <work-id> --task <task-id> --input verification.json --plan
-node .tiller/run.cjs work task resume <work-id> --task <task-id> --input operation.json --plan
-node .tiller/run.cjs work delivery-check <work-id> --input references.json
-node .tiller/run.cjs work delivery-ready <work-id> --input ready.json --plan
-```
-
-写操作在核对预览后，用相同输入和 `--apply <plan-id>` 应用。`operationId` 在同一工作内唯一，`expectedRevision` 取当前状态；verify 还必须引用实际 start/resume 返回的 `attemptId`。登记规划不等于批准，激活需当前 planning 确认。task verify 和 delivery-check 只核对已有产物与证据，不执行测试；delivery-ready 保存不可变回执，不自动验收。
-
-字段、可解析的组装示例、检查点摘要和例外约束见[使用指引](resources/usage.md#规划任务与整体交付)。`technicalReady` 表示当前技术条件；`operationAllowed` 可以受明确例外影响。例外不会抹去失败或写成普通 verified，也不会自动传给依赖、合入或发布。历史回执返回 `historical: true`、`currentValidity: not-evaluated`，须重新检查当前有效性。验收/发布用 `deliveryBinding` 绑定具体整体回执及技术摘要；合入在 `mergeBinding` 内绑定，并继续核对 Git 对象和独立授权。
+交付预览按动作声明读取范围：commit 核对明确选中文件的正文，push/review/merge 核对不可变提交与实际批准资料；仓库身份、完整索引和工作目录状态均参与检查。cleanup 与 reconcile 保留完整文件正文核验，以检查需要保全的本地成果。
 
 ## 实现与验证范围
 
-源码在 `src/`，通用规则及模板在 `resources/`，测试在 `test/`。没有第三方运行时库，不调用模型、不自动发布。当前实测平台为 Windows；macOS、Linux 尚未实测。工程资源可从已知 0.1.0、0.2.0、0.2.1、0.2.2、0.3.0 至 0.3.6 版本显式升级到 0.4.0；这是资源升级，不是工作记录迁移。尚未实现任意历史格式转换、远程仓库获取、模式切换或自动业务任务调度。
+源码在 src，资源在 resources，测试在 test。没有第三方运行时库，不调用模型、不自动发布。当前实测平台为 Windows；macOS、Linux 尚未实测。远程仓库获取、工程管理模式切换和自动业务任务调度不属于当前能力。程序/资源 0.5.0、工作/确认 schema 4、整体就绪回执 2 等协议分别判断，详见[严格记录格式](resources/usage.md#严格记录格式与接续)。
+
+开发时按改动边界选择验证入口：`npm run test:rules` 验证纯规则，`npm run test:contracts` 验证真实读取与提交边界，`npm run test:integration` 验证模块接通，`npm run test:e2e` 验证完整流程与 CLI。`npm test` 构建一次后运行全部测试，保持文件级并发 2，并输出实际并发度，性能对照不增加并发；每个测试文件使用独立进程和临时资料。`test/suites.json` 要求每个测试文件恰好归属一层，新增或遗漏文件会使入口失败。完整回归包含所有层，不用局部结果代替整体检查；发布包另执行 `npm run test:package`。
+
+长期验证按模块、跨模块场景和系统质量组织，测试代码沿用项目框架。九类适用性须有实际依据；执行命令须核对环境和副作用授权。run 输入绑定当前 workflow，人工观察先 capture 再实际检查及 record；程序退出成功不自动表示逐用例通过。证据变化后重核，不能用最终组合测试补造历史放行。配置、选择和命令格式见[测试与验证](resources/usage.md#测试与验证)。
 
 ## 工程文档
 
@@ -318,21 +127,3 @@ node .tiller/run.cjs work delivery-ready <work-id> --input ready.json --plan
 - [开发规范需求](.tiller/specs/modules/standards/requirements.md)
 - [开发规范设计](.tiller/specs/modules/standards/design.md)
 - [首个交付工作及验证](.tiller/work/initial-delivery/work.md)
-
-## 长期测试用例与验证证据
-
-长期用例按 `.tiller/verification/modules/<模块>/<类别>.yaml` 维护，跨模块用例放在 `cross-module/<场景>.yaml`，系统质量用例放在 `system/<专题>.yaml`。模块沿用设计职责，测试代码保留项目语言和原有目录；单元、接口、集成、场景、性能、安全、可靠性、兼容性及易用性分别声明适用范围。
-
-```sh
-node .tiller/run.cjs verification init
-node .tiller/run.cjs verification check
-node .tiller/run.cjs verification run <work-id> --suite <suite-id> --plan
-node .tiller/run.cjs verification run <work-id> --suite <suite-id> --apply <plan-id>
-node .tiller/run.cjs verification capture <work-id> --input observation.json
-node .tiller/run.cjs verification record <work-id> --input <result.json>
-node .tiller/run.cjs verification report <work-id>
-```
-
-`verification init` 按需建立入口和配置，九类默认待明确，不生成业务用例或通过记录。格式、配置示例与操作说明见[使用指引](resources/usage.md)。用例采用受限声明式 YAML，不支持完整 YAML 或脚本执行；复杂测试由既有测试代码实现。
-
-`check` 检查格式、引用与关联，不证明测试充分或实际通过。run/report 可用 `--input` 传入 `{selection}`。`run` 计划明确程序、参数和受检对象；套件退出零不自动变成每条用例通过。人工观察先 `capture` 绑定 `{selection, environment}`，实际观察后 `record` 引用返回的 `captureId`；运行后的逐用例声明可引用实际 run 记录 ID。不能观察后采集当前版本冒充过去证据，也不能手填 execution 检查通过。`report` 使用最新相关尝试并检查证据、定义及完整产物快照，不替代验收或真实 AI 行为评测。未声明依赖和外部环境仍需人工核对。

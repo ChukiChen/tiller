@@ -2,29 +2,24 @@ import assert from 'node:assert/strict';
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import test from 'node:test';
-import { cli, confirmFixture, failure, fixture, put, snapshot, success } from './helpers.mjs';
+import { createWorkflowFixtureAt } from './workflow-fixtures.mjs';
+import { cli, failure, fixture, put, snapshot, success } from './helpers.mjs';
 
-test('CLI creates references and adds design to the same work only after matching confirmation', (t) => {
-  const root = fixture(t);
-  success(cli(root, 'init'));
-  const id = '20261015-outline';
-  const source = '.tiller/specs/requirements.md';
-  put(root, source, '# Requirements\nStore local notes and search by exact title.\n');
-  put(root, 'artifact.json', JSON.stringify({ type: 'product-requirements', source: { repository: '.', path: source } }));
-  success(cli(root, 'work', 'create', id, '--title', 'Notes', '--input', 'artifact.json'));
-  assert.equal(existsSync(join(root, `.tiller/work/${id}/requirements.md`)), false);
+test('CLI adds referenced outputs without copying sources and preserves revision/idempotency', async t => {
+  const root = fixture(t); success(cli(root, 'init'));
+  const id = '20261015-outline'; await createWorkflowFixtureAt(root, id);
+  const source = '.tiller/specs/scope.md';
+  put(root, source, '# Scope\nInspect local notes and report the observed result.\n');
+  put(root, 'artifact.json', JSON.stringify({ operationId: 'scope-output', expectedRevision: 1, outputId: 'scope-output', source: { repository: '.', path: source } }));
+  success(cli(root, 'work', 'add', id, '--input', 'artifact.json'));
+  assert.equal(existsSync(join(root, `.tiller/work/${id}/scope-output.md`)), false);
+  assert.equal(success(cli(root, 'work', 'add', id, '--input', 'artifact.json')).changed, false);
   const before = snapshot(root);
-  failure(cli(root, 'work', 'add', id, '--type', 'product-design', '--requirements-request', 'req-1'));
-  assert.deepEqual(snapshot(root), before);
-  confirmFixture(root, id, [source], 'req-1', 'requirements');
-  success(cli(root, 'work', 'add', id, '--type', 'product-design', '--requirements-request', 'req-1'));
-  assert.equal(success(cli(root, 'work', 'add', id, '--type', 'product-design', '--requirements-request', 'req-1')).changed, false);
   const resumed = success(cli(root, 'work', 'resume', id));
-  assert.deepEqual(Object.keys(resumed.artifacts).sort(), ['design', 'requirements']);
+  assert.ok(resumed.artifacts['scope-output']);
   success(cli(root, 'work', 'inspect', '--all'));
-  const stable = snapshot(root);
-  assert.equal(failure(cli(root, 'work', 'complete', id, '--evidence', 'review.md')).error.code, 'ARTIFACT_REQUIRED');
-  assert.deepEqual(snapshot(root), stable);
+  assert.equal(failure(cli(root, 'work', 'complete', id)).error.code, 'INVALID_ARGUMENT');
+  assert.deepEqual(snapshot(root), before);
 });
 
 test('CLI rejects removed adoption and migration commands without modifying old files', t => {
@@ -38,7 +33,7 @@ test('CLI rejects removed adoption and migration commands without modifying old 
   }
   const inspected = failure(cli(root, 'work', 'inspect', id));
   assert.equal(inspected.works[0].registration, 'unsupported');
-  assert.match(inspected.issues.join(' '), /版本 2.*版本 3/);
+  assert.match(inspected.issues.join(' '), /版本 2.*版本 4/);
   assert.equal(failure(cli(root, 'work', 'resume', id)).error.code, 'UNSUPPORTED_RECORD_VERSION');
   assert.deepEqual(snapshot(root), before);
 });

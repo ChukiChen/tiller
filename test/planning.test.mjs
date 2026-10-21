@@ -1,13 +1,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { parsePlanningDefinition, planPlanningRegistration, applyPlanningRegistration, planPlanningActivation, applyPlanningActivation, loadActivePlanning, loadPlanningState, readRegisteredPlanning, parsePlanningState } from '../dist/planning.js';
 import { requestConfirmation, readConfirmation } from '../dist/confirmations.js';
 import { planDeliveryPreparation, applyDeliveryPreparation } from '../dist/delivery-environment.js';
 import { git } from '../dist/delivery-git.js';
-import { createWork } from '../dist/work.js';
-import { setupPlanning, fixtureDecision, documentSelection } from './planning-helpers.mjs';
+import { setupPlanning, fixtureDecision, documentSelection, seedApprovedDevelopment, registerDevelopmentOutputs } from './planning-helpers.mjs';
 import { put } from './helpers.mjs';
 
 const copy = value => JSON.parse(JSON.stringify(value));
@@ -23,8 +22,26 @@ async function activate(context, revision = 'v-one', requestId = 'planning-one',
   return { input, preview, receipt: await applyPlanningActivation(context.root, context.workId, input, preview.planId) };
 }
 
+test('bounded manual preparation copies preserve historical bytes and isolate later mutations', async t => {
+  const first = await setupPlanning(t);
+  const second = await setupPlanning(t);
+  assert.notEqual(first.root, second.root);
+  for (const name of ['record.json', 'stages/state.json', 'confirmations.json']) {
+    assert.equal(readFileSync(file(first.root, first.workId, name), 'utf8'), readFileSync(file(second.root, second.workId, name), 'utf8'));
+  }
+  const firstSource = join(first.root, first.requirements.path);
+  const secondSource = join(second.root, second.requirements.path);
+  assert.ok(Math.abs(statSync(firstSource).mtimeMs - statSync(secondSource).mtimeMs) < 2);
+  const original = readFileSync(secondSource, 'utf8');
+  put(first.root, first.requirements.path, '# Changed only in the first independent fixture\n');
+  assert.equal(readFileSync(secondSource, 'utf8'), original);
+  assert.equal(existsSync(file(second.root, second.workId, 'tasks.json')), false);
+  assert.equal(existsSync(join(second.root, '.tiller/local/lock.json')), false);
+  assert.equal(existsSync(join(second.root, '.git')), false);
+});
+
 test('planning validates graph, coverage, safe scopes, explicit checks and strict structures', async t => {
-  const context = await setupPlanning(t); const original = context.plan;
+  const context = await setupPlanning(t, { reuseSeed: true }); const original = context.plan;
   const mutations = [
     plan => { plan.extra = true; },
     plan => { plan.schemaVersion = 2; },
@@ -81,8 +98,10 @@ test('registration is immutable and activation requires the exact reviewed plan 
   await assert.rejects(planPlanningRegistration(root, workId, { ...context.registration, operationId: 'register-again', expectedRevision: 1 }), { code: 'REVISION_EXISTS' });
   const activation = { operationId: 'activate-v-one', expectedRevision: 1, revision: 'v-one', confirmation: { workId, requestId: 'missing', decisionId: 'missing' } };
   await assert.rejects(planPlanningActivation(root, workId, activation), /请求不存在/u);
+  put(root, context.outputSources['planning-output'].path, '# 规划审阅\n\n已登记当前版本的任务边界。\n');
+  await registerDevelopmentOutputs(context, 'planning');
   await requestConfirmation(root, workId, {
-    requestId: 'incomplete-planning', gate: 'planning', scope: context.plan.scope, subjects: [{ repository: '.', path: saved.definitionPath }], upstream: ['design'],
+    workflowBinding: await context.binding('planning'), requestId: 'incomplete-planning', gate: 'planning', scope: context.plan.scope, subjects: [context.outputSources['planning-output'], { repository: '.', path: saved.definitionPath }], upstream: ['design'],
     reviewSummary: '此测试故意漏掉规格和审阅视图。', openIssues: [], nextAction: '激活当前规划',
   });
   await fixtureDecision(root, workId, 'incomplete-planning', 'approve-incomplete');
@@ -228,9 +247,8 @@ test('optional planning artifacts may omit checks but declared checks remain exp
 test('cross-work task specification confirmation uses explicit current identity and does not authorize a broader scope', async t => {
   const context = await setupPlanning(t); const { root, workId, plan } = context;
   const sourceWork = 'source-specification'; const source = plan.requirements[0].source;
-  await createWork(root, sourceWork, '共享需求依据', { type: 'change-requirements', source, scope: plan.scope });
-  await requestConfirmation(root, sourceWork, { requestId: 'shared-requirements', gate: 'requirements', scope: plan.scope, subjects: [source], upstream: [], reviewSummary: '明确复用共享需求正文和同一范围。', openIssues: [], nextAction: '按需求进行设计' });
-  await fixtureDecision(root, sourceWork, 'shared-requirements', 'approve-shared');
+  await seedApprovedDevelopment(root, sourceWork, { scope: plan.scope, requirementsSource: source,
+    requirementsText: readFileSync(join(root, source.path), 'utf8'), requirementsRequestId: 'shared-requirements', requirementsDecisionId: 'approve-shared' });
   plan.tasks[0].basis.requirements = { workId: sourceWork, requestId: 'shared-requirements', decisionId: 'approve-shared' };
   plan.tasks[0].relatedWorks = [sourceWork];
   const preview = await planPlanningRegistration(root, workId, context.registration);
@@ -245,7 +263,7 @@ test('cross-work task specification confirmation uses explicit current identity 
 });
 
 test('accumulated specification paths reject case aliases before writing immutable records', async t => {
-  const context = await setupPlanning(t);
+  const context = await setupPlanning(t, { reuseSeed: true });
   const task = context.plan.tasks[0];
   task.basis = { ...task.basis, design: null }; task.pendingDetails = ['详细设计待补充。'];
   task.specifications.standards[0].path = task.specifications.standards[0].path.replace('standard.md', 'STANDARD.md');
@@ -258,27 +276,26 @@ test('cross-work approval cannot approve different bytes at the same repository 
   const context = await setupPlanning(t, { mode: 'workspace', repository: 'business' });
   const { root, workId, plan } = context; const sourceWork = 'isolated-specification';
   const business = join(root, 'business'); const source = { repository: 'business', path: 'shared-requirements.md' };
+  const approvedRequirements = '# 来源工作已确认的需求正文\n\nREQ-1：读者按照已核对的操作说明读取输入、执行步骤，并核对本次输出。\n';
+  const differentRequirements = '# 当前工作中同名但不同的未确认正文\n\nREQ-1：读者必须额外检查另一项输出；该新增要求未包含在来源工作的确认中。\n';
   await git(business, ['config', 'core.autocrlf', 'false']);
-  put(business, source.path, '# 来源工作已确认的需求正文\n');
+  put(business, source.path, approvedRequirements);
   await git(business, ['checkout', '-b', 'main']);
   await git(business, ['add', '--all']);
   await git(business, ['-c', 'user.name=Synthetic', '-c', 'user.email=test@example.invalid', 'commit', '-m', 'Synthetic isolated specification baseline']);
-  await createWork(root, sourceWork, '隔离的规格来源', { type: 'change-requirements', source, scope: plan.scope });
-  const request = { scope: plan.scope, reviewSummary: '仅供隔离测试：确认具体正文。', openIssues: [], nextAction: '继续对应范围。' };
-  await requestConfirmation(root, sourceWork, { ...request, requestId: 'requirements', gate: 'requirements', subjects: [source], upstream: [] });
-  await fixtureDecision(root, sourceWork, 'requirements', 'approve-requirements');
-  await requestConfirmation(root, sourceWork, { ...request, requestId: 'design', gate: 'design', subjects: plan.tasks[0].specifications.design, upstream: ['requirements'] });
-  await fixtureDecision(root, sourceWork, 'design', 'approve-design');
+  await seedApprovedDevelopment(root, sourceWork, { scope: plan.scope, requirementsSource: source,
+    requirementsText: approvedRequirements, designSource: plan.tasks[0].specifications.design[0],
+    designText: readFileSync(join(root, plan.tasks[0].specifications.design[0].path), 'utf8') });
   const input = { schemaVersion: 1, designRequest: 'design', repositories: [{ id: 'business', base: 'HEAD', branch: 'codex/isolated-specification', target: 'main' }] };
   const preparation = await planDeliveryPreparation(root, sourceWork, input);
   const prepared = await applyDeliveryPreparation(root, sourceWork, input, preparation.planId);
   assert.notEqual(prepared.bindings.business.root, business);
-  put(business, source.path, '# 当前工作中同名但不同的未确认正文\n');
+  put(business, source.path, differentRequirements);
   const confirmation = { workId: sourceWork, requestId: 'requirements', decisionId: 'approve-requirements' };
   assert.equal((await readConfirmation(root, confirmation)).check.confirmed, true);
   plan.tasks[0].basis = { ...plan.tasks[0].basis, requirements: confirmation };
   plan.tasks[0].specifications.requirements = [source]; plan.tasks[0].relatedWorks = [sourceWork];
   await assert.rejects(planPlanningRegistration(root, workId, context.registration), { code: 'CONTENT_CHANGED' });
   assert.equal(existsSync(file(root, workId, 'tasks.json')), false);
-  assert.equal(readFileSync(join(prepared.bindings.business.root, source.path), 'utf8'), '# 来源工作已确认的需求正文\n');
+  assert.equal(readFileSync(join(prepared.bindings.business.root, source.path), 'utf8'), approvedRequirements);
 });

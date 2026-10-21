@@ -43,8 +43,9 @@ cases:
   const startPlan = await planTaskOperation(root, workId, task.id, 'start', startInput);
   assert.equal(startPlan.operationAllowed, true, JSON.stringify(startPlan.blockingReasons));
   const started = await applyTaskOperation(root, workId, task.id, 'start', startInput, startPlan.planId);
-  const runPlan = await planVerificationRun(root, workId, 'optional-input', task.verification);
-  const executed = await applyVerificationRun(root, workId, 'optional-input', runPlan.planId, task.verification);
+  const workflow = { stageId: 'implementation', taskId: task.id, actions: ['test'], confirmationRefs: [...context.confirmationRefs] };
+  const runPlan = await planVerificationRun(root, workId, 'optional-input', task.verification, workflow);
+  const executed = await applyVerificationRun(root, workId, 'optional-input', runPlan.planId, task.verification, workflow);
   assert.equal(executed.ready, true);
   assert.match(executed.record.execution.output, /TC-OPTIONAL passed/);
   const evidence = { repository: '.', path: `.tiller/work/${workId}/optional-case-evidence.md` };

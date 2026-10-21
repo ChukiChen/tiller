@@ -1,0 +1,246 @@
+{
+  "schemaVersion": 1,
+  "id": "documentation",
+  "version": "1.0.0",
+  "title": "文档与规则维护",
+  "appliesTo": [
+    "修正文案、格式、引用或明确的文档语义。"
+  ],
+  "notApplicableTo": [
+    "改变行为、权限或流程义务不能按纯文字编辑免除确认。"
+  ],
+  "stages": [
+    {
+      "id": "scope",
+      "title": "目标与语义影响",
+      "dependsOn": [],
+      "consumes": [],
+      "produces": [
+        "scope-output"
+      ],
+      "checks": [
+        "判定是否改变产品行为、权限或流程义务；未知语义影响不得按纯编辑放行。"
+      ],
+      "confirmations": [],
+      "actions": [
+        "read",
+        "write-report"
+      ]
+    },
+    {
+      "id": "requirements",
+      "title": "语义变更需求确认",
+      "dependsOn": [
+        "scope"
+      ],
+      "consumes": [
+        "scope-output"
+      ],
+      "produces": [
+        "requirements-output"
+      ],
+      "checks": [
+        "确认受影响的行为、权限、流程义务和验收标准。"
+      ],
+      "confirmations": [
+        "requirements"
+      ],
+      "actions": [
+        "read",
+        "write-report"
+      ],
+      "when": {
+        "any": [
+          {
+            "fact": "semanticChange",
+            "equals": true
+          },
+          {
+            "fact": "changesBehavior",
+            "equals": true
+          },
+          {
+            "fact": "modifiesCode",
+            "equals": true
+          }
+        ]
+      },
+      "confirmationAt": "verify"
+    },
+    {
+      "id": "design",
+      "title": "语义变更设计确认",
+      "dependsOn": [
+        "requirements"
+      ],
+      "consumes": [],
+      "produces": [
+        "design-output"
+      ],
+      "checks": [
+        "确认具体规则语义与上下游影响。"
+      ],
+      "confirmations": [
+        "design"
+      ],
+      "actions": [
+        "read",
+        "write-report"
+      ],
+      "when": {
+        "any": [
+          {
+            "fact": "semanticChange",
+            "equals": true
+          },
+          {
+            "fact": "changesBehavior",
+            "equals": true
+          },
+          {
+            "fact": "modifiesCode",
+            "equals": true
+          }
+        ]
+      },
+      "confirmationAt": "verify"
+    },
+    {
+      "id": "planning",
+      "title": "语义变更实施安排确认",
+      "dependsOn": [
+        "design"
+      ],
+      "consumes": [],
+      "produces": [
+        "planning-output"
+      ],
+      "checks": [
+        "确认必要任务边界、顺序和验证条件。"
+      ],
+      "confirmations": [
+        "planning"
+      ],
+      "actions": [
+        "read",
+        "write-report"
+      ],
+      "when": {
+        "any": [
+          {
+            "fact": "semanticChange",
+            "equals": true
+          },
+          {
+            "fact": "changesBehavior",
+            "equals": true
+          },
+          {
+            "fact": "modifiesCode",
+            "equals": true
+          }
+        ]
+      },
+      "confirmationAt": "verify"
+    },
+    {
+      "id": "draft",
+      "title": "起草文档",
+      "dependsOn": [
+        "scope",
+        "planning"
+      ],
+      "consumes": [
+        "scope-output"
+      ],
+      "produces": [
+        "draft-output"
+      ],
+      "checks": [
+        "依据具体编辑请求起草；语义变化须具备适用确认。"
+      ],
+      "confirmations": [],
+      "actions": [
+        "read",
+        "edit-documents"
+      ]
+    },
+    {
+      "id": "review",
+      "title": "审阅与修订",
+      "dependsOn": [
+        "draft"
+      ],
+      "consumes": [
+        "draft-output"
+      ],
+      "produces": [
+        "review-output"
+      ],
+      "checks": [
+        "核对正文、链接、语义与变更说明并修订；保留未决事项。"
+      ],
+      "confirmations": [],
+      "actions": [
+        "read",
+        "edit-documents",
+        "write-report"
+      ]
+    }
+  ],
+  "outputs": [
+    {
+      "id": "scope-output",
+      "role": "scope",
+      "title": "目标与语义影响",
+      "producer": "scope"
+    },
+    {
+      "id": "requirements-output",
+      "role": "requirements",
+      "title": "语义变更需求确认",
+      "producer": "requirements"
+    },
+    {
+      "id": "design-output",
+      "role": "design",
+      "title": "语义变更设计确认",
+      "producer": "design"
+    },
+    {
+      "id": "planning-output",
+      "role": "planning",
+      "title": "语义变更实施安排确认",
+      "producer": "planning"
+    },
+    {
+      "id": "draft-output",
+      "role": "document",
+      "title": "起草文档",
+      "producer": "draft"
+    },
+    {
+      "id": "review-output",
+      "role": "change-notes",
+      "title": "审阅与修订",
+      "producer": "review"
+    }
+  ],
+  "completion": {
+    "requiredStages": [
+      "review"
+    ],
+    "requiredOutputs": [
+      "scope-output",
+      "requirements-output",
+      "design-output",
+      "planning-output",
+      "draft-output",
+      "review-output"
+    ],
+    "checks": [
+      "产物与实际证据一致；未知影响和未覆盖范围如实记录；交付不自动表示用户接受或操作授权。"
+    ],
+    "result": "report-delivered"
+  }
+}

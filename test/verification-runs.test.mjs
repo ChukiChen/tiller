@@ -6,10 +6,15 @@ import { test } from 'node:test';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { initialize } from '../dist/core.js';
-import { createWork } from '../dist/work.js';
+import { createStartedBaseline, baselineAuthorization } from './workflow-fixtures.mjs';
 import { verificationCategories } from '../dist/verification-cases.js';
-import { planVerificationRun, applyVerificationRun, recordVerificationEvidence, captureVerificationObservation, reportVerification, readVerificationRecords } from '../dist/verification-runs.js';
+import { planVerificationRun as planVerificationRunRaw, applyVerificationRun as applyVerificationRunRaw, recordVerificationEvidence, captureVerificationObservation as captureVerificationObservationRaw, reportVerification, readVerificationRecords } from '../dist/verification-runs.js';
 import { snapshot as sharedSnapshot } from './helpers.mjs';
+
+
+const planVerificationRun = (root, id, suite, selection) => planVerificationRunRaw(root, id, suite, selection, baselineAuthorization(['test']));
+const applyVerificationRun = (root, id, suite, planId, selection) => applyVerificationRunRaw(root, id, suite, planId, selection, baselineAuthorization(['test']));
+const captureVerificationObservation = (root, id, input) => captureVerificationObservationRaw(root, id, { ...input, workflow: baselineAuthorization(['write-report']) });
 
 const workId = '20261019-testing';
 async function fixture(t, script = 'console.log("executed")', timeoutMs = 10000, workspace = false) {
@@ -19,7 +24,6 @@ async function fixture(t, script = 'console.log("executed")', timeoutMs = 10000,
     await promisify(execFile)('git', ['init', '--quiet', path.join(root, 'repositories/service-a')]);
     await initialize({ root, mode: 'workspace', repositories: ['service-a'] });
   } else await initialize({ root });
-  await createWork(root, workId, '验证执行', 'change-requirements');
   await mkdir(path.join(root, '.tiller/verification/modules/demo'), { recursive: true });
   await writeFile(path.join(root, 'spec.md'), '# Requirement and design\n');
   await writeFile(path.join(root, 'runner.mjs'), script);
@@ -32,6 +36,7 @@ async function fixture(t, script = 'console.log("executed")', timeoutMs = 10000,
   await writeFile(path.join(root, '.tiller/verification/config.json'), JSON.stringify(config));
   const cases = ['TC-DEMO-1', 'TC-DEMO-2'].map(id => `  - id: ${id}\n    title: ${id}\n    modules: [demo]\n    categories: [unit]\n    requirements: [REQ-DEMO]\n    given: [准备]\n    when: [执行]\n    then: [符合预期]\n    automation:\n      suite: demo\n      test_ref: ${id}\n      source:\n        repository: .\n        path: runner.mjs`).join('\n');
   await writeFile(path.join(root, '.tiller/verification/modules/demo/unit.yaml'), `schema_version: 1\ncases:\n${cases}\n`);
+  await createStartedBaseline(root, workId);
   return root;
 }
 const evidence = (status = 'passed', caseIds = ['TC-DEMO-1', 'TC-DEMO-2']) => ({ environment: 'Node local fixture',
@@ -72,7 +77,7 @@ test('suite exit zero records execution but never invents individual case passes
   const root = await fixture(t);
   const work = path.join(root, `.tiller/work/${workId}/record.json`);
   const original = await readFile(work, 'utf8');
-  assert.equal(JSON.parse(original).schemaVersion, 3);
+  assert.equal(JSON.parse(original).schemaVersion, 4);
   const plan = await planVerificationRun(root, workId, 'demo');
   assert.equal(plan.command, process.execPath);
   const expectedInvocation = { repository: '.', command: 'node', args: ['runner.mjs'], cwd: '.' };
@@ -247,7 +252,7 @@ test('multi-repository execution resolves registered directory and enforces work
   await assert.rejects(planVerificationRun(root, workId, 'demo'), /工作范围/);
   await assert.rejects(recordFreshEvidence(root, workId, evidence()), /工作范围/);
   const multiId = '20261019-multi';
-  await createWork(root, multiId, '跨仓库验证', { type: 'change-requirements', scope: { repositories: ['.', 'service-a'], targets: ['demo'] } });
+  await createStartedBaseline(root, multiId, { repositories: ['.', 'service-a'], targets: ['demo'] });
   const plan = await planVerificationRun(root, multiId, 'demo');
   assert.equal(plan.cwd, path.join(root, 'repositories/service-a'));
   const run = await applyVerificationRun(root, multiId, 'demo', plan.planId);
@@ -278,18 +283,23 @@ test('pending categories and uncovered requirements prevent complete report', as
   await assert.rejects(reportVerification(root, workId), /不适用类别冲突/);
 });
 
-test('ignored result directory or individual result cannot be written or trusted', async t => {
+test('ignored result directory or prior result blocks writes while ordinary history remains readable', async t => {
   const root = await fixture(t);
   await promisify(execFile)('git', ['init', '--quiet', root]);
   const ignore = path.join(root, `.tiller/work/${workId}/.gitignore`);
   await writeFile(ignore, 'verification-runs/\n');
   await assert.rejects(recordFreshEvidence(root, workId, evidence()), /忽略|共享/);
+  assert.deepEqual(await readVerificationRecords(root, workId), []);
   await rm(ignore);
   const saved = await recordFreshEvidence(root, workId, evidence());
   assert.equal((await reportVerification(root, workId)).ready, true);
   await writeFile(ignore, `verification-runs/${saved.record.id}.json\n`);
-  await assert.rejects(reportVerification(root, workId), /忽略|共享/);
+  const before = sharedSnapshot(root);
+  assert.equal((await reportVerification(root, workId)).ready, true, 'Ordinary evidence queries do not decide Git sharing eligibility.');
+  assert.equal((await readVerificationRecords(root, workId)).length, 2);
+  assert.deepEqual(sharedSnapshot(root), before);
   await assert.rejects(recordFreshEvidence(root, workId, evidence()), /忽略|共享/);
+  assert.deepEqual(sharedSnapshot(root), before, 'A rejected write does not append history based on an ignored prior record.');
 });
 
 test('passed outcomes require independent evidence rather than definitions or prior machine records', async t => {
@@ -323,4 +333,18 @@ test('ignored new JSON result is rejected before executing any command', async t
   assert.equal(run.ready, true);
   assert.equal(await readFile(path.join(root, 'executed-sentinel.txt'), 'utf8'), 'executed');
   assert.equal(path.basename(run.path), `${run.record.id}.json`);
+});
+
+test('ignored existing result blocks execution before a command can produce side effects', async t => {
+  const root = await fixture(t, 'import { writeFileSync } from "node:fs"; writeFileSync("executed-sentinel.txt", "executed")');
+  await promisify(execFile)('git', ['init', '--quiet', root]);
+  const saved = await recordFreshEvidence(root, workId, evidence());
+  const plan = await planVerificationRun(root, workId, 'demo');
+  const ignore = path.join(root, `.tiller/work/${workId}/.gitignore`);
+  await writeFile(ignore, `verification-runs/${saved.record.id}.json\n`);
+  const before = sharedSnapshot(root);
+  await assert.rejects(applyVerificationRun(root, workId, 'demo', plan.planId), /忽略|共享/);
+  await assert.rejects(readFile(path.join(root, 'executed-sentinel.txt')), { code: 'ENOENT' });
+  assert.equal((await readVerificationRecords(root, workId)).length, 2);
+  assert.deepEqual(sharedSnapshot(root), before);
 });

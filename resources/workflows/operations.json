@@ -1,0 +1,177 @@
+{
+  "schemaVersion": 1,
+  "id": "operations",
+  "version": "1.0.0",
+  "title": "发布与运维操作",
+  "appliesTo": [
+    "发布明确版本至明确环境，或执行具体运维动作。"
+  ],
+  "notApplicableTo": [
+    "大类名称不能代替对象与动作；开发证据复用不补造开发过程。"
+  ],
+  "stages": [
+    {
+      "id": "object",
+      "title": "对象版本与环境",
+      "dependsOn": [],
+      "consumes": [],
+      "produces": [
+        "object-output"
+      ],
+      "checks": [
+        "固定对象版本、目标环境、动作、范围和已有证据来源。"
+      ],
+      "confirmations": [],
+      "actions": [
+        "read",
+        "write-report"
+      ]
+    },
+    {
+      "id": "preflight",
+      "title": "前置与恢复检查",
+      "dependsOn": [
+        "object"
+      ],
+      "consumes": [
+        "object-output"
+      ],
+      "produces": [
+        "preflight-output"
+      ],
+      "checks": [
+        "核对前置检查、现有交付证据、恢复条件和具体影响事实。"
+      ],
+      "confirmations": [],
+      "actions": [
+        "read",
+        "write-report"
+      ]
+    },
+    {
+      "id": "release",
+      "title": "具体版本发布",
+      "dependsOn": [
+        "preflight"
+      ],
+      "consumes": [
+        "preflight-output"
+      ],
+      "produces": [
+        "release-output"
+      ],
+      "checks": [
+        "发布确认与适用验收引用同一交付对象；引用其他工作时绑定其版本及真实验收。"
+      ],
+      "confirmations": [
+        "acceptance",
+        "release"
+      ],
+      "actions": [
+        "release",
+        "write-report"
+      ],
+      "when": {
+        "fact": "release",
+        "equals": true
+      },
+      "confirmationAt": "start"
+    },
+    {
+      "id": "operation",
+      "title": "具体运维操作",
+      "dependsOn": [
+        "preflight"
+      ],
+      "consumes": [
+        "preflight-output"
+      ],
+      "produces": [
+        "operation-output"
+      ],
+      "checks": [
+        "真实操作授权绑定对象、环境和恢复条件，不从类型生成权限。"
+      ],
+      "confirmations": [
+        "operation"
+      ],
+      "actions": [
+        "operate",
+        "write-report"
+      ],
+      "when": {
+        "fact": "release",
+        "equals": false
+      },
+      "confirmationAt": "start"
+    },
+    {
+      "id": "observation",
+      "title": "结果观察",
+      "dependsOn": [
+        "release",
+        "operation"
+      ],
+      "consumes": [],
+      "produces": [
+        "observation-output"
+      ],
+      "checks": [
+        "保存实际执行事实和观察结果；检查通过不表示操作已发生；失败不自动回滚。"
+      ],
+      "confirmations": [],
+      "actions": [
+        "read",
+        "write-report"
+      ]
+    }
+  ],
+  "outputs": [
+    {
+      "id": "object-output",
+      "role": "object",
+      "title": "对象版本与环境",
+      "producer": "object"
+    },
+    {
+      "id": "preflight-output",
+      "role": "preflight",
+      "title": "前置与恢复检查",
+      "producer": "preflight"
+    },
+    {
+      "id": "release-output",
+      "role": "release",
+      "title": "具体版本发布",
+      "producer": "release"
+    },
+    {
+      "id": "operation-output",
+      "role": "operation",
+      "title": "具体运维操作",
+      "producer": "operation"
+    },
+    {
+      "id": "observation-output",
+      "role": "observation",
+      "title": "结果观察",
+      "producer": "observation"
+    }
+  ],
+  "completion": {
+    "requiredStages": [
+      "observation"
+    ],
+    "requiredOutputs": [
+      "object-output",
+      "preflight-output",
+      "release-output",
+      "operation-output",
+      "observation-output"
+    ],
+    "checks": [
+      "产物与实际证据一致；未知影响和未覆盖范围如实记录；交付不自动表示用户接受或操作授权。"
+    ],
+    "result": "operation-observed"
+  }
+}

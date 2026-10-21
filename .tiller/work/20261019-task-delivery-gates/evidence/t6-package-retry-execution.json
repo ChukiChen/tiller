@@ -1,8 +1,0 @@
-{
-  "startedAt": "2026-10-19T15:25:35.7363829Z",
-  "exitCode": 0,
-  "snapshotRoot": "C:\\Users\\Administrator\\AppData\\Local\\Temp\\tiller-package-snapshot-929e0e61522c4e6897db205de400b0e1",
-  "durationMs": 529406,
-  "finishedAt": "2026-10-19T15:34:25.1682179Z",
-  "command": "npm run test:package"
-}

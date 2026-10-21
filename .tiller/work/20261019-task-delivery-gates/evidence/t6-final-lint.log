@@ -1,5 +1,0 @@
-
-> tiller@0.4.0 lint
-> node scripts/lint.mjs
-
-Source and resource lint passed.
