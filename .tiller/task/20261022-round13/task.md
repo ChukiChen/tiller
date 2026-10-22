@@ -62,10 +62,117 @@
 - 对象摘要：d9ecdbbd56dd8389accbb5644b59f671c1595273af8b78e463f2ee1f9a778f10
 - 时间：2026-10-22T09:46:53.369Z
 
+### acceptance
+- 确认部分：交付验收
+- 对象：当前交付（需求、设计、验证与提交）
+- 确认人：ChukiChen
+- 提交：1d1bf57b2f89a2dfb30c39108428033156480858
+- 对象摘要：ec616b850f43d4e6a9d71e24462b7f92abed67b808591889ee30e96c39efe59b
+- 时间：2026-10-22T11:09:21.428Z
+
 ## 验证
 
-尚无验证。
+### run-1
+- 条件：AC-1
+- 测试：test/pr.test.mjs::pr summary prefers flag then metadata then earliest conventional commit then task title
+- 用例：CASE-081
+- 命令：node --test --test-name-pattern="pr summary prefers flag then metadata then earliest conventional commit then task title" test/pr.test.mjs
+- 结果：passed
+- 退出码：0
+- 提交：1d1bf57b2f89a2dfb30c39108428033156480858
+- 代码树摘要：b48b6f6395a11fddbb7f99570ee559db786bd556f08fea6bd2e23b20f7864aa5
+- 来源：executed
+- 时间：2026-10-22T11:09:04.107Z
+
+### run-2
+- 条件：AC-2
+- 测试：test/pr.test.mjs::pr change list orders commits from oldest to newest
+- 用例：CASE-082
+- 命令：node --test --test-name-pattern="pr change list orders commits from oldest to newest" test/pr.test.mjs
+- 结果：passed
+- 退出码：0
+- 提交：1d1bf57b2f89a2dfb30c39108428033156480858
+- 代码树摘要：b48b6f6395a11fddbb7f99570ee559db786bd556f08fea6bd2e23b20f7864aa5
+- 来源：executed
+- 时间：2026-10-22T11:09:04.892Z
+
+### run-3
+- 条件：AC-3
+- 测试：test/pr.test.mjs::pr verification section uses plain nested records without numbered bullets
+- 用例：CASE-083
+- 命令：node --test --test-name-pattern="pr verification section uses plain nested records without numbered bullets" test/pr.test.mjs
+- 结果：passed
+- 退出码：0
+- 提交：1d1bf57b2f89a2dfb30c39108428033156480858
+- 代码树摘要：b48b6f6395a11fddbb7f99570ee559db786bd556f08fea6bd2e23b20f7864aa5
+- 来源：executed
+- 时间：2026-10-22T11:09:05.947Z
+
+### run-4
+- 条件：AC-3
+- 测试：test/pr.test.mjs::pr verification section lists every recorded run in order
+- 用例：CASE-077
+- 命令：node --test --test-name-pattern="pr verification section lists every recorded run in order" test/pr.test.mjs
+- 结果：passed
+- 退出码：0
+- 提交：1d1bf57b2f89a2dfb30c39108428033156480858
+- 代码树摘要：b48b6f6395a11fddbb7f99570ee559db786bd556f08fea6bd2e23b20f7864aa5
+- 来源：executed
+- 时间：2026-10-22T11:09:07.050Z
+
+### run-5
+- 条件：AC-4
+- 测试：test/rules.test.mjs::restored guidance keeps complete commands and explicit boundaries
+- 用例：CASE-084
+- 命令：node --test --test-name-pattern="restored guidance keeps complete commands and explicit boundaries" test/rules.test.mjs
+- 结果：passed
+- 退出码：0
+- 提交：1d1bf57b2f89a2dfb30c39108428033156480858
+- 代码树摘要：b48b6f6395a11fddbb7f99570ee559db786bd556f08fea6bd2e23b20f7864aa5
+- 来源：executed
+- 时间：2026-10-22T11:09:07.278Z
+
+### run-6
+- 条件：AC-5
+- 测试：test/rules.test.mjs::required reading budget allows clear guidance within 7000 characters
+- 用例：CASE-049, CASE-074, CASE-085
+- 命令：node --test --test-name-pattern="required reading budget allows clear guidance within 7000 characters" test/rules.test.mjs
+- 结果：passed
+- 退出码：0
+- 提交：1d1bf57b2f89a2dfb30c39108428033156480858
+- 代码树摘要：b48b6f6395a11fddbb7f99570ee559db786bd556f08fea6bd2e23b20f7864aa5
+- 来源：executed
+- 时间：2026-10-22T11:09:07.485Z
+
+### run-7
+- 条件：AC-3
+- 测试：test/pr.test.mjs::pr verification section uses plain nested records without numbered bullets
+- 用例：CASE-083
+- 命令：node --test --test-name-pattern="pr verification section uses plain nested records without numbered bullets" test/pr.test.mjs
+- 结果：passed
+- 退出码：0
+- 提交：1d1bf57b2f89a2dfb30c39108428033156480858
+- 代码树摘要：b48b6f6395a11fddbb7f99570ee559db786bd556f08fea6bd2e23b20f7864aa5
+- 来源：executed
+- 时间：2026-10-22T11:09:15.103Z
 
 ## 自检
 
-交付前运行 check；验收后运行 accept。
+- [x] 需求确认有效
+- [x] 设计确认有效
+- [x] 验收条件均有当前通过且绑定全局用例的测试引用
+- [x] 每条验收条件均映射到本次验证引用的全局用例
+- [x] 验收条件与用例来源 criteria 相互指向或由本任务新增/修改
+- [x] 全局用例结构与引用有效
+- [x] 改动未超出范围
+- [x] 未弱化仍存在的测试
+- [x] 记录不含密钥或本机绝对路径
+
+提示：
+- 49 条历史用例未绑定来源 AC；新用例请用 case add 写入 criteria，check 对已有 criteria 的用例执行反向校验。
+- AC-5 引用的历史用例 CASE-049 未绑定来源 AC；可在本次修改该用例时补上 criteria: ["20261022-round13#AC-5"]。
+- 本次改动涉及模块 initialization：建议回归该模块 18 条用例及经过它的场景 CASE-055, CASE-001。
+- 本次改动涉及模块 standards：建议回归该模块 6 条用例及经过它的场景 CASE-055。
+- 本次改动涉及模块 verification：建议回归该模块 24 条用例及经过它的场景 CASE-055, CASE-001。
+- 本次改动涉及模块 workflow：建议回归该模块 35 条用例及经过它的场景 CASE-055, CASE-001。
+- 修改的测试文件移除了 1 个测试用例（请确认对应功能已删除；详情见 Git diff）。
