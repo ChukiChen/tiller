@@ -61,33 +61,116 @@
 - 对象摘要：8d00090a148a8ee9c30bb6c7b722fd80afe6d4a1a056dc8b8099cc43fce531cd
 - 时间：2026-10-22T08:09:59.250Z
 
+### acceptance
+- 确认部分：交付验收
+- 对象：当前交付（需求、设计、验证与提交）
+- 确认人：ChukiChen
+- 提交：7850747882a73c91ae9d99cd43192c5d0bbd5ed6
+- 对象摘要：477178c11adb80992e69c9fd5e36f6b1e8e3d0e7090d64291104a7d2ddcdb19c
+- 时间：2026-10-22T08:21:58.483Z
+
 ## 验证
 
-尚无验证。
+### run-1
+- 条件：AC-1
+- 测试：test/pr.test.mjs::commit subjects enforce type, module, Chinese summary and no task links
+- 用例：CASE-073
+- 命令：node --test --test-name-pattern="commit subjects enforce type, module, Chinese summary and no task links" test/pr.test.mjs
+- 结果：passed
+- 退出码：0
+- 提交：7850747882a73c91ae9d99cd43192c5d0bbd5ed6
+- 代码树摘要：0360ec8a9350d7485e47a7e30bd30f9c8ea431e0ad6a5a52d98c75b65b7ef558
+- 来源：executed
+- 时间：2026-10-22T08:21:50.008Z
+
+### run-2
+- 条件：AC-1
+- 测试：test/pr.test.mjs::check warns about nonconforming commit subjects and skips merge subjects
+- 用例：CASE-069
+- 命令：node --test --test-name-pattern="check warns about nonconforming commit subjects and skips merge subjects" test/pr.test.mjs
+- 结果：passed
+- 退出码：0
+- 提交：7850747882a73c91ae9d99cd43192c5d0bbd5ed6
+- 代码树摘要：0360ec8a9350d7485e47a7e30bd30f9c8ea431e0ad6a5a52d98c75b65b7ef558
+- 来源：executed
+- 时间：2026-10-22T08:21:50.914Z
+
+### run-3
+- 条件：AC-2
+- 测试：test/pr.test.mjs::branch names follow type and task prefix rules
+- 用例：CASE-070
+- 命令：node --test --test-name-pattern="branch names follow type and task prefix rules" test/pr.test.mjs
+- 结果：passed
+- 退出码：0
+- 提交：7850747882a73c91ae9d99cd43192c5d0bbd5ed6
+- 代码树摘要：0360ec8a9350d7485e47a7e30bd30f9c8ea431e0ad6a5a52d98c75b65b7ef558
+- 来源：executed
+- 时间：2026-10-22T08:21:51.106Z
+
+### run-4
+- 条件：AC-3
+- 测试：test/pr.test.mjs::pr draft derives title, five sections and current AC state
+- 用例：CASE-068
+- 命令：node --test --test-name-pattern="pr draft derives title, five sections and current AC state" test/pr.test.mjs
+- 结果：passed
+- 退出码：0
+- 提交：7850747882a73c91ae9d99cd43192c5d0bbd5ed6
+- 代码树摘要：0360ec8a9350d7485e47a7e30bd30f9c8ea431e0ad6a5a52d98c75b65b7ef558
+- 来源：executed
+- 时间：2026-10-22T08:21:52.440Z
+
+### run-5
+- 条件：AC-4
+- 测试：test/pr.test.mjs::init installs a managed pull request template and preserves an existing one
+- 用例：CASE-071
+- 命令：node --test --test-name-pattern="init installs a managed pull request template and preserves an existing one" test/pr.test.mjs
+- 结果：passed
+- 退出码：0
+- 提交：7850747882a73c91ae9d99cd43192c5d0bbd5ed6
+- 代码树摘要：0360ec8a9350d7485e47a7e30bd30f9c8ea431e0ad6a5a52d98c75b65b7ef558
+- 来源：executed
+- 时间：2026-10-22T08:21:52.788Z
+
+### run-6
+- 条件：AC-4
+- 测试：test/pr.test.mjs::upgrade adds the pull request template to a previous managed set
+- 用例：CASE-072
+- 命令：node --test --test-name-pattern="upgrade adds the pull request template to a previous managed set" test/pr.test.mjs
+- 结果：passed
+- 退出码：0
+- 提交：7850747882a73c91ae9d99cd43192c5d0bbd5ed6
+- 代码树摘要：0360ec8a9350d7485e47a7e30bd30f9c8ea431e0ad6a5a52d98c75b65b7ef558
+- 来源：executed
+- 时间：2026-10-22T08:21:53.168Z
+
+### run-7
+- 条件：AC-5
+- 测试：test/rules.test.mjs::required reading stays within the default-flow budget
+- 用例：CASE-049, CASE-074
+- 命令：node --test --test-name-pattern="required reading stays within the default-flow budget" test/rules.test.mjs
+- 结果：passed
+- 退出码：0
+- 提交：7850747882a73c91ae9d99cd43192c5d0bbd5ed6
+- 代码树摘要：0360ec8a9350d7485e47a7e30bd30f9c8ea431e0ad6a5a52d98c75b65b7ef558
+- 来源：executed
+- 时间：2026-10-22T08:21:53.365Z
 
 ## 自检
 
 - [x] 需求确认有效
 - [x] 设计确认有效
-- [ ] 验收条件均有当前通过且绑定全局用例的测试引用
-- [ ] 每条验收条件均映射到本次验证引用的全局用例
+- [x] 验收条件均有当前通过且绑定全局用例的测试引用
+- [x] 每条验收条件均映射到本次验证引用的全局用例
 - [x] 验收条件与用例来源 criteria 相互指向或由本任务新增/修改
 - [x] 全局用例结构与引用有效
 - [x] 改动未超出范围
 - [x] 未弱化仍存在的测试
 - [x] 记录不含密钥或本机绝对路径
 
-阻塞项：
-- AC-1 尚无验证。
-- AC-2 尚无验证。
-- AC-3 尚无验证。
-- AC-4 尚无验证。
-- AC-5 尚无验证。
-- 交付范围存在未提交改动：.github/pull_request_template.md、.tiller/cases/index.md、.tiller/cases/modules/initialization/behavior.json、.tiller/cases/modules/workflow/interface.json、.tiller/context/project.md、.tiller/project.json、.tiller/rules/activities/delivery.md、.tiller/rules/core.md、.tiller/specs/decisions.md、.tiller/specs/design.md、.tiller/specs/modules/initialization/design.md、.tiller/specs/modules/initialization/requirements.md、.tiller/specs/modules/standards/design.md、.tiller/specs/modules/standards/requirements.md、.tiller/specs/modules/verification/design.md、.tiller/specs/modules/verification/requirements.md、.tiller/specs/modules/workflow/design.md、.tiller/specs/modules/workflow/requirements.md、.tiller/specs/requirements.md、.tiller/usage.md、AGENTS.md、README.md、resources/entry.md、resources/pull_request_template.md、resources/rules/activities/delivery.md、resources/rules/core.md、resources/usage.md、scripts/package-smoke.mjs、src/branch-conventions.ts、src/cli.ts、src/commit-conventions.ts、src/core.ts、src/files.ts、src/flow.ts、src/pr.ts、src/project-metadata.ts、src/upgrade.ts、test/first-batch.test.mjs、test/pr.test.mjs、test/rules.test.mjs、test/suites.json、test/usage-resources.test.mjs
-
 提示：
 - 49 条历史用例未绑定来源 AC；新用例请用 case add 写入 criteria，check 对已有 criteria 的用例执行反向校验。
+- AC-5 引用的历史用例 CASE-049 未绑定来源 AC；可在本次修改该用例时补上 criteria: ["20261022-round11#AC-5"]。
 - 本次改动涉及模块 initialization：建议回归该模块 16 条用例及经过它的场景 CASE-055, CASE-001。
-- 本次改动涉及模块 standards：建议回归该模块 3 条用例及经过它的场景 CASE-055。
+- 本次改动涉及模块 standards：建议回归该模块 4 条用例及经过它的场景 CASE-055。
 - 本次改动涉及模块 verification：建议回归该模块 24 条用例及经过它的场景 CASE-055, CASE-001。
 - 本次改动涉及模块 workflow：建议回归该模块 28 条用例及经过它的场景 CASE-055, CASE-001。
