@@ -1,6 +1,6 @@
 # 确认绑定结构化正文并将 work 重命名为 task
 
-<!-- tiller-task:v1 {"version":1,"id":"20261022-confirm-task","type":"improvement","size":"standard","created":"2026-10-22T01:20:00.000Z","base":"65da92da05e6f86df50cde1c1831014e636e099f","scope":["src","test","scripts","resources","AGENTS.md","README.md",".tiller"],"preExisting":{}} -->
+<!-- tiller-task:v1 {"version":1,"id":"20261022-confirm-task","type":"improvement","size":"standard","created":"2026-10-22T00:20:00.000Z","base":"65da92da05e6f86df50cde1c1831014e636e099f","scope":["src","test","scripts","resources","AGENTS.md","README.md",".tiller"],"preExisting":{}} -->
 
 ## 需求
 
@@ -27,8 +27,78 @@
 
 ## 验证
 
-尚无验证。
+### run-1
+- 条件：AC-1
+- 测试：test/flow-cli.test.mjs::requirements confirmation binds the written requirement rather than the quote
+- 命令：npm test
+- 结果：passed
+- 退出码：0
+- 提交：193a807f07305d2be8fb16085719a90229cf551c
+- 代码树摘要：d2c8da669dd44d9fc9a76a014193df5043297fd68877f0b21c5498c8e257edb2
+- 来源：executed
+- 时间：2026-10-22T00:54:07.000Z
+
+### run-2
+- 条件：AC-1
+- 测试：test/flow-cli.test.mjs::an empty requirement cannot be confirmed by a user quote alone
+- 命令：npm test
+- 结果：passed
+- 退出码：0
+- 提交：193a807f07305d2be8fb16085719a90229cf551c
+- 代码树摘要：d2c8da669dd44d9fc9a76a014193df5043297fd68877f0b21c5498c8e257edb2
+- 来源：executed
+- 时间：2026-10-22T00:54:07.000Z
+
+### run-3
+- 条件：AC-2
+- 测试：test/flow-cli.test.mjs::small flow produces one task file and records verified acceptance without raw logs
+- 命令：npm test
+- 结果：passed
+- 退出码：0
+- 提交：193a807f07305d2be8fb16085719a90229cf551c
+- 代码树摘要：d2c8da669dd44d9fc9a76a014193df5043297fd68877f0b21c5498c8e257edb2
+- 来源：executed
+- 时间：2026-10-22T00:54:07.000Z
+
+### run-4
+- 条件：AC-2
+- 测试：test/flow-cli.test.mjs::legacy work records stay read-only and are not listed as current tasks
+- 命令：npm test
+- 结果：passed
+- 退出码：0
+- 提交：193a807f07305d2be8fb16085719a90229cf551c
+- 代码树摘要：d2c8da669dd44d9fc9a76a014193df5043297fd68877f0b21c5498c8e257edb2
+- 来源：executed
+- 时间：2026-10-22T00:54:07.000Z
+
+### run-5
+- 条件：AC-3
+- 测试：test/rules.test.mjs
+- 命令：npm test
+- 结果：passed
+- 退出码：0
+- 提交：193a807f07305d2be8fb16085719a90229cf551c
+- 代码树摘要：d2c8da669dd44d9fc9a76a014193df5043297fd68877f0b21c5498c8e257edb2
+- 来源：executed
+- 时间：2026-10-22T00:54:07.000Z
+
+### run-6
+- 条件：AC-4
+- 测试：test/suites.json
+- 命令：npm run build && npm run lint && npm run typecheck && npm test && npm run test:package
+- 结果：passed
+- 退出码：0
+- 提交：193a807f07305d2be8fb16085719a90229cf551c
+- 代码树摘要：d2c8da669dd44d9fc9a76a014193df5043297fd68877f0b21c5498c8e257edb2
+- 来源：executed
+- 时间：2026-10-22T00:54:07.000Z
 
 ## 自检
 
-交付前运行 check；验收后运行 accept。
+- [ ] 需求确认有效（负责人直接下达本轮实施指令，未另设展示后的 confirm）
+- [ ] 设计确认有效（标准任务，未另设展示后的 confirm）
+- [x] 验收条件均有当前通过的测试引用
+- [x] 全局用例引用有效
+- [x] 改动未超出范围
+- [x] 未弱化仍存在的测试
+- [x] 记录不含密钥或本机绝对路径
