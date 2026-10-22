@@ -65,31 +65,106 @@
 - 对象摘要：3aefe16101f86690aa4bb4ef6d7a9722929bf9617a8b9408d073d688a5c17fd8
 - 时间：2026-10-22T11:32:51.903Z
 
+### acceptance
+- 确认部分：交付验收
+- 对象：当前交付（需求、设计、验证与提交）
+- 确认人：ChukiChen
+- 提交：2b7b7b8487d06cbcd8d9b0023b99fc9eab797577
+- 对象摘要：e0c19211da3b76a357776a8db5573b3958f11bdcbd8ce4f6b7a5912cef017790
+- 时间：2026-10-22T12:48:26.261Z
+
 ## 验证
 
-尚无验证。
+### run-1
+- 条件：AC-1
+- 测试：test/verification-integrity.test.mjs::verify executes the recorded command, rejects legacy inputs and reads old records
+- 用例：CASE-086
+- 命令：node --test-name-pattern="verify executes the recorded command, rejects legacy inputs and reads old records" test/verification-integrity.test.mjs
+- 结果：passed
+- 退出码：0
+- 来源：executed
+- 核实：已核实
+- 提交：2b7b7b8487d06cbcd8d9b0023b99fc9eab797577
+- 代码树摘要：dcae4d961959fbb5df258ae2776cf8821dd487f57ceca2446af79dd95d4a517a
+- 时间：2026-10-22T12:48:13.821Z
+
+### run-2
+- 条件：AC-2
+- 测试：test/verification-integrity.test.mjs::reported verification is blocked by default and allowed explicitly
+- 用例：CASE-087
+- 命令：node --test-name-pattern="reported verification is blocked by default and allowed explicitly" test/verification-integrity.test.mjs
+- 结果：passed
+- 退出码：0
+- 来源：executed
+- 核实：已核实
+- 提交：2b7b7b8487d06cbcd8d9b0023b99fc9eab797577
+- 代码树摘要：dcae4d961959fbb5df258ae2776cf8821dd487f57ceca2446af79dd95d4a517a
+- 时间：2026-10-22T12:48:14.953Z
+
+### run-3
+- 条件：AC-3
+- 测试：test/verification-integrity.test.mjs::named node test output is verified for TAP, spec and nested special characters
+- 用例：CASE-088
+- 命令：node --test-name-pattern="named node test output is verified for TAP, spec and nested special characters" test/verification-integrity.test.mjs
+- 结果：passed
+- 退出码：0
+- 来源：executed
+- 核实：已核实
+- 提交：2b7b7b8487d06cbcd8d9b0023b99fc9eab797577
+- 代码树摘要：dcae4d961959fbb5df258ae2776cf8821dd487f57ceca2446af79dd95d4a517a
+- 时间：2026-10-22T12:48:16.608Z
+
+### run-4
+- 条件：AC-4
+- 测试：test/verification-integrity.test.mjs::bugfix verification requires baseline failure and current passing evidence
+- 用例：CASE-089
+- 命令：node --test-name-pattern="bugfix verification requires baseline failure and current passing evidence" test/verification-integrity.test.mjs
+- 结果：passed
+- 退出码：0
+- 来源：executed
+- 核实：已核实
+- 提交：2b7b7b8487d06cbcd8d9b0023b99fc9eab797577
+- 代码树摘要：dcae4d961959fbb5df258ae2776cf8821dd487f57ceca2446af79dd95d4a517a
+- 时间：2026-10-22T12:48:18.324Z
+
+### run-5
+- 条件：AC-5
+- 测试：test/verification-integrity.test.mjs::standard starts require explicit targets while small defaults to repository root
+- 用例：CASE-090
+- 命令：node --test-name-pattern="standard starts require explicit targets while small defaults to repository root" test/verification-integrity.test.mjs
+- 结果：passed
+- 退出码：0
+- 来源：executed
+- 核实：已核实
+- 提交：2b7b7b8487d06cbcd8d9b0023b99fc9eab797577
+- 代码树摘要：dcae4d961959fbb5df258ae2776cf8821dd487f57ceca2446af79dd95d4a517a
+- 时间：2026-10-22T12:48:18.742Z
+
+### run-6
+- 条件：AC-6
+- 测试：test/rules.test.mjs::verification guidance requires execution, reporting reasons and failure-first evidence
+- 用例：CASE-091
+- 命令：node --test-name-pattern="verification guidance requires execution, reporting reasons and failure-first evidence" test/rules.test.mjs
+- 结果：passed
+- 退出码：0
+- 来源：executed
+- 核实：已核实
+- 提交：2b7b7b8487d06cbcd8d9b0023b99fc9eab797577
+- 代码树摘要：dcae4d961959fbb5df258ae2776cf8821dd487f57ceca2446af79dd95d4a517a
+- 时间：2026-10-22T12:48:18.909Z
 
 ## 自检
 
 - [x] 需求确认有效
 - [x] 设计确认有效
-- [ ] 验收条件均有当前通过且绑定全局用例的测试引用
-- [ ] 每条验收条件均映射到本次验证引用的全局用例
+- [x] 验收条件均有当前通过且绑定全局用例的测试引用
+- [x] 每条验收条件均映射到本次验证引用的全局用例
 - [x] 验收条件与用例来源 criteria 相互指向或由本任务新增/修改
-- [ ] 验证命令已执行且测试输出已核实
+- [x] 验证命令已执行且测试输出已核实
 - [x] 全局用例结构与引用有效
 - [x] 改动未超出范围
 - [x] 未弱化仍存在的测试
 - [x] 记录不含密钥或本机绝对路径
-
-阻塞项：
-- AC-1 尚无验证。
-- AC-2 尚无验证。
-- AC-3 尚无验证。
-- AC-4 尚无验证。
-- AC-5 尚无验证。
-- AC-6 尚无验证。
-- 交付范围存在未提交改动：.tiller/cases/index.md、.tiller/cases/modules/standards/behavior.json、.tiller/cases/modules/verification/interface.json、.tiller/cases/modules/workflow/behavior.json、.tiller/cases/modules/workflow/interface.json、.tiller/cases/modules/workflow/security.json、.tiller/context/project.md、.tiller/index.md、.tiller/project.json、.tiller/rules/activities/delivery.md、.tiller/rules/core.md、.tiller/rules/quality/verification.md、.tiller/specs/decisions.md、.tiller/specs/design.md、.tiller/specs/modules/standards/requirements.md、.tiller/specs/modules/verification/design.md、.tiller/specs/modules/verification/requirements.md、.tiller/specs/modules/workflow/design.md、.tiller/specs/modules/workflow/requirements.md、.tiller/specs/requirements.md、.tiller/usage.md、AGENTS.md、README.md、resources/entry.md、resources/rules/activities/delivery.md、resources/rules/core.md、resources/rules/quality/verification.md、resources/usage.md、scripts/package-smoke.mjs、src/cases.ts、src/cli.ts、src/flow.ts、src/pr.ts、src/test-output.ts、test/first-batch.test.mjs、test/flow-cli.test.mjs、test/pr.test.mjs、test/rules.test.mjs、test/suites.json、test/verification-integrity.test.mjs
 
 提示：
 - 49 条历史用例未绑定来源 AC；新用例请用 case add 写入 criteria，check 对已有 criteria 的用例执行反向校验。
