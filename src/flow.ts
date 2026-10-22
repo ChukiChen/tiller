@@ -8,40 +8,40 @@ import { applyChanges, readTextIfExists, validateRelativePath, withProjectLock }
 import { validateWorkId } from './work-id.js';
 
 const execFileAsync = promisify(execFile);
-const MARKER_PREFIX = '<!-- tiller-lite:v1 ';
+const MARKER_PREFIX = '<!-- tiller-flow:v1 ';
 const MARKER_SUFFIX = ' -->';
-const LITE_VERSION = 1;
+const FLOW_VERSION = 1;
 const DEFAULT_TYPE = 'feature';
 const TYPES = ['requirements', 'analysis', 'research', 'feature', 'bugfix', 'improvement', 'review', 'validation', 'documentation', 'migration', 'operations'] as const;
 const CODE_TYPES = new Set(['feature', 'bugfix', 'improvement', 'migration', 'operations']);
 const CONFIRMATION_GATES = ['requirements', 'design', 'acceptance'] as const;
 const RESULTS = ['passed', 'failed', 'skipped'] as const;
 
-export type LiteType = typeof TYPES[number];
-export type LiteSize = 'small' | 'standard';
-export type LiteGate = typeof CONFIRMATION_GATES[number];
-export type LiteResult = typeof RESULTS[number];
+export type FlowType = typeof TYPES[number];
+export type FlowSize = 'small' | 'standard';
+export type FlowGate = typeof CONFIRMATION_GATES[number];
+export type FlowResult = typeof RESULTS[number];
 
-export interface LiteMeta {
-  version: 1; id: string; type: LiteType; size: LiteSize; created: string; base: string; scope: string[]; preExisting: Record<string, string>;
+export interface FlowMeta {
+  version: 1; id: string; type: FlowType; size: FlowSize; created: string; base: string; scope: string[]; preExisting: Record<string, string>;
 }
-export interface LiteCriterion { id: string; text: string }
-export interface LiteConfirmation {
-  gate: LiteGate; quote: string; commit: string; subject: string; at: string;
+export interface FlowCriterion { id: string; text: string }
+export interface FlowConfirmation {
+  gate: FlowGate; quote: string; commit: string; subject: string; at: string;
 }
-export interface LiteVerification {
-  id: string; criterion: string; test: string; command: string; result: LiteResult;
+export interface FlowVerification {
+  id: string; criterion: string; test: string; command: string; result: FlowResult;
   exitCode: number | null; commit: string; at: string; tree: string; source: 'executed' | 'reported';
 }
-export interface LiteWork {
-  meta: LiteMeta; title: string; goal: string; design: string; criteria: LiteCriterion[];
-  confirmations: LiteConfirmation[]; verifications: LiteVerification[]; content: string; path: string;
+export interface FlowWork {
+  meta: FlowMeta; title: string; goal: string; design: string; criteria: FlowCriterion[];
+  confirmations: FlowConfirmation[]; verifications: FlowVerification[]; content: string; path: string;
 }
 
-export interface LiteStartInput {
+export interface FlowStartInput {
   title: string; goal: string; type?: string; size?: string; targets?: string[]; criteria: string[];
 }
-export interface LiteVerifyInput {
+export interface FlowVerifyInput {
   criteria: string[]; test: string; command: string; result?: string; run?: string;
 }
 
@@ -50,7 +50,7 @@ function fail(code: string, message: string): never {
 }
 function text(value: unknown, label: string, maximum = 10000): string {
   if (typeof value !== 'string' || !value.trim() || value.length > maximum || /[\x00-\x1f]/u.test(value)) {
-    fail('INVALID_LITE_INPUT', `${label}必须是非空单行文本，且不超过 ${maximum} 字符。`);
+    fail('INVALID_FLOW_INPUT', `${label}必须是非空单行文本，且不超过 ${maximum} 字符。`);
   }
   return value.trim();
 }
@@ -67,23 +67,23 @@ function scopeValues(values: string[] | undefined): string[] {
   const result = raw.map(value => value.trim().replace(/^\.\//u, '').replace(/\/+$/u, '') || '.');
   for (const value of result) {
     if (value !== '.') validateRelativePath(value);
-    if (path.posix.isAbsolute(value) || value.includes('\\')) fail('INVALID_LITE_SCOPE', `范围必须是工程相对路径：${value}`);
+    if (path.posix.isAbsolute(value) || value.includes('\\')) fail('INVALID_FLOW_SCOPE', `范围必须是工程相对路径：${value}`);
   }
   return [...new Set(result)];
 }
-function liteType(value: string | undefined): LiteType {
+function flowType(value: string | undefined): FlowType {
   const actual = value ?? DEFAULT_TYPE;
-  if (!TYPES.includes(actual as LiteType)) fail('INVALID_LITE_TYPE', `任务类型必须是：${TYPES.join(', ')}。`);
-  return actual as LiteType;
+  if (!TYPES.includes(actual as FlowType)) fail('INVALID_FLOW_TYPE', `任务类型必须是：${TYPES.join(', ')}。`);
+  return actual as FlowType;
 }
-function liteSize(value: string | undefined): LiteSize {
+function flowSize(value: string | undefined): FlowSize {
   if (value === 'large') return 'standard';
   const actual = value ?? 'standard';
-  if (actual !== 'small' && actual !== 'standard') fail('INVALID_LITE_SIZE', '任务规模必须是 small 或 standard（large 作为 standard 的别名）。');
+  if (actual !== 'small' && actual !== 'standard') fail('INVALID_FLOW_SIZE', '任务规模必须是 small 或 standard（large 作为 standard 的别名）。');
   return actual;
 }
-function codeType(meta: LiteMeta): boolean { return CODE_TYPES.has(meta.type); }
-function requiresDesign(work: Pick<LiteWork, 'meta'>): boolean { return codeType(work.meta) && work.meta.size === 'standard'; }
+function codeType(meta: FlowMeta): boolean { return CODE_TYPES.has(meta.type); }
+function requiresDesign(work: Pick<FlowWork, 'meta'>): boolean { return codeType(work.meta) && work.meta.size === 'standard'; }
 
 async function git(root: string, args: string[]): Promise<{ ok: boolean; stdout: string; stderr: string; code: number | null }> {
   try {
@@ -114,26 +114,26 @@ async function currentCommit(root: string, requested?: string): Promise<string> 
   return (await head(root)) ?? 'no-git';
 }
 
-function parseMeta(marker: string, id: string): LiteMeta {
+function parseMeta(marker: string, id: string): FlowMeta {
   let raw: unknown;
-  try { raw = JSON.parse(marker); } catch { fail('INVALID_LITE_WORK', '工作元信息不是有效 JSON。'); }
-  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) fail('INVALID_LITE_WORK', '工作元信息格式无效。');
+  try { raw = JSON.parse(marker); } catch { fail('INVALID_FLOW_WORK', '工作元信息不是有效 JSON。'); }
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) fail('INVALID_FLOW_WORK', '工作元信息格式无效。');
   const value = raw as Record<string, unknown>;
-  for (const key of ['version', 'id', 'type', 'size', 'created', 'base', 'scope']) if (!Object.hasOwn(value, key)) fail('INVALID_LITE_WORK', `工作元信息缺少 ${key}。`);
-  if (value.version !== LITE_VERSION || value.id !== id) fail('INVALID_LITE_WORK', '工作元信息版本或标识不匹配。');
-  const type = liteType(String(value.type));
-  const size = liteSize(String(value.size));
+  for (const key of ['version', 'id', 'type', 'size', 'created', 'base', 'scope']) if (!Object.hasOwn(value, key)) fail('INVALID_FLOW_WORK', `工作元信息缺少 ${key}。`);
+  if (value.version !== FLOW_VERSION || value.id !== id) fail('INVALID_FLOW_WORK', '工作元信息版本或标识不匹配。');
+  const type = flowType(String(value.type));
+  const size = flowSize(String(value.size));
   const created = text(value.created, '创建时间', 64);
-  if (!Number.isFinite(Date.parse(created))) fail('INVALID_LITE_WORK', '工作创建时间无效。');
+  if (!Number.isFinite(Date.parse(created))) fail('INVALID_FLOW_WORK', '工作创建时间无效。');
   const base = text(value.base, '基线提交', 64);
-  if (!validCommit(base)) fail('INVALID_LITE_WORK', '工作基线提交无效。');
-  if (!Array.isArray(value.scope) || !value.scope.length || value.scope.some(item => typeof item !== 'string')) fail('INVALID_LITE_WORK', '工作范围无效。');
+  if (!validCommit(base)) fail('INVALID_FLOW_WORK', '工作基线提交无效。');
+  if (!Array.isArray(value.scope) || !value.scope.length || value.scope.some(item => typeof item !== 'string')) fail('INVALID_FLOW_WORK', '工作范围无效。');
   const preExisting: Record<string, string> = {};
   if (value.preExisting !== undefined) {
-    if (!value.preExisting || typeof value.preExisting !== 'object' || Array.isArray(value.preExisting)) fail('INVALID_LITE_WORK', '开工前改动摘要格式无效。');
+    if (!value.preExisting || typeof value.preExisting !== 'object' || Array.isArray(value.preExisting)) fail('INVALID_FLOW_WORK', '开工前改动摘要格式无效。');
     for (const [relative, digest] of Object.entries(value.preExisting as Record<string, unknown>)) {
       validateRelativePath(relative);
-      if (typeof digest !== 'string' || !/^[a-f0-9]{64}$/u.test(digest)) fail('INVALID_LITE_WORK', '开工前改动摘要无效。');
+      if (typeof digest !== 'string' || !/^[a-f0-9]{64}$/u.test(digest)) fail('INVALID_FLOW_WORK', '开工前改动摘要无效。');
       preExisting[relative] = digest;
     }
   }
@@ -147,22 +147,22 @@ function sectionBody(content: string, title: string): string {
   const next = /^##\s+/mu.exec(rest);
   return rest.slice(0, next?.index ?? rest.length).trim();
 }
-function parseCriteria(content: string): LiteCriterion[] {
+function parseCriteria(content: string): FlowCriterion[] {
   const body = sectionBody(content, '验收条件');
-  const result: LiteCriterion[] = [];
+  const result: FlowCriterion[] = [];
   for (const line of body.split(/\r?\n/u)) {
     const match = /^-\s+(AC-\d+):\s*(.+)$/u.exec(line.trim());
     if (match) result.push({ id: match[1]!, text: match[2]!.trim() });
   }
   return result;
 }
-function parseConfirmations(content: string): LiteConfirmation[] {
+function parseConfirmations(content: string): FlowConfirmation[] {
   const body = sectionBody(content, '确认');
   const chunks = body.split(/^###\s+/mu).slice(1);
-  const result: LiteConfirmation[] = [];
+  const result: FlowConfirmation[] = [];
   for (const chunk of chunks) {
     const lines = chunk.split(/\r?\n/u);
-    const gate = lines.shift()?.trim() as LiteGate | undefined;
+    const gate = lines.shift()?.trim() as FlowGate | undefined;
     if (!gate || !CONFIRMATION_GATES.includes(gate)) continue;
     const field = (name: string) => {
       const prefix = `- ${name}：`;
@@ -178,10 +178,10 @@ function parseConfirmations(content: string): LiteConfirmation[] {
   }
   return result;
 }
-function parseVerifications(content: string): LiteVerification[] {
+function parseVerifications(content: string): FlowVerification[] {
   const body = sectionBody(content, '验证');
   const chunks = body.split(/^###\s+/mu).slice(1);
-  const result: LiteVerification[] = [];
+  const result: FlowVerification[] = [];
   for (const chunk of chunks) {
     const lines = chunk.split(/\r?\n/u);
     const id = lines.shift()?.trim();
@@ -193,12 +193,12 @@ function parseVerifications(content: string): LiteVerification[] {
     const criterion = field('条件');
     const test = field('测试');
     const command = field('命令');
-    const resultValue = field('结果') as LiteResult;
+    const resultValue = field('结果') as FlowResult;
     const exitText = field('退出码');
     const commit = field('提交');
     const at = field('时间');
     const tree = field('代码树摘要');
-    const source = field('来源') as LiteVerification['source'];
+    const source = field('来源') as FlowVerification['source'];
     if (criterion && test && command && RESULTS.includes(resultValue) && validCommit(commit)
       && /^[a-f0-9]{64}$/u.test(tree) && Number.isFinite(Date.parse(at)) && (source === 'executed' || source === 'reported')) {
       result.push({ id, criterion, test, command, result: resultValue, exitCode: exitText === '无' ? null : Number(exitText),
@@ -207,20 +207,20 @@ function parseVerifications(content: string): LiteVerification[] {
   }
   return result;
 }
-function parseWork(content: string, id: string, relative: string): LiteWork {
+function parseWork(content: string, id: string, relative: string): FlowWork {
   const marker = new RegExp(`${MARKER_PREFIX.replace(/[.*+?^${}()|[\]\\]/gu, '\\$&')}(\\{.*\\})${MARKER_SUFFIX.replace(/[.*+?^${}()|[\]\\]/gu, '\\$&')}`, 'u').exec(content);
-  if (!marker) fail('LITE_WORK_NOT_FOUND', `工作 ${id} 不是当前轻量记录。`);
+  if (!marker) fail('FLOW_WORK_NOT_FOUND', `工作 ${id} 不是当前轻量记录。`);
   const title = /^#\s+(.+)$/mu.exec(content)?.[1]?.trim();
-  if (!title) fail('INVALID_LITE_WORK', '工作记录缺少标题。');
+  if (!title) fail('INVALID_FLOW_WORK', '工作记录缺少标题。');
   const goal = sectionBody(content, '目标');
-  if (!goal) fail('INVALID_LITE_WORK', '工作记录缺少目标。');
+  if (!goal) fail('INVALID_FLOW_WORK', '工作记录缺少目标。');
   return {
     meta: parseMeta(marker[1]!, id), title, goal, design: sectionBody(content, '设计'),
     criteria: parseCriteria(content), confirmations: parseConfirmations(content),
     verifications: parseVerifications(content), content, path: relative,
   };
 }
-async function readWork(root: string, id: string): Promise<LiteWork> {
+async function readWork(root: string, id: string): Promise<FlowWork> {
   validateWorkId(id);
   await readProjectMetadata(root);
   const relative = workPath(id);
@@ -229,7 +229,7 @@ async function readWork(root: string, id: string): Promise<LiteWork> {
   return parseWork(content, id, relative);
 }
 
-function renderConfirmations(values: LiteConfirmation[]): string {
+function renderConfirmations(values: FlowConfirmation[]): string {
   if (!values.length) return '';
   return values.map(value => [
     `### ${value.gate}`,
@@ -239,7 +239,7 @@ function renderConfirmations(values: LiteConfirmation[]): string {
     `- 时间：${value.at}`,
   ].join('\n')).join('\n\n');
 }
-function renderVerifications(values: LiteVerification[]): string {
+function renderVerifications(values: FlowVerification[]): string {
   if (!values.length) return '';
   return values.map(value => [
     `### ${value.id}`,
@@ -254,7 +254,7 @@ function renderVerifications(values: LiteVerification[]): string {
     `- 时间：${value.at}`,
   ].join('\n')).join('\n\n');
 }
-function renderWork(work: Omit<LiteWork, 'content' | 'path'>, selfCheck = ''): string {
+function renderWork(work: Omit<FlowWork, 'content' | 'path'>, selfCheck = ''): string {
   const parts = [
     `# ${work.title}`,
     `${MARKER_PREFIX}${JSON.stringify(work.meta)}${MARKER_SUFFIX}`,
@@ -272,32 +272,32 @@ async function writeWork(root: string, id: string, before: string, after: string
   await applyChanges(root, [{ path: workPath(id), before, after }]);
 }
 
-function criteriaList(values: string[]): LiteCriterion[] {
-  if (!values.length) fail('INVALID_LITE_INPUT', '至少提供一个 --criterion。');
-  const result: LiteCriterion[] = [];
+function criteriaList(values: string[]): FlowCriterion[] {
+  if (!values.length) fail('INVALID_FLOW_INPUT', '至少提供一个 --criterion。');
+  const result: FlowCriterion[] = [];
   for (const raw of values) {
     const match = /^(AC-\d+)\s*[=:：]\s*(.+)$/u.exec(raw.trim());
     const id = match?.[1] ?? `AC-${result.length + 1}`;
     const body = normalizeLine(match?.[2] ?? raw);
-    if (!body) fail('INVALID_LITE_INPUT', '验收条件不能为空。');
-    if (result.some(item => item.id === id)) fail('INVALID_LITE_INPUT', `验收条件编号重复：${id}`);
+    if (!body) fail('INVALID_FLOW_INPUT', '验收条件不能为空。');
+    if (result.some(item => item.id === id)) fail('INVALID_FLOW_INPUT', `验收条件编号重复：${id}`);
     result.push({ id, text: body });
   }
   return result.sort((left, right) => Number(left.id.slice(3)) - Number(right.id.slice(3)));
 }
-function requirementsSubject(work: Pick<LiteWork, 'meta' | 'goal' | 'criteria'>): string {
+function requirementsSubject(work: Pick<FlowWork, 'meta' | 'goal' | 'criteria'>): string {
   return sha(JSON.stringify({
     type: work.meta.type, size: work.meta.size, scope: work.meta.scope,
     goal: normalizeLine(work.goal), criteria: work.criteria.map(item => [item.id, normalizeLine(item.text)]),
   }));
 }
-function designSubject(work: Pick<LiteWork, 'meta' | 'goal' | 'criteria' | 'design'>): string {
+function designSubject(work: Pick<FlowWork, 'meta' | 'goal' | 'criteria' | 'design'>): string {
   return sha(JSON.stringify({ requirements: requirementsSubject(work), design: work.design.trim() }));
 }
-function latestVerification(work: Pick<LiteWork, 'verifications'>, criterion: string): LiteVerification | undefined {
+function latestVerification(work: Pick<FlowWork, 'verifications'>, criterion: string): FlowVerification | undefined {
   return [...work.verifications].reverse().find(item => item.criterion === criterion);
 }
-function deliverySubject(work: LiteWork, commit: string): string {
+function deliverySubject(work: FlowWork, commit: string): string {
   return sha(JSON.stringify({
     requirements: requirementsSubject(work), design: work.design.trim() ? designSubject(work) : null,
     commit, criteria: work.criteria.map(item => {
@@ -306,17 +306,17 @@ function deliverySubject(work: LiteWork, commit: string): string {
     }),
   }));
 }
-function expectedSubject(work: LiteWork, gate: LiteGate, commit: string): string {
+function expectedSubject(work: FlowWork, gate: FlowGate, commit: string): string {
   if (gate === 'requirements') return requirementsSubject(work);
   if (gate === 'design') return designSubject(work);
   return deliverySubject(work, commit);
 }
 
-export async function startLite(rootInput: string, idInput: string, input: LiteStartInput) {
+export async function startFlow(rootInput: string, idInput: string, input: FlowStartInput) {
   const root = path.resolve(rootInput); validateWorkId(idInput);
   const title = safeInput(text(input.title, '标题', 200), '标题');
   const goal = safeInput(text(input.goal, '目标'), '目标');
-  const type = liteType(input.type); const size = liteSize(input.size);
+  const type = flowType(input.type); const size = flowSize(input.size);
   const scope = scopeValues(input.targets);
   const criteria = criteriaList(input.criteria).map(item => ({ ...item, text: safeInput(item.text, `${item.id} 验收条件`) }));
   const relative = workPath(idInput);
@@ -339,7 +339,7 @@ export async function startLite(rootInput: string, idInput: string, input: LiteS
   });
 }
 
-export async function resumeLite(rootInput: string, id?: string) {
+export async function resumeFlow(rootInput: string, id?: string) {
   const root = path.resolve(rootInput); await readProjectMetadata(root);
   if (id) {
     const work = await readWork(root, id);
@@ -360,17 +360,17 @@ export async function resumeLite(rootInput: string, id?: string) {
         works.push({ id: entry.name, title: work.title, type: work.meta.type, size: work.meta.size, path: work.path,
           confirmed: work.confirmations.length, verified: work.verifications.length });
       }
-    } catch { /* Other work formats are outside the lightweight index. */ }
+    } catch { /* Other work formats are outside the default flow index. */ }
   }
   return { works };
 }
 
-export async function confirmLite(rootInput: string, id: string, gateInput: string, quoteInput: string, commitInput?: string) {
+export async function confirmFlow(rootInput: string, id: string, gateInput: string, quoteInput: string, commitInput?: string) {
   const root = path.resolve(rootInput);
   return withProjectLock(root, async () => {
     const work = await readWork(root, id);
-    if (!CONFIRMATION_GATES.includes(gateInput as LiteGate)) fail('INVALID_CONFIRMATION_GATE', `确认节点必须是：${CONFIRMATION_GATES.join(', ')}。`);
-    const gate = gateInput as LiteGate; const quote = safeInput(text(quoteInput, '用户原话', 4000), '用户原话');
+    if (!CONFIRMATION_GATES.includes(gateInput as FlowGate)) fail('INVALID_CONFIRMATION_GATE', `确认节点必须是：${CONFIRMATION_GATES.join(', ')}。`);
+    const gate = gateInput as FlowGate; const quote = safeInput(text(quoteInput, '用户原话', 4000), '用户原话');
     if (gate === 'requirements' && !work.criteria.length) fail('MISSING_REQUIREMENTS', '没有可确认的验收条件。');
     if (gate === 'design') {
       const requirements = [...work.confirmations].reverse().find(item => item.gate === 'requirements');
@@ -382,12 +382,12 @@ export async function confirmLite(rootInput: string, id: string, gateInput: stri
       if (safety.length) fail('UNSAFE_RECORD', `设计正文${safety.join('；')}`);
     }
     if (gate === 'acceptance') {
-      const checked = await inspectLite(root, id);
+      const checked = await inspectFlow(root, id);
       if (!checked.ready) fail('NOT_READY', `技术自检未通过：${checked.issues.join('；')}`);
     }
     const commit = await currentCommit(root, commitInput);
     const subject = expectedSubject(work, gate, commit);
-    const confirmation: LiteConfirmation = { gate, quote: normalizeLine(quote), commit, subject, at: new Date().toISOString() };
+    const confirmation: FlowConfirmation = { gate, quote: normalizeLine(quote), commit, subject, at: new Date().toISOString() };
     const next = { ...work, confirmations: [...work.confirmations.filter(item => item.gate !== gate), confirmation] };
     const { content: _content, path: _path, ...body } = next;
     await writeWork(root, id, work.content, renderWork(body, sectionBody(work.content, '自检')));
@@ -534,19 +534,19 @@ async function weakensTests(root: string, base: string): Promise<TestFindings> {
   return { issues: [...new Set(issues)], warnings: [...new Set(warnings)] };
 }
 
-export interface LiteCheck {
+export interface FlowCheck {
   id: string; ready: boolean; issues: string[]; warnings: string[]; criteria: { id: string; covered: boolean; test?: string; result?: string; commit?: string }[];
-  confirmations: { gate: LiteGate; confirmed: boolean; quote: string; commit: string; issue?: string }[];
+  confirmations: { gate: FlowGate; confirmed: boolean; quote: string; commit: string; issue?: string }[];
   acceptance: { confirmed: boolean; quote?: string; commit?: string };
   changedOutsideScope: string[]; selfCheck: string;
 }
 
-async function evaluateLite(root: string, id: string, work: LiteWork): Promise<LiteCheck> {
+async function evaluateFlow(root: string, id: string, work: FlowWork): Promise<FlowCheck> {
   const issues: string[] = []; const warnings: string[] = [];
   const requirement = [...work.confirmations].reverse().find(item => item.gate === 'requirements');
   const currentTree = await treeDigest(root, work.meta.scope, id);
-  const confirmationStates: LiteCheck['confirmations'] = [];
-  for (const gate of ['requirements', 'design', 'acceptance'] as LiteGate[]) {
+  const confirmationStates: FlowCheck['confirmations'] = [];
+  for (const gate of ['requirements', 'design', 'acceptance'] as FlowGate[]) {
     const item = [...work.confirmations].reverse().find(entry => entry.gate === gate);
     if (!item) { confirmationStates.push({ gate, confirmed: false, quote: '', commit: '' }); continue; }
     const expected = expectedSubject(work, gate, item.commit);
@@ -610,36 +610,36 @@ async function evaluateLite(root: string, id: string, work: LiteWork): Promise<L
     changedOutsideScope, selfCheck };
 }
 
-export async function inspectLite(rootInput: string, id: string): Promise<LiteCheck> {
+export async function inspectFlow(rootInput: string, id: string): Promise<FlowCheck> {
   const root = path.resolve(rootInput); const work = await readWork(root, id);
-  return evaluateLite(root, id, work);
+  return evaluateFlow(root, id, work);
 }
 
-export async function checkLite(rootInput: string, id: string): Promise<LiteCheck> {
+export async function checkFlow(rootInput: string, id: string): Promise<FlowCheck> {
   const root = path.resolve(rootInput);
   return withProjectLock(root, async () => {
     const work = await readWork(root, id);
-    const checked = await evaluateLite(root, id, work);
+    const checked = await evaluateFlow(root, id, work);
     const next = renderWork(work, checked.selfCheck);
     if (next !== work.content) await writeWork(root, id, work.content, next);
     return checked;
   });
 }
 
-export async function verifyLite(rootInput: string, id: string, input: LiteVerifyInput) {
+export async function verifyFlow(rootInput: string, id: string, input: FlowVerifyInput) {
   const root = path.resolve(rootInput);
   return withProjectLock(root, async () => {
     const work = await readWork(root, id);
-    if (!input.criteria?.length) fail('INVALID_LITE_INPUT', '至少提供一个 --criterion。');
+    if (!input.criteria?.length) fail('INVALID_FLOW_INPUT', '至少提供一个 --criterion。');
     const criteria = [...new Set(input.criteria.map(value => value.trim()))];
     for (const criterion of criteria) if (!work.criteria.some(item => item.id === criterion)) fail('UNKNOWN_CRITERION', `验收条件不存在：${criterion}`);
     const test = testReference(input.test);
     if (!(await testExists(root, test))) fail('TEST_NOT_FOUND', `测试引用不存在：${test}`);
     const command = safeInput(text(input.command, '验证命令', 4000), '验证命令');
     if (input.run !== undefined) safeInput(text(input.run, '执行命令', 4000), '执行命令');
-    let result: LiteResult;
+    let result: FlowResult;
     let exitCode: number | null = null;
-    let source: LiteVerification['source'] = 'reported';
+    let source: FlowVerification['source'] = 'reported';
     if (input.run !== undefined) {
       source = 'executed';
       const exit = await new Promise<number | null>((resolve, reject) => {
@@ -652,30 +652,30 @@ export async function verifyLite(rootInput: string, id: string, input: LiteVerif
       });
       exitCode = exit;
       result = exit === 0 ? 'passed' : 'failed';
-      if (input.result !== undefined && liteResult(input.result) !== result) fail('RESULT_MISMATCH', `命令结果 ${result} 与 --result 不一致。`);
+      if (input.result !== undefined && flowResult(input.result) !== result) fail('RESULT_MISMATCH', `命令结果 ${result} 与 --result 不一致。`);
     } else {
-      result = liteResult(input.result ?? 'passed');
+      result = flowResult(input.result ?? 'passed');
     }
     const commit = await currentCommit(root, undefined);
     const tree = await treeDigest(root, work.meta.scope, id);
     const at = new Date().toISOString();
-    const entries: LiteVerification[] = criteria.map((criterion, index) => ({
+    const entries: FlowVerification[] = criteria.map((criterion, index) => ({
       id: `run-${work.verifications.length + index + 1}`,
       criterion, test, command, result, exitCode, commit, at, tree, source,
     }));
-    const next: LiteWork = { ...work, verifications: [...work.verifications, ...entries] };
+    const next: FlowWork = { ...work, verifications: [...work.verifications, ...entries] };
     const { content: _content, path: _path, ...body } = next;
     await writeWork(root, id, work.content, renderWork(body, sectionBody(work.content, '自检')));
     return { id, result, commit, tree, entries, next: result === 'passed' ? `tiller check ${id}` : `修复后重新运行验证` };
   });
 }
-function liteResult(value: string): LiteResult {
-  if (!RESULTS.includes(value as LiteResult)) fail('INVALID_RESULT', `验证结果必须是：${RESULTS.join(', ')}。`);
-  return value as LiteResult;
+function flowResult(value: string): FlowResult {
+  if (!RESULTS.includes(value as FlowResult)) fail('INVALID_RESULT', `验证结果必须是：${RESULTS.join(', ')}。`);
+  return value as FlowResult;
 }
 
-export async function acceptLite(rootInput: string, id: string, quoteInput: string, commitInput?: string) {
-  const checked = await checkLite(rootInput, id);
+export async function acceptFlow(rootInput: string, id: string, quoteInput: string, commitInput?: string) {
+  const checked = await checkFlow(rootInput, id);
   if (!checked.ready) fail('NOT_READY', `技术自检未通过：${checked.issues.join('；')}`);
-  return confirmLite(rootInput, id, 'acceptance', quoteInput, commitInput);
+  return confirmFlow(rootInput, id, 'acceptance', quoteInput, commitInput);
 }

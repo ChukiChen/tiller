@@ -33,7 +33,7 @@ test('initialization supplies current usage and launcher with discoverable links
   assert.deepEqual(snapshot(root), before);
 });
 
-test('current entry and rules retain lightweight stage, scope, context and compatibility navigation', async t => {
+test('current entry and rules retain default-flow stage, scope, context and compatibility navigation', async t => {
   const root = fixture(t);
   await initialize({ root });
   const rules = read(root, '.tiller/rules/core.md');

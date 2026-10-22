@@ -8,9 +8,9 @@ node .tiller/run.cjs status
 node .tiller/run.cjs resume
 ```
 
-`--help` 展示全部轻量流程和参数。命令参数从当前工作记录推断，通常不需要手写大段 JSON。
+`--help` 展示默认工作流和参数。命令参数从当前工作记录推断，通常不需要手写大段 JSON。
 
-## 默认流程
+## 默认工作流
 
 ```sh
 # 小改动

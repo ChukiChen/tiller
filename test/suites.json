@@ -17,6 +17,6 @@
     "usage-resources.test.mjs"
   ],
   "e2e": [
-    "lightweight-cli.test.mjs"
+    "flow-cli.test.mjs"
   ]
 }

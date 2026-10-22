@@ -219,10 +219,10 @@ test('accept refuses an unverified work and leaves no acceptance record', async 
   assert.doesNotMatch(read(root, work(root, id)), /验收通过/u);
 });
 
-test('default help is lightweight and old audit commands are gone', t => {
+test('default help names the default flow and old audit commands are gone', t => {
   const root = fixture(t);
   const normal = success(cli(root, '--help'));
-  assert.match(normal.help, /轻量标准开发流程/u);
+  assert.match(normal.help, /默认工作流/u);
   assert.match(normal.help, /tiller start/u);
   assert.doesNotMatch(normal.help, /advanced|work plan register|workflow list/u);
   for (const args of [['advanced'], ['work', 'create'], ['workflow', 'list'], ['planning'], ['task'], ['delivery-check']]) {

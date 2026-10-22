@@ -6,11 +6,11 @@ import { realpathSync } from 'node:fs';
 import { bindRuntime, runtimeStatus } from './runtime.js';
 import { initialize, inspectProject, recoverProject } from './core.js';
 import { applyUpgrade, planUpgrade } from './upgrade.js';
-import { acceptLite, checkLite, confirmLite, inspectLite, resumeLite, startLite, verifyLite } from './lite.js';
+import { acceptFlow, checkFlow, confirmFlow, inspectFlow, resumeFlow, startFlow, verifyFlow } from './flow.js';
 
 export const CLI_VERSION = '0.5.0';
 
-const HELP = `tiller ${CLI_VERSION} — 轻量标准开发流程
+const HELP = `tiller ${CLI_VERSION} — 默认工作流
 
 用法：
   tiller init [path] [--mode project|workspace] [--repo <repository-path> ...]
@@ -26,7 +26,7 @@ const HELP = `tiller ${CLI_VERSION} — 轻量标准开发流程
   tiller upgrade [path] --plan
   tiller upgrade [path] --apply <plan-id>
 
-默认流程：
+默认工作流：
 - small：需求确认 → 实现 → 验证；standard：需求 → 设计 → 实现 → 验证。验收始终需要真实用户原话。
 - 默认人工节点只有需求、设计和交付验收；没有规划、任务、阶段或合入审计命令。
 - work.md 是唯一工作记录：确认保存原话、提交和对象摘要；验证保存命令、结果、提交和代码树摘要。
@@ -76,8 +76,8 @@ export async function runCli(rawArgs = process.argv.slice(2)): Promise<void> {
       if (wantsJson) output({ ok: true, version: CLI_VERSION }); else process.stdout.write(`${CLI_VERSION}\n`);
     } else {
       const [command, second, third] = positionals;
-      const liteCommand = ['start', 'resume', 'confirm', 'verify', 'check', 'accept'].includes(command ?? '');
-      const allowed = liteCommand
+      const flowCommand = ['start', 'resume', 'confirm', 'verify', 'check', 'accept'].includes(command ?? '');
+      const allowed = flowCommand
         ? command === 'start' ? ['path', 'title', 'goal', 'type', 'size', 'target', 'criterion']
           : command === 'resume' ? ['path']
             : command === 'confirm' ? ['path', 'quote', 'commit']
@@ -91,36 +91,36 @@ export async function runCli(rawArgs = process.argv.slice(2)): Promise<void> {
       }
       let result: unknown;
       let ready = true;
-      if (liteCommand) {
+      if (flowCommand) {
         const root = resolve(values.path ?? process.cwd());
         if (command === 'start') {
           if (positionals.length !== 2) usage('start 需要一个工作标识。');
           if (!values.title || !values.goal) usage('start 需要 --title 和 --goal；验收条件使用可重复的 --criterion。');
           if (!values.criterion?.length) usage('start 至少需要一个 --criterion，例如 --criterion "AC-1=命令正常退出"。');
-          result = await startLite(root, second!, { title: values.title, goal: values.goal,
+          result = await startFlow(root, second!, { title: values.title, goal: values.goal,
             ...(values.type === undefined ? {} : { type: values.type }), ...(values.size === undefined ? {} : { size: values.size }),
             ...(values.target === undefined ? {} : { targets: values.target }), criteria: values.criterion });
         } else if (command === 'resume') {
           if (positionals.length > 2) usage('resume 最多接受一个工作标识。');
-          if (second) result = { ...await resumeLite(root, second), check: await inspectLite(root, second) };
-          else result = await resumeLite(root);
+          if (second) result = { ...await resumeFlow(root, second), check: await inspectFlow(root, second) };
+          else result = await resumeFlow(root);
         } else if (command === 'confirm') {
           if (positionals.length !== 3) usage('confirm 需要工作标识和确认节点：requirements、design 或 acceptance。');
           if (!values.quote) usage('confirm 需要 --quote "<用户原话>"。');
-          result = await confirmLite(root, second!, third!, values.quote, values.commit);
+          result = await confirmFlow(root, second!, third!, values.quote, values.commit);
         } else if (command === 'verify') {
           if (positionals.length !== 2) usage('verify 需要一个工作标识。');
           if (!values.criterion?.length || !values.test || !values.command) usage('verify 需要 --criterion、--test 和 --command；执行命令时同时给出相同的 --run。');
-          result = await verifyLite(root, second!, { criteria: values.criterion, test: values.test, command: values.command,
+          result = await verifyFlow(root, second!, { criteria: values.criterion, test: values.test, command: values.command,
             ...(values.result === undefined ? {} : { result: values.result }), ...(values.run === undefined ? {} : { run: values.run }) });
           ready = (result as { result?: string }).result === 'passed';
         } else if (command === 'check') {
           if (positionals.length !== 2) usage('check 需要一个工作标识。');
-          const checked = await checkLite(root, second!); result = checked; ready = checked.ready;
+          const checked = await checkFlow(root, second!); result = checked; ready = checked.ready;
         } else {
           if (positionals.length !== 2) usage('accept 需要一个工作标识。');
           if (!values.quote) usage('accept 需要 --quote "<用户原话>"。');
-          result = await acceptLite(root, second!, values.quote, values.commit);
+          result = await acceptFlow(root, second!, values.quote, values.commit);
         }
       } else if (command === 'init' || command === 'status' || command === 'recover') {
         if (positionals.length > 2) usage('位置参数过多。');

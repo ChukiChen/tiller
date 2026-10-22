@@ -23,7 +23,7 @@ test('entry keeps the small and standard flows explicit and bounded', () => {
   assert.doesNotMatch(entry, /advanced/u);
 });
 
-test('core and usage describe the only supported lightweight record path', () => {
+test('core and usage describe the only supported default-flow record path', () => {
   const core = read('rules/core.md');
   assert.match(core, /小改动 \| 需求确认 → 实现 → 验证/u);
   assert.match(core, /标准\/大功能 \| 需求确认 → 设计确认 → 实现 → 验证/u);
@@ -46,7 +46,7 @@ test('core and usage describe the only supported lightweight record path', () =>
   assert.match(read('rules/index.md'), /规则按需读取/u);
 });
 
-test('required reading stays within the lightweight budget', () => {
+test('required reading stays within the default-flow budget', () => {
   const required = ['entry.md', 'usage.md', 'rules/index.md', 'rules/core.md'];
   const total = required.reduce((sum, name) => sum + read(name).length, 0);
   assert.ok(total <= 5000, `required reading is ${total} characters`);
@@ -98,7 +98,7 @@ test('activity rules keep requirements, design, implementation and delivery boun
   assert.match(read('rules/activities/delivery.md'), /合入与发布仍需各自授权/u);
 });
 
-test('README describes only the lightweight flow and release-time versioning', () => {
+test('README describes only the default flow and release-time versioning', () => {
   const readme = readFileSync(new URL('../README.md', import.meta.url), 'utf8');
   assert.match(readme, /小改动：需求确认 → 实现 → 验证/u);
   assert.match(readme, /标准或大功能：需求确认 → 设计确认 → 实现 → 验证/u);

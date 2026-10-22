@@ -32,11 +32,11 @@ function manifest(root) {
 
 const packed = JSON.parse(run(process.execPath, [npm, 'pack', '--ignore-scripts=false', '--json', '--pack-destination', output], project))[0];
 const paths = new Set(packed.files.map(file => file.path));
-for (const path of ['dist/cli.js', 'dist/lite.js', 'resources/entry.md', 'resources/usage.md', 'resources/run.cjs']) {
+for (const path of ['dist/cli.js', 'dist/flow.js', 'resources/entry.md', 'resources/usage.md', 'resources/run.cjs']) {
   assert.ok(paths.has(path), path);
 }
 for (const path of [...paths]) assert.ok(!/^resources\/(?:workflows|templates)\//u.test(path), path);
-const expectedModules = ['cli', 'core', 'files', 'lite', 'project-metadata', 'repository-paths', 'runtime', 'shared-paths', 'types', 'upgrade', 'work-id'];
+const expectedModules = ['cli', 'core', 'files', 'flow', 'project-metadata', 'repository-paths', 'runtime', 'shared-paths', 'types', 'upgrade', 'work-id'];
 const packagedModules = [...paths].filter(path => /^dist\/[^/]+\.js$/u.test(path)).map(path => path.slice(5, -3)).sort();
 assert.deepEqual(packagedModules, expectedModules);
 assert.ok(![...paths].some(path => /^(src|test|\.tiller|node_modules)\//u.test(path)));
@@ -63,7 +63,7 @@ const installedEntry = readFileSync(join(install, 'node_modules/tiller/resources
 assert.equal(readFileSync(join(target, 'AGENTS.md'), 'utf8'), `<!-- tiller:entry:start -->\n${installedEntry}\n<!-- tiller:entry:end -->\n`);
 const invoke = (args, status = 0) => JSON.parse(run(process.execPath, ['.tiller/run.cjs', ...args, '--json'], target, status));
 const workId = '20261021-package-smoke';
-const started = invoke(['start', workId, '--title', 'Package smoke', '--goal', 'Verify the lightweight package entry',
+const started = invoke(['start', workId, '--title', 'Package smoke', '--goal', 'Verify the default flow package entry',
   '--criterion', 'AC-1=package starts a work', '--size', 'small', '--target', '.']);
 assert.equal(started.id, workId);
 assert.ok(!started.next.includes('advanced'));

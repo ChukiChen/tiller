@@ -1,7 +1,7 @@
 <!-- tiller:entry:start -->
 # tiller 工作入口
 
-tiller 用一套可复现的轻量流程帮助 AI 完成软件开发：先确认目标，再在范围内实现，最后用可定位的测试证明结果。项目背景和专属约定由 `.tiller/context/`、`.tiller/rules/` 和已有决定维护。
+tiller 用一套可复现的默认工作流帮助 AI 完成软件开发：先确认目标，再在范围内实现，最后用可定位的测试证明结果。项目背景和专属约定由 `.tiller/context/`、`.tiller/rules/` 和已有决定维护。
 
 ## 开始
 

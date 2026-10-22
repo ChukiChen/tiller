@@ -2,7 +2,7 @@
 
 tiller 是一套面向 AI 开发的标准工作流程与 CLI。它用较少的人工节点、可重复的检查和可追溯的 Git 记录，帮助开发者明确目标、控制范围、验证交付，并在中断后继续工作。
 
-## 默认流程
+## 默认工作流
 
 先明确交付目标、范围、任务大小和已有授权，再选择流程：
 
@@ -99,4 +99,5 @@ tiller upgrade --apply <plan-id>
 - [总体需求](.tiller/specs/requirements.md)
 - [总体设计](.tiller/specs/design.md)
 - [决策记录](.tiller/specs/decisions.md)
-- [本轮轻量流程工作记录](.tiller/work/20261022-lightweight-flow/work.md)
+- [默认工作流模块命名工作记录](.tiller/work/20261022-flow-naming/work.md)
+- [本轮默认工作流工作记录](.tiller/work/20261022-lightweight-flow/work.md)
