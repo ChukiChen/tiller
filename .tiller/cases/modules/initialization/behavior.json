@@ -53,6 +53,41 @@
       "criteria": [
         "20261022-first-batch#AC-5"
       ]
+    },
+    {
+      "id": "CASE-071",
+      "title": "初始化安装受管 PR 模板并保留已有模板",
+      "requirements": [
+        ".tiller/specs/modules/initialization/requirements.md#2-初始化"
+      ],
+      "modules": [
+        "initialization"
+      ],
+      "test_ref": "test/pr.test.mjs::init installs a managed pull request template and preserves an existing one",
+      "source": [
+        "src/core.ts",
+        "resources/pull_request_template.md"
+      ],
+      "criteria": [
+        "20261022-round11#AC-4"
+      ]
+    },
+    {
+      "id": "CASE-072",
+      "title": "旧受管清单升级时补充 PR 模板",
+      "requirements": [
+        ".tiller/specs/modules/initialization/requirements.md#3-受管资源"
+      ],
+      "modules": [
+        "initialization"
+      ],
+      "test_ref": "test/pr.test.mjs::upgrade adds the pull request template to a previous managed set",
+      "source": [
+        "src/upgrade.ts"
+      ],
+      "criteria": [
+        "20261022-round11#AC-4"
+      ]
     }
   ]
 }

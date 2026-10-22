@@ -33,14 +33,14 @@ test('core and usage describe the only supported default-flow record path', () =
   assert.match(core, /确认绑定 `task\.md` 的结构化正文/u);
   assert.match(core, /原话可选/u);
   assert.match(core, /不保存全文快照.*自举工程或安装包/u);
-  assert.match(core, /同一问题连续两次尝试失败时停止自动修复/u);
+  assert.match(core, /同一问题连续两次失败即停止/u);
   assert.match(core, /变化需同步 `\.tiller\/context\/`/u);
-  assert.match(core, /交付前自检：逐条核对验收条件；检查 diff 是否越界；确认测试未被删除或弱化/u);
+  assert.match(core, /交付前逐条核对 AC、diff 边界、测试弱化和记录安全/u);
   assert.match(core, /只支持当前及直接兼容的上一资源契约/u);
   assert.match(core, /版本号只在正式发布时修改/u);
   assert.doesNotMatch(core, /advanced|上一版本升级/u);
   const usage = read('usage.md');
-  for (const command of ['start', 'resume', 'confirm', 'verify', 'check', 'accept', 'close']) assert.ok(usage.includes(`run.cjs ${command}`), command);
+  for (const command of ['start', 'resume', 'confirm', 'verify', 'check', 'accept', 'close', 'pr']) assert.ok(usage.includes(`run.cjs ${command}`), command);
   assert.match(usage, /reopen/u);
   assert.match(usage, /--size small/u);
   assert.match(usage, /standard 另生成/u);
@@ -52,6 +52,19 @@ test('core and usage describe the only supported default-flow record path', () =
   assert.match(usage, /不保存全文快照和日志/u);
   assert.match(usage, /当前及上一资源契约/u);
   assert.doesNotMatch(usage, /advanced|上一版本到当前版本/u);
+  assert.match(usage, /类型\(模块\): 中文摘要/u);
+  assert.match(usage, /\[任务编号\]/u);
+  assert.match(usage, /类型\/任务编号/u);
+  const delivery = read('rules/activities/delivery.md');
+  assert.match(delivery, /类型\(模块\): 中文摘要/u);
+  assert.match(delivery, /PR 标题.*\[任务编号\]/u);
+  assert.match(delivery, /`pr <task-id>`/u);
+  assert.match(delivery, /main\/master 与 detached HEAD/u);
+  const template = read('pull_request_template.md');
+  for (const heading of ['关联任务', '变更内容', '验收条件', '验证结果', '影响与风险']) {
+    assert.equal(template.split(`## ${heading}`).length - 1, 1, heading);
+  }
+  assert.doesNotMatch(template, /范围外|不在范围/u);
   assert.match(read('rules/index.md'), /规则按需读取/u);
 });
 
@@ -152,13 +165,13 @@ test('global cases use module kinds and scenarios with resolvable named tests', 
   const scenarios = readdirSync(join(directory, 'scenarios')).filter(name => name.endsWith('.json')).sort()
     .flatMap(name => JSON.parse(readFileSync(join(directory, 'scenarios', name), 'utf8')).scenarios);
   cases.push(...scenarios.map(item => ({ ...item, file: `scenarios/${item.id}` })));
-  assert.equal(cases.length, 67);
-  assert.deepEqual(cases.map(item => item.id).sort(), Array.from({ length: 67 }, (_, index) => `CASE-${String(index + 1).padStart(3, '0')}`));
+  assert.equal(cases.length, 73);
+  assert.deepEqual(cases.map(item => item.id).sort(), Array.from({ length: 73 }, (_, index) => `CASE-${String(index + 1).padStart(3, '0')}`));
   assert.deepEqual(counts, {
-    initialization: { behavior: 3, interface: 0, performance: 11, security: 0 },
+    initialization: { behavior: 5, interface: 0, performance: 11, security: 0 },
     standards: { behavior: 3, interface: 0, performance: 0, security: 0 },
     verification: { behavior: 4, interface: 5, performance: 15, security: 0 },
-    workflow: { behavior: 15, interface: 6, performance: 0, security: 3 },
+    workflow: { behavior: 15, interface: 10, performance: 0, security: 3 },
   });
   for (const item of scenarios) {
     assert.ok(item.modules.length > 0 && item.modules.every(module => specs.includes(module)), `${item.id}: modules`);
@@ -191,6 +204,8 @@ test('structured confirmation guidance is synchronized across help and durable d
   assert.match(help, /--by/u);
   assert.match(help, /原话可选/u);
   assert.match(help, /start 生成结构化需求/u);
+  assert.match(help, /tiller pr/u);
+  assert.match(help, /类型\/任务编号/u);
   assert.doesNotMatch(help, /验收始终需要真实用户原话|confirm 需要 --quote/u);
   for (const relative of ['README.md', 'resources/entry.md', 'resources/usage.md', 'resources/rules/core.md',
     'resources/rules/activities/requirements.md', 'resources/rules/activities/design.md', 'resources/rules/activities/delivery.md']) {

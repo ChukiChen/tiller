@@ -15,6 +15,7 @@ node .tiller/run.cjs verify <task-id> --criterion AC-1 --test test/cli.test.mjs:
 node .tiller/run.cjs check <task-id>
 node .tiller/run.cjs accept <task-id> [--by "验收人"]
 node .tiller/run.cjs close <task-id> --reason "交付完成"
+node .tiller/run.cjs pr <task-id> [--json]
 ```
 
 `start` 生成目标、范围、编号 AC；standard 另生成方案、取舍、影响与风险。确认前校验必填段。
@@ -22,6 +23,8 @@ node .tiller/run.cjs close <task-id> --reason "交付完成"
 `confirm`/`accept`/`plan confirm` 的 `--quote` 可选；`--by` 默认取 `git config user.name`。记录确认部分、确认人、时间、提交和正文摘要；需求与设计独立失效。旧记录兼容。
 
 阶段由事实推导：需求已确认 → 设计已确认（small 可略）→ 已验证 → 已验收 → 已关闭/放弃，失效时回退说明。已验收 `close`，未验收 `--abandon`，终态 `reopen`。
+
+`pr` 读取本地记录与 Git，输出标题、五段说明、分支或 JSON。提交 `类型(模块): 中文摘要`，PR 标题尾加 `[任务编号]`，分支用 `类型/任务编号[-描述]`；`check` 仅提示。
 
 ## 规划与用例
 

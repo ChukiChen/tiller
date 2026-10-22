@@ -2,8 +2,8 @@ import { createHash } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import {
-  ENTRY_END, ENTRY_START, IGNORE_END, IGNORE_START, INDEX_END, INDEX_START, META, RESOURCE_VERSION,
-  SHARED_RESOURCES, buildIndexSection, inspectProject, managedDigest, managedSection, parseMetadata,
+  ENTRY_END, ENTRY_START, IGNORE_END, IGNORE_START, INDEX_END, INDEX_START, META, PR_TEMPLATE, REQUIRED_MANAGED,
+  RESOURCE_VERSION, SHARED_RESOURCES, buildIndexSection, inspectProject, managedDigest, managedSection, parseMetadata,
   repositoryIgnorePatterns, sha256 as coreSha256, trackedContent,
 } from './core.js';
 import { applyChanges, hasPendingTransaction, readTextIfExists, withProjectLock } from './files.js';
@@ -25,7 +25,7 @@ const LIMITATIONS = [
   '不迁移业务资料、历史任务、旧确认或旧审计资料；业务文件与项目资料保持原样。',
   '规则约束依赖宿主遵守；CLI 检查不能认证决定者身份或阻止绕过 CLI 直接写入。',
 ];
-const EOL_EQUIVALENT = new Set(['AGENTS.md', '.gitignore', '.tiller/index.md',
+const EOL_EQUIVALENT = new Set(['AGENTS.md', '.gitignore', '.tiller/index.md', PR_TEMPLATE,
   ...SHARED_RESOURCES.map(resource => `.tiller/${resource}`)]);
 
 function replaceSection(current: string, replacement: string, start: string, end: string): string {
@@ -53,6 +53,7 @@ function withCurrentEol(current: string, desired: string): string {
 }
 
 async function desiredContent(metadata: ProjectMetadata, relative: string, current: string): Promise<string> {
+  if (relative === PR_TEMPLATE) return withCurrentEol(current, await readFile(new URL('../resources/pull_request_template.md', import.meta.url), 'utf8'));
   if (SHARED_RESOURCES.some(resource => `.tiller/${resource}` === relative)) {
     return withCurrentEol(current, await readFile(new URL(`../resources/${relative.slice('.tiller/'.length)}`, import.meta.url), 'utf8'));
   }
@@ -89,9 +90,29 @@ export async function planUpgrade(root: string): Promise<UpgradePlan> {
   const changes: FileChange[] = [];
   const managedFiles: Record<string, string> = {};
   const inputs: Record<string, unknown> = { metadata: metadataText };
-  for (const relative of Object.keys(metadata.managedFiles)) {
+  for (const relative of REQUIRED_MANAGED) {
     const current = await readTextIfExists(absoluteRoot, relative);
     inputs[relative] = current;
+    const recorded = metadata.managedFiles[relative];
+    if (recorded === undefined) {
+      if (relative !== PR_TEMPLATE) {
+        conflicts.push(`受管文件依据缺少 ${relative}；升级不会写入。`);
+        continue;
+      }
+      const desired = await desiredContent(metadata, relative, current ?? '');
+      if (current === null) {
+        inputs[`desired:${relative}`] = desired;
+        managedFiles[relative] = managedDigest(relative, desired);
+        changes.push({ path: relative, before: null, after: desired });
+        continue;
+      }
+      if (desired.replace(/\r\n/gu, '\n') === current.replace(/\r\n/gu, '\n')) {
+        managedFiles[relative] = managedDigest(relative, current);
+        continue;
+      }
+      conflicts.push(`用户已有 ${relative} 与分发模板不同；升级不会覆盖。`);
+      continue;
+    }
     if (current === null) {
       conflicts.push(`受管文件缺失：${relative}；升级不会凭摘要重建。`);
       continue;
@@ -108,12 +129,16 @@ export async function planUpgrade(root: string): Promise<UpgradePlan> {
     if (desired !== current && desired.replace(/\r\n/gu, '\n') === current.replace(/\r\n/gu, '\n')) {
       desired = current;
     }
-    if (!sameDigest(relative, tracked, metadata.managedFiles[relative]!)) {
+    if (relative === PR_TEMPLATE && desired.replace(/\r\n/gu, '\n') !== current.replace(/\r\n/gu, '\n')) {
+      conflicts.push(`用户已有 ${relative} 与分发模板不同；升级不会覆盖。`);
+      continue;
+    }
+    if (!sameDigest(relative, tracked, recorded)) {
       conflicts.push(`用户修改了受管文件 ${relative}：${differenceHint(tracked, trackedContent(relative, desired))}；升级不会覆盖。`);
       continue;
     }
     inputs[`desired:${relative}`] = desired;
-    const currentDigest = metadata.managedFiles[relative]!;
+    const currentDigest = recorded;
     managedFiles[relative] = sameDigest(relative, trackedContent(relative, desired), currentDigest)
       ? currentDigest
       : managedDigest(relative, desired);

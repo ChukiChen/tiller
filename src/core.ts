@@ -10,10 +10,10 @@ import {
 import type { FileChange, InitializeOptions, ProjectInspection, ProjectMetadata, ProjectMode } from './types.js';
 import type { TextReadInput } from './files.js';
 import { repositoryPath, validateRepositoryMappings } from './repository-paths.js';
-import { META, REQUIRED_MANAGED, RESOURCE_VERSION, SCHEMA_VERSION, SHARED_RESOURCES, parseMetadata } from './project-metadata.js';
+import { META, PR_TEMPLATE, REQUIRED_MANAGED, RESOURCE_VERSION, SCHEMA_VERSION, SHARED_RESOURCES, parseMetadata } from './project-metadata.js';
 import { assertSharedWritePaths } from './shared-paths.js';
 
-export { META, RESOURCE_VERSION, SCHEMA_VERSION, RULES, SHARED_RESOURCES, parseMetadata } from './project-metadata.js';
+export { META, PR_TEMPLATE, REQUIRED_MANAGED, RESOURCE_VERSION, SCHEMA_VERSION, RULES, SHARED_RESOURCES, parseMetadata } from './project-metadata.js';
 
 export type { InitializeOptions, ProjectInspection, ProjectMetadata, ProjectMode } from './types.js';
 
@@ -222,6 +222,29 @@ export function buildIndexSection(mode: ProjectMode): string {
   ].join('\n');
 }
 
+async function pullRequestTemplate(root: string, managedFiles: Record<string, string>): Promise<{ change: FileChange | null; digest: string | null }> {
+  if (Object.hasOwn(managedFiles, PR_TEMPLATE)) return { change: null, digest: managedFiles[PR_TEMPLATE]! };
+  const content = await readFile(new URL('../resources/pull_request_template.md', import.meta.url), 'utf8');
+  if (!content.trim()) throw new Error('分发 PR 模板为空。');
+  const before = await readTextIfExists(root, PR_TEMPLATE);
+  if (before !== null && !equivalentManagedContent(PR_TEMPLATE, before, content)) {
+    return { change: null, digest: managedDigest(PR_TEMPLATE, before) };
+  }
+  return {
+    change: before === null ? { path: PR_TEMPLATE, before: null, after: content } : null,
+    digest: managedDigest(PR_TEMPLATE, before ?? content),
+  };
+}
+
+function orderedManagedFiles(managedFiles: Record<string, string>): Record<string, string> {
+  const ordered: Record<string, string> = {};
+  for (const relative of REQUIRED_MANAGED) {
+    const digest = managedFiles[relative];
+    if (digest) ordered[relative] = digest;
+  }
+  return ordered;
+}
+
 const SKELETON_FILES: { path: string; content: string }[] = [
   {
     path: '.tiller/specs/requirements.md',
@@ -383,8 +406,18 @@ export async function initialize(options: InitializeOptions): Promise<ProjectIns
       const inspection = await inspectProject(root);
       if (!inspection.ready) throw new Error(inspection.issues.join('\n'));
       const skeleton = await skeletonChanges(root);
-      if (!skeleton.length) return { ...inspection, changed: false };
-      await applyChanges(root, skeleton);
+      const template = await pullRequestTemplate(root, existing.managedFiles);
+      const changes = [...skeleton, ...(template.change ? [template.change] : [])];
+      let metadataChange: FileChange | null = null;
+      if (template.digest && existing.managedFiles[PR_TEMPLATE] !== template.digest) {
+        const metadata = { ...existing, managedFiles: orderedManagedFiles({ ...existing.managedFiles, [PR_TEMPLATE]: template.digest }) };
+        const after = `${JSON.stringify(metadata, null, 2)}\n`;
+        metadataChange = { path: META, before: existingText, after };
+        changes.push(metadataChange);
+      }
+      const effective = changes.filter(change => change.before !== change.after);
+      if (!effective.length) return { ...inspection, changed: false };
+      await applyChanges(root, effective);
       const completed = await inspectProject(root);
       if (!completed.ready) throw new Error(`补齐项目骨架后检查未通过：${completed.issues.join('\n')}`);
       return { ...completed, changed: true };
@@ -401,6 +434,9 @@ export async function initialize(options: InitializeOptions): Promise<ProjectIns
       changes.push({ path: relative, before, after: before ?? content });
       managedFiles[relative] = managedDigest(relative, content);
     }
+    const template = await pullRequestTemplate(root, managedFiles);
+    if (template.change) changes.push(template.change);
+    if (template.digest) managedFiles[PR_TEMPLATE] = template.digest;
     const entry = await readFile(new URL('../resources/entry.md', import.meta.url), 'utf8');
     if (!entry.trim()) throw new Error('分发入口资源为空。');
     const agentsBefore = await readTextIfExists(root, 'AGENTS.md');
@@ -419,7 +455,7 @@ export async function initialize(options: InitializeOptions): Promise<ProjectIns
     managedFiles['.tiller/index.md'] = managedDigest('.tiller/index.md', indexAfter);
     const metadata: ProjectMetadata = {
       schemaVersion: SCHEMA_VERSION, resourceVersion: RESOURCE_VERSION, mode, repositories, repositoryPaths,
-      managedFiles, createdAt: new Date().toISOString(),
+      managedFiles: orderedManagedFiles(managedFiles), createdAt: new Date().toISOString(),
     };
     changes.push({ path: META, before: null, after: `${JSON.stringify(metadata, null, 2)}\n` });
     await applyChanges(root, changes);

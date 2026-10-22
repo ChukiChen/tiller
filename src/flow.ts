@@ -8,6 +8,8 @@ import {
   type CaseLibrary, type GlobalCase,
 } from './cases.js';
 import { resolveConfirmer } from './confirmer.js';
+import { branchNameWarning } from './branch-conventions.js';
+import { commitMessageWarnings } from './commit-conventions.js';
 import { readProjectMetadata } from './core.js';
 import { applyChanges, readTextIfExists, validateRelativePath, withProjectLock } from './files.js';
 import { readPlanItem } from './plans.js';
@@ -313,7 +315,7 @@ function parseTask(content: string, id: string, relative: string): FlowTask {
     verifications: parseVerifications(content), closures: parseClosures(content), content, path: relative,
   };
 }
-async function readTask(root: string, id: string): Promise<FlowTask> {
+export async function readTask(root: string, id: string): Promise<FlowTask> {
   validateTaskId(id);
   await readProjectMetadata(root);
   const relative = taskPath(id);
@@ -864,6 +866,14 @@ async function evaluateFlow(root: string, id: string, task: FlowTask): Promise<F
   const library = await readCaseLibrary(root);
   issues.push(...library.issues);
   warnings.push(...library.warnings);
+  let specModules: string[] = [];
+  try {
+    specModules = (await readdir(path.join(root, '.tiller/specs/modules'), { withFileTypes: true }))
+      .filter(entry => entry.isDirectory()).map(entry => entry.name);
+  } catch { /* Commit format checks do not require module specs to exist. */ }
+  warnings.push(...await commitMessageWarnings(root, task.meta.base, specModules));
+  const branchWarning = await branchNameWarning(root, id);
+  if (branchWarning) warnings.push(branchWarning);
   let matched = 0;
   let criteriaBindingValid = true;
   const criteria = await Promise.all(task.criteria.map(async item => {

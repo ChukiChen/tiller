@@ -18,6 +18,7 @@
   ],
   "e2e": [
     "flow-cli.test.mjs",
-    "first-batch.test.mjs"
+    "first-batch.test.mjs",
+    "pr.test.mjs"
   ]
 }
