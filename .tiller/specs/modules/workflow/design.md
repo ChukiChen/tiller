@@ -39,6 +39,12 @@
 
 `close` 只接受当前阶段为已验收的任务；未验收任务必须显式 `--abandon`。关闭事件写入 `task.md` 的“关闭”区段，保存状态、原因和时间。`reopen` 追加恢复事件；验收、确认和验证仍按原摘要判断，阶段从最后一次恢复之后的事实重新计算。终态任务上的 `confirm`、`verify`、`accept` 直接阻塞。
 
-## 6. 范围与恢复
+## 6. 交付草稿
+
+`commitTypeForTaskType` 将任务类型映射到限定提交类型；`taskCommits` 读取 `base..HEAD` 的非合并主题。`branchNameIssue` 校验 `类型/任务编号[-描述]` 及任务编号前缀；`currentBranch` 在 main/master、detached HEAD 或无 Git 时跳过。
+
+`draftPullRequest` 复用 `inspectFlow` 的 AC 覆盖状态，从任务范围和全局用例来源推导唯一模块；多模块时省略标题模块并提示。正文生成器只接受五个固定二级标题，Markdown 在标题后单列建议分支，JSON 同时返回 `body`、`branch` 和提交列表。该模块没有网络依赖。
+
+## 7. 范围与恢复
 
 范围是工程相对路径集合；默认 `.`。排除任务自己的记录、`.tiller/local/`、`.git/` 和依赖目录。无 Git 时跳过依赖提交差分的检查，但保留文件级代码树摘要。写入使用统一事务，失败可用 `recover`。

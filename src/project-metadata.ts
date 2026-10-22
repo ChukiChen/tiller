@@ -5,6 +5,7 @@ export const SCHEMA_VERSION = 1;
 export const RESOURCE_VERSION = '0.5.0';
 export const SUPPORTED_RESOURCE_VERSIONS = ['0.4.0', '0.5.0'] as const;
 export const META = '.tiller/project.json';
+export const PR_TEMPLATE = '.github/pull_request_template.md';
 export const RULES = [
   'rules/index.md', 'rules/core.md',
   'rules/activities/requirements.md', 'rules/activities/design.md',
@@ -12,7 +13,8 @@ export const RULES = [
   'rules/quality/documents.md', 'rules/quality/verification.md',
 ] as const;
 export const SHARED_RESOURCES = [...RULES, 'usage.md', 'run.cjs'] as const;
-export const REQUIRED_MANAGED = ['AGENTS.md', '.gitignore', '.tiller/index.md', ...SHARED_RESOURCES.map(name => `.tiller/${name}`)];
+export const PREVIOUS_MANAGED = ['AGENTS.md', '.gitignore', '.tiller/index.md', ...SHARED_RESOURCES.map(name => `.tiller/${name}`)];
+export const REQUIRED_MANAGED = [...PREVIOUS_MANAGED, PR_TEMPLATE];
 
 export function parseMetadata(text: string): ProjectMetadata {
   let value: unknown;
@@ -32,8 +34,13 @@ export function parseMetadata(text: string): ProjectMetadata {
     throw new Error('受管文件依据缺失。');
   }
   const managed = data.managedFiles as Record<string, unknown>;
-  if (Object.keys(managed).length !== REQUIRED_MANAGED.length ||
-      REQUIRED_MANAGED.some(name => !Object.hasOwn(managed, name) || typeof managed[name] !== 'string' ||
-        !/^[0-9a-f]{64}$/u.test(managed[name] as string))) throw new Error('受管文件依据不完整或含不支持的文件。');
+  const keys = Object.keys(managed).sort();
+  const currentSet = [...REQUIRED_MANAGED].sort();
+  const previousSet = [...PREVIOUS_MANAGED].sort();
+  const sameSet = (expected: string[]) => keys.length === expected.length && expected.every((name, index) => name === keys[index]);
+  if ((!sameSet(currentSet) && !sameSet(previousSet)) ||
+      keys.some(name => typeof managed[name] !== 'string' || !/^[0-9a-f]{64}$/u.test(managed[name] as string))) {
+    throw new Error('受管文件依据不完整或含不支持的文件。');
+  }
   return data as unknown as ProjectMetadata;
 }

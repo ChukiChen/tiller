@@ -56,6 +56,7 @@ test('empty init creates the guided skeleton without overwriting existing files'
   assert.equal(result.ready, true);
   assert.equal(read(root, '.tiller/specs/requirements.md'), '# 用户已有需求\n\n保留原文。\n');
   for (const relative of [
+    '.github/pull_request_template.md',
     '.tiller/specs/design.md', '.tiller/specs/decisions.md', '.tiller/specs/modules/README.md',
     '.tiller/context/project.md', '.tiller/cases/index.md', '.tiller/cases/modules/.gitkeep',
     '.tiller/cases/scenarios/.gitkeep', '.tiller/plans/README.md',

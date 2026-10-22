@@ -57,6 +57,24 @@
       "criteria": [
         "20261022-round9#AC-5"
       ]
+    },
+    {
+      "id": "CASE-074",
+      "title": "提交、分支与 PR 规范同步后必读资料仍在预算内",
+      "requirements": [
+        ".tiller/specs/modules/standards/requirements.md"
+      ],
+      "modules": [
+        "standards"
+      ],
+      "test_ref": "test/rules.test.mjs::required reading stays within the default-flow budget",
+      "source": [
+        "resources/rules/activities/delivery.md",
+        "resources/usage.md"
+      ],
+      "criteria": [
+        "20261022-round11#AC-5"
+      ]
     }
   ]
 }

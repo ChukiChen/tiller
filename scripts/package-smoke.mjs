@@ -41,11 +41,11 @@ function manifest(root) {
 
 const packed = JSON.parse(run(process.execPath, [npm, 'pack', '--ignore-scripts=false', '--json', '--pack-destination', output], project))[0];
 const paths = new Set(packed.files.map(file => file.path));
-for (const path of ['dist/cli.js', 'dist/flow.js', 'resources/entry.md', 'resources/usage.md', 'resources/run.cjs']) {
+for (const path of ['dist/cli.js', 'dist/flow.js', 'resources/entry.md', 'resources/usage.md', 'resources/pull_request_template.md', 'resources/run.cjs']) {
   assert.ok(paths.has(path), path);
 }
 for (const path of [...paths]) assert.ok(!/^resources\/(?:workflows|templates)\//u.test(path), path);
-const expectedModules = ['cases', 'cli', 'confirmer', 'core', 'files', 'flow', 'plans', 'project-metadata', 'repository-paths', 'runtime', 'shared-paths', 'task-id', 'types', 'upgrade'];
+const expectedModules = ['branch-conventions', 'cases', 'cli', 'commit-conventions', 'confirmer', 'core', 'files', 'flow', 'plans', 'pr', 'project-metadata', 'repository-paths', 'runtime', 'shared-paths', 'task-id', 'types', 'upgrade'];
 const packagedModules = [...paths].filter(path => /^dist\/[^/]+\.js$/u.test(path)).map(path => path.slice(5, -3)).sort();
 assert.deepEqual(packagedModules, expectedModules);
 assert.ok(![...paths].some(path => /^(src|test|\.tiller|node_modules)\//u.test(path)));
@@ -67,6 +67,7 @@ const help = run(process.execPath, ['.tiller/run.cjs', '--help'], target);
 assert.ok(help.includes('tiller start'), 'tiller start');
 assert.ok(help.includes('tiller plan start'), 'plan start');
 assert.ok(help.includes('tiller case add'), 'case add');
+assert.ok(help.includes('tiller pr'), 'pr');
 assert.ok(help.includes('--requirement'), 'requirement input');
 assert.ok(!help.includes('advanced'), 'advanced help must not be advertised');
 assert.ok(!/lite|lightweight/iu.test(help), 'lite naming must be gone');
@@ -74,6 +75,9 @@ assert.equal(JSON.parse(run(process.execPath, ['.tiller/run.cjs', 'runtime', 'st
 const installedUsage = readFileSync(join(target, '.tiller/usage.md'), 'utf8');
 assert.ok(installedUsage.includes('node .tiller/run.cjs'));
 assert.ok(installedUsage.includes('case add'));
+assert.ok(installedUsage.includes('run.cjs pr'));
+const installedTemplate = readFileSync(join(target, '.github/pull_request_template.md'), 'utf8');
+for (const heading of ['关联任务', '变更内容', '验收条件', '验证结果', '影响与风险']) assert.ok(installedTemplate.includes(`## ${heading}`), heading);
 const installedEntry = readFileSync(join(install, 'node_modules/tiller/resources/entry.md'), 'utf8').trimEnd();
 assert.equal(readFileSync(join(target, 'AGENTS.md'), 'utf8'), `<!-- tiller:entry:start -->\n${installedEntry}\n<!-- tiller:entry:end -->\n`);
 const invoke = (args, status = 0) => JSON.parse(run(process.execPath, ['.tiller/run.cjs', ...args, '--json'], target, status));
@@ -108,6 +112,10 @@ const verified = invoke(['verify', taskId, '--criterion', 'AC-1', '--test', 'tes
 assert.deepEqual(verified.cases, ['CASE-001']);
 const checked = invoke(['check', taskId]);
 assert.equal(checked.ready, true, checked.issues.join('\n'));
+const draft = invoke(['pr', taskId]);
+assert.equal(draft.branch, `feat/${taskId}`);
+assert.ok(draft.title.endsWith(`[${taskId}]`));
+assert.match(draft.body, /^## 关联任务$/mu);
 invoke(['accept', taskId, '--quote', 'Package smoke accepted']);
 assert.equal(invoke(['close', taskId, '--reason', 'Package smoke delivered']).stage, '已关闭');
 assert.equal(invoke(['accept', taskId, '--quote', 'Closed task cannot accept'], 1).error.code, 'TASK_CLOSED');

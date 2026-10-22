@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import test from 'node:test';
-import { equivalentManagedContent, initialize, inspectProject, matchesManagedDigest, parseMetadata, RESOURCE_VERSION, sha256, SHARED_RESOURCES } from '../dist/core.js';
+import { equivalentManagedContent, initialize, inspectProject, matchesManagedDigest, parseMetadata, PR_TEMPLATE, RESOURCE_VERSION, sha256, SHARED_RESOURCES } from '../dist/core.js';
 import { applyUpgrade, planUpgrade } from '../dist/upgrade.js';
 import { fixture, gitRepository, put, snapshot } from './helpers.mjs';
 
@@ -14,7 +14,9 @@ test('initialization supplies current usage and launcher with discoverable links
   const result = await initialize({ root });
   assert.equal(RESOURCE_VERSION, '0.5.0');
   assert.equal(result.metadata.resourceVersion, RESOURCE_VERSION);
-  assert.equal(Object.keys(result.metadata.managedFiles).length, SHARED_RESOURCES.length + 3);
+  assert.equal(Object.keys(result.metadata.managedFiles).length, SHARED_RESOURCES.length + 4);
+  assert.ok(existsSync(join(root, PR_TEMPLATE)));
+  assert.ok(Object.hasOwn(result.metadata.managedFiles, PR_TEMPLATE));
   for (const name of added) {
     assert.equal(read(root, name), readFileSync(new URL(`../resources/${name.slice(8)}`, import.meta.url), 'utf8'));
     assert.ok(!read(root, name).includes(root));
@@ -113,6 +115,7 @@ test('current metadata requires the complete managed set and rejects historical 
   await initialize({ root });
   const metadata = JSON.parse(read(root, '.tiller/project.json'));
   for (const relative of Object.keys(metadata.managedFiles)) {
+    if (relative === PR_TEMPLATE) continue;
     const missing = structuredClone(metadata);
     delete missing.managedFiles[relative];
     assert.throws(() => parseMetadata(JSON.stringify(missing)), /受管文件依据/u);
@@ -120,6 +123,9 @@ test('current metadata requires the complete managed set and rejects historical 
   const extra = structuredClone(metadata);
   extra.managedFiles['.tiller/unexpected.md'] = sha256('unexpected');
   assert.throws(() => parseMetadata(JSON.stringify(extra)), /受管文件依据/u);
+  const previous = structuredClone(metadata);
+  delete previous.managedFiles[PR_TEMPLATE];
+  assert.equal(parseMetadata(JSON.stringify(previous)).resourceVersion, RESOURCE_VERSION);
   const noMappings = structuredClone(metadata);
   delete noMappings.repositoryPaths;
   assert.throws(() => parseMetadata(JSON.stringify(noMappings)));
@@ -148,7 +154,7 @@ test('ignored current entry paths block inspection and noop without changing ori
 test('managed resource EOL equivalence is bidirectional and restricted to the distributed allowlist', () => {
   const lf = 'first line\nsecond line\n';
   const crlf = lf.replace(/\n/gu, '\r\n');
-  for (const relative of ['AGENTS.md', '.gitignore', '.tiller/index.md', ...SHARED_RESOURCES.map(name => `.tiller/${name}`)]) {
+  for (const relative of ['AGENTS.md', '.gitignore', '.tiller/index.md', PR_TEMPLATE, ...SHARED_RESOURCES.map(name => `.tiller/${name}`)]) {
     assert.equal(equivalentManagedContent(relative, lf, crlf), true, relative);
     assert.equal(equivalentManagedContent(relative, crlf, lf), true, relative);
     assert.equal(matchesManagedDigest(relative, lf, sha256(crlf)), true, relative);

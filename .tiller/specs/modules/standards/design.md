@@ -7,12 +7,13 @@
 - `resources/rules/index.md`：按活动查找细则。
 - `resources/rules/core.md`：流程、确认、记录、范围、卡住、context 和版本边界。
 - `resources/rules/activities/` 与 `quality/`：需求、设计、实现、交付和文档/验证细节。
+- `resources/pull_request_template.md`：固定五段 PR 说明，初始化时复制为受管 `.github/pull_request_template.md`。
 
 不内置重阶段模板或全量规格副本。入口和核心规则保持短句、表格和明确动词。
 
 ## 2. 接入与同步
 
-`init` 把入口写入 `AGENTS.md` 固定区段，将规则、usage 和启动器复制到 `.tiller/`。受管摘要记录规范化内容；`upgrade` 只刷新未修改文件。项目自有规则和区段外入口正文保持原样。
+`init` 把入口写入 `AGENTS.md` 固定区段，将规则、usage 和启动器复制到 `.tiller/`，并按摘要管理 PR 模板。`upgrade` 只刷新未修改文件。项目自有规则、已有 PR 模板和区段外入口正文保持原样。
 
 ## 3. 检查方式
 

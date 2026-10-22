@@ -92,6 +92,78 @@
       "criteria": [
         "20261022-round9#AC-1"
       ]
+    },
+    {
+      "id": "CASE-068",
+      "title": "PR 草稿包含标题、五段说明、AC 状态与建议分支",
+      "requirements": [
+        ".tiller/specs/modules/workflow/requirements.md#5-提交与-pr-草稿"
+      ],
+      "modules": [
+        "workflow"
+      ],
+      "test_ref": "test/pr.test.mjs::pr draft derives title, five sections and current AC state",
+      "source": [
+        "src/pr.ts",
+        "src/commit-conventions.ts",
+        "src/branch-conventions.ts",
+        "src/cli.ts"
+      ],
+      "criteria": [
+        "20261022-round11#AC-3"
+      ]
+    },
+    {
+      "id": "CASE-069",
+      "title": "提交主题不合规只提示并跳过合并提交",
+      "requirements": [
+        ".tiller/specs/modules/workflow/requirements.md#5-提交与-pr-草稿"
+      ],
+      "modules": [
+        "workflow"
+      ],
+      "test_ref": "test/pr.test.mjs::check warns about nonconforming commit subjects and skips merge subjects",
+      "source": [
+        "src/commit-conventions.ts",
+        "src/flow.ts"
+      ],
+      "criteria": [
+        "20261022-round11#AC-1"
+      ]
+    },
+    {
+      "id": "CASE-070",
+      "title": "分支名建议与校验遵循类型和任务编号",
+      "requirements": [
+        ".tiller/specs/modules/workflow/requirements.md#5-提交与-pr-草稿"
+      ],
+      "modules": [
+        "workflow"
+      ],
+      "test_ref": "test/pr.test.mjs::branch names follow type and task prefix rules",
+      "source": [
+        "src/branch-conventions.ts"
+      ],
+      "criteria": [
+        "20261022-round11#AC-2"
+      ]
+    },
+    {
+      "id": "CASE-073",
+      "title": "提交主题校验类型、模块、中文摘要与任务链接",
+      "requirements": [
+        ".tiller/specs/modules/workflow/requirements.md#5-提交与-pr-草稿"
+      ],
+      "modules": [
+        "workflow"
+      ],
+      "test_ref": "test/pr.test.mjs::commit subjects enforce type, module, Chinese summary and no task links",
+      "source": [
+        "src/commit-conventions.ts"
+      ],
+      "criteria": [
+        "20261022-round11#AC-1"
+      ]
     }
   ]
 }

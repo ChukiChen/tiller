@@ -12,6 +12,9 @@
 | `src/flow.ts` | task 的 start/resume/confirm/verify/check/accept/close/reopen 与阶段推导 |
 | `src/plans.ts` | 规划、条目依赖、确认和状态 |
 | `src/cases.ts` | 全局用例读取、校验、`case add`、回归提示 |
+| `src/commit-conventions.ts` | 提交主题与 PR 类型约定、任务基线后的提交读取 |
+| `src/branch-conventions.ts` | 分支名建议、格式与任务编号校验 |
+| `src/pr.ts` | 从 `task.md` 与 Git 生成五段 PR 草稿和建议分支 |
 | `src/upgrade.ts` | 受管文件预览、冲突判断、原子刷新 |
 | `src/cli.ts` | 命令解析、帮助、JSON 输出和退出码 |
 | `resources/` | 分发的入口、使用指引、规则和启动器 |
@@ -53,16 +56,22 @@
 
 无 Git 时范围检查降级为提示；有 Git 时同时检查越界、未提交改动、删除/跳过/弱化测试。
 
-## 7. 初始化与升级
+## 7. 提交、分支与 PR
 
-`init` 只补缺失骨架，维护 `AGENTS.md` 区段、`.gitignore` 本机排除和 `.tiller/index.md` 导航；已存在且冲突的入口拒绝覆盖。`project.json` 保存模式、仓库映射和各受管文件的规范化摘要。
+提交类型限定 `feat/fix/docs/refactor/test/chore`，主题格式为 `类型(模块): 中文摘要`；模块名必须来自 `.tiller/specs/modules/`，任务类型到提交类型由固定映射推导。检查范围是任务 `base` 到 `HEAD` 的非合并提交，只产生提示。
+
+分支建议为 `类型/任务编号`；当前分支可附加 `-简短描述`，但必须与当前任务编号一致。main/master 与 detached HEAD 跳过检查。PR 标题为提交格式加 `[任务编号]`，正文固定五段；`pr` 只输出草稿，不访问远端。
+
+## 8. 初始化与升级
+
+`init` 只补缺失骨架，维护 `AGENTS.md` 区段、`.gitignore` 本机排除、`.tiller/index.md` 导航和 `.github/pull_request_template.md`；已存在且冲突的入口拒绝覆盖。`project.json` 保存模式、仓库映射和各受管文件的规范化摘要。
 
 `upgrade` 读取当前或兼容上一资源契约，按记录摘要判断受管文件是否被用户修改。未修改文件按分发资源或固定区段重建；修改、缺失和异常区段只报告冲突。预览摘要绑定输入、期望结果和元信息；应用时在锁内重新预览并原子写入，成功后更新摘要与 `resourceVersion`。
 
-## 8. 错误与恢复
+## 9. 错误与恢复
 
 输入错误返回参数错误；未初始化、版本不支持、冲突、依赖阻塞、未确认、未验证、范围越界等使用稳定错误码并说明下一步。写操作使用事务与恢复日志，失败后可用 `recover` 恢复；不得凭摘要重建缺失文件或覆盖用户修改。
 
-## 9. 验证入口
+## 10. 验证入口
 
 `npm run build`、`lint`、`typecheck`、`npm test`、`npm run test:package`。构建必须实际编译 TypeScript；局部规则检查不能替代完整测试。

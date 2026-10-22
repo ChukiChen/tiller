@@ -9,6 +9,7 @@ import { applyUpgrade, planUpgrade } from './upgrade.js';
 import { addGlobalCase } from './cases.js';
 import { acceptFlow, checkFlow, closeFlow, confirmFlow, inspectFlow, reopenFlow, resumeFlow, startFlow, verifyFlow } from './flow.js';
 import { confirmPlan, startPlan, statusPlan } from './plans.js';
+import { draftPullRequest } from './pr.js';
 
 export const CLI_VERSION = '0.5.0';
 
@@ -27,6 +28,7 @@ const HELP = `tiller ${CLI_VERSION} — 默认工作流
   tiller case add <task-id> --scenario <场景名> --module <模块> [--module ...] --title <标题> --test "<文件::测试名>" --criterion AC-1 [--spec <引用> ...] --source <源码路径> [--source ...]
   tiller verify <task-id> --criterion AC-1 [--criterion ...] --test <测试文件或用例引用> --command "<验证命令>" [--run "<同一命令>"] [--result passed|failed|skipped] [--path <root>]
   tiller check <task-id> [--path <root>]
+  tiller pr <task-id> [--path <root>]
   tiller accept <task-id> [--by <确认人>] [--quote "<可选原话>"] [--commit <oid>] [--path <root>]
   tiller close <task-id> --reason "<原因>" [--abandon] [--path <root>]
   tiller reopen <task-id> --reason "<原因>" [--path <root>]
@@ -42,6 +44,7 @@ const HELP = `tiller ${CLI_VERSION} — 默认工作流
 - task.md 是唯一任务记录：start 生成结构化需求，standard 另有设计与影响；确认前校验正文，原话只作可选附注。验证保存命令、结果、提交和代码树摘要。
 - 阶段由 task.md 事实推导；close 收尾已验收任务，未验收终止用 --abandon，必要时 reopen。
 - case add 自动分配 CASE 编号并写入来源 AC；check 会核对 AC→全局用例→测试→当前验证，校验模块/场景结构并提示相关回归，同时检查范围、测试弱化、密钥和本机绝对路径。
+- pr 从 task.md 和 Git 提交生成五段 PR 草稿及建议分支名；提交用“类型(模块): 中文摘要”，分支用“类型/任务编号[-描述]”；check 只提示格式问题。
 - upgrade 刷新未修改的受管文件，保留并报告用户修改；版本号只在正式发布时修改。
 `;
 
@@ -101,6 +104,7 @@ export async function runCli(rawArgs = process.argv.slice(2)): Promise<void> {
       const flowCommand = ['start', 'resume', 'confirm', 'verify', 'check', 'accept', 'close', 'reopen'].includes(command ?? '');
       const planCommand = command === 'plan';
       const caseCommand = command === 'case';
+      const prCommand = command === 'pr';
       const allowed = flowCommand
         ? command === 'start' ? ['path', 'title', 'requirement', 'type', 'size', 'target', 'criterion', 'plan', 'item']
           : command === 'resume' ? ['path']
@@ -113,7 +117,8 @@ export async function runCli(rawArgs = process.argv.slice(2)): Promise<void> {
           : second === 'confirm' ? ['path', 'quote', 'by', 'commit']
             : second === 'status' ? ['path'] : []
           : caseCommand ? second === 'add' ? ['path', 'module', 'kind', 'scenario', 'title', 'test', 'criterion', 'spec', 'source'] : []
-            : command === 'init' ? ['mode', 'repo']
+            : prCommand ? ['path']
+              : command === 'init' ? ['mode', 'repo']
               : command === 'upgrade' ? ['plan', 'apply']
                 : command === 'runtime' ? ['path'] : [];
       for (const name of Object.keys(values)) {
@@ -121,6 +126,7 @@ export async function runCli(rawArgs = process.argv.slice(2)): Promise<void> {
       }
       let result: unknown;
       let ready = true;
+      let markdownOutput: string | null = null;
       if (flowCommand) {
         const root = resolve(values.path ?? process.cwd());
         if (command === 'start') {
@@ -202,6 +208,11 @@ export async function runCli(rawArgs = process.argv.slice(2)): Promise<void> {
           ...(values.kind === undefined ? {} : { kind: values.kind }),
           ...(values.scenario === undefined ? {} : { scenario: values.scenario }),
         });
+      } else if (prCommand) {
+        if (positionals.length !== 2) usage('pr 需要一个任务标识。');
+        const draft = await draftPullRequest(resolve(values.path ?? process.cwd()), second!);
+        result = draft;
+        markdownOutput = draft.markdown;
       } else if (command === 'init' || command === 'status' || command === 'recover') {
         if (positionals.length > 2) usage('位置参数过多。');
         const root = second ?? process.cwd();
@@ -236,7 +247,8 @@ export async function runCli(rawArgs = process.argv.slice(2)): Promise<void> {
         ready = runtime.ready;
         result = { runtime, entry: runtime.ready ? 'node .tiller/run.cjs' : null, entryRoot: resolve(root) };
       } else usage(`未知命令：${command ?? ''}`);
-      output({ ok: ready, ...result as object });
+      if (markdownOutput !== null && !wantsJson) process.stdout.write(markdownOutput);
+      else output({ ok: ready, ...result as object });
       if (!ready) process.exitCode = 1;
     }
   } catch (error) {
