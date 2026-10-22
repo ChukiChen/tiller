@@ -25,8 +25,59 @@
 
 ## 验证
 
-尚无验证。
+### run-1
+- 条件：AC-1
+- 测试：test/rules.test.mjs::global cases map to existing requirements, sources and named tests
+- 命令：npm run test:rules
+- 结果：passed
+- 退出码：0
+- 提交：d59a9c2a3089c50be4d7e05096acb75d4b947953
+- 代码树摘要：9566e54ad62ccc78b9a922ab5f583e267671f27dcf319a24fea95490d94d6989
+- 来源：executed
+- 时间：2026-10-22T00:40:11.000Z
+
+### run-2
+- 条件：AC-2
+- 测试：test/flow-cli.test.mjs::global cases accept resolvable refs and report unmapped verification tests
+- 命令：npm run test:e2e
+- 结果：passed
+- 退出码：0
+- 提交：d59a9c2a3089c50be4d7e05096acb75d4b947953
+- 代码树摘要：9566e54ad62ccc78b9a922ab5f583e267671f27dcf319a24fea95490d94d6989
+- 来源：executed
+- 时间：2026-10-22T00:40:11.000Z
+
+### run-3
+- 条件：AC-3
+- 测试：test/rules.test.mjs
+- 命令：npm run test:rules
+- 结果：passed
+- 退出码：0
+- 提交：d59a9c2a3089c50be4d7e05096acb75d4b947953
+- 代码树摘要：9566e54ad62ccc78b9a922ab5f583e267671f27dcf319a24fea95490d94d6989
+- 来源：executed
+- 时间：2026-10-22T00:40:11.000Z
+
+### run-4
+- 条件：AC-4
+- 测试：test/suites.json
+- 命令：npm run build && npm run lint && npm run typecheck && npm test && npm run test:package
+- 结果：passed
+- 退出码：0
+- 提交：d59a9c2a3089c50be4d7e05096acb75d4b947953
+- 代码树摘要：9566e54ad62ccc78b9a922ab5f583e267671f27dcf319a24fea95490d94d6989
+- 来源：executed
+- 时间：2026-10-22T00:40:11.000Z
 
 ## 自检
 
-交付前运行 check；验收后运行 accept。
+- [ ] 需求确认有效（本任务按用户直接实施指令执行，未另设展示后的需求确认）
+- [x] 该任务无需设计确认
+- [x] 验收条件均有当前通过的测试引用
+- [x] 全局用例引用有效
+- [x] 改动未超出范围
+- [x] 未弱化仍存在的测试
+- [x] 记录不含密钥或本机绝对路径
+
+阻塞项：
+- 缺少需求确认。技术结果和用户实施指令不替代后续交付验收。
