@@ -30,8 +30,9 @@ function stageTask(root, id) {
 function addDesign(root, id) {
   const relative = `.tiller/task/${id}/task.md`;
   const content = read(root, relative);
-  assert.match(content, /^## 确认$/mu);
-  put(root, relative, content.replace('\n## 确认\n', '\n## 设计\n\n使用任务记录中的结构化正文推进。\n\n## 确认\n'));
+  assert.match(content, /^### 方案$/mu);
+  put(root, relative, content.replace('### 方案\n\n### 取舍\n\n### 影响与风险',
+    '### 方案\n\n使用任务记录中的结构化正文推进。\n\n### 取舍\n\n保持现有命令边界。\n\n### 影响与风险\n\n阶段推导与任务记录。'));
 }
 
 function activeFiles(root) {

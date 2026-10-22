@@ -17,12 +17,13 @@
 - `work/`：仅保留的历史任务记录，只读追溯；新任务写入 `task/`。
 - `local/`：本机锁与恢复信息，不作为共享事实来源。
 
-任务创建或资料变化后，以实际文件和任务记录为准；确认原话只作凭证，不替代已写明的需求或设计正文。
+任务创建或资料变化后，以实际文件和任务记录为准；确认绑定结构化正文，原话可选且不替代正文。
 <!-- tiller:index:end -->
 
 ## 已有资料
 
 - [第一批功能补齐任务](task/20261022-first-batch/task.md)
+- [确认去原话化与结构化任务正文](task/20261022-round9/task.md)
 - [任务阶段、关闭与规格清理](task/20261022-round8/task.md)
 - [全局用例说明](cases/index.md)
 - [总体需求](specs/requirements.md)、[总体设计](specs/design.md)、[决策记录](specs/decisions.md)

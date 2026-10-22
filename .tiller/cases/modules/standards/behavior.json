@@ -39,6 +39,24 @@
         "20261022-round8#AC-1",
         "20261022-round8#AC-5"
       ]
+    },
+    {
+      "id": "CASE-065",
+      "title": "结构化确认语义在帮助与长期资料中同步",
+      "requirements": [
+        ".tiller/specs/modules/standards/requirements.md#3-执行规则"
+      ],
+      "modules": [
+        "standards"
+      ],
+      "test_ref": "test/rules.test.mjs::structured confirmation guidance is synchronized across help and durable docs",
+      "source": [
+        "src/cli.ts",
+        "resources/usage.md"
+      ],
+      "criteria": [
+        "20261022-round9#AC-5"
+      ]
     }
   ]
 }

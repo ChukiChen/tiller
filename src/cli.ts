@@ -18,16 +18,16 @@ const HELP = `tiller ${CLI_VERSION} — 默认工作流
   tiller init [path] [--mode project|workspace] [--repo <repository-path> ...]
   tiller status [path]
   tiller plan start <plan-id> --title <标题> --goal <目标> --spec <specs 引用> [--spec ...] --item "P-1=标题;size=small;deps=P-0;specs=<引用>;plan=<子规划>" [--item ...]
-  tiller plan confirm <plan-id> --quote "<用户原话>" [--commit <oid>] [--path <root>]
+  tiller plan confirm <plan-id> [--by <确认人>] [--quote "<可选原话>"] [--commit <oid>] [--path <root>]
   tiller plan status <plan-id> [--path <root>]
   tiller start <task-id> --title <标题> --requirement <需求正文> --criterion "AC-1=<验收条件>" [--criterion ...] [--type feature] [--size small|standard] [--target <相对路径> ...] [--plan <plan-id> --item <条目>] [--path <root>]
   tiller resume [task-id] [--path <root>]
-  tiller confirm <task-id> requirements|design|acceptance --quote "<用户原话>" [--commit <oid>] [--path <root>]
+  tiller confirm <task-id> requirements|design|acceptance [--by <确认人>] [--quote "<可选原话>"] [--commit <oid>] [--path <root>]
   tiller case add <task-id> --module <模块> --kind behavior|interface|performance|security --title <标题> --test "<文件::测试名>" --criterion AC-1 [--criterion ...] [--spec <引用> ...] --source <源码路径> [--source ...] [--path <root>]
   tiller case add <task-id> --scenario <场景名> --module <模块> [--module ...] --title <标题> --test "<文件::测试名>" --criterion AC-1 [--spec <引用> ...] --source <源码路径> [--source ...]
   tiller verify <task-id> --criterion AC-1 [--criterion ...] --test <测试文件或用例引用> --command "<验证命令>" [--run "<同一命令>"] [--result passed|failed|skipped] [--path <root>]
   tiller check <task-id> [--path <root>]
-  tiller accept <task-id> --quote "<用户原话>" [--commit <oid>] [--path <root>]
+  tiller accept <task-id> [--by <确认人>] [--quote "<可选原话>"] [--commit <oid>] [--path <root>]
   tiller close <task-id> --reason "<原因>" [--abandon] [--path <root>]
   tiller reopen <task-id> --reason "<原因>" [--path <root>]
   tiller recover [path]
@@ -36,10 +36,10 @@ const HELP = `tiller ${CLI_VERSION} — 默认工作流
   tiller upgrade [path] --apply <plan-id>
 
 默认工作流：
-- small：需求确认 → 实现 → 验证；standard：需求 → 设计 → 实现 → 验证。验收始终需要真实用户原话。
+- small：需求确认 → 实现 → 验证；standard：需求 → 设计 → 实现 → 验证。确认记录人、时间、摘要和提交，原话可选。
 - 默认人工节点只有需求、设计和交付验收；规划、合入、发布按需确认，没有阶段或审计命令。
 - 大功能可先写 .tiller/plans/<id>.md 并确认；start 挂到条目时默认继承粒度，依赖未验收会阻塞。
-- task.md 是唯一任务记录：需求和设计正文必须先写清；用户原话只作确认凭证，不替代正文。验证保存命令、结果、提交和代码树摘要。
+- task.md 是唯一任务记录：start 生成结构化需求，standard 另有设计与影响；确认前校验正文，原话只作可选附注。验证保存命令、结果、提交和代码树摘要。
 - 阶段由 task.md 事实推导；close 收尾已验收任务，未验收终止用 --abandon，必要时 reopen。
 - case add 自动分配 CASE 编号并写入来源 AC；check 会核对 AC→全局用例→测试→当前验证，校验模块/场景结构并提示相关回归，同时检查范围、测试弱化、密钥和本机绝对路径。
 - upgrade 刷新未修改的受管文件，保留并报告用户修改；版本号只在正式发布时修改。
@@ -78,7 +78,7 @@ export async function runCli(rawArgs = process.argv.slice(2)): Promise<void> {
         json: { type: 'boolean' }, mode: { type: 'string' }, repo: { type: 'string', multiple: true },
         path: { type: 'string' }, title: { type: 'string' }, requirement: { type: 'string' }, reason: { type: 'string' },
         type: { type: 'string' }, size: { type: 'string' }, target: { type: 'string', multiple: true },
-        quote: { type: 'string' }, commit: { type: 'string' }, criterion: { type: 'string', multiple: true },
+        quote: { type: 'string' }, by: { type: 'string' }, commit: { type: 'string' }, criterion: { type: 'string', multiple: true },
         test: { type: 'string' }, command: { type: 'string' }, run: { type: 'string' }, result: { type: 'string' },
         plan: { type: 'string' }, item: { type: 'string', multiple: true }, goal: { type: 'string' },
         spec: { type: 'string', multiple: true }, module: { type: 'string', multiple: true },
@@ -104,13 +104,13 @@ export async function runCli(rawArgs = process.argv.slice(2)): Promise<void> {
       const allowed = flowCommand
         ? command === 'start' ? ['path', 'title', 'requirement', 'type', 'size', 'target', 'criterion', 'plan', 'item']
           : command === 'resume' ? ['path']
-            : command === 'confirm' ? ['path', 'quote', 'commit']
+            : command === 'confirm' ? ['path', 'quote', 'by', 'commit']
               : command === 'verify' ? ['path', 'criterion', 'test', 'command', 'run', 'result']
-                : command === 'accept' ? ['path', 'quote', 'commit']
+                : command === 'accept' ? ['path', 'quote', 'by', 'commit']
                   : command === 'close' ? ['path', 'reason', 'abandon']
                     : command === 'reopen' ? ['path', 'reason'] : ['path']
         : planCommand ? second === 'start' ? ['path', 'title', 'goal', 'spec', 'item']
-          : second === 'confirm' ? ['path', 'quote', 'commit']
+          : second === 'confirm' ? ['path', 'quote', 'by', 'commit']
             : second === 'status' ? ['path'] : []
           : caseCommand ? second === 'add' ? ['path', 'module', 'kind', 'scenario', 'title', 'test', 'criterion', 'spec', 'source'] : []
             : command === 'init' ? ['mode', 'repo']
@@ -139,8 +139,11 @@ export async function runCli(rawArgs = process.argv.slice(2)): Promise<void> {
           else result = await resumeFlow(root);
         } else if (command === 'confirm') {
           if (positionals.length !== 3) usage('confirm 需要任务标识和确认节点：requirements、design 或 acceptance。');
-          if (!values.quote) usage('confirm 需要 --quote "<用户原话>"；原话只作凭证，需求正文和设计正文必须先写入任务记录。');
-          result = await confirmFlow(root, second!, third!, values.quote, values.commit);
+          result = await confirmFlow(root, second!, third!, {
+            ...(values.quote === undefined ? {} : { quote: values.quote }),
+            ...(values.by === undefined ? {} : { by: values.by }),
+            ...(values.commit === undefined ? {} : { commit: values.commit }),
+          });
         } else if (command === 'verify') {
           if (positionals.length !== 2) usage('verify 需要一个任务标识。');
           if (!values.criterion?.length || !values.test || !values.command) usage('verify 需要 --criterion、--test 和 --command；执行命令时同时给出相同的 --run。');
@@ -152,8 +155,11 @@ export async function runCli(rawArgs = process.argv.slice(2)): Promise<void> {
           const checked = await checkFlow(root, second!); result = checked; ready = checked.ready;
         } else if (command === 'accept') {
           if (positionals.length !== 2) usage('accept 需要一个任务标识。');
-          if (!values.quote) usage('accept 需要 --quote "<用户原话>"。');
-          result = await acceptFlow(root, second!, values.quote, values.commit);
+          result = await acceptFlow(root, second!, {
+            ...(values.quote === undefined ? {} : { quote: values.quote }),
+            ...(values.by === undefined ? {} : { by: values.by }),
+            ...(values.commit === undefined ? {} : { commit: values.commit }),
+          });
         } else if (command === 'close') {
           if (positionals.length !== 2) usage('close 需要一个任务标识。');
           if (!values.reason) usage('close 需要 --reason "<关闭原因>"；未验收终止请同时使用 --abandon。');
@@ -171,8 +177,11 @@ export async function runCli(rawArgs = process.argv.slice(2)): Promise<void> {
           result = await startPlan(root, third!, { title: values.title, goal: values.goal, requirements: values.spec, items: values.item });
         } else if (second === 'confirm') {
           if (positionals.length !== 3) usage('plan confirm 需要一个规划标识。');
-          if (!values.quote) usage('plan confirm 需要 --quote "<用户原话>"。');
-          result = await confirmPlan(root, third!, values.quote, values.commit);
+          result = await confirmPlan(root, third!, {
+            ...(values.quote === undefined ? {} : { quote: values.quote }),
+            ...(values.by === undefined ? {} : { by: values.by }),
+            ...(values.commit === undefined ? {} : { commit: values.commit }),
+          });
         } else if (second === 'status') {
           if (positionals.length !== 3) usage('plan status 需要一个规划标识。');
           result = await statusPlan(root, third!);

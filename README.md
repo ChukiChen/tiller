@@ -16,15 +16,17 @@ tiller 是一套面向 AI 开发的标准工作流程与 CLI。它用较少的�
 tiller start <task-id> --title <标题> --requirement <需求正文> \
   --criterion "AC-1=<验收条件>" --size small --target src --target test
 tiller resume [task-id]
-tiller confirm <task-id> requirements --quote "<用户原话>"
+tiller confirm <task-id> requirements [--by "<确认人>"]
 tiller verify <task-id> --criterion AC-1 --test "test/example.test.mjs::用例名" \
   --command "npm test" --run "npm test"
 tiller check <task-id>
-tiller accept <task-id> --quote "<用户原话>"
+tiller accept <task-id> [--by "<验收人>"]
 tiller close <task-id> --reason "交付完成"
 ```
 
-单次任务以 `task.md` 与 Git 追溯。需求与设计正文必须完整写在该记录中；确认保存对象、用户原话、提交和摘要，原话只是凭证，不能替代正文。验证保存 AC、用例编号、测试引用、命令、结果、提交和代码树摘要。不保存全文快照、原始日志、自举工程或安装包。
+单次任务以 `task.md` 与 Git 追溯。`start` 在需求中生成目标、范围和编号 AC；standard 任务同时生成方案、取舍、影响与风险。确认前校验必填段，自动保存确认部分、确认人、时间、提交和正文摘要；需求与设计独立失效。原话只是可选凭证，不能替代正文。
+
+验证保存 AC、用例编号、测试引用、命令、结果、提交和代码树摘要。单个任务只保留一份 `task.md`；完成后把长期有效结论同步到 `.tiller/specs/`，超大设计先用 plan 拆成多个任务。不保存全文快照、原始日志、自举工程或安装包。
 
 任务阶段由记录事实推导：已开始 → 需求已确认 → 设计已确认（small 可跳过）→ 已验证 → 已验收 → 已关闭/已放弃。确认失效或验证过期时，`resume` 显示回退后的真实阶段和原因。`close` 只收尾已验收任务；未验收终止使用 `close --abandon`；两者都可通过 `reopen --reason` 显式恢复，之后才能继续确认、验证或验收。
 
@@ -36,7 +38,7 @@ tiller close <task-id> --reason "交付完成"
 tiller plan start batch --title "第一批" --goal "完成接入" \
   --spec .tiller/specs/requirements.md#3-默认工作流 \
   --item "P-1=接入;size=small;deps=-;specs=.tiller/specs/requirements.md#7-初始化与受管升级"
-tiller plan confirm batch --quote "<用户原话>"
+tiller plan confirm batch [--by "<确认人>"]
 tiller plan status batch
 tiller start <task-id> --plan batch --item P-1 --title "接入" \
   --requirement "完成最小接入" --criterion "AC-1=接入可用"
@@ -128,5 +130,6 @@ tiller upgrade --apply <plan-id>
 - [总体设计](.tiller/specs/design.md)
 - [决策记录](.tiller/specs/decisions.md)
 - [全局用例说明](.tiller/cases/index.md)
+- [确认去原话化与结构化任务正文](.tiller/task/20261022-round9/task.md)
 - [确认语义与 task 重命名任务记录](.tiller/task/20261022-confirm-task/task.md)
 - [模块用例与用例先行任务记录](.tiller/task/20261022-case-first/task.md)

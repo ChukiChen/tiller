@@ -4,6 +4,7 @@ import { lstat, readdir } from 'node:fs/promises';
 import path from 'node:path';
 import { promisify } from 'node:util';
 import { readProjectMetadata } from './core.js';
+import { resolveConfirmer } from './confirmer.js';
 import { applyChanges, readTextIfExists, validateRelativePath, withProjectLock } from './files.js';
 import { validateTaskId } from './task-id.js';
 import type { FlowStage } from './flow.js';
@@ -31,10 +32,12 @@ export interface PlanItem {
 
 export interface PlanConfirmation {
   object: string;
-  quote: string;
+  quote?: string;
+  by?: string;
   commit: string;
   subject: string;
   at: string;
+  style?: 'legacy';
 }
 
 export interface PlanMeta {
@@ -61,6 +64,8 @@ export interface PlanStartInput {
   requirements: string[];
   items: string[];
 }
+
+export interface PlanConfirmInput { quote?: string; commit?: string; by?: string }
 
 export interface PlanItemState {
   id: string;
@@ -221,11 +226,15 @@ function parseMeta(raw: string, id: string): PlanMeta {
     for (const rawConfirmation of data.confirmations) {
       if (!rawConfirmation || typeof rawConfirmation !== 'object' || Array.isArray(rawConfirmation)) fail('INVALID_PLAN', '规划确认记录格式无效。');
       const entry = rawConfirmation as Record<string, unknown>;
-      if (entry.object !== '规划正文（目标、关联需求与任务条目）' || typeof entry.quote !== 'string' || !entry.quote.trim()
+      if (entry.object !== '规划正文（目标、关联需求与任务条目）'
         || typeof entry.commit !== 'string' || !/^(?:[a-f0-9]{7,64}|no-git)$/u.test(entry.commit)
         || typeof entry.subject !== 'string' || !/^[a-f0-9]{64}$/u.test(entry.subject)
         || typeof entry.at !== 'string' || !Number.isFinite(Date.parse(entry.at))) fail('INVALID_PLAN', '规划确认记录不完整。');
-      confirmations.push({ object: entry.object, quote: entry.quote, commit: entry.commit, subject: entry.subject, at: entry.at });
+      const quote = typeof entry.quote === 'string' ? entry.quote.trim() : '';
+      const by = typeof entry.by === 'string' && entry.by.trim() ? line(entry.by, '确认人', 200) : '';
+      if (!quote && !by) fail('INVALID_PLAN', '规划确认记录缺少确认人或用户原话。');
+      confirmations.push({ object: entry.object, ...(quote ? { quote } : {}), ...(by ? { by } : {}),
+        commit: entry.commit, subject: entry.subject, at: entry.at, ...(!by ? { style: 'legacy' as const } : {}) });
     }
   }
   return { version: 1, id, created: data.created, title, goal, requirements, items, confirmations };
@@ -260,15 +269,26 @@ function renderPlan(meta: PlanMeta): string {
       ...(item.childPlan ? [`- 子规划：${item.childPlan}`] : []),
     ].join('\n')).join('\n\n'),
     '## 确认',
-    meta.confirmations.length ? meta.confirmations.map(confirmation => [
-      '### requirements',
-      `- 对象：${confirmation.object}`,
-      `- 用户原话：${confirmation.quote}`,
-      '- 原话用途：确认凭证，不替代已写明的正文',
-      `- 提交：${confirmation.commit}`,
-      `- 对象摘要：${confirmation.subject}`,
-      `- 时间：${confirmation.at}`,
-    ].join('\n')).join('\n\n') : '尚无确认。',
+    meta.confirmations.length ? meta.confirmations.map(confirmation => confirmation.style === 'legacy'
+      ? [
+          '### requirements',
+          `- 对象：${confirmation.object}`,
+          `- 用户原话：${confirmation.quote ?? ''}`,
+          '- 原话用途：确认凭证，不替代已写明的正文',
+          `- 提交：${confirmation.commit}`,
+          `- 对象摘要：${confirmation.subject}`,
+          `- 时间：${confirmation.at}`,
+        ].join('\n')
+      : [
+          '### requirements',
+          '- 确认部分：规划',
+          `- 对象：${confirmation.object}`,
+          `- 确认人：${confirmation.by ?? '未记录'}`,
+          ...(confirmation.quote ? [`- 用户原话：${confirmation.quote}`, '- 原话用途：可选附注，不替代已写明的正文'] : []),
+          `- 提交：${confirmation.commit}`,
+          `- 对象摘要：${confirmation.subject}`,
+          `- 时间：${confirmation.at}`,
+        ].join('\n')).join('\n\n') : '尚无确认。',
   ];
   return `${parts.join('\n\n').trimEnd()}\n`;
 }
@@ -312,23 +332,26 @@ export async function startPlan(rootInput: string, id: string, input: PlanStartI
     const meta: PlanMeta = { version: 1, id, created: new Date().toISOString(), title, goal, requirements, items, confirmations: [] };
     await applyChanges(root, [{ path: relative, before: null, after: renderPlan(meta) }]);
     return { id, path: relative, items: items.map(item => item.id), confirmed: false,
-      next: `核对规划正文后确认：tiller plan confirm ${id} --quote "<用户原话>"` };
+      next: `核对规划正文后确认：tiller plan confirm ${id} [--by "<确认人>"]` };
   });
 }
 
-export async function confirmPlan(rootInput: string, id: string, quoteInput: string, commitInput?: string) {
+export async function confirmPlan(rootInput: string, id: string, input: PlanConfirmInput = {}) {
   const root = path.resolve(rootInput);
-  const quote = line(quoteInput, '用户原话', 4000);
   return withProjectLock(root, async () => {
     const plan = await readPlan(root, id);
     if (!plan.bodyMatches) fail('PLAN_BODY_CHANGED', '规划可见正文与条目元信息不一致；请恢复正文或重新建立规划，再确认。');
-    const commit = await currentCommit(root, commitInput);
+    const quote = input.quote === undefined ? '' : line(input.quote, '用户原话', 4000);
+    const by = line(await resolveConfirmer(root, input.by), '确认人', 200);
+    const commit = await currentCommit(root, input.commit);
     const confirmation: PlanConfirmation = {
-      object: '规划正文（目标、关联需求与任务条目）', quote, commit, subject: planSubject(plan.meta), at: new Date().toISOString(),
+      object: '规划正文（目标、关联需求与任务条目）', ...(quote ? { quote } : {}), by, commit,
+      subject: planSubject(plan.meta), at: new Date().toISOString(),
     };
     const meta = { ...plan.meta, confirmations: [confirmation] };
     await applyChanges(root, [{ path: plan.path, before: plan.content, after: renderPlan(meta) }]);
-    return { id, confirmed: true, object: confirmation.object, quote, commit, subject: confirmation.subject, path: plan.path };
+    return { id, confirmed: true, object: confirmation.object, by, ...(quote ? { quote } : {}),
+      commit, subject: confirmation.subject, path: plan.path };
   });
 }
 
@@ -416,7 +439,7 @@ export async function readPlanItem(rootInput: string, planId: string, itemId: st
   const item = status.items.find(entry => entry.id === itemId);
   if (!item) fail('PLAN_ITEM_NOT_FOUND', `规划 ${planId} 没有条目 ${itemId}。`);
   const confirmation = plan.meta.confirmations.at(-1);
-  if (!status.confirmed) fail('PLAN_NOT_CONFIRMED', `规划 ${planId} 尚未确认或正文已变化；先执行 plan confirm ${planId} --quote "<用户原话>"。`);
+  if (!status.confirmed) fail('PLAN_NOT_CONFIRMED', `规划 ${planId} 尚未确认或正文已变化；先执行 plan confirm ${planId}。`);
   if (item.blockedBy.length) {
     fail('PLAN_DEPENDENCY_BLOCKED', `条目 ${itemId} 依赖尚未验收：${item.blockedBy.join(', ')}。依赖选择为阻塞，完成并验收依赖后再开工。`);
   }

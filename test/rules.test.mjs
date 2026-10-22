@@ -16,11 +16,11 @@ test('entry keeps the small and standard flows explicit and bounded', () => {
   assert.match(entry, /默认人工节点只有需求、设计和交付验收/u);
   assert.match(entry, /规划、合入、发布按需确认/u);
   assert.match(entry, /只修改本次范围内的文件/u);
-  assert.match(entry, /同一问题连续两次修复失败就停止/u);
+  assert.match(entry, /同一问题两次修复失败即停止/u);
   assert.match(entry, /验收条件必须编号，先转为全局用例，再映射具体测试引用/u);
   assert.match(entry, /不保存原始日志、全文快照、自举工程或安装包/u);
   assert.match(entry, /不得出现密钥、token、凭据或本机绝对路径/u);
-  assert.match(entry, /同步更新 `\.tiller\/context\/`/u);
+  assert.match(entry, /变化时同步 `\.tiller\/context\/`/u);
   assert.doesNotMatch(entry, /advanced/u);
 });
 
@@ -30,24 +30,27 @@ test('core and usage describe the only supported default-flow record path', () =
   assert.match(core, /标准\/大功能 \| 需求确认 → 设计确认 → 实现 → 验证/u);
   assert.match(core, /规划不是默认人工节点/u);
   assert.match(core, /轻量任务只维护 `\.tiller\/task\/<id>\/task\.md`/u);
-  assert.match(core, /原话只作凭证，不能替代正文/u);
-  assert.match(core, /不保存全文快照、原始日志、自举工程或安装包/u);
+  assert.match(core, /确认绑定 `task\.md` 的结构化正文/u);
+  assert.match(core, /原话可选/u);
+  assert.match(core, /不保存全文快照.*自举工程或安装包/u);
   assert.match(core, /同一问题连续两次尝试失败时停止自动修复/u);
-  assert.match(core, /以下变化需要同步 `\.tiller\/context\/`/u);
+  assert.match(core, /变化需同步 `\.tiller\/context\/`/u);
   assert.match(core, /交付前自检：逐条核对验收条件；检查 diff 是否越界；确认测试未被删除或弱化/u);
   assert.match(core, /只支持当前及直接兼容的上一资源契约/u);
   assert.match(core, /版本号只在正式发布时修改/u);
   assert.doesNotMatch(core, /advanced|上一版本升级/u);
   const usage = read('usage.md');
-  for (const command of ['start', 'resume', 'confirm', 'verify', 'check', 'accept', 'close', 'reopen']) assert.ok(usage.includes(`run.cjs ${command}`), command);
+  for (const command of ['start', 'resume', 'confirm', 'verify', 'check', 'accept', 'close']) assert.ok(usage.includes(`run.cjs ${command}`), command);
+  assert.match(usage, /reopen/u);
   assert.match(usage, /--size small/u);
-  assert.match(usage, /--size standard/u);
+  assert.match(usage, /standard 另生成/u);
   assert.match(usage, /\.tiller\/cases\//u);
-  assert.match(usage, /`task\.md` 只记录本次任务/u);
-  assert.match(usage, /原话只作凭证，不替代正文/u);
+  assert.match(usage, /单任务只有 `\.tiller\/task\/<id>\/task\.md`/u);
+  assert.match(usage, /`--quote` 可选/u);
+  assert.match(usage, /`--by` 默认取 `git config user\.name`/u);
   assert.match(usage, /--abandon/u);
   assert.match(usage, /不保存全文快照和日志/u);
-  assert.match(usage, /当前及直接兼容的上一资源契约/u);
+  assert.match(usage, /当前及上一资源契约/u);
   assert.doesNotMatch(usage, /advanced|上一版本到当前版本/u);
   assert.match(read('rules/index.md'), /规则按需读取/u);
 });
@@ -86,8 +89,8 @@ test('initialization preserves the guidance reading chain and valid links', t =>
 
 test('task records use Git and one task.md rather than snapshots or evidence packages', () => {
   const core = read('rules/core.md');
-  assert.match(core, /确认记录对象、原话、提交和摘要/u);
-  assert.match(core, /原话只作凭证，不能替代正文/u);
+  assert.match(core, /确认前校验必填段/u);
+  assert.match(core, /需求和设计独立摘要/u);
   assert.match(core, /验证记录用例、命令、结果、提交和代码树摘要/u);
   assert.match(core, /从 Git 取回或重跑/u);
   assert.doesNotMatch(core, /`work\.md`/u);
@@ -112,7 +115,9 @@ test('README describes only the default flow and release-time versioning', () =>
   assert.match(readme, /标准或大功能：需求确认 → 设计确认 → 实现 → 验证/u);
   assert.match(readme, /默认人工节点只有需求、设计/u);
   assert.match(readme, /单次任务以 `task\.md` 与 Git 追溯/u);
-  assert.match(readme, /原话只是凭证，不能替代正文/u);
+  assert.match(readme, /原话只是可选凭证，不能替代正文/u);
+  assert.match(readme, /确认部分、确认人、时间、提交/u);
+  assert.match(readme, /单个任务只保留一份 `task\.md`/u);
   assert.match(readme, /close --abandon/u);
   assert.match(readme, /reopen --reason/u);
   assert.match(readme, /\.tiller\/cases\//u);
@@ -147,13 +152,13 @@ test('global cases use module kinds and scenarios with resolvable named tests', 
   const scenarios = readdirSync(join(directory, 'scenarios')).filter(name => name.endsWith('.json')).sort()
     .flatMap(name => JSON.parse(readFileSync(join(directory, 'scenarios', name), 'utf8')).scenarios);
   cases.push(...scenarios.map(item => ({ ...item, file: `scenarios/${item.id}` })));
-  assert.equal(cases.length, 59);
-  assert.deepEqual(cases.map(item => item.id).sort(), Array.from({ length: 59 }, (_, index) => `CASE-${String(index + 1).padStart(3, '0')}`));
+  assert.equal(cases.length, 67);
+  assert.deepEqual(cases.map(item => item.id).sort(), Array.from({ length: 67 }, (_, index) => `CASE-${String(index + 1).padStart(3, '0')}`));
   assert.deepEqual(counts, {
     initialization: { behavior: 3, interface: 0, performance: 11, security: 0 },
-    standards: { behavior: 2, interface: 0, performance: 0, security: 0 },
+    standards: { behavior: 3, interface: 0, performance: 0, security: 0 },
     verification: { behavior: 4, interface: 5, performance: 15, security: 0 },
-    workflow: { behavior: 9, interface: 5, performance: 0, security: 3 },
+    workflow: { behavior: 15, interface: 6, performance: 0, security: 3 },
   });
   for (const item of scenarios) {
     assert.ok(item.modules.length > 0 && item.modules.every(module => specs.includes(module)), `${item.id}: modules`);
@@ -179,4 +184,27 @@ test('global cases use module kinds and scenarios with resolvable named tests', 
     const names = [...content.matchAll(/\b(?:test|it)\s*\(\s*(['"`])(.*?)\1\s*,/gu)].map(match => match[2]);
     assert.ok(names.includes(testName), `${item.id}: missing ${item.test_ref}`);
   }
+});
+
+test('structured confirmation guidance is synchronized across help and durable docs', () => {
+  const help = success(cli(repository, '--help')).help;
+  assert.match(help, /--by/u);
+  assert.match(help, /原话可选/u);
+  assert.match(help, /start 生成结构化需求/u);
+  assert.doesNotMatch(help, /验收始终需要真实用户原话|confirm 需要 --quote/u);
+  for (const relative of ['README.md', 'resources/entry.md', 'resources/usage.md', 'resources/rules/core.md',
+    'resources/rules/activities/requirements.md', 'resources/rules/activities/design.md', 'resources/rules/activities/delivery.md']) {
+    const content = readFileSync(join(repository, relative), 'utf8');
+    assert.doesNotMatch(content, /只接受真实原话|需要真实用户原话|再取得真实用户原话|原话只作凭证，不能替代正文/u, relative);
+  }
+  const specs = readFileSync(join(repository, '.tiller/specs/modules/workflow/requirements.md'), 'utf8');
+  assert.match(specs, /确认人/u);
+  assert.match(specs, /原话可选/u);
+  assert.match(specs, /目标、范围/u);
+  assert.match(specs, /方案.*影响与风险/u);
+  const decisions = readFileSync(join(repository, '.tiller/specs/decisions.md'), 'utf8');
+  assert.match(decisions, /原话不再必填/u);
+  const cases = readFileSync(join(repository, '.tiller/cases/index.md'), 'utf8');
+  assert.match(cases, /原话可选/u);
+  assert.match(cases, /结构化/u);
 });

@@ -151,6 +151,108 @@
       "criteria": [
         "20261022-round8#AC-4"
       ]
+    },
+    {
+      "id": "CASE-060",
+      "title": "无原话确认自动记录确认人",
+      "requirements": [
+        ".tiller/specs/modules/workflow/requirements.md#flow-15-在关键节点取得人工确认"
+      ],
+      "modules": [
+        "workflow"
+      ],
+      "test_ref": "test/flow-cli.test.mjs::structured task template validates written requirements and records confirmer without a quote",
+      "source": [
+        "src/flow.ts"
+      ],
+      "criteria": [
+        "20261022-round9#AC-1"
+      ]
+    },
+    {
+      "id": "CASE-062",
+      "title": "结构化任务模板在确认前校验必填段落",
+      "requirements": [
+        ".tiller/specs/modules/workflow/requirements.md#2-开始与接续"
+      ],
+      "modules": [
+        "workflow"
+      ],
+      "test_ref": "test/flow-cli.test.mjs::structured task template validates written requirements and records confirmer without a quote",
+      "source": [
+        "src/flow.ts"
+      ],
+      "criteria": [
+        "20261022-round9#AC-2"
+      ]
+    },
+    {
+      "id": "CASE-063",
+      "title": "需求与设计确认使用独立摘要",
+      "requirements": [
+        ".tiller/specs/modules/workflow/requirements.md#flow-06-处理要求和方案变化"
+      ],
+      "modules": [
+        "workflow"
+      ],
+      "test_ref": "test/flow-cli.test.mjs::requirement and design confirmations use independent digests",
+      "source": [
+        "src/flow.ts"
+      ],
+      "criteria": [
+        "20261022-round9#AC-3"
+      ]
+    },
+    {
+      "id": "CASE-064",
+      "title": "旧任务正文与旧确认记录保持有效",
+      "requirements": [
+        ".tiller/specs/modules/workflow/requirements.md#4-任务记录"
+      ],
+      "modules": [
+        "workflow"
+      ],
+      "test_ref": "test/flow-cli.test.mjs::legacy task text and quoted confirmation remain readable and valid",
+      "source": [
+        "src/flow.ts"
+      ],
+      "criteria": [
+        "20261022-round9#AC-4"
+      ]
+    },
+    {
+      "id": "CASE-066",
+      "title": "验收确认可省略原话并记录验收人",
+      "requirements": [
+        ".tiller/specs/modules/workflow/requirements.md#flow-15-在关键节点取得人工确认"
+      ],
+      "modules": [
+        "workflow"
+      ],
+      "test_ref": "test/flow-cli.test.mjs::small flow produces one task file and records verified acceptance without raw logs",
+      "source": [
+        "src/flow.ts"
+      ],
+      "criteria": [
+        "20261022-round9#AC-1"
+      ]
+    },
+    {
+      "id": "CASE-067",
+      "title": "设计确认要求方案与影响非空",
+      "requirements": [
+        ".tiller/specs/modules/workflow/requirements.md#flow-27-结构化正文与去原话确认"
+      ],
+      "modules": [
+        "workflow"
+      ],
+      "test_ref": "test/flow-cli.test.mjs::standard flow blocks before design confirmation and accepts design after requirements",
+      "source": [
+        "src/flow.ts"
+      ],
+      "criteria": [
+        "20261022-round9#AC-2"
+      ]
     }
   ]
 }

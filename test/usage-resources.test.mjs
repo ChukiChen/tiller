@@ -25,9 +25,10 @@ test('initialization supplies current usage and launcher with discoverable links
   assert.match(read(root, '.tiller/index.md'), /\]\(usage\.md\)/u);
   const usage = read(root, '.tiller/usage.md');
   for (const command of ['start', 'resume', 'confirm', 'verify', 'check', 'accept']) assert.ok(usage.includes(command), command);
+  assert.match(usage, /reopen/u);
   assert.ok(!usage.includes('advanced'), 'old audit path must not be advertised');
   assert.match(usage, /--size small/u);
-  assert.match(usage, /--size standard/u);
+  assert.match(usage, /standard 另生成/u);
   const before = snapshot(root);
   assert.equal((await initialize({ root })).changed, false);
   assert.deepEqual(snapshot(root), before);
@@ -42,7 +43,8 @@ test('current entry and rules retain default-flow stage, scope, context and comp
   }
   assert.match(rules, /小改动.*需求确认.*实现.*验证/u);
   assert.match(rules, /标准\/大功能.*设计确认/u);
-  assert.match(rules, /原话只作凭证，不能替代正文/u);
+  assert.match(rules, /确认绑定 `task\.md` 的结构化正文/u);
+  assert.match(rules, /原话可选/u);
   assert.match(read(root, '.tiller/rules/activities/implementation.md'), /只修改本次声明的文件范围/u);
   assert.match(read(root, '.tiller/rules/activities/design.md'), /同步计划更新 `\.tiller\/context\/`/u);
 });

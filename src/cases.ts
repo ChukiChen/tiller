@@ -318,6 +318,14 @@ function sectionBody(content: string, title: string): string {
   return rest.slice(0, next?.index ?? rest.length);
 }
 
+function subSectionBody(content: string, title: string): string {
+  const match = new RegExp(`^### ${title}\\s*$`, 'mu').exec(content);
+  if (!match) return '';
+  const rest = content.slice(match.index + match[0].length);
+  const next = /^#{1,3}\s+/mu.exec(rest);
+  return rest.slice(0, next?.index ?? rest.length);
+}
+
 async function taskCriteria(root: string, taskId: string): Promise<Set<string>> {
   validateTaskId(taskId);
   const content = await readTextIfExists(root, `.tiller/task/${taskId}/task.md`);
@@ -325,7 +333,10 @@ async function taskCriteria(root: string, taskId: string): Promise<Set<string>> 
     throw Object.assign(new Error(`任务 ${taskId} 不存在或不是当前格式；先执行 start。`), { code: 'TASK_NOT_FOUND' });
   }
   const ids = new Set<string>();
-  for (const match of sectionBody(content, '验收条件').matchAll(/^-\s+(AC-\d+):/gmu)) ids.add(match[1]!);
+  const requirement = sectionBody(content, '需求');
+  const nested = subSectionBody(requirement, '验收条件');
+  const criteria = nested || sectionBody(content, '验收条件');
+  for (const match of criteria.matchAll(/^-\s+(AC-\d+):/gmu)) ids.add(match[1]!);
   if (!ids.size) throw Object.assign(new Error(`任务 ${taskId} 没有验收条件。`), { code: 'MISSING_REQUIREMENTS' });
   return ids;
 }
