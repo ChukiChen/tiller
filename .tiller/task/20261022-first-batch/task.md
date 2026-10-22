@@ -4,7 +4,7 @@
 
 ## 需求
 
-在不恢复重审计的前提下补齐第一批产品能力：新增可确认的实施规划与条目依赖；空项目 init 生成最小骨架；case add 自动登记模块/场景用例并绑定来源 AC；check 双向校验 AC 与用例；upgrade 在兼容资源契约下刷新未修改的受管文件并保留用户修改；重写当前 specs 并将失效内容归档。所有能力保持轻量、以 task.md、cases 和 Git 为事实源，版本号不在本轮变更。
+在不恢复重审计的前提下补齐第一批产品能力：新增可确认的实施规划与条目依赖；空项目 init 生成最小骨架；case add 自动登记模块/场景用例并绑定来源 AC；check 双向校验 AC 与用例；upgrade 在兼容资源契约下刷新未修改的受管文件并保留用户修改；重写当前 specs 并直接删除失效内容。所有能力保持轻量、以 task.md、cases 和 Git 为事实源，版本号不在本轮变更。
 
 ## 验收条件
 
@@ -13,7 +13,7 @@
 - AC-3: case add 自动分配唯一编号，支持模块类型与场景，校验模块、AC 和具名测试引用
 - AC-4: check 强制 AC 引用的用例存在、criteria 回指当前任务 AC、测试存在且本次验证通过且未过期
 - AC-5: upgrade 支持兼容版本预览和应用，只刷新未修改受管文件，用户修改列为冲突并保留
-- AC-6: 当前 specs 重写并控制篇幅，旧内容归档，入口/usage/rules/cases 与实际命令一致
+- AC-6: 当前 specs 重写并控制篇幅，过时内容直接删除而不保留归档，入口/usage/rules/cases 与实际命令一致
 
 ## 设计
 
@@ -22,43 +22,124 @@
 - 用例：全局用例按模块/类型和场景组织；case add 在工程锁内分配 CASE 编号，校验模块、类型、来源 AC 和 test_ref，缺测试文件返回骨架。新用例写 criteria，历史空值仅提示。
 - 双向校验：verify 按具名测试命中用例并写入 task.md；check 要求 AC 有当前通过且未过期的验证、用例 test_ref 一致，并要求 criteria 回指当前 AC 或该用例在本任务新增/修改。
 - 升级：upgrade 只接受当前和直接兼容的上一资源契约；按 project.json 摘要识别未修改受管文件，刷新时保留区段外内容与换行差异；用户修改、缺失和异常区段作为冲突。--plan 只预览，应用时锁内重核并原子更新摘要与 resourceVersion。
-- 文档与规格：重写总体与四个模块规格，旧全文迁入 specs/archive；入口、usage、rules、README、cases/index 与命令保持一致，必读资料不超过约 5000 字符。
+- 文档与规格：重写总体与四个模块规格，过时内容直接删除，不保留 specs/archive；入口、usage、rules、README、cases/index 与命令保持一致，必读资料不超过约 5000 字符。
 - 版本策略：本轮只更新自举工程的资源摘要与兼容 resourceVersion；package.json、CLI_VERSION 和 RESOURCE_VERSION 保持 0.5.0，不把功能改动绑定成资源升版。
 
 ## 确认
 
-尚无确认。
+### requirements
+- 确认部分：需求
+- 对象：需求正文（目标、范围与验收条件）
+- 确认人：ChukiChen
+- 提交：b6a9179b3ea691ffa2fce9e528d3bb81969bdd23
+- 对象摘要：4d48339ec2bfac19c416067e5e70bbf4224488f0e53c2da1658b5f1e17e3592c
+- 时间：2026-10-22T07:36:31.254Z
+
+### design
+- 确认部分：设计
+- 对象：设计正文
+- 确认人：ChukiChen
+- 提交：b6a9179b3ea691ffa2fce9e528d3bb81969bdd23
+- 对象摘要：f4bb759f16ace0352f638a8bdbcfeae967bb2ea0ab4c4ea5ab18816e61703bda
+- 时间：2026-10-22T07:36:33.423Z
+
+### acceptance
+- 确认部分：交付验收
+- 对象：当前交付（需求、设计、验证与提交）
+- 确认人：ChukiChen
+- 提交：b6a9179b3ea691ffa2fce9e528d3bb81969bdd23
+- 对象摘要：d301cc172376f71bed76d6113fd05bdb4ebad437e7b2b3a0e200e38f7099123a
+- 时间：2026-10-22T07:37:08.772Z
 
 ## 验证
 
-尚无验证。
+### run-1
+- 条件：AC-1
+- 测试：test/first-batch.test.mjs::new project runs init, plan, start, confirm, case add, verify, check and accept end to end
+- 用例：CASE-055
+- 命令：node --test --test-name-pattern="new project runs init, plan, start, confirm, case add, verify, check and accept end to end" test/first-batch.test.mjs
+- 结果：passed
+- 退出码：0
+- 提交：b6a9179b3ea691ffa2fce9e528d3bb81969bdd23
+- 代码树摘要：8f75eec304dc98850d4669c3123314fd5a00f3f97f985a43cadfad1120429506
+- 来源：executed
+- 时间：2026-10-22T07:36:44.405Z
+
+### run-2
+- 条件：AC-2
+- 测试：test/first-batch.test.mjs::planning blocks unfinished dependencies, reports uncovered requirements and invalidates body edits
+- 用例：CASE-052
+- 命令：node --test --test-name-pattern="planning blocks unfinished dependencies, reports uncovered requirements and invalidates body edits" test/first-batch.test.mjs
+- 结果：passed
+- 退出码：0
+- 提交：b6a9179b3ea691ffa2fce9e528d3bb81969bdd23
+- 代码树摘要：8f75eec304dc98850d4669c3123314fd5a00f3f97f985a43cadfad1120429506
+- 来源：executed
+- 时间：2026-10-22T07:36:47.646Z
+
+### run-3
+- 条件：AC-3
+- 测试：test/first-batch.test.mjs::case add allocates unique ids for module cases and scenarios with source ACs
+- 用例：CASE-053
+- 命令：node --test --test-name-pattern="case add allocates unique ids for module cases and scenarios with source ACs" test/first-batch.test.mjs
+- 结果：passed
+- 退出码：0
+- 提交：b6a9179b3ea691ffa2fce9e528d3bb81969bdd23
+- 代码树摘要：8f75eec304dc98850d4669c3123314fd5a00f3f97f985a43cadfad1120429506
+- 来源：executed
+- 时间：2026-10-22T07:36:50.677Z
+
+### run-4
+- 条件：AC-4
+- 测试：test/first-batch.test.mjs::check blocks a verified case whose criteria do not point back to the task AC
+- 用例：CASE-054
+- 命令：node --test --test-name-pattern="check blocks a verified case whose criteria do not point back to the task AC" test/first-batch.test.mjs
+- 结果：passed
+- 退出码：0
+- 提交：b6a9179b3ea691ffa2fce9e528d3bb81969bdd23
+- 代码树摘要：8f75eec304dc98850d4669c3123314fd5a00f3f97f985a43cadfad1120429506
+- 来源：executed
+- 时间：2026-10-22T07:36:53.639Z
+
+### run-5
+- 条件：AC-5
+- 测试：test/first-batch.test.mjs::upgrade previews and applies a compatible resource refresh while preserving user edits
+- 用例：CASE-051
+- 命令：node --test --test-name-pattern="upgrade previews and applies a compatible resource refresh while preserving user edits" test/first-batch.test.mjs
+- 结果：passed
+- 退出码：0
+- 提交：b6a9179b3ea691ffa2fce9e528d3bb81969bdd23
+- 代码树摘要：8f75eec304dc98850d4669c3123314fd5a00f3f97f985a43cadfad1120429506
+- 来源：executed
+- 时间：2026-10-22T07:36:56.313Z
+
+### run-6
+- 条件：AC-6
+- 测试：test/first-batch.test.mjs::empty init creates the guided skeleton without overwriting existing files
+- 用例：CASE-050
+- 命令：node --test --test-name-pattern="empty init creates the guided skeleton without overwriting existing files" test/first-batch.test.mjs
+- 结果：passed
+- 退出码：0
+- 提交：b6a9179b3ea691ffa2fce9e528d3bb81969bdd23
+- 代码树摘要：8f75eec304dc98850d4669c3123314fd5a00f3f97f985a43cadfad1120429506
+- 来源：executed
+- 时间：2026-10-22T07:37:01.551Z
 
 ## 自检
 
-- [ ] 需求确认有效
-- [ ] 设计确认有效
-- [ ] 验收条件均有当前通过且绑定全局用例的测试引用
-- [ ] 每条验收条件均映射到本次验证引用的全局用例
+- [x] 需求确认有效
+- [x] 设计确认有效
+- [x] 验收条件均有当前通过且绑定全局用例的测试引用
+- [x] 每条验收条件均映射到本次验证引用的全局用例
 - [x] 验收条件与用例来源 criteria 相互指向或由本任务新增/修改
 - [x] 全局用例结构与引用有效
 - [x] 改动未超出范围
 - [x] 未弱化仍存在的测试
 - [x] 记录不含密钥或本机绝对路径
 
-阻塞项：
-- 缺少需求确认。
-- 缺少设计确认。
-- AC-1 尚无验证。
-- AC-2 尚无验证。
-- AC-3 尚无验证。
-- AC-4 尚无验证。
-- AC-5 尚无验证。
-- AC-6 尚无验证。
-- 交付范围存在未提交改动：.tiller/cases/index.md、.tiller/cases/modules/initialization/behavior.json、.tiller/cases/modules/verification/behavior.json、.tiller/cases/modules/verification/interface.json、.tiller/cases/modules/workflow/behavior.json、.tiller/cases/scenarios/new-project-onboarding.json、.tiller/context/project.md、.tiller/index.md、.tiller/project.json、.tiller/rules/activities/delivery.md、.tiller/rules/activities/design.md、.tiller/rules/activities/requirements.md、.tiller/rules/core.md、.tiller/rules/index.md、.tiller/rules/quality/verification.md、.tiller/run.cjs、.tiller/specs/archive/decisions-2026-10-22.md、.tiller/specs/archive/design-2026-10-22.md、.tiller/specs/archive/modules-initialization-design-2026-10-22.md、.tiller/specs/archive/modules-initialization-requirements-2026-10-22.md、.tiller/specs/archive/modules-standards-design-2026-10-22.md、.tiller/specs/archive/modules-standards-requirements-2026-10-22.md、.tiller/specs/archive/modules-verification-design-2026-10-22.md、.tiller/specs/archive/modules-verification-requirements-2026-10-22.md、.tiller/specs/archive/modules-workflow-design-2026-10-22.md、.tiller/specs/archive/modules-workflow-requirements-2026-10-22.md、.tiller/specs/archive/requirements-2026-10-22.md、.tiller/specs/decisions.md、.tiller/specs/design.md、.tiller/specs/modules/README.md、.tiller/specs/modules/initialization/design.md、.tiller/specs/modules/initialization/requirements.md、.tiller/specs/modules/standards/design.md、.tiller/specs/modules/standards/requirements.md、.tiller/specs/modules/verification/design.md、.tiller/specs/modules/verification/requirements.md、.tiller/specs/modules/workflow/design.md、.tiller/specs/modules/workflow/requirements.md、.tiller/specs/requirements.md、.tiller/usage.md、AGENTS.md、README.md、resources/entry.md、resources/rules/activities/delivery.md、resources/rules/activities/design.md、resources/rules/activities/requirements.md、resources/rules/core.md、resources/rules/index.md、resources/rules/quality/verification.md、resources/run.cjs、resources/usage.md、scripts/package-smoke.mjs、src/cases.ts、src/cli.ts、src/core.ts、src/flow.ts、src/plans.ts、src/project-metadata.ts、src/repository-paths.ts、src/types.ts、src/upgrade.ts、test/core.test.mjs、test/first-batch.test.mjs、test/flow-cli.test.mjs、test/helpers.mjs、test/launcher-performance.test.mjs、test/repository-paths.test.mjs、test/rules.test.mjs、test/runtime.test.mjs、test/suites.json、test/upgrade.test.mjs、test/usage-resources.test.mjs
-
 提示：
 - 49 条历史用例未绑定来源 AC；新用例请用 case add 写入 criteria，check 对已有 criteria 的用例执行反向校验。
 - 本次改动涉及模块 initialization：建议回归该模块 14 条用例及经过它的场景 CASE-055, CASE-001。
-- 本次改动涉及模块 standards：建议回归该模块 1 条用例及经过它的场景 CASE-055。
+- 本次改动涉及模块 standards：建议回归该模块 3 条用例及经过它的场景 CASE-055。
 - 本次改动涉及模块 verification：建议回归该模块 24 条用例及经过它的场景 CASE-055, CASE-001。
-- 本次改动涉及模块 workflow：建议回归该模块 14 条用例及经过它的场景 CASE-055, CASE-001。
+- 本次改动涉及模块 workflow：建议回归该模块 24 条用例及经过它的场景 CASE-055, CASE-001。
