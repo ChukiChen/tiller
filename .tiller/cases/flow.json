@@ -3,10 +3,10 @@
   "cases": [
     {
       "id": "CASE-001",
-      "title": "小改动只生成 work.md，并在当前验证后记录交付验收",
+      "title": "小改动只生成 task.md，并在当前验证后记录交付验收",
       "requirements": [".tiller/specs/modules/workflow/requirements.md#flow-03-选择必要工作与验证安排", ".tiller/specs/modules/workflow/requirements.md#flow-24-在各环节形成测试依据并保存执行事实"],
       "modules": ["src/flow.ts"],
-      "test_ref": "test/flow-cli.test.mjs::small flow produces one work file and records verified acceptance without raw logs",
+      "test_ref": "test/flow-cli.test.mjs::small flow produces one task file and records verified acceptance without raw logs",
       "source": ["src/flow.ts"]
     },
     {
@@ -68,7 +68,7 @@
     {
       "id": "CASE-009",
       "title": "记录中的密钥和本机绝对路径会被拒绝",
-      "requirements": [".tiller/rules/core.md#工作记录约定"],
+      "requirements": [".tiller/rules/core.md#任务记录约定"],
       "modules": ["src/flow.ts"],
       "test_ref": "test/flow-cli.test.mjs::unsafe paths and secrets are rejected from records before acceptance",
       "source": ["src/flow.ts"]
@@ -78,7 +78,7 @@
       "title": "未通过技术自检的任务不能记录交付验收",
       "requirements": [".tiller/specs/modules/workflow/requirements.md#flow-09-依据验证结果判断交付", ".tiller/specs/modules/workflow/requirements.md#flow-15-在关键节点取得人工确认"],
       "modules": ["src/flow.ts"],
-      "test_ref": "test/flow-cli.test.mjs::accept refuses an unverified work and leaves no acceptance record",
+      "test_ref": "test/flow-cli.test.mjs::accept refuses an unverified task and leaves no acceptance record",
       "source": ["src/flow.ts"]
     },
     {
@@ -95,6 +95,30 @@
       "requirements": [".tiller/specs/modules/workflow/requirements.md#flow-24-在各环节形成测试依据并保存执行事实"],
       "modules": ["src/flow.ts"],
       "test_ref": "test/flow-cli.test.mjs::global cases accept resolvable refs and report unmapped verification tests",
+      "source": ["src/flow.ts"]
+    },
+    {
+      "id": "CASE-013",
+      "title": "需求确认绑定已写明的需求正文，正文变化后确认失效",
+      "requirements": [".tiller/rules/core.md#人工确认", ".tiller/rules/core.md#任务记录约定"],
+      "modules": ["src/flow.ts"],
+      "test_ref": "test/flow-cli.test.mjs::requirements confirmation binds the written requirement rather than the quote",
+      "source": ["src/flow.ts"]
+    },
+    {
+      "id": "CASE-014",
+      "title": "用户原话不能替代缺失的需求正文",
+      "requirements": [".tiller/rules/core.md#人工确认", ".tiller/rules/activities/requirements.md#确认"],
+      "modules": ["src/flow.ts"],
+      "test_ref": "test/flow-cli.test.mjs::an empty requirement cannot be confirmed by a user quote alone",
+      "source": ["src/flow.ts"]
+    },
+    {
+      "id": "CASE-015",
+      "title": "历史 work 记录只读保留，不进入当前任务列表",
+      "requirements": [".tiller/rules/core.md#任务记录约定", ".tiller/rules/core.md#兼容与升级"],
+      "modules": ["src/flow.ts", "src/core.ts"],
+      "test_ref": "test/flow-cli.test.mjs::legacy work records stay read-only and are not listed as current tasks",
       "source": ["src/flow.ts"]
     }
   ]

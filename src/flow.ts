@@ -5,17 +5,25 @@ import path from 'node:path';
 import { promisify } from 'node:util';
 import { readProjectMetadata } from './core.js';
 import { applyChanges, readTextIfExists, validateRelativePath, withProjectLock } from './files.js';
-import { validateWorkId } from './work-id.js';
+import { validateTaskId } from './task-id.js';
 
 const execFileAsync = promisify(execFile);
-const MARKER_PREFIX = '<!-- tiller-flow:v1 ';
+const MARKER_PREFIX = '<!-- tiller-task:v1 ';
 const MARKER_SUFFIX = ' -->';
 const FLOW_VERSION = 1;
 const DEFAULT_TYPE = 'feature';
 const TYPES = ['requirements', 'analysis', 'research', 'feature', 'bugfix', 'improvement', 'review', 'validation', 'documentation', 'migration', 'operations'] as const;
 const CODE_TYPES = new Set(['feature', 'bugfix', 'improvement', 'migration', 'operations']);
 const CONFIRMATION_GATES = ['requirements', 'design', 'acceptance'] as const;
+const CONFIRMATION_OBJECTS: Record<FlowGate, string> = {
+  requirements: '需求正文（目标与验收条件）',
+  design: '设计正文',
+  acceptance: '当前交付（需求、设计、验证与提交）',
+};
 const RESULTS = ['passed', 'failed', 'skipped'] as const;
+const TASK_DIRECTORY = '.tiller/task';
+const TASK_FILE = 'task.md';
+const LEGACY_TASK_DIRECTORY = '.tiller/work';
 
 export type FlowType = typeof TYPES[number];
 export type FlowSize = 'small' | 'standard';
@@ -27,19 +35,19 @@ export interface FlowMeta {
 }
 export interface FlowCriterion { id: string; text: string }
 export interface FlowConfirmation {
-  gate: FlowGate; quote: string; commit: string; subject: string; at: string;
+  gate: FlowGate; object: string; quote: string; commit: string; subject: string; at: string;
 }
 export interface FlowVerification {
   id: string; criterion: string; test: string; command: string; result: FlowResult;
   exitCode: number | null; commit: string; at: string; tree: string; source: 'executed' | 'reported';
 }
-export interface FlowWork {
-  meta: FlowMeta; title: string; goal: string; design: string; criteria: FlowCriterion[];
+export interface FlowTask {
+  meta: FlowMeta; title: string; requirement: string; design: string; criteria: FlowCriterion[];
   confirmations: FlowConfirmation[]; verifications: FlowVerification[]; content: string; path: string;
 }
 
 export interface FlowStartInput {
-  title: string; goal: string; type?: string; size?: string; targets?: string[]; criteria: string[];
+  title: string; requirement: string; type?: string; size?: string; targets?: string[]; criteria: string[];
 }
 export interface FlowVerifyInput {
   criteria: string[]; test: string; command: string; result?: string; run?: string;
@@ -66,7 +74,7 @@ function safeInput(value: string, label: string): string {
   if (safety.length) fail('UNSAFE_RECORD', `${label}${safety.join('；')}`);
   return value;
 }
-function workPath(id: string): string { return `.tiller/work/${id}/work.md`; }
+function taskPath(id: string): string { return `${TASK_DIRECTORY}/${id}/${TASK_FILE}`; }
 function scopeValues(values: string[] | undefined): string[] {
   const raw = values?.length ? values : ['.'];
   const result = raw.map(value => value.trim().replace(/^\.\//u, '').replace(/\/+$/u, '') || '.');
@@ -88,7 +96,7 @@ function flowSize(value: string | undefined): FlowSize {
   return actual;
 }
 function codeType(meta: FlowMeta): boolean { return CODE_TYPES.has(meta.type); }
-function requiresDesign(work: Pick<FlowWork, 'meta'>): boolean { return codeType(work.meta) && work.meta.size === 'standard'; }
+function requiresDesign(task: Pick<FlowTask, 'meta'>): boolean { return codeType(task.meta) && task.meta.size === 'standard'; }
 
 async function git(root: string, args: string[]): Promise<{ ok: boolean; stdout: string; stderr: string; code: number | null }> {
   try {
@@ -121,24 +129,24 @@ async function currentCommit(root: string, requested?: string): Promise<string> 
 
 function parseMeta(marker: string, id: string): FlowMeta {
   let raw: unknown;
-  try { raw = JSON.parse(marker); } catch { fail('INVALID_FLOW_WORK', '工作元信息不是有效 JSON。'); }
-  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) fail('INVALID_FLOW_WORK', '工作元信息格式无效。');
+  try { raw = JSON.parse(marker); } catch { fail('INVALID_FLOW_TASK', '任务元信息不是有效 JSON。'); }
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) fail('INVALID_FLOW_TASK', '任务元信息格式无效。');
   const value = raw as Record<string, unknown>;
-  for (const key of ['version', 'id', 'type', 'size', 'created', 'base', 'scope']) if (!Object.hasOwn(value, key)) fail('INVALID_FLOW_WORK', `工作元信息缺少 ${key}。`);
-  if (value.version !== FLOW_VERSION || value.id !== id) fail('INVALID_FLOW_WORK', '工作元信息版本或标识不匹配。');
+  for (const key of ['version', 'id', 'type', 'size', 'created', 'base', 'scope']) if (!Object.hasOwn(value, key)) fail('INVALID_FLOW_TASK', `任务元信息缺少 ${key}。`);
+  if (value.version !== FLOW_VERSION || value.id !== id) fail('INVALID_FLOW_TASK', '任务元信息版本或标识不匹配。');
   const type = flowType(String(value.type));
   const size = flowSize(String(value.size));
   const created = text(value.created, '创建时间', 64);
-  if (!Number.isFinite(Date.parse(created))) fail('INVALID_FLOW_WORK', '工作创建时间无效。');
+  if (!Number.isFinite(Date.parse(created))) fail('INVALID_FLOW_TASK', '任务创建时间无效。');
   const base = text(value.base, '基线提交', 64);
-  if (!validCommit(base)) fail('INVALID_FLOW_WORK', '工作基线提交无效。');
-  if (!Array.isArray(value.scope) || !value.scope.length || value.scope.some(item => typeof item !== 'string')) fail('INVALID_FLOW_WORK', '工作范围无效。');
+  if (!validCommit(base)) fail('INVALID_FLOW_TASK', '任务基线提交无效。');
+  if (!Array.isArray(value.scope) || !value.scope.length || value.scope.some(item => typeof item !== 'string')) fail('INVALID_FLOW_TASK', '任务范围无效。');
   const preExisting: Record<string, string> = {};
   if (value.preExisting !== undefined) {
-    if (!value.preExisting || typeof value.preExisting !== 'object' || Array.isArray(value.preExisting)) fail('INVALID_FLOW_WORK', '开工前改动摘要格式无效。');
+    if (!value.preExisting || typeof value.preExisting !== 'object' || Array.isArray(value.preExisting)) fail('INVALID_FLOW_TASK', '开工前改动摘要格式无效。');
     for (const [relative, digest] of Object.entries(value.preExisting as Record<string, unknown>)) {
       validateRelativePath(relative);
-      if (typeof digest !== 'string' || !/^[a-f0-9]{64}$/u.test(digest)) fail('INVALID_FLOW_WORK', '开工前改动摘要无效。');
+      if (typeof digest !== 'string' || !/^[a-f0-9]{64}$/u.test(digest)) fail('INVALID_FLOW_TASK', '开工前改动摘要无效。');
       preExisting[relative] = digest;
     }
   }
@@ -173,12 +181,15 @@ function parseConfirmations(content: string): FlowConfirmation[] {
       const prefix = `- ${name}：`;
       return lines.find(line => line.startsWith(prefix))?.slice(prefix.length).trim() ?? '';
     };
+    const object = field('对象');
     const quote = field('用户原话');
+    const purpose = field('原话用途');
     const commit = field('提交');
     const subject = field('对象摘要');
     const at = field('时间');
-    if (quote && validCommit(commit) && /^[a-f0-9]{64}$/u.test(subject) && Number.isFinite(Date.parse(at))) {
-      result.push({ gate, quote, commit, subject, at });
+    if (object === CONFIRMATION_OBJECTS[gate] && quote && purpose === '确认凭证，不替代已写明的正文' && validCommit(commit)
+      && /^[a-f0-9]{64}$/u.test(subject) && Number.isFinite(Date.parse(at))) {
+      result.push({ gate, object, quote, commit, subject, at });
     }
   }
   return result;
@@ -212,33 +223,35 @@ function parseVerifications(content: string): FlowVerification[] {
   }
   return result;
 }
-function parseWork(content: string, id: string, relative: string): FlowWork {
+function parseTask(content: string, id: string, relative: string): FlowTask {
   const marker = new RegExp(`${MARKER_PREFIX.replace(/[.*+?^${}()|[\]\\]/gu, '\\$&')}(\\{.*\\})${MARKER_SUFFIX.replace(/[.*+?^${}()|[\]\\]/gu, '\\$&')}`, 'u').exec(content);
-  if (!marker) fail('FLOW_WORK_NOT_FOUND', `工作 ${id} 不是当前轻量记录。`);
+  if (!marker) fail('FLOW_TASK_NOT_FOUND', `任务 ${id} 不是当前轻量记录。`);
   const title = /^#\s+(.+)$/mu.exec(content)?.[1]?.trim();
-  if (!title) fail('INVALID_FLOW_WORK', '工作记录缺少标题。');
-  const goal = sectionBody(content, '目标');
-  if (!goal) fail('INVALID_FLOW_WORK', '工作记录缺少目标。');
+  if (!title) fail('INVALID_FLOW_TASK', '任务记录缺少标题。');
+  const requirement = sectionBody(content, '需求');
+  if (!requirement) fail('INVALID_FLOW_TASK', '任务记录缺少“## 需求”正文。');
   return {
-    meta: parseMeta(marker[1]!, id), title, goal, design: sectionBody(content, '设计'),
+    meta: parseMeta(marker[1]!, id), title, requirement, design: sectionBody(content, '设计'),
     criteria: parseCriteria(content), confirmations: parseConfirmations(content),
     verifications: parseVerifications(content), content, path: relative,
   };
 }
-async function readWork(root: string, id: string): Promise<FlowWork> {
-  validateWorkId(id);
+async function readTask(root: string, id: string): Promise<FlowTask> {
+  validateTaskId(id);
   await readProjectMetadata(root);
-  const relative = workPath(id);
+  const relative = taskPath(id);
   const content = await readTextIfExists(root, relative);
-  if (content === null) fail('WORK_NOT_FOUND', `工作 ${id} 不存在；请先执行 start。`);
-  return parseWork(content, id, relative);
+  if (content === null) fail('TASK_NOT_FOUND', `任务 ${id} 不存在；请先执行 start。`);
+  return parseTask(content, id, relative);
 }
 
 function renderConfirmations(values: FlowConfirmation[]): string {
   if (!values.length) return '';
   return values.map(value => [
     `### ${value.gate}`,
+    `- 对象：${value.object}`,
     `- 用户原话：${normalizeLine(value.quote)}`,
+    '- 原话用途：确认凭证，不替代已写明的正文',
     `- 提交：${value.commit}`,
     `- 对象摘要：${value.subject}`,
     `- 时间：${value.at}`,
@@ -259,22 +272,22 @@ function renderVerifications(values: FlowVerification[]): string {
     `- 时间：${value.at}`,
   ].join('\n')).join('\n\n');
 }
-function renderWork(work: Omit<FlowWork, 'content' | 'path'>, selfCheck = ''): string {
+function renderTask(task: Omit<FlowTask, 'content' | 'path'>, selfCheck = ''): string {
   const parts = [
-    `# ${work.title}`,
-    `${MARKER_PREFIX}${JSON.stringify(work.meta)}${MARKER_SUFFIX}`,
-    '## 目标', work.goal,
-    '## 验收条件', work.criteria.map(item => `- ${item.id}: ${normalizeLine(item.text)}`).join('\n'),
+    `# ${task.title}`,
+    `${MARKER_PREFIX}${JSON.stringify(task.meta)}${MARKER_SUFFIX}`,
+    '## 需求', task.requirement,
+    '## 验收条件', task.criteria.map(item => `- ${item.id}: ${normalizeLine(item.text)}`).join('\n'),
   ];
-  if (work.design.trim()) parts.push('## 设计', work.design.trim());
-  parts.push('## 确认', renderConfirmations(work.confirmations) || '尚无确认。');
-  parts.push('## 验证', renderVerifications(work.verifications) || '尚无验证。');
+  if (task.design.trim()) parts.push('## 设计', task.design.trim());
+  parts.push('## 确认', renderConfirmations(task.confirmations) || '尚无确认。');
+  parts.push('## 验证', renderVerifications(task.verifications) || '尚无验证。');
   parts.push('## 自检', selfCheck.trim() || '交付前运行 check；验收后运行 accept。');
   return `${parts.join('\n\n').trimEnd()}\n`;
 }
-async function writeWork(root: string, id: string, before: string, after: string): Promise<void> {
+async function writeTask(root: string, id: string, before: string, after: string): Promise<void> {
   if (before === after) return;
-  await applyChanges(root, [{ path: workPath(id), before, after }]);
+  await applyChanges(root, [{ path: taskPath(id), before, after }]);
 }
 
 function criteriaList(values: string[]): FlowCriterion[] {
@@ -290,100 +303,100 @@ function criteriaList(values: string[]): FlowCriterion[] {
   }
   return result.sort((left, right) => Number(left.id.slice(3)) - Number(right.id.slice(3)));
 }
-function requirementsSubject(work: Pick<FlowWork, 'meta' | 'goal' | 'criteria'>): string {
+function requirementsSubject(task: Pick<FlowTask, 'meta' | 'requirement' | 'criteria'>): string {
   return sha(JSON.stringify({
-    type: work.meta.type, size: work.meta.size, scope: work.meta.scope,
-    goal: normalizeLine(work.goal), criteria: work.criteria.map(item => [item.id, normalizeLine(item.text)]),
+    type: task.meta.type, size: task.meta.size, scope: task.meta.scope,
+    requirement: normalizeLine(task.requirement), criteria: task.criteria.map(item => [item.id, normalizeLine(item.text)]),
   }));
 }
-function designSubject(work: Pick<FlowWork, 'meta' | 'goal' | 'criteria' | 'design'>): string {
-  return sha(JSON.stringify({ requirements: requirementsSubject(work), design: work.design.trim() }));
+function designSubject(task: Pick<FlowTask, 'meta' | 'requirement' | 'criteria' | 'design'>): string {
+  return sha(JSON.stringify({ requirements: requirementsSubject(task), design: task.design.trim() }));
 }
-function latestVerification(work: Pick<FlowWork, 'verifications'>, criterion: string): FlowVerification | undefined {
-  return [...work.verifications].reverse().find(item => item.criterion === criterion);
+function latestVerification(task: Pick<FlowTask, 'verifications'>, criterion: string): FlowVerification | undefined {
+  return [...task.verifications].reverse().find(item => item.criterion === criterion);
 }
-function deliverySubject(work: FlowWork, commit: string): string {
+function deliverySubject(task: FlowTask, commit: string): string {
   return sha(JSON.stringify({
-    requirements: requirementsSubject(work), design: work.design.trim() ? designSubject(work) : null,
-    commit, criteria: work.criteria.map(item => {
-      const run = latestVerification(work, item.id);
+    requirements: requirementsSubject(task), design: task.design.trim() ? designSubject(task) : null,
+    commit, criteria: task.criteria.map(item => {
+      const run = latestVerification(task, item.id);
       return [item.id, run ? { test: run.test, command: run.command, result: run.result, tree: run.tree } : null];
     }),
   }));
 }
-function expectedSubject(work: FlowWork, gate: FlowGate, commit: string): string {
-  if (gate === 'requirements') return requirementsSubject(work);
-  if (gate === 'design') return designSubject(work);
-  return deliverySubject(work, commit);
+function expectedSubject(task: FlowTask, gate: FlowGate, commit: string): string {
+  if (gate === 'requirements') return requirementsSubject(task);
+  if (gate === 'design') return designSubject(task);
+  return deliverySubject(task, commit);
 }
 
 export async function startFlow(rootInput: string, idInput: string, input: FlowStartInput) {
-  const root = path.resolve(rootInput); validateWorkId(idInput);
+  const root = path.resolve(rootInput); validateTaskId(idInput);
   const title = safeInput(text(input.title, '标题', 200), '标题');
-  const goal = safeInput(text(input.goal, '目标'), '目标');
+  const requirement = safeInput(text(input.requirement, '需求正文'), '需求正文');
   const type = flowType(input.type); const size = flowSize(input.size);
   const scope = scopeValues(input.targets);
   const criteria = criteriaList(input.criteria).map(item => ({ ...item, text: safeInput(item.text, `${item.id} 验收条件`) }));
-  const relative = workPath(idInput);
+  const relative = taskPath(idInput);
   return withProjectLock(root, async () => {
     await readProjectMetadata(root);
-    if (await readTextIfExists(root, relative) !== null) fail('WORK_EXISTS', `工作 ${idInput} 已存在，不能覆盖。`);
+    if (await readTextIfExists(root, relative) !== null) fail('TASK_EXISTS', `任务 ${idInput} 已存在，不能覆盖。`);
     const base = (await head(root)) ?? 'no-git';
     const preExisting: Record<string, string> = {};
     for (const changed of (await changedFiles(root, base)) ?? []) {
-      if (excludedPath(changed, idInput) || changed.startsWith('.tiller/work/')) continue;
+      if (excludedPath(changed, idInput) || changed.startsWith(`${TASK_DIRECTORY}/`) || changed.startsWith(`${LEGACY_TASK_DIRECTORY}/`)) continue;
       try { preExisting[changed] = sha(await readFile(path.join(root, changed), 'utf8')); }
       catch { /* Deleted pre-existing paths cannot be compared later. */ }
     }
     const created = new Date().toISOString();
-    const work = { meta: { version: 1 as const, id: idInput, type, size, created, base, scope, preExisting }, title, goal, design: '', criteria, confirmations: [], verifications: [] };
-    const content = renderWork(work);
+    const task = { meta: { version: 1 as const, id: idInput, type, size, created, base, scope, preExisting }, title, requirement, design: '', criteria, confirmations: [], verifications: [] };
+    const content = renderTask(task);
     await mkdir(path.dirname(path.join(root, relative)), { recursive: true });
     await applyChanges(root, [{ path: relative, before: null, after: content }]);
-    return { id: idInput, path: relative, type, size, base, scope, criteria, next: `确认需求：tiller confirm ${idInput} requirements --quote "<用户原话>"` };
+    return { id: idInput, path: relative, type, size, base, scope, criteria, next: `核对需求正文后确认：tiller confirm ${idInput} requirements --quote "<用户原话>"` };
   });
 }
 
 export async function resumeFlow(rootInput: string, id?: string) {
   const root = path.resolve(rootInput); await readProjectMetadata(root);
   if (id) {
-    const work = await readWork(root, id);
-    return { id, title: work.title, type: work.meta.type, size: work.meta.size, scope: work.meta.scope,
-      path: work.path, criteria: work.criteria, confirmations: work.confirmations, verifications: work.verifications };
+    const task = await readTask(root, id);
+    return { id, title: task.title, type: task.meta.type, size: task.meta.size, scope: task.meta.scope,
+      path: task.path, requirement: task.requirement, criteria: task.criteria, confirmations: task.confirmations, verifications: task.verifications };
   }
-  const directory = path.join(root, '.tiller/work');
+  const directory = path.join(root, TASK_DIRECTORY);
   let entries;
   try { entries = await readdir(directory, { withFileTypes: true }); }
-  catch (error) { if ((error as NodeJS.ErrnoException).code === 'ENOENT') return { works: [] }; throw error; }
-  const works = [];
+  catch (error) { if ((error as NodeJS.ErrnoException).code === 'ENOENT') return { tasks: [] }; throw error; }
+  const tasks = [];
   for (const entry of entries.sort((a, b) => a.name.localeCompare(b.name))) {
     if (!entry.isDirectory()) continue;
     try {
-      const content = await readTextIfExists(root, workPath(entry.name));
+      const content = await readTextIfExists(root, taskPath(entry.name));
       if (content?.includes(MARKER_PREFIX)) {
-        const work = parseWork(content, entry.name, workPath(entry.name));
-        works.push({ id: entry.name, title: work.title, type: work.meta.type, size: work.meta.size, path: work.path,
-          confirmed: work.confirmations.length, verified: work.verifications.length });
+        const task = parseTask(content, entry.name, taskPath(entry.name));
+        tasks.push({ id: entry.name, title: task.title, type: task.meta.type, size: task.meta.size, path: task.path,
+          confirmed: task.confirmations.length, verified: task.verifications.length });
       }
-    } catch { /* Other work formats are outside the default flow index. */ }
+    } catch { /* Other task formats are outside the default flow index. */ }
   }
-  return { works };
+  return { tasks };
 }
 
 export async function confirmFlow(rootInput: string, id: string, gateInput: string, quoteInput: string, commitInput?: string) {
   const root = path.resolve(rootInput);
   return withProjectLock(root, async () => {
-    const work = await readWork(root, id);
+    const task = await readTask(root, id);
     if (!CONFIRMATION_GATES.includes(gateInput as FlowGate)) fail('INVALID_CONFIRMATION_GATE', `确认节点必须是：${CONFIRMATION_GATES.join(', ')}。`);
     const gate = gateInput as FlowGate; const quote = safeInput(text(quoteInput, '用户原话', 4000), '用户原话');
-    if (gate === 'requirements' && !work.criteria.length) fail('MISSING_REQUIREMENTS', '没有可确认的验收条件。');
+    if (gate === 'requirements' && !task.criteria.length) fail('MISSING_REQUIREMENTS', '没有可确认的验收条件。');
     if (gate === 'design') {
-      const requirements = [...work.confirmations].reverse().find(item => item.gate === 'requirements');
-      if (!requirements || requirements.subject !== requirementsSubject(work)) fail('MISSING_REQUIREMENTS', '确认设计前需要当前有效的需求确认。');
+      const requirements = [...task.confirmations].reverse().find(item => item.gate === 'requirements');
+      if (!requirements || requirements.subject !== requirementsSubject(task)) fail('MISSING_REQUIREMENTS', '确认设计前需要当前有效的需求确认。');
     }
     if (gate === 'design') {
-      if (!work.design.trim()) fail('MISSING_DESIGN', '工作记录没有“## 设计”正文，不能确认设计。');
-      const safety = recordSafety(work.design);
+      if (!task.design.trim()) fail('MISSING_DESIGN', '任务记录没有“## 设计”正文，不能确认设计。');
+      const safety = recordSafety(task.design);
       if (safety.length) fail('UNSAFE_RECORD', `设计正文${safety.join('；')}`);
     }
     if (gate === 'acceptance') {
@@ -391,12 +404,13 @@ export async function confirmFlow(rootInput: string, id: string, gateInput: stri
       if (!checked.ready) fail('NOT_READY', `技术自检未通过：${checked.issues.join('；')}`);
     }
     const commit = await currentCommit(root, commitInput);
-    const subject = expectedSubject(work, gate, commit);
-    const confirmation: FlowConfirmation = { gate, quote: normalizeLine(quote), commit, subject, at: new Date().toISOString() };
-    const next = { ...work, confirmations: [...work.confirmations.filter(item => item.gate !== gate), confirmation] };
+    const subject = expectedSubject(task, gate, commit);
+    const object = CONFIRMATION_OBJECTS[gate];
+    const confirmation: FlowConfirmation = { gate, object, quote: normalizeLine(quote), commit, subject, at: new Date().toISOString() };
+    const next = { ...task, confirmations: [...task.confirmations.filter(item => item.gate !== gate), confirmation] };
     const { content: _content, path: _path, ...body } = next;
-    await writeWork(root, id, work.content, renderWork(body, sectionBody(work.content, '自检')));
-    return { id, gate, confirmed: true, quote: confirmation.quote, commit, subject, path: work.path };
+    await writeTask(root, id, task.content, renderTask(body, sectionBody(task.content, '自检')));
+    return { id, gate, confirmed: true, object, quote: confirmation.quote, commit, subject, path: task.path };
   });
 }
 
@@ -517,11 +531,11 @@ async function readGlobalCases(root: string): Promise<CaseLibrary> {
   return { cases, issues: [...new Set(issues)], warnings };
 }
 
-async function evaluateGlobalCases(root: string, work: FlowWork): Promise<CaseLibrary & { matched: number }> {
+async function evaluateGlobalCases(root: string, task: FlowTask): Promise<CaseLibrary & { matched: number }> {
   const library = await readGlobalCases(root);
   let matched = 0;
-  for (const criterion of work.criteria) {
-    const run = latestVerification(work, criterion.id);
+  for (const criterion of task.criteria) {
+    const run = latestVerification(task, criterion.id);
     if (!run) continue;
     if (library.cases.some(item => sameTestReference(run.test, item.test_ref))) matched++;
     else if (library.cases.length) library.warnings.push(`${criterion.id} 的测试引用未落在全局用例 test_ref：${run.test}`);
@@ -530,8 +544,11 @@ async function evaluateGlobalCases(root: string, work: FlowWork): Promise<CaseLi
 }
 
 function excludedPath(relative: string, id: string): boolean {
-  return relative === `.tiller/work/${id}` || relative.startsWith(`.tiller/work/${id}/`)
+  return relative === `${TASK_DIRECTORY}/${id}` || relative.startsWith(`${TASK_DIRECTORY}/${id}/`)
     || relative.startsWith('.tiller/local/') || relative.startsWith('.git/') || relative.includes('/node_modules/');
+}
+function taskRecordPath(relative: string): boolean {
+  return [TASK_DIRECTORY, LEGACY_TASK_DIRECTORY].some(directory => relative === directory || relative.startsWith(`${directory}/`));
 }
 function inScope(relative: string, scope: string[]): boolean {
   return scope.includes('.') || scope.some(root => relative === root || relative.startsWith(`${root}/`));
@@ -599,7 +616,7 @@ async function scopedWorkingChanges(root: string, scope: string[], id: string): 
   const untracked = await git(root, ['ls-files', '-z', '--others', '--exclude-standard', '--', ...scope]);
   if (!tracked.ok || !untracked.ok) return null;
   return [...new Set([...tracked.stdout.split('\0'), ...untracked.stdout.split('\0')].filter(Boolean))]
-    .filter(relative => !excludedPath(relative, id) && !relative.startsWith('.tiller/work/') && inScope(relative, scope)).sort();
+    .filter(relative => !excludedPath(relative, id) && !taskRecordPath(relative) && inScope(relative, scope)).sort();
 }
 interface TestFindings { issues: string[]; warnings: string[] }
 interface TestBlock { name: string; assertions: number }
@@ -662,28 +679,28 @@ export interface FlowCheck {
   changedOutsideScope: string[]; cases: { count: number; matched: number }; selfCheck: string;
 }
 
-async function evaluateFlow(root: string, id: string, work: FlowWork): Promise<FlowCheck> {
+async function evaluateFlow(root: string, id: string, task: FlowTask): Promise<FlowCheck> {
   const issues: string[] = []; const warnings: string[] = [];
-  const requirement = [...work.confirmations].reverse().find(item => item.gate === 'requirements');
-  const currentTree = await treeDigest(root, work.meta.scope, id);
+  const requirement = [...task.confirmations].reverse().find(item => item.gate === 'requirements');
+  const currentTree = await treeDigest(root, task.meta.scope, id);
   const confirmationStates: FlowCheck['confirmations'] = [];
   for (const gate of ['requirements', 'design', 'acceptance'] as FlowGate[]) {
-    const item = [...work.confirmations].reverse().find(entry => entry.gate === gate);
+    const item = [...task.confirmations].reverse().find(entry => entry.gate === gate);
     if (!item) { confirmationStates.push({ gate, confirmed: false, quote: '', commit: '' }); continue; }
-    const expected = expectedSubject(work, gate, item.commit);
+    const expected = expectedSubject(task, gate, item.commit);
     const confirmed = item.subject === expected;
     confirmationStates.push({ gate, confirmed, quote: item.quote, commit: item.commit, ...(confirmed ? {} : { issue: '确认对象已变化' }) });
   }
   if (!requirement) issues.push('缺少需求确认。');
-  else if (requirement.subject !== requirementsSubject(work)) issues.push('需求确认后目标、范围或验收条件已变化，需要重新确认。');
-  if (requiresDesign(work)) {
-    if (!work.design.trim()) issues.push('standard 开发任务需要填写“## 设计”并确认。');
-    const design = [...work.confirmations].reverse().find(item => item.gate === 'design');
+  else if (requirement.subject !== requirementsSubject(task)) issues.push('需求确认后需求正文、范围或验收条件已变化，需要重新确认。');
+  if (requiresDesign(task)) {
+    if (!task.design.trim()) issues.push('standard 开发任务需要填写“## 设计”并确认。');
+    const design = [...task.confirmations].reverse().find(item => item.gate === 'design');
     if (!design) issues.push('缺少设计确认。');
-    else if (design.subject !== designSubject(work)) issues.push('设计确认后需求或设计已变化，需要重新确认。');
+    else if (design.subject !== designSubject(task)) issues.push('设计确认后需求或设计已变化，需要重新确认。');
   }
-  const criteria = await Promise.all(work.criteria.map(async item => {
-    const run = latestVerification(work, item.id);
+  const criteria = await Promise.all(task.criteria.map(async item => {
+    const run = latestVerification(task, item.id);
     if (!run) { issues.push(`${item.id} 尚无验证。`); return { id: item.id, covered: false }; }
     const covered = run.result === 'passed' && run.tree === currentTree && await testExists(root, run.test);
     if (run.result !== 'passed') issues.push(`${item.id} 最新验证结果为 ${run.result}。`);
@@ -692,41 +709,41 @@ async function evaluateFlow(root: string, id: string, work: FlowWork): Promise<F
     if (run.source === 'reported') warnings.push(`${item.id} 使用外部报告结果，未由本次命令重新执行。`);
     return { id: item.id, covered, test: run.test, result: run.result, commit: run.commit };
   }));
-  const cases = await evaluateGlobalCases(root, work);
+  const cases = await evaluateGlobalCases(root, task);
   issues.push(...cases.issues);
   warnings.push(...cases.warnings);
-  const changed = await changedFiles(root, work.meta.base);
+  const changed = await changedFiles(root, task.meta.base);
   const changedOutsideScope: string[] = [];
   if (changed === null) warnings.push('未检测到可用 Git 基线，范围检查已跳过。');
   else for (const relative of changed) {
-    if (excludedPath(relative, id) || relative.startsWith('.tiller/work/')) continue;
-    if (work.meta.preExisting[relative] !== undefined) {
+    if (excludedPath(relative, id) || taskRecordPath(relative)) continue;
+    if (task.meta.preExisting[relative] !== undefined) {
       try {
-        if (sha(await readFile(path.join(root, relative), 'utf8')) === work.meta.preExisting[relative]) continue;
+        if (sha(await readFile(path.join(root, relative), 'utf8')) === task.meta.preExisting[relative]) continue;
       } catch { /* Missing pre-existing files are reported as changes. */ }
     }
-    if (!inScope(relative, work.meta.scope)) changedOutsideScope.push(relative);
+    if (!inScope(relative, task.meta.scope)) changedOutsideScope.push(relative);
   }
   if (changedOutsideScope.length) issues.push(`改动超出范围：${changedOutsideScope.join('、')}`);
-  const weakened = await weakensTests(root, work.meta.base);
+  const weakened = await weakensTests(root, task.meta.base);
   issues.push(...weakened.issues);
   warnings.push(...weakened.warnings);
-  const uncommitted = await scopedWorkingChanges(root, work.meta.scope, id);
+  const uncommitted = await scopedWorkingChanges(root, task.meta.scope, id);
   if (uncommitted === null) warnings.push('未检测到可用 Git 提交，未提交改动检查已跳过。');
   else if (uncommitted.length) issues.push(`交付范围存在未提交改动：${uncommitted.join('、')}`);
-  issues.push(...recordSafety(work.content));
-  const acceptance = [...work.confirmations].reverse().find(item => item.gate === 'acceptance');
-  const acceptanceConfirmed = acceptance !== undefined && acceptance.subject === expectedSubject(work, 'acceptance', acceptance.commit);
-  if (acceptance && !acceptanceConfirmed) warnings.push('交付验收后工作对象已变化，需要重新验收。');
+  issues.push(...recordSafety(task.content));
+  const acceptance = [...task.confirmations].reverse().find(item => item.gate === 'acceptance');
+  const acceptanceConfirmed = acceptance !== undefined && acceptance.subject === expectedSubject(task, 'acceptance', acceptance.commit);
+  if (acceptance && !acceptanceConfirmed) warnings.push('交付验收后任务对象已变化，需要重新验收。');
   const uniqueIssues = [...new Set(issues)];
   const selfCheck = [
     `- ${uniqueIssues.includes('缺少需求确认。') || uniqueIssues.some(item => item.startsWith('需求确认后')) ? '[ ]' : '[x]'} 需求确认有效`,
-    `- ${requiresDesign(work) && uniqueIssues.some(item => item.includes('设计')) ? '[ ]' : '[x]'} ${requiresDesign(work) ? '设计确认有效' : '该任务无需设计确认'}`,
+    `- ${requiresDesign(task) && uniqueIssues.some(item => item.includes('设计')) ? '[ ]' : '[x]'} ${requiresDesign(task) ? '设计确认有效' : '该任务无需设计确认'}`,
     `- ${criteria.every(item => item.covered) ? '[x]' : '[ ]'} 验收条件均有当前通过的测试引用`,
     `- ${cases.issues.length ? '[ ]' : '[x]'} 全局用例引用有效`,
     `- ${changedOutsideScope.length ? '[ ]' : '[x]'} 改动未超出范围`,
     `- ${weakened.issues.length ? '[ ]' : '[x]'} 未弱化仍存在的测试`,
-    `- ${recordSafety(work.content).length ? '[ ]' : '[x]'} 记录不含密钥或本机绝对路径`,
+    `- ${recordSafety(task.content).length ? '[ ]' : '[x]'} 记录不含密钥或本机绝对路径`,
     ...(uniqueIssues.length ? ['', '阻塞项：', ...uniqueIssues.map(item => `- ${item}`)] : []),
     ...(warnings.length ? ['', '提示：', ...warnings.map(item => `- ${item}`)] : []),
   ].join('\n');
@@ -736,17 +753,17 @@ async function evaluateFlow(root: string, id: string, work: FlowWork): Promise<F
 }
 
 export async function inspectFlow(rootInput: string, id: string): Promise<FlowCheck> {
-  const root = path.resolve(rootInput); const work = await readWork(root, id);
-  return evaluateFlow(root, id, work);
+  const root = path.resolve(rootInput); const task = await readTask(root, id);
+  return evaluateFlow(root, id, task);
 }
 
 export async function checkFlow(rootInput: string, id: string): Promise<FlowCheck> {
   const root = path.resolve(rootInput);
   return withProjectLock(root, async () => {
-    const work = await readWork(root, id);
-    const checked = await evaluateFlow(root, id, work);
-    const next = renderWork(work, checked.selfCheck);
-    if (next !== work.content) await writeWork(root, id, work.content, next);
+    const task = await readTask(root, id);
+    const checked = await evaluateFlow(root, id, task);
+    const next = renderTask(task, checked.selfCheck);
+    if (next !== task.content) await writeTask(root, id, task.content, next);
     return checked;
   });
 }
@@ -754,10 +771,10 @@ export async function checkFlow(rootInput: string, id: string): Promise<FlowChec
 export async function verifyFlow(rootInput: string, id: string, input: FlowVerifyInput) {
   const root = path.resolve(rootInput);
   return withProjectLock(root, async () => {
-    const work = await readWork(root, id);
+    const task = await readTask(root, id);
     if (!input.criteria?.length) fail('INVALID_FLOW_INPUT', '至少提供一个 --criterion。');
     const criteria = [...new Set(input.criteria.map(value => value.trim()))];
-    for (const criterion of criteria) if (!work.criteria.some(item => item.id === criterion)) fail('UNKNOWN_CRITERION', `验收条件不存在：${criterion}`);
+    for (const criterion of criteria) if (!task.criteria.some(item => item.id === criterion)) fail('UNKNOWN_CRITERION', `验收条件不存在：${criterion}`);
     const test = testReference(input.test);
     if (!(await testExists(root, test))) fail('TEST_NOT_FOUND', `测试引用不存在：${test}`);
     const command = safeInput(text(input.command, '验证命令', 4000), '验证命令');
@@ -782,15 +799,15 @@ export async function verifyFlow(rootInput: string, id: string, input: FlowVerif
       result = flowResult(input.result ?? 'passed');
     }
     const commit = await currentCommit(root, undefined);
-    const tree = await treeDigest(root, work.meta.scope, id);
+    const tree = await treeDigest(root, task.meta.scope, id);
     const at = new Date().toISOString();
     const entries: FlowVerification[] = criteria.map((criterion, index) => ({
-      id: `run-${work.verifications.length + index + 1}`,
+      id: `run-${task.verifications.length + index + 1}`,
       criterion, test, command, result, exitCode, commit, at, tree, source,
     }));
-    const next: FlowWork = { ...work, verifications: [...work.verifications, ...entries] };
+    const next: FlowTask = { ...task, verifications: [...task.verifications, ...entries] };
     const { content: _content, path: _path, ...body } = next;
-    await writeWork(root, id, work.content, renderWork(body, sectionBody(work.content, '自检')));
+    await writeTask(root, id, task.content, renderTask(body, sectionBody(task.content, '自检')));
     return { id, result, commit, tree, entries, next: result === 'passed' ? `tiller check ${id}` : `修复后重新运行验证` };
   });
 }

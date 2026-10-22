@@ -8,13 +8,11 @@ node .tiller/run.cjs status
 node .tiller/run.cjs resume
 ```
 
-`--help` 展示工作流和参数；参数从当前记录推断，不需要大段 JSON。
-
 ## 默认工作流
 
 ```sh
 # 小改动
-node .tiller/run.cjs start 20261021-fix --title "修复退出码" --goal "失败时返回非零" \
+node .tiller/run.cjs start 20261021-fix --title "修复退出码" --requirement "失败时返回非零" \
   --criterion "AC-1=失败命令返回非零" --size small --target src --target test
 node .tiller/run.cjs confirm 20261021-fix requirements --quote "确认"
 node .tiller/run.cjs verify 20261021-fix --criterion AC-1 --test test/cli.test.mjs \
@@ -23,20 +21,20 @@ node .tiller/run.cjs check 20261021-fix
 node .tiller/run.cjs accept 20261021-fix --quote "验收通过"
 ```
 
-标准或大功能使用 `--size standard`，并在工作记录的 `## 设计` 中写明方案后再执行 `confirm <id> design --quote ...`。
+`start` 写入 `task.md` 的 `## 需求`，确认前补全正文。标准任务用 `--size standard`，先写 `## 设计` 再执行 `confirm <id> design`。用户原话只作确认凭证，不替代正文。
 
 ## 全局用例
 
-`.tiller/cases/*.json` 是产品级回归事实源，保存 id、标题、需求/模块、test_ref 和源码路径；`work.md` 只记录本次任务，不存执行日志或快照。`verify --test` 优先引用用例的 `test_ref`；`check` 校验用例引用，并对未命中的本次测试给出提示。
+`.tiller/cases/*.json` 是产品级回归事实源，保存 id、标题、需求/模块、test_ref 和源码路径；`task.md` 只记录本次任务，不存执行日志或快照。`verify --test` 优先引用用例的 `test_ref`；`check` 校验用例引用，并对未命中的本次测试给出提示。
 
 ## 规则
 
-- `start` 记录类型、规模、范围、编号验收条件；不生成文档套件。
-- `confirm` 只接受真实用户原话；需求、设计和验收分别绑定当前对象。
+- `start` 记录结构化需求、类型、规模、范围与验收条件；不生成文档套件。
+- `confirm` 只接受真实原话；原话只作凭证，需求和设计正文须已写清并绑定当前对象。
 - `verify` 记录测试引用、命令、结果、提交和代码树摘要。`--run` 实际执行，否则用 `--result` 记录外部结果。
 - `check` 检查验收条件覆盖、验证过期、范围越界、测试删除或弱化、全局用例、密钥和本机路径；技术通过不等于验收。
 - `accept` 只在 `check` 通过后保存交付验收。
-- 工作记录位于 `.tiller/work/<id>/work.md`；历史细节从 Git 取回或重跑，不保存全文快照和日志。
+- 任务记录位于 `.tiller/task/<id>/task.md`；历史 `.tiller/work/` 只读保留。细节从 Git 取回或重跑，不保存全文快照和日志。
 
 ## 安装与恢复
 

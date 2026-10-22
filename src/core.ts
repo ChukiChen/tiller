@@ -209,9 +209,10 @@ export function buildIndexSection(mode: ProjectMode): string {
     '- `cases/`：产品级回归用例事实，保存编号、需求/模块引用、测试引用和源码路径。',
     '- `rules/`：通用规则及已有项目约定。',
     '- `context/`：项目背景、现状与资料索引。',
-    '- `work/`：按实际目录查找工作记录，读取目标、进展、阻碍、证据及下一步。',
+    '- `task/`：当前任务记录，按任务标识读取结构化需求、设计、确认与验证。',
+    '- `work/`：仅保留的历史任务记录，只读追溯；新任务写入 `task/`。',
     '- `local/`：本机锁与恢复信息，不作为共享事实来源。', '',
-    '工作创建或资料变化后，以实际文件和工作记录为准；下方资料与工作链接可按实际情况更新。',
+    '任务创建或资料变化后，以实际文件和任务记录为准；确认原话只作凭证，不替代已写明的需求或设计正文。',
     INDEX_END,
   ].join('\n');
 }
@@ -219,7 +220,7 @@ export function buildIndexSection(mode: ProjectMode): string {
 async function buildIndex(root: string, mode: ProjectMode, repositories: string[], repositoryPaths: Record<string, string>): Promise<string> {
   const lines = [buildIndexSection(mode), '', '## 已有资料', ''];
   let count = 0;
-  for (const category of ['specs', 'cases', 'context', 'work', 'rules']) {
+  for (const category of ['specs', 'cases', 'context', 'task', 'work', 'rules']) {
     const base = `.tiller/${category}`;
     async function visit(relative: string): Promise<void> {
       const absolute = await assertSafePath(root, relative);

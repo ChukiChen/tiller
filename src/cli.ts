@@ -15,12 +15,12 @@ const HELP = `tiller ${CLI_VERSION} — 默认工作流
 用法：
   tiller init [path] [--mode project|workspace] [--repo <repository-path> ...]
   tiller status [path]
-  tiller start <work-id> --title <标题> --goal <目标> --criterion "AC-1=<验收条件>" [--criterion ...] [--type feature] [--size small|standard] [--target <相对路径> ...] [--path <root>]
-  tiller resume [work-id] [--path <root>]
-  tiller confirm <work-id> requirements|design|acceptance --quote "<用户原话>" [--commit <oid>] [--path <root>]
-  tiller verify <work-id> --criterion AC-1 [--criterion ...] --test <测试文件或用例引用> --command "<验证命令>" [--run "<同一命令>"] [--result passed|failed|skipped] [--path <root>]
-  tiller check <work-id> [--path <root>]
-  tiller accept <work-id> --quote "<用户原话>" [--commit <oid>] [--path <root>]
+  tiller start <task-id> --title <标题> --requirement <需求正文> --criterion "AC-1=<验收条件>" [--criterion ...] [--type feature] [--size small|standard] [--target <相对路径> ...] [--path <root>]
+  tiller resume [task-id] [--path <root>]
+  tiller confirm <task-id> requirements|design|acceptance --quote "<用户原话>" [--commit <oid>] [--path <root>]
+  tiller verify <task-id> --criterion AC-1 [--criterion ...] --test <测试文件或用例引用> --command "<验证命令>" [--run "<同一命令>"] [--result passed|failed|skipped] [--path <root>]
+  tiller check <task-id> [--path <root>]
+  tiller accept <task-id> --quote "<用户原话>" [--commit <oid>] [--path <root>]
   tiller recover [path]
   tiller runtime status|bind [--path <root>]
   tiller upgrade [path] --plan
@@ -29,7 +29,7 @@ const HELP = `tiller ${CLI_VERSION} — 默认工作流
 默认工作流：
 - small：需求确认 → 实现 → 验证；standard：需求 → 设计 → 实现 → 验证。验收始终需要真实用户原话。
 - 默认人工节点只有需求、设计和交付验收；没有规划、任务、阶段或合入审计命令。
-- work.md 是唯一任务记录：确认保存原话、提交和对象摘要；验证保存命令、结果、提交和代码树摘要。产品级回归事实放在 .tiller/cases/。
+- task.md 是唯一任务记录：需求和设计正文必须先写清；用户原话只作确认凭证，不替代正文。验证保存命令、结果、提交和代码树摘要。
 - check 会核对全局用例引用、验收条件→测试引用、范围越界、测试删除或弱化、密钥和本机绝对路径；accept 只接受 check 通过的当前对象。
 - upgrade 只核对当前资源契约，不改写文件或版本；版本号只在正式发布时修改。
 `;
@@ -57,7 +57,7 @@ export async function runCli(rawArgs = process.argv.slice(2)): Promise<void> {
       options: {
         help: { type: 'boolean', short: 'h' }, version: { type: 'boolean', short: 'v' },
         json: { type: 'boolean' }, mode: { type: 'string' }, repo: { type: 'string', multiple: true },
-        path: { type: 'string' }, title: { type: 'string' }, goal: { type: 'string' },
+        path: { type: 'string' }, title: { type: 'string' }, requirement: { type: 'string' },
         type: { type: 'string' }, size: { type: 'string' }, target: { type: 'string', multiple: true },
         quote: { type: 'string' }, commit: { type: 'string' }, criterion: { type: 'string', multiple: true },
         test: { type: 'string' }, command: { type: 'string' }, run: { type: 'string' }, result: { type: 'string' },
@@ -78,7 +78,7 @@ export async function runCli(rawArgs = process.argv.slice(2)): Promise<void> {
       const [command, second, third] = positionals;
       const flowCommand = ['start', 'resume', 'confirm', 'verify', 'check', 'accept'].includes(command ?? '');
       const allowed = flowCommand
-        ? command === 'start' ? ['path', 'title', 'goal', 'type', 'size', 'target', 'criterion']
+        ? command === 'start' ? ['path', 'title', 'requirement', 'type', 'size', 'target', 'criterion']
           : command === 'resume' ? ['path']
             : command === 'confirm' ? ['path', 'quote', 'commit']
               : command === 'verify' ? ['path', 'criterion', 'test', 'command', 'run', 'result']
@@ -94,31 +94,31 @@ export async function runCli(rawArgs = process.argv.slice(2)): Promise<void> {
       if (flowCommand) {
         const root = resolve(values.path ?? process.cwd());
         if (command === 'start') {
-          if (positionals.length !== 2) usage('start 需要一个工作标识。');
-          if (!values.title || !values.goal) usage('start 需要 --title 和 --goal；验收条件使用可重复的 --criterion。');
+          if (positionals.length !== 2) usage('start 需要一个任务标识。');
+          if (!values.title || !values.requirement) usage('start 需要 --title 和 --requirement；需求正文必须先写清，验收条件使用可重复的 --criterion。');
           if (!values.criterion?.length) usage('start 至少需要一个 --criterion，例如 --criterion "AC-1=命令正常退出"。');
-          result = await startFlow(root, second!, { title: values.title, goal: values.goal,
+          result = await startFlow(root, second!, { title: values.title, requirement: values.requirement,
             ...(values.type === undefined ? {} : { type: values.type }), ...(values.size === undefined ? {} : { size: values.size }),
             ...(values.target === undefined ? {} : { targets: values.target }), criteria: values.criterion });
         } else if (command === 'resume') {
-          if (positionals.length > 2) usage('resume 最多接受一个工作标识。');
+          if (positionals.length > 2) usage('resume 最多接受一个任务标识。');
           if (second) result = { ...await resumeFlow(root, second), check: await inspectFlow(root, second) };
           else result = await resumeFlow(root);
         } else if (command === 'confirm') {
-          if (positionals.length !== 3) usage('confirm 需要工作标识和确认节点：requirements、design 或 acceptance。');
-          if (!values.quote) usage('confirm 需要 --quote "<用户原话>"。');
+          if (positionals.length !== 3) usage('confirm 需要任务标识和确认节点：requirements、design 或 acceptance。');
+          if (!values.quote) usage('confirm 需要 --quote "<用户原话>"；原话只作凭证，需求正文和设计正文必须先写入任务记录。');
           result = await confirmFlow(root, second!, third!, values.quote, values.commit);
         } else if (command === 'verify') {
-          if (positionals.length !== 2) usage('verify 需要一个工作标识。');
+          if (positionals.length !== 2) usage('verify 需要一个任务标识。');
           if (!values.criterion?.length || !values.test || !values.command) usage('verify 需要 --criterion、--test 和 --command；执行命令时同时给出相同的 --run。');
           result = await verifyFlow(root, second!, { criteria: values.criterion, test: values.test, command: values.command,
             ...(values.result === undefined ? {} : { result: values.result }), ...(values.run === undefined ? {} : { run: values.run }) });
           ready = (result as { result?: string }).result === 'passed';
         } else if (command === 'check') {
-          if (positionals.length !== 2) usage('check 需要一个工作标识。');
+          if (positionals.length !== 2) usage('check 需要一个任务标识。');
           const checked = await checkFlow(root, second!); result = checked; ready = checked.ready;
         } else {
-          if (positionals.length !== 2) usage('accept 需要一个工作标识。');
+          if (positionals.length !== 2) usage('accept 需要一个任务标识。');
           if (!values.quote) usage('accept 需要 --quote "<用户原话>"。');
           result = await acceptFlow(root, second!, values.quote, values.commit);
         }

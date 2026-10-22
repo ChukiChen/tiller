@@ -207,14 +207,14 @@ test('transactions reject local path casing aliases and noncanonical roots befor
   const root = await project(t);
   await withProjectLock(root, async () => {
     const originalLock = await readTextIfExists(root, '.tiller/local/lock.json');
-    for (const unsafePath of ['.tiller/Local/lock.json', '.TILLER/LOCAL/lock.json', '.tiller/loCal', '.TILLER/work/file.md', 'agents.md']) {
+    for (const unsafePath of ['.tiller/Local/lock.json', '.TILLER/LOCAL/lock.json', '.tiller/loCal', '.TILLER/task/file.md', 'agents.md']) {
       await assert.rejects(applyChanges(root, [{ path: unsafePath, before: null, after: 'unsafe' }]), /本机恢复记录|只允许/);
     }
     assert.equal(await readTextIfExists(root, '.tiller/local/lock.json'), originalLock);
     assert.equal(await readTextIfExists(root, '.tiller/local/transaction.json'), null);
     await assert.rejects(applyChanges(root, [
-      { path: '.tiller/work/Item.md', before: null, after: 'one' },
-      { path: '.tiller/work/item.md', before: null, after: 'two' },
+      { path: '.tiller/task/Item.md', before: null, after: 'one' },
+      { path: '.tiller/task/item.md', before: null, after: 'two' },
     ]), /重复文件事务路径/);
   });
   await writeFile(path.join(root, '.tiller/local/transaction.json'), JSON.stringify({
@@ -259,7 +259,7 @@ test('shared path checks reject ignored evidence while allowing non-Git projects
   await promisify(execFile)('git', ['init', '--quiet', root]);
   await writeFile(path.join(root, '.gitignore'), 'private/\n');
   await assert.rejects(assertSharedWritePaths(root, ['private/review.md']), /共享资料被 Git 忽略/);
-  await assertSharedWritePaths(root, ['.tiller/work/review/evidence.md']);
+  await assertSharedWritePaths(root, ['.tiller/task/example/task.md']);
   await assert.rejects(assertSharedWritePaths(root, ['../outside']), /不安全/);
 });
 

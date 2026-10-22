@@ -37,11 +37,12 @@ test('current entry and rules retain default-flow stage, scope, context and comp
   const root = fixture(t);
   await initialize({ root });
   const rules = read(root, '.tiller/rules/core.md');
-  for (const heading of ['工作记录约定', '按目标选择流程', '范围与卡住', 'context 更新', '兼容与升级']) {
+  for (const heading of ['任务记录约定', '按目标选择流程', '范围与卡住', 'context 更新', '兼容与升级']) {
     assert.ok(rules.includes(`## ${heading}`), heading);
   }
   assert.match(rules, /小改动.*需求确认.*实现.*验证/u);
   assert.match(rules, /标准\/大功能.*设计确认/u);
+  assert.match(rules, /原话只作凭证，不能替代正文/u);
   assert.match(read(root, '.tiller/rules/activities/implementation.md'), /只修改本次声明的文件范围/u);
   assert.match(read(root, '.tiller/rules/activities/design.md'), /同步计划更新 `\.tiller\/context\/`/u);
 });
@@ -152,7 +153,7 @@ test('managed resource EOL equivalence is bidirectional and restricted to the di
     assert.equal(equivalentManagedContent(relative, lf, crlf.replace('second', 'changed')), false, relative);
     assert.equal(matchesManagedDigest(relative, crlf.replace('second', 'changed'), sha256(lf)), false, relative);
   }
-  for (const relative of ['.tiller/work/task/requirements.md', '.tiller/work/task/confirmations.json', '.tiller/rules/project.md', '.tiller/context/notes.md', 'src/code.ts']) {
+  for (const relative of ['.tiller/task/example/task.md', '.tiller/task/example/confirmations.json', '.tiller/rules/project.md', '.tiller/context/notes.md', 'src/code.ts']) {
     assert.equal(equivalentManagedContent(relative, lf, crlf), false, relative);
     assert.equal(matchesManagedDigest(relative, lf, sha256(crlf)), false, relative);
     assert.equal(matchesManagedDigest(relative, crlf, sha256(lf)), false, relative);

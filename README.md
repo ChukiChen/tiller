@@ -13,23 +13,23 @@ tiller 是一套面向 AI 开发的标准工作流程与 CLI。它用较少的�
 默认入口提供六个命令：
 
 ```sh
-tiller start <work-id> --title <标题> --goal <目标> \
+tiller start <task-id> --title <标题> --requirement <需求正文> \
   --criterion "AC-1=<验收条件>" --size small --target src --target test
-tiller resume [work-id]
-tiller confirm <work-id> requirements --quote "<用户原话>"
-tiller verify <work-id> --criterion AC-1 --test test/example.test.mjs \
+tiller resume [task-id]
+tiller confirm <task-id> requirements --quote "<用户原话>"
+tiller verify <task-id> --criterion AC-1 --test test/example.test.mjs \
   --command "npm test" --run "npm test"
-tiller check <work-id>
-tiller accept <work-id> --quote "<用户原话>"
+tiller check <task-id>
+tiller accept <task-id> --quote "<用户原话>"
 ```
 
-单次任务记录只维护 `.tiller/work/<id>/work.md`。确认保存用户原话、提交和对象摘要；验证保存验收条件、测试引用、命令、结果、提交和代码树摘要。需要细节时从 Git 取回或重跑，不保存全文快照、原始日志、自举工程或安装包。
+单次任务记录只维护 `.tiller/task/<id>/task.md`。需求与设计正文必须完整写在该记录中；确认保存对象、用户原话、提交和对象摘要，原话只是凭证，不能替代正文。验证保存验收条件、测试引用、命令、结果、提交和代码树摘要。需要细节时从 Git 取回或重跑，不保存全文快照、原始日志、自举工程或安装包。
 
-跨任务回归事实集中维护在 `.tiller/cases/*.json`：每条用例保存稳定编号、标题、需求/模块引用、自动化 `test_ref` 和源码路径。`work.md` 只服务本次任务；用例库只存声明，不存执行日志或证据包。`verify --test` 优先引用用例的 `test_ref`，`check` 会校验全局用例并提示未命中的本次测试。
+跨任务回归事实集中维护在 `.tiller/cases/*.json`：每条用例保存稳定编号、标题、需求/模块引用、自动化 `test_ref` 和源码路径。`task.md` 只服务本次任务；用例库只存声明，不存执行日志或证据包。`verify --test` 优先引用用例的 `test_ref`，`check` 会校验全局用例并提示未命中的本次测试。
 
 `check` 还会核对验收条件覆盖、验证是否过期、范围越界、未提交改动、测试删除或弱化、密钥和本机绝对路径。`accept` 只在技术自检通过后记录真实验收原话。
 
-旧类型流程、阶段、规划、任务、交付审计和全文快照路径已删除；单次任务以 `work.md` 与 Git 追溯，跨任务回归以 `.tiller/cases/` 声明为准。
+旧类型流程、阶段、规划、审计和全文快照路径已删除；单次任务以 `task.md` 与 Git 追溯，跨任务回归以 `.tiller/cases/` 声明为准。历史 `.tiller/work/` 只读保留，不自动迁移。
 
 ## 安装与接入
 
@@ -68,7 +68,7 @@ tiller init ./management-project --mode workspace \
 src/          TypeScript CLI
 resources/    随工程安装的入口、规则、使用指引和启动器
 test/         规则、契约、集成和端到端测试
-.tiller/      当前工程的需求、设计、决定、背景、全局用例和工作记录
+.tiller/      当前工程的需求、设计、决定、背景、全局用例和任务记录
 ```
 
 项目背景和长期决定分别维护在 `.tiller/context/` 与 `.tiller/specs/`。目录、关键模块职责、构建/启动/测试入口、主要接口或数据流、外部依赖变化时更新背景；普通实现细节不重复记录。
@@ -87,7 +87,7 @@ npm run test:package
 
 ## 升级与权限
 
-当前程序与资源契约为 0.5.0。版本号只在正式发布正式包时修改，本功能迭代不触发资源版本升级。升级命令只核对当前契约，不改写受管文件、不迁移历史版本或历史工作记录，也不继承旧批准。
+当前程序与资源契约为 0.5.0。版本号只在正式发布正式包时修改，本功能迭代不触发资源版本升级。升级命令只核对当前契约，不改写受管文件、不迁移历史版本或历史任务记录，也不继承旧批准。
 
 ```sh
 tiller upgrade --plan
@@ -102,5 +102,6 @@ tiller upgrade --apply <plan-id>
 - [总体设计](.tiller/specs/design.md)
 - [决策记录](.tiller/specs/decisions.md)
 - [全局用例说明](.tiller/cases/index.md)
-- [默认工作流模块命名工作记录](.tiller/work/20261022-flow-naming/work.md)
-- [本轮默认工作流工作记录](.tiller/work/20261022-lightweight-flow/work.md)
+- [默认工作流模块命名任务记录](.tiller/work/20261022-flow-naming/work.md)
+- [轻量默认工作流任务记录](.tiller/work/20261022-lightweight-flow/work.md)
+- [确认语义与 task 重命名任务记录](.tiller/task/20261022-confirm-task/task.md)

@@ -18,7 +18,7 @@ test('entry keeps the small and standard flows explicit and bounded', () => {
   assert.match(entry, /只修改本次范围内的文件/u);
   assert.match(entry, /同一问题连续两次修复失败就停止/u);
   assert.match(entry, /验收条件必须编号，并映射到具体测试引用/u);
-  assert.match(entry, /不保存原始日志、文件全文快照、自举工程或安装包/u);
+  assert.match(entry, /不保存原始日志、全文快照、自举工程或安装包/u);
   assert.match(entry, /不得出现密钥、token、凭据或本机绝对路径/u);
   assert.match(entry, /同步更新 `\.tiller\/context\/`/u);
   assert.doesNotMatch(entry, /advanced/u);
@@ -29,8 +29,9 @@ test('core and usage describe the only supported default-flow record path', () =
   assert.match(core, /小改动 \| 需求确认 → 实现 → 验证/u);
   assert.match(core, /标准\/大功能 \| 需求确认 → 设计确认 → 实现 → 验证/u);
   assert.match(core, /规划不是默认人工节点/u);
-  assert.match(core, /轻量工作只维护 `\.tiller\/work\/<id>\/work\.md`/u);
-  assert.match(core, /不保存被确认文件全文快照、原始日志、自举工程、安装包或重复证据/u);
+  assert.match(core, /轻量任务只维护 `\.tiller\/task\/<id>\/task\.md`/u);
+  assert.match(core, /原话只作凭证，不能替代正文/u);
+  assert.match(core, /不保存全文快照、原始日志、自举工程或安装包/u);
   assert.match(core, /同一问题连续两次尝试失败时停止自动修复/u);
   assert.match(core, /以下变化需要同步 `\.tiller\/context\/`/u);
   assert.match(core, /交付前自检：逐条核对验收条件；检查 diff 是否越界；确认测试未被删除或弱化/u);
@@ -42,7 +43,8 @@ test('core and usage describe the only supported default-flow record path', () =
   assert.match(usage, /--size small/u);
   assert.match(usage, /--size standard/u);
   assert.match(usage, /\.tiller\/cases\//u);
-  assert.match(usage, /`work\.md` 只记录本次任务/u);
+  assert.match(usage, /`task\.md` 只记录本次任务/u);
+  assert.match(usage, /原话只作确认凭证/u);
   assert.match(usage, /不保存全文快照和日志/u);
   assert.match(usage, /只检查当前资源契约/u);
   assert.doesNotMatch(usage, /advanced|上一版本到当前版本/u);
@@ -81,11 +83,13 @@ test('initialization preserves the guidance reading chain and valid links', t =>
   }
 });
 
-test('work records use Git and one work.md rather than snapshots or evidence packages', () => {
+test('task records use Git and one task.md rather than snapshots or evidence packages', () => {
   const core = read('rules/core.md');
-  assert.match(core, /确认记录用户原话、提交和对象摘要/u);
+  assert.match(core, /确认记录对象、原话、提交和摘要/u);
+  assert.match(core, /原话不得替代需求或设计正文/u);
   assert.match(core, /验证记录命令、结果、提交和代码树摘要/u);
-  assert.match(core, /从 Git 取回或重跑命令/u);
+  assert.match(core, /从 Git 取回或重跑/u);
+  assert.doesNotMatch(core, /`work\.md`/u);
   assert.doesNotMatch(core, /record\.json.*必须|reviews\/|证据包/u);
   assert.doesNotMatch(read('rules/activities/delivery.md'), /advanced/u);
   assert.doesNotMatch(read('rules/quality/verification.md'), /advanced/u);
@@ -106,7 +110,8 @@ test('README describes only the default flow and release-time versioning', () =>
   assert.match(readme, /小改动：需求确认 → 实现 → 验证/u);
   assert.match(readme, /标准或大功能：需求确认 → 设计确认 → 实现 → 验证/u);
   assert.match(readme, /默认人工节点只有需求、设计/u);
-  assert.match(readme, /单次任务以 `work\.md` 与 Git 追溯/u);
+  assert.match(readme, /单次任务以 `task\.md` 与 Git 追溯/u);
+  assert.match(readme, /原话只是凭证，不能替代正文/u);
   assert.match(readme, /\.tiller\/cases\//u);
   assert.match(readme, /版本号只在正式发布正式包时修改/u);
   assert.match(readme, /升级命令只核对当前契约/u);
@@ -118,7 +123,7 @@ test('global cases map to existing requirements, sources and named tests', () =>
   const files = readdirSync(directory).filter(name => name.endsWith('.json')).sort();
   assert.deepEqual(files, ['flow.json']);
   const cases = files.flatMap(name => JSON.parse(readFileSync(join(directory, name), 'utf8')).cases);
-  assert.equal(cases.length, 12);
+  assert.equal(cases.length, 15);
   assert.equal(new Set(cases.map(item => item.id)).size, cases.length);
   for (const item of cases) {
     for (const reference of [...item.requirements, ...item.modules, ...item.source]) {
