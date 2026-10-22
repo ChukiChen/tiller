@@ -8,7 +8,7 @@ import {
   type CaseLibrary, type GlobalCase,
 } from './cases.js';
 import { resolveConfirmer } from './confirmer.js';
-import { branchNameWarning } from './branch-conventions.js';
+import { branchNameWarning, normalizeBranchSlug } from './branch-conventions.js';
 import { commitMessageWarnings } from './commit-conventions.js';
 import { readProjectMetadata } from './core.js';
 import { applyChanges, readTextIfExists, validateRelativePath, withProjectLock } from './files.js';
@@ -55,7 +55,7 @@ export type FlowCloseStatus = 'closed' | 'abandoned';
 export interface FlowMeta {
   version: 1; id: string; type: FlowType; size: FlowSize; created: string; base: string; scope: string[]; preExisting: Record<string, string>;
   format?: 'structured';
-  plan?: string; item?: string;
+  plan?: string; item?: string; slug?: string;
 }
 export interface FlowCriterion { id: string; text: string }
 export interface FlowConfirmation {
@@ -76,7 +76,7 @@ export interface FlowTask {
 export interface TaskStage { stage: FlowStage; reason: string }
 
 export interface FlowStartInput {
-  title: string; requirement: string; type?: string; size?: string; targets?: string[]; criteria: string[]; plan?: string; item?: string;
+  title: string; requirement: string; type?: string; size?: string; targets?: string[]; criteria: string[]; plan?: string; item?: string; slug?: string;
 }
 export interface FlowVerifyInput {
   criteria: string[]; test: string; command: string; result?: string; run?: string;
@@ -188,9 +188,15 @@ function parseMeta(marker: string, id: string): FlowMeta {
     if (value.format !== 'structured') fail('INVALID_FLOW_TASK', '任务记录格式标记无效。');
     format = 'structured';
   }
+  let slug: string | undefined;
+  if (value.slug !== undefined) {
+    if (typeof value.slug !== 'string' || !normalizeBranchSlug(value.slug)) fail('INVALID_FLOW_TASK', '任务英文标识无效。');
+    slug = normalizeBranchSlug(value.slug)!;
+  }
   return { version: 1, id, type, size, created, base, scope: scopeValues(value.scope as string[]), preExisting,
     ...(format ? { format } : {}),
-    ...(plan && item ? { plan, item } : {}) };
+    ...(plan && item ? { plan, item } : {}),
+    ...(slug ? { slug } : {}) };
 }
 function sectionBody(content: string, title: string): string {
   const match = new RegExp(`^## ${title}\\s*$`, 'mu').exec(content);
@@ -451,6 +457,8 @@ export async function startFlow(rootInput: string, idInput: string, input: FlowS
   const type = flowType(input.type);
   const scope = scopeValues(input.targets);
   const criteria = criteriaList(input.criteria).map(item => ({ ...item, text: safeInput(item.text, `${item.id} 验收条件`) }));
+  const slug = input.slug === undefined ? undefined : normalizeBranchSlug(input.slug);
+  if (input.slug !== undefined && !slug) fail('INVALID_FLOW_INPUT', '--slug 必须是 1-64 位英文、数字或连字符组成的简短描述。');
   if ((input.plan === undefined) !== (input.item === undefined)) fail('INVALID_FLOW_INPUT', '--plan 和 --item 必须同时提供。');
   const relative = taskPath(idInput);
   return withProjectLock(root, async () => {
@@ -477,13 +485,14 @@ export async function startFlow(rootInput: string, idInput: string, input: FlowS
     const structuredRequirement = renderStructuredRequirement(requirement, scope, criteria);
     const task = { meta: { version: 1 as const, id: idInput, type, size, created, base, scope, preExisting,
       format: 'structured' as const,
-      ...(plan && item ? { plan, item } : {}) }, title, requirement: structuredRequirement,
+      ...(plan && item ? { plan, item } : {}), ...(slug ? { slug } : {}) }, title, requirement: structuredRequirement,
       design: size === 'standard' ? emptyDesignTemplate() : '', criteria,
       confirmations: [], verifications: [], closures: [] };
     const content = renderTask(task);
     await mkdir(path.dirname(path.join(root, relative)), { recursive: true });
     await applyChanges(root, [{ path: relative, before: null, after: content }]);
     return { id: idInput, path: relative, type, size, base, scope, criteria, ...(plan && item ? { plan, item } : {}),
+      ...(slug ? { slug } : {}),
       next: `核对结构化需求正文后确认：tiller confirm ${idInput} requirements [--by "<确认人>"]` };
   });
 }
@@ -495,6 +504,7 @@ export async function resumeFlow(rootInput: string, id?: string) {
     const stage = await taskStageForTask(root, id, task);
     return { id, title: task.title, type: task.meta.type, size: task.meta.size, scope: task.meta.scope,
       path: task.path, ...(task.meta.plan && task.meta.item ? { plan: task.meta.plan, item: task.meta.item } : {}),
+      ...(task.meta.slug ? { slug: task.meta.slug } : {}),
       stage: stage.stage, stageReason: stage.reason,
       requirement: task.requirement, criteria: task.criteria, confirmations: task.confirmations, verifications: task.verifications,
       closures: task.closures };
@@ -513,6 +523,7 @@ export async function resumeFlow(rootInput: string, id?: string) {
         const stage = await taskStageForTask(root, entry.name, task);
         tasks.push({ id: entry.name, title: task.title, type: task.meta.type, size: task.meta.size, path: task.path,
           ...(task.meta.plan && task.meta.item ? { plan: task.meta.plan, item: task.meta.item } : {}),
+          ...(task.meta.slug ? { slug: task.meta.slug } : {}),
           stage: stage.stage, stageReason: stage.reason,
           confirmed: task.confirmations.length, verified: task.verifications.length });
       }

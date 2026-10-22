@@ -1,6 +1,6 @@
 import { readdir } from 'node:fs/promises';
 import path from 'node:path';
-import { suggestedBranchName } from './branch-conventions.js';
+import { branchDescriptionForTask, currentBranch, normalizeBranchSlug, suggestedBranchNameFor } from './branch-conventions.js';
 import { readCaseLibrary } from './cases.js';
 import { commitTypeForTaskType, taskCommits, type CommitType, type TaskCommit } from './commit-conventions.js';
 import { inspectFlow, readTask } from './flow.js';
@@ -39,20 +39,24 @@ async function specModules(root: string): Promise<string[]> {
 }
 
 function referencedModules(task: FlowTask, available: string[]): string[] {
-  const text = `${task.requirement}\n${task.design}\n${task.meta.scope.join('\n')}`;
-  const found = new Set<string>();
-  for (const match of text.matchAll(/\.tiller\/(?:specs|cases)\/modules\/([a-z][a-z0-9_-]*)/gu)) {
-    if (available.includes(match[1]!)) found.add(match[1]!);
+  const found: string[] = [];
+  const add = (value: string): void => {
+    if (available.includes(value) && !found.includes(value)) found.push(value);
+  };
+  for (const scope of task.meta.scope) {
+    for (const match of scope.matchAll(/\.tiller\/(?:specs|cases)\/modules\/([a-z][a-z0-9_-]*)/gu)) add(match[1]!);
   }
-  return [...found].sort();
+  for (const line of task.requirement.split(/\r?\n/u)) {
+    if (!/涉及模块/u.test(line)) continue;
+    for (const match of line.matchAll(/[a-z][a-z0-9_-]*/gu)) add(match[0]);
+  }
+  const text = `${task.requirement}\n${task.design}`;
+  for (const match of text.matchAll(/\.tiller\/(?:specs|cases)\/modules\/([a-z][a-z0-9_-]*)/gu)) add(match[1]!);
+  return found;
 }
 
 function scopeCovers(scope: string[], relative: string): boolean {
   return scope.some(value => value === '.' || relative === value || relative.startsWith(`${value}/`));
-}
-
-function latestVerification(task: FlowTask, criterion: string) {
-  return [...task.verifications].reverse().find(item => item.criterion === criterion);
 }
 
 function impactText(task: FlowTask): string {
@@ -63,21 +67,30 @@ function impactText(task: FlowTask): string {
 
 function bodyMarkdown(task: FlowTask, commits: TaskCommit[], covered: Map<string, boolean>): string {
   const sections = new Map<string, string[]>();
-  sections.set('关联任务', [`[${task.meta.id}](.tiller/task/${task.meta.id}/task.md)`]);
+  sections.set('关联任务', [`任务 ${task.meta.id}，记录见 \`.tiller/task/${task.meta.id}/task.md\``]);
   sections.set('变更内容', commits.length ? commits.map(commit => `- ${commit.subject}`) : ['- （待补充：任务基线后尚无提交）']);
   sections.set('验收条件', task.criteria.map(criterion => `- [${covered.get(criterion.id) ? 'x' : ' '}] ${criterion.id}: ${criterion.text}`));
   sections.set('验证结果', task.criteria.map(criterion => {
-    const run = latestVerification(task, criterion.id);
-    if (!run) return `- ${criterion.id}：尚无验证记录。`;
-    const cases = run.cases.length ? `；用例 ${run.cases.join(', ')}` : '';
     const state = covered.get(criterion.id) ? '当前有效' : '当前未覆盖或已过期';
-    return `- ${criterion.id}：${run.result}（${state}）；测试 \`${run.test}\`${cases}；命令 \`${run.command}\`；提交 \`${run.commit}\`。`;
+    const runs = task.verifications.filter(item => item.criterion === criterion.id);
+    if (!runs.length) return `- ${criterion.id}：尚无验证记录。`;
+    return [
+      `- ${criterion.id}：${state}。`,
+      ...runs.map((run, index) => {
+        const cases = run.cases.length ? `；用例 ${run.cases.join(', ')}` : '';
+        return `  - ${index + 1}. ${run.result}；测试 \`${run.test}\`${cases}；命令 \`${run.command}\`；提交 \`${run.commit}\`。`;
+      }),
+    ].join('\n');
   }));
   sections.set('影响与风险', [impactText(task)]);
   return TASK_HEADINGS.flatMap(heading => [`## ${heading}`, '', ...sections.get(heading)!, '']).join('\n').trimEnd();
 }
 
-export async function draftPullRequest(rootInput: string, id: string): Promise<PullRequestDraft & { markdown: string }> {
+export async function draftPullRequest(
+  rootInput: string,
+  id: string,
+  options: { slug?: string } = {},
+): Promise<PullRequestDraft & { markdown: string }> {
   const root = path.resolve(rootInput);
   const task = await readTask(root, id);
   const type = commitTypeForTaskType(task.meta.type);
@@ -91,12 +104,18 @@ export async function draftPullRequest(rootInput: string, id: string): Promise<P
       for (const module of item.modules) if (available.includes(module)) modules.add(module);
     }
   }
-  const resolvedModules = [...modules].sort();
-  const module = resolvedModules.length === 1 ? resolvedModules[0]! : null;
+  const resolvedModules = [...modules];
+  const branchDescription = options.slug === undefined
+    ? task.meta.slug ?? branchDescriptionForTask((await currentBranch(root)) ?? '', task.meta.id)
+    : normalizeBranchSlug(options.slug);
+  if (options.slug !== undefined && !branchDescription) {
+    throw Object.assign(new Error('--slug 必须是 1-64 位英文、数字或连字符组成的简短描述。'), { code: 'INVALID_SLUG' });
+  }
+  const module = resolvedModules[0] ?? null;
   const warnings: string[] = [];
-  if (resolvedModules.length > 1) warnings.push(`任务涉及多个模块（${resolvedModules.join(', ')}），PR 标题已省略模块，请人工确认。`);
+  if (resolvedModules.length > 1) warnings.push(`任务涉及多个模块（${resolvedModules.join(', ')}），PR/MR 标题使用首个主模块 ${module}，请人工确认。`);
   const title = `${type}${module ? `(${module})` : ''}: ${task.title} [${task.meta.id}]`;
-  const branch = suggestedBranchName(type, task.meta.id);
+  const branch = suggestedBranchNameFor(type, task.meta.id, branchDescription);
   const commits = await taskCommits(root, task.meta.base);
   if (commits.warning) warnings.push(commits.warning);
   const covered = new Map(checked.criteria.map(item => [item.id, item.covered]));

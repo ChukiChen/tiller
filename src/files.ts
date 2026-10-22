@@ -2,7 +2,7 @@ import { createHash, randomUUID } from 'node:crypto';
 import { lstat, mkdir, open, readFile, rename, unlink } from 'node:fs/promises';
 import path from 'node:path';
 import type { FileChange } from './types.js';
-import { META, PR_TEMPLATE, parseMetadata } from './project-metadata.js';
+import { GITLAB_TEMPLATE, META, PR_TEMPLATE, parseMetadata } from './project-metadata.js';
 import { assertSharedWritePaths } from './shared-paths.js';
 
 export type { FileChange } from './types.js';
@@ -360,7 +360,8 @@ function validateChanges(value: unknown): asserts value is FileChange[] {
       throw new Error('文件事务不能修改其本机恢复记录。');
     }
     // Require the same canonical entry/root spelling on every supported filesystem.
-    if (entry.path !== 'AGENTS.md' && entry.path !== '.gitignore' && entry.path !== PR_TEMPLATE && !entry.path.startsWith('.tiller/')) {
+    if (entry.path !== 'AGENTS.md' && entry.path !== '.gitignore' && entry.path !== PR_TEMPLATE
+      && entry.path !== GITLAB_TEMPLATE && !entry.path.startsWith('.tiller/')) {
       throw new Error('文件事务只允许修改 tiller 管理资料及工程入口。');
     }
     if (seen.has(key)) throw new Error(`重复文件事务路径：${entry.path}`);

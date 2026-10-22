@@ -88,6 +88,41 @@
       "criteria": [
         "20261022-round11#AC-4"
       ]
+    },
+    {
+      "id": "CASE-078",
+      "title": "初始化按平台生成 PR 或 MR 模板",
+      "requirements": [
+        ".tiller/specs/modules/initialization/requirements.md#2-初始化"
+      ],
+      "modules": [
+        "initialization"
+      ],
+      "test_ref": "test/pr.test.mjs::init platform selects github gitlab or both managed templates",
+      "source": [
+        "src/core.ts",
+        "src/project-metadata.ts"
+      ],
+      "criteria": [
+        "20261022-round12#AC-4"
+      ]
+    },
+    {
+      "id": "CASE-079",
+      "title": "升级只补齐已配置平台的合并请求模板",
+      "requirements": [
+        ".tiller/specs/modules/initialization/requirements.md#4-升级"
+      ],
+      "modules": [
+        "initialization"
+      ],
+      "test_ref": "test/pr.test.mjs::upgrade adds only templates for the configured platform",
+      "source": [
+        "src/upgrade.ts"
+      ],
+      "criteria": [
+        "20261022-round12#AC-4"
+      ]
     }
   ]
 }

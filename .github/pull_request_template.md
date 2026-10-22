@@ -1,6 +1,6 @@
 ## 关联任务
 
-[<id>](.tiller/task/<id>/task.md)
+任务 <id>，记录见 `.tiller/task/<id>/task.md`
 
 ## 变更内容
 

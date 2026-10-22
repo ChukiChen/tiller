@@ -7,15 +7,21 @@ import {
   applyChanges, assertSafePath, hasPendingTransaction, readTextIfExists, readTextInputs,
   recoverChanges, validateRelativePath, withProjectLock,
 } from './files.js';
-import type { FileChange, InitializeOptions, ProjectInspection, ProjectMetadata, ProjectMode } from './types.js';
+import type { FileChange, InitializeOptions, ProjectInspection, ProjectMetadata, ProjectMode, ProjectPlatform } from './types.js';
 import type { TextReadInput } from './files.js';
 import { repositoryPath, validateRepositoryMappings } from './repository-paths.js';
-import { META, PR_TEMPLATE, REQUIRED_MANAGED, RESOURCE_VERSION, SCHEMA_VERSION, SHARED_RESOURCES, parseMetadata } from './project-metadata.js';
+import {
+  GITHUB_TEMPLATE, GITLAB_TEMPLATE, META, REQUIRED_MANAGED, RESOURCE_VERSION, SCHEMA_VERSION, SHARED_RESOURCES,
+  managedFilesForPlatform, normalizePlatform, parseMetadata, templatePathsForPlatform,
+} from './project-metadata.js';
 import { assertSharedWritePaths } from './shared-paths.js';
 
-export { META, PR_TEMPLATE, REQUIRED_MANAGED, RESOURCE_VERSION, SCHEMA_VERSION, RULES, SHARED_RESOURCES, parseMetadata } from './project-metadata.js';
+export {
+  GITHUB_TEMPLATE, GITLAB_TEMPLATE, META, PR_TEMPLATE, REQUIRED_MANAGED, RESOURCE_VERSION, SCHEMA_VERSION, RULES,
+  SHARED_RESOURCES, managedFilesForPlatform, normalizePlatform, parseMetadata, templatePathsForPlatform,
+} from './project-metadata.js';
 
-export type { InitializeOptions, ProjectInspection, ProjectMetadata, ProjectMode } from './types.js';
+export type { InitializeOptions, ProjectInspection, ProjectMetadata, ProjectMode, ProjectPlatform } from './types.js';
 
 export const ENTRY_START = '<!-- tiller:entry:start -->';
 export const ENTRY_END = '<!-- tiller:entry:end -->';
@@ -23,7 +29,7 @@ export const INDEX_START = '<!-- tiller:index:start -->';
 export const INDEX_END = '<!-- tiller:index:end -->';
 export const IGNORE_START = '# tiller:local:start';
 export const IGNORE_END = '# tiller:local:end';
-const EOL_EQUIVALENT_MANAGED = new Set(REQUIRED_MANAGED);
+const EOL_EQUIVALENT_MANAGED = new Set([...REQUIRED_MANAGED, GITLAB_TEMPLATE]);
 const execFileAsync = promisify(execFile);
 
 function gitEnvironment(): NodeJS.ProcessEnv {
@@ -222,23 +228,32 @@ export function buildIndexSection(mode: ProjectMode): string {
   ].join('\n');
 }
 
-async function pullRequestTemplate(root: string, managedFiles: Record<string, string>): Promise<{ change: FileChange | null; digest: string | null }> {
-  if (Object.hasOwn(managedFiles, PR_TEMPLATE)) return { change: null, digest: managedFiles[PR_TEMPLATE]! };
-  const content = await readFile(new URL('../resources/pull_request_template.md', import.meta.url), 'utf8');
-  if (!content.trim()) throw new Error('分发 PR 模板为空。');
-  const before = await readTextIfExists(root, PR_TEMPLATE);
-  if (before !== null && !equivalentManagedContent(PR_TEMPLATE, before, content)) {
-    return { change: null, digest: managedDigest(PR_TEMPLATE, before) };
+async function pullRequestTemplates(
+  root: string,
+  managedFiles: Record<string, string>,
+  platform: ProjectPlatform,
+): Promise<{ changes: FileChange[]; digests: Record<string, string> }> {
+  const changes: FileChange[] = [];
+  const digests: Record<string, string> = {};
+  for (const relative of templatePathsForPlatform(platform)) {
+    if (Object.hasOwn(managedFiles, relative)) { digests[relative] = managedFiles[relative]!; continue; }
+    const resource = relative === GITHUB_TEMPLATE ? 'pull_request_template.md' : 'merge_request_template.md';
+    const content = await readFile(new URL(`../resources/${resource}`, import.meta.url), 'utf8');
+    if (!content.trim()) throw new Error(`分发合并请求模板为空：${relative}`);
+    const before = await readTextIfExists(root, relative);
+    if (before !== null && !equivalentManagedContent(relative, before, content)) {
+      digests[relative] = managedDigest(relative, before);
+      continue;
+    }
+    if (before === null) changes.push({ path: relative, before: null, after: content });
+    digests[relative] = managedDigest(relative, before ?? content);
   }
-  return {
-    change: before === null ? { path: PR_TEMPLATE, before: null, after: content } : null,
-    digest: managedDigest(PR_TEMPLATE, before ?? content),
-  };
+  return { changes, digests };
 }
 
-function orderedManagedFiles(managedFiles: Record<string, string>): Record<string, string> {
+function orderedManagedFiles(managedFiles: Record<string, string>, platform: ProjectPlatform): Record<string, string> {
   const ordered: Record<string, string> = {};
-  for (const relative of REQUIRED_MANAGED) {
+  for (const relative of managedFilesForPlatform(platform)) {
     const digest = managedFiles[relative];
     if (digest) ordered[relative] = digest;
   }
@@ -393,12 +408,17 @@ export async function initialize(options: InitializeOptions): Promise<ProjectIns
   const existingText = await readTextIfExists(root, META);
   // Unknown versions must not acquire a lock or leave other changes in that project.
   const existing = existingText === null ? null : parseMetadata(existingText);
+  const existingPlatform = existing ? normalizePlatform(existing.platform) : undefined;
+  const platform = options.platform === undefined ? existingPlatform ?? 'github' : normalizePlatform(options.platform);
+  if (existing && options.platform !== undefined && options.platform !== existingPlatform) {
+    throw new Error('已有工程的平台配置不同；重复初始化不会切换 github、gitlab 或 both。');
+  }
   const { repositories, repositoryPaths } = await normalizeRepositories(root, mode, options.repositories ?? []);
   if (existing && (existing.mode !== mode || JSON.stringify([...existing.repositories].sort()) !== JSON.stringify(repositories) ||
       repositories.some(id => repositoryPath(existing, id) !== repositoryPaths[id]))) {
     throw new Error('初始化方式、仓库范围或路径与已有工程不同；重复初始化不会转换模式或修改范围。');
   }
-  await checkSharedIgnore(root, existing ? Object.keys(existing.managedFiles) : REQUIRED_MANAGED);
+  await checkSharedIgnore(root, existing ? Object.keys(existing.managedFiles) : managedFilesForPlatform(platform));
   return withProjectLock(root, async () => {
     const underLockText = await readTextIfExists(root, META);
     if (underLockText !== existingText) throw new Error('工程元信息已变化，请重试。');
@@ -406,11 +426,17 @@ export async function initialize(options: InitializeOptions): Promise<ProjectIns
       const inspection = await inspectProject(root);
       if (!inspection.ready) throw new Error(inspection.issues.join('\n'));
       const skeleton = await skeletonChanges(root);
-      const template = await pullRequestTemplate(root, existing.managedFiles);
-      const changes = [...skeleton, ...(template.change ? [template.change] : [])];
+      const templates = await pullRequestTemplates(root, existing.managedFiles, platform);
+      const changes = [...skeleton, ...templates.changes];
       let metadataChange: FileChange | null = null;
-      if (template.digest && existing.managedFiles[PR_TEMPLATE] !== template.digest) {
-        const metadata = { ...existing, managedFiles: orderedManagedFiles({ ...existing.managedFiles, [PR_TEMPLATE]: template.digest }) };
+      const needsPlatform = options.platform !== undefined && existing.platform !== platform;
+      const needsTemplate = Object.entries(templates.digests).some(([relative, digest]) => existing.managedFiles[relative] !== digest);
+      if (needsPlatform || needsTemplate) {
+        const metadata: ProjectMetadata = {
+          ...existing,
+          ...(needsPlatform ? { platform } : {}),
+          managedFiles: orderedManagedFiles({ ...existing.managedFiles, ...templates.digests }, platform),
+        };
         const after = `${JSON.stringify(metadata, null, 2)}\n`;
         metadataChange = { path: META, before: existingText, after };
         changes.push(metadataChange);
@@ -434,9 +460,9 @@ export async function initialize(options: InitializeOptions): Promise<ProjectIns
       changes.push({ path: relative, before, after: before ?? content });
       managedFiles[relative] = managedDigest(relative, content);
     }
-    const template = await pullRequestTemplate(root, managedFiles);
-    if (template.change) changes.push(template.change);
-    if (template.digest) managedFiles[PR_TEMPLATE] = template.digest;
+    const templates = await pullRequestTemplates(root, managedFiles, platform);
+    changes.push(...templates.changes);
+    Object.assign(managedFiles, templates.digests);
     const entry = await readFile(new URL('../resources/entry.md', import.meta.url), 'utf8');
     if (!entry.trim()) throw new Error('分发入口资源为空。');
     const agentsBefore = await readTextIfExists(root, 'AGENTS.md');
@@ -455,7 +481,8 @@ export async function initialize(options: InitializeOptions): Promise<ProjectIns
     managedFiles['.tiller/index.md'] = managedDigest('.tiller/index.md', indexAfter);
     const metadata: ProjectMetadata = {
       schemaVersion: SCHEMA_VERSION, resourceVersion: RESOURCE_VERSION, mode, repositories, repositoryPaths,
-      managedFiles: orderedManagedFiles(managedFiles), createdAt: new Date().toISOString(),
+      ...(options.platform === undefined && platform === 'github' ? {} : { platform }),
+      managedFiles: orderedManagedFiles(managedFiles, platform), createdAt: new Date().toISOString(),
     };
     changes.push({ path: META, before: null, after: `${JSON.stringify(metadata, null, 2)}\n` });
     await applyChanges(root, changes);
