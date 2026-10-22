@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "scenarios": [
+    {
+      "id": "CASE-055",
+      "title": "空项目接入并完成默认流程",
+      "requirements": [
+        ".tiller/specs/requirements.md#3-默认工作流",
+        ".tiller/specs/modules/standards/requirements.md"
+      ],
+      "modules": [
+        "initialization",
+        "workflow",
+        "verification",
+        "standards"
+      ],
+      "test_ref": "test/first-batch.test.mjs::new project runs init, plan, start, confirm, case add, verify, check and accept end to end",
+      "source": [
+        "src/core.ts",
+        "src/flow.ts",
+        "src/plans.ts",
+        "src/cases.ts"
+      ],
+      "criteria": [
+        "20261022-first-batch#AC-1",
+        "20261022-first-batch#AC-6"
+      ]
+    }
+  ]
+}

@@ -3,14 +3,13 @@ import assert from 'node:assert/strict';
 import { cpSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { spawnSync } from 'node:child_process';
 import { initialize } from '../dist/core.js';
 import { bindRuntime } from '../dist/runtime.js';
-import { fixture, put } from './helpers.mjs';
+import { fixture, put, spawnCaptured } from './helpers.mjs';
 
 const cli = fileURLToPath(new URL('../dist/cli.js', import.meta.url));
 function launch(root, args, options = {}) {
-  return spawnSync(process.execPath, [join(root, '.tiller/run.cjs'), ...args], {
+  return spawnCaptured(process.execPath, [join(root, '.tiller/run.cjs'), ...args], {
     cwd: root, encoding: 'utf8', windowsHide: true, ...options,
   });
 }
@@ -35,7 +34,7 @@ for (const argument of ['--version', '--help']) test(`launcher ${argument} uses 
 });
 
 test('importing the complete CLI performs no command or output', () => {
-  const result = spawnSync(process.execPath, ['--input-type=module', '-e',
+  const result = spawnCaptured(process.execPath, ['--input-type=module', '-e',
     `await import(${JSON.stringify(new URL('../dist/cli.js', import.meta.url).href)}); process.stdout.write('imported');`],
   { encoding: 'utf8', windowsHide: true });
   assert.equal(result.status, 0, result.stderr);
@@ -44,7 +43,7 @@ test('importing the complete CLI performs no command or output', () => {
 });
 
 test('importing the CLI from stdin does not require a file entry or run a command', () => {
-  const result = spawnSync(process.execPath, ['--input-type=module', '-'], {
+  const result = spawnCaptured(process.execPath, ['--input-type=module', '-'], {
     encoding: 'utf8', windowsHide: true,
     input: `await import(${JSON.stringify(new URL('../dist/cli.js', import.meta.url).href)}); process.stdout.write('imported');`,
   });
@@ -60,7 +59,7 @@ test('launcher rejects a syntax error in a nonselected business module before ru
   cpSync(new URL('../dist', import.meta.url), join(install, 'dist'), { recursive: true });
   cpSync(new URL('../resources', import.meta.url), join(install, 'resources'), { recursive: true });
   writeFileSync(join(install, 'package.json'), JSON.stringify({ name: 'tiller', version: '0.5.0', type: 'module', bin: { tiller: 'dist/cli.js' } }));
-  writeFileSync(join(install, 'dist/workflow-transitions.js'), 'invalid JavaScript {{{\n');
+  writeFileSync(join(install, 'dist/repository-paths.js'), 'invalid JavaScript {{{\n');
   const target = join(root, 'must-not-initialize');
   const result = launch(root, ['init', target]);
   assert.equal(result.status, 1);

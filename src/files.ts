@@ -2,7 +2,6 @@ import { createHash, randomUUID } from 'node:crypto';
 import { lstat, mkdir, open, readFile, rename, unlink } from 'node:fs/promises';
 import path from 'node:path';
 import type { FileChange } from './types.js';
-import { resolveDeliveryLockRoot } from './delivery-location.js';
 import { META, parseMetadata } from './project-metadata.js';
 import { assertSharedWritePaths } from './shared-paths.js';
 
@@ -265,7 +264,7 @@ async function ensureLocal(root: string): Promise<void> {
 
 /** Serializes this CLI's writes. Stale locks are reclaimed only for a dead local PID. */
 export async function withProjectLock<T>(root: string, fn: () => Promise<T>): Promise<T> {
-  root = await resolveDeliveryLockRoot(root);
+  root = path.resolve(root);
   await ensureLocal(root);
   const lockPath = await assertSafePath(root, LOCK);
   const token = randomUUID();

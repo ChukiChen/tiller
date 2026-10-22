@@ -7,7 +7,7 @@ import { spawnSync } from 'node:child_process';
 import { test } from 'node:test';
 import { bindRuntime, runtimeStatus } from '../dist/runtime.js';
 import { initialize, inspectProject, sha256 } from '../dist/core.js';
-import { runWithDeliveryBinding } from '../dist/delivery-location.js';
+import { spawnCaptured } from './helpers.mjs';
 
 const CLI_VERSION = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8')).version;
 
@@ -36,7 +36,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(realpathSync(process.ar
   return file;
 }
 function launch(root, args = [], options = {}) {
-  return spawnSync(process.execPath, [path.join(root, '.tiller/run.cjs'), ...args], { cwd: root, encoding: 'utf8', input: 'stdin value', ...options });
+  return spawnCaptured(process.execPath, [path.join(root, '.tiller/run.cjs'), ...args], { cwd: root, encoding: 'utf8', input: 'stdin value', ...options });
 }
 function git(root, ...args) {
   const result = spawnSync('git', ['-C', root, ...args], { encoding: 'utf8' });
@@ -232,20 +232,6 @@ test('runtime status rejects modified shared launcher using managed metadata', a
   const status = await runtimeStatus(root);
   assert.equal(status.ready, false);
   assert.match(status.issues.join(' '), /启动器.*摘要/);
-});
-
-test('binding creates checkout local directory even when delivery lock routes to anchor', async t => {
-  const { base, root } = await fixture(t);
-  const anchor = path.join(base, 'anchor');
-  await mkdir(anchor);
-  await initialize({ root: anchor });
-  await rm(path.join(root, '.tiller/local'), { recursive: true, force: true });
-  const target = await cli(path.join(base, 'install'));
-  const location = { schemaVersion: 1, state: 'active', mode: 'project', workId: 'runtime-fixture', anchorRoot: anchor, recordRoot: root, bindings: { '.': { root, sourceRoot: anchor, commonDir: anchor } } };
-  const status = await runWithDeliveryBinding(location, () => bindRuntime(root, target));
-  assert.equal(status.ready, true);
-  assert.equal(JSON.parse(await readFile(path.join(root, '.tiller/local/runtime.json'), 'utf8')).projectRoot, root);
-  assert.equal(await readFile(path.join(root, '.tiller/local/.gitignore'), 'utf8'), '*\n');
 });
 
 

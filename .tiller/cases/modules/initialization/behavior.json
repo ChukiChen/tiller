@@ -1,0 +1,58 @@
+{
+  "schemaVersion": 1,
+  "module": "initialization",
+  "kind": "behavior",
+  "cases": [
+    {
+      "id": "CASE-015",
+      "title": "历史 work 记录只读保留，不进入当前任务列表",
+      "requirements": [
+        ".tiller/rules/core.md#任务记录约定",
+        ".tiller/rules/core.md#兼容与升级"
+      ],
+      "modules": [
+        "initialization"
+      ],
+      "test_ref": "test/flow-cli.test.mjs::legacy work records stay read-only and are not listed as current tasks",
+      "source": [
+        "src/flow.ts",
+        "src/core.ts"
+      ]
+    },
+    {
+      "id": "CASE-050",
+      "title": "空仓库初始化生成最小骨架且不覆盖已有文件",
+      "requirements": [
+        ".tiller/specs/modules/initialization/requirements.md#2-初始化"
+      ],
+      "modules": [
+        "initialization"
+      ],
+      "test_ref": "test/first-batch.test.mjs::empty init creates the guided skeleton without overwriting existing files",
+      "source": [
+        "src/core.ts"
+      ],
+      "criteria": [
+        "20261022-first-batch#AC-1",
+        "20261022-first-batch#AC-6"
+      ]
+    },
+    {
+      "id": "CASE-051",
+      "title": "兼容受管资源刷新未修改文件并保留用户修改",
+      "requirements": [
+        ".tiller/specs/modules/initialization/requirements.md#4-升级"
+      ],
+      "modules": [
+        "initialization"
+      ],
+      "test_ref": "test/first-batch.test.mjs::upgrade previews and applies a compatible resource refresh while preserving user edits",
+      "source": [
+        "src/upgrade.ts"
+      ],
+      "criteria": [
+        "20261022-first-batch#AC-5"
+      ]
+    }
+  ]
+}

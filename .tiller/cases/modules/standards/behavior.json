@@ -1,0 +1,62 @@
+{
+  "schemaVersion": 1,
+  "module": "standards",
+  "kind": "behavior",
+  "cases": [
+    {
+      "id": "CASE-049",
+      "title": "默认必读资料保持在 5000 字符预算内",
+      "requirements": [
+        ".tiller/rules/index.md",
+        ".tiller/rules/core.md"
+      ],
+      "modules": [
+        "standards"
+      ],
+      "test_ref": "test/rules.test.mjs::required reading stays within the default-flow budget",
+      "source": [
+        "resources/entry.md",
+        "resources/usage.md",
+        "resources/rules/index.md",
+        "resources/rules/core.md"
+      ]
+    },
+    {
+      "id": "CASE-059",
+      "title": "规格目录与引导引用被物理删除",
+      "requirements": [
+        ".tiller/specs/modules/standards/requirements.md#2-必读与按需读取"
+      ],
+      "modules": [
+        "standards"
+      ],
+      "test_ref": "test/first-batch.test.mjs::specs archive is removed and active guidance has no archival references",
+      "source": [
+        "test/first-batch.test.mjs",
+        "README.md"
+      ],
+      "criteria": [
+        "20261022-round8#AC-1",
+        "20261022-round8#AC-5"
+      ]
+    },
+    {
+      "id": "CASE-065",
+      "title": "结构化确认语义在帮助与长期资料中同步",
+      "requirements": [
+        ".tiller/specs/modules/standards/requirements.md#3-执行规则"
+      ],
+      "modules": [
+        "standards"
+      ],
+      "test_ref": "test/rules.test.mjs::structured confirmation guidance is synchronized across help and durable docs",
+      "source": [
+        "src/cli.ts",
+        "resources/usage.md"
+      ],
+      "criteria": [
+        "20261022-round9#AC-5"
+      ]
+    }
+  ]
+}

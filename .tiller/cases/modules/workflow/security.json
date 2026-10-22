@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "module": "workflow",
+  "kind": "security",
+  "cases": [
+    {
+      "id": "CASE-004",
+      "title": "范围检查分别报告越界提交和未提交改动",
+      "requirements": [".tiller/specs/modules/workflow/requirements.md#flow-04-在授权范围内持续推进"],
+      "modules": ["workflow"],
+      "test_ref": "test/flow-cli.test.mjs::scope checks report committed and uncommitted out-of-scope changes",
+      "source": ["src/flow.ts"]
+    },
+    {
+      "id": "CASE-005",
+      "title": "开工前未变化的外部改动不会冒充本次越界",
+      "requirements": [".tiller/specs/modules/workflow/requirements.md#flow-04-在授权范围内持续推进"],
+      "modules": ["workflow"],
+      "test_ref": "test/flow-cli.test.mjs::pre-existing changes are excluded from scope findings only while unchanged",
+      "source": ["src/flow.ts"]
+    },
+    {
+      "id": "CASE-009",
+      "title": "记录中的密钥和本机绝对路径会被拒绝",
+      "requirements": [".tiller/rules/core.md#任务记录约定"],
+      "modules": ["workflow"],
+      "test_ref": "test/flow-cli.test.mjs::unsafe paths and secrets are rejected from records before acceptance",
+      "source": ["src/flow.ts"]
+    }
+  ]
+}

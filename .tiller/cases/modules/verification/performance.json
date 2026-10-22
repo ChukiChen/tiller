@@ -1,0 +1,127 @@
+{
+  "schemaVersion": 1,
+  "module": "verification",
+  "kind": "performance",
+  "cases": [
+    {
+      "id": "CASE-016",
+      "title": "路径批量检查复用共同父目录",
+      "requirements": [".tiller/specs/modules/verification/requirements.md"],
+      "modules": ["verification"],
+      "test_ref": "test/file-path-performance.test.mjs::one path batch checks common parents once and independent batches start fresh",
+      "source": ["src/files.ts"]
+    },
+    {
+      "id": "CASE-017",
+      "title": "路径批次保留链接、坏父目录和批次间变化",
+      "requirements": [".tiller/specs/modules/verification/requirements.md"],
+      "modules": ["verification"],
+      "test_ref": "test/file-path-performance.test.mjs::path batches preserve file links, bad parents and new changes between calls",
+      "source": ["src/files.ts"]
+    },
+    {
+      "id": "CASE-018",
+      "title": "证明边界在材料读取后仍能观察到撤销",
+      "requirements": [".tiller/specs/modules/verification/requirements.md"],
+      "modules": ["verification"],
+      "test_ref": "test/file-path-performance.test.mjs::one proof boundary reconciles declarations and observes revocation after material reads",
+      "source": ["src/files.ts"]
+    },
+    {
+      "id": "CASE-019",
+      "title": "显式操作输入只读取一次并隔离根目录",
+      "requirements": [".tiller/specs/modules/verification/requirements.md"],
+      "modules": ["verification"],
+      "test_ref": "test/file-path-performance.test.mjs::an explicit operation input reads once, isolates roots and proves changes independently",
+      "source": ["src/files.ts"]
+    },
+    {
+      "id": "CASE-031",
+      "title": "写入边界合并资格声明并检测新增忽略规则",
+      "requirements": [".tiller/specs/modules/verification/requirements.md"],
+      "modules": ["verification"],
+      "test_ref": "test/shared-path-round-performance.test.mjs::one write boundary merges eligibility declarations and independently detects a new ignore rule",
+      "source": ["src/shared-paths.ts"]
+    },
+    {
+      "id": "CASE-032",
+      "title": "批量文本读取不启动 Git 并拒绝变化输入",
+      "requirements": [".tiller/specs/modules/verification/requirements.md"],
+      "modules": ["verification"],
+      "test_ref": "test/shared-path-round-performance.test.mjs::batch text reads check inputs without Git and explicit proof rejects changed or newly created files",
+      "source": ["src/files.ts", "src/shared-paths.ts"]
+    },
+    {
+      "id": "CASE-033",
+      "title": "文本证明拒绝变化、删除和替换的硬链接",
+      "requirements": [".tiller/specs/modules/verification/requirements.md"],
+      "modules": ["verification"],
+      "test_ref": "test/shared-path-round-performance.test.mjs::explicit text proof rejects changed, removed and replaced hard-linked inputs",
+      "source": ["src/files.ts"]
+    },
+    {
+      "id": "CASE-034",
+      "title": "共享写入通过一次 Git stdin 请求处理长路径列表",
+      "requirements": [".tiller/specs/modules/verification/requirements.md"],
+      "modules": ["verification"],
+      "test_ref": "test/shared-path-round-performance.test.mjs::shared writes batch long path lists through one Git stdin request",
+      "source": ["src/shared-paths.ts"]
+    },
+    {
+      "id": "CASE-035",
+      "title": "仓库发现避免非仓库进程并观察后续和祖先仓库",
+      "requirements": [".tiller/specs/modules/verification/requirements.md"],
+      "modules": ["verification"],
+      "test_ref": "test/shared-path-round-performance.test.mjs::repository discovery avoids non-repository processes and notices later and ancestor repositories",
+      "source": ["src/shared-paths.ts"]
+    },
+    {
+      "id": "CASE-036",
+      "title": "事务边界在日志或内容写入前拒绝忽略路径",
+      "requirements": [".tiller/specs/modules/verification/requirements.md"],
+      "modules": ["verification"],
+      "test_ref": "test/shared-path-round-performance.test.mjs::transaction boundary rejects ignored writes before journal or content changes",
+      "source": ["src/files.ts"]
+    },
+    {
+      "id": "CASE-037",
+      "title": "批量读取拒绝硬链接和无效 UTF-8",
+      "requirements": [".tiller/specs/modules/verification/requirements.md"],
+      "modules": ["verification"],
+      "test_ref": "test/shared-path-round-performance.test.mjs::batch readers reject hard links and invalid UTF8",
+      "source": ["src/files.ts"]
+    },
+    {
+      "id": "CASE-038",
+      "title": "事务拒绝未知的当前或替换元信息版本",
+      "requirements": [".tiller/specs/modules/verification/requirements.md"],
+      "modules": ["verification"],
+      "test_ref": "test/shared-path-round-performance.test.mjs::transaction refuses an unknown current or replacement metadata version",
+      "source": ["src/files.ts", "src/project-metadata.ts"]
+    },
+    {
+      "id": "CASE-039",
+      "title": "批量输入收集只访问共同父目录并读取每个声明文件一次",
+      "requirements": [".tiller/specs/modules/verification/requirements.md"],
+      "modules": ["verification"],
+      "test_ref": "test/shared-path-round-performance.test.mjs::batch input collection visits common parents once and reads each declared file once",
+      "source": ["src/files.ts"]
+    },
+    {
+      "id": "CASE-040",
+      "title": "有界文本输入在分配前拒绝超大字节并复查增长",
+      "requirements": [".tiller/specs/modules/verification/requirements.md"],
+      "modules": ["verification"],
+      "test_ref": "test/shared-path-round-performance.test.mjs::bounded text inputs reject oversized bytes before allocation and recheck growth after read",
+      "source": ["src/files.ts"]
+    },
+    {
+      "id": "CASE-041",
+      "title": "文本输入上限允许空文件零值并拒绝非法选项",
+      "requirements": [".tiller/specs/modules/verification/requirements.md"],
+      "modules": ["verification"],
+      "test_ref": "test/shared-path-round-performance.test.mjs::text input limits accept zero for empty files and reject invalid option values",
+      "source": ["src/files.ts"]
+    }
+  ]
+}

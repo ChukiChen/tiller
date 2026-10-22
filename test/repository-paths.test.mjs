@@ -30,10 +30,11 @@ test('repository mapping validation rejects ambiguous, escaping, incomplete and 
 
 
 test('historical versions cannot supply or infer repository mappings', () => {
-  for (const resourceVersion of ['0.1.0', '0.2.0', '0.2.1', '0.2.2', '0.3.0', '0.3.1', '0.3.2', '0.3.3', '0.3.4', '0.3.5', '0.3.6', '0.4.0']) {
+  for (const resourceVersion of ['0.1.0', '0.2.0', '0.2.1', '0.2.2', '0.3.0', '0.3.1', '0.3.2', '0.3.3', '0.3.4', '0.3.5', '0.3.6']) {
     for (const mapping of [undefined, { 'service-a': 'service-a' }, { 'service-a': 'repositories/service-a' }]) {
       assert.throws(() => repositoryPath(metadata(mapping, { resourceVersion }), 'service-a'), /版本不受支持/u);
     }
   }
+  assert.equal(repositoryPath(metadata({ 'service-a': 'service-a' }, { resourceVersion: '0.4.0' }), 'service-a'), 'service-a');
   assert.throws(() => validateRepositoryMappings(metadata(undefined, { mode: 'project', repositories: [] })), /映射/u);
 });

@@ -3,6 +3,7 @@ import { validateRepositoryMappings } from './repository-paths.js';
 
 export const SCHEMA_VERSION = 1;
 export const RESOURCE_VERSION = '0.5.0';
+export const SUPPORTED_RESOURCE_VERSIONS = ['0.4.0', '0.5.0'] as const;
 export const META = '.tiller/project.json';
 export const RULES = [
   'rules/index.md', 'rules/core.md',
@@ -18,7 +19,7 @@ export function parseMetadata(text: string): ProjectMetadata {
   try { value = JSON.parse(text); } catch { throw new Error('工程元信息不是有效 JSON。'); }
   if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('工程元信息格式无效。');
   const data = value as Record<string, unknown>;
-  if (data.schemaVersion !== SCHEMA_VERSION || data.resourceVersion !== RESOURCE_VERSION) {
+  if (data.schemaVersion !== SCHEMA_VERSION || !SUPPORTED_RESOURCE_VERSIONS.includes(data.resourceVersion as typeof SUPPORTED_RESOURCE_VERSIONS[number])) {
     throw new Error('工程格式或资源版本不受支持；仅支持当前契约，原有资料保持不变。');
   }
   if (data.mode !== 'project' && data.mode !== 'workspace') throw new Error('工程管理方式无效。');
