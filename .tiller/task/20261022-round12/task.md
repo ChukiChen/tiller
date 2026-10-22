@@ -62,29 +62,111 @@
 - 对象摘要：88405305b147fa6d68488e5e20ba2c0dd01b7d174f6fc0763912dbb8b1f5b580
 - 时间：2026-10-22T08:28:44.741Z
 
+### acceptance
+- 确认部分：交付验收
+- 对象：当前交付（需求、设计、验证与提交）
+- 确认人：ChukiChen
+- 提交：382bec85adc09db3325952a6e3bab03acddd1f46
+- 对象摘要：dcda81ed0fa23beee5719fe7547d1b6f1d74a0e8c982ee3011a4e23ee0b774e8
+- 时间：2026-10-22T09:43:44.520Z
+
 ## 验证
 
-尚无验证。
+### run-1
+- 条件：AC-1
+- 测试：test/pr.test.mjs::pr title selects first declared module and omits unknown modules
+- 用例：CASE-075
+- 命令：node --test --test-name-pattern="pr title selects first declared module and omits unknown modules" test/pr.test.mjs
+- 结果：passed
+- 退出码：0
+- 提交：382bec85adc09db3325952a6e3bab03acddd1f46
+- 代码树摘要：dcf7cfa4fcf0644e12f1aecc2997c9ad366d8a6884b83616fc2dcdee085be36d
+- 来源：executed
+- 时间：2026-10-22T09:43:31.073Z
+
+### run-2
+- 条件：AC-2
+- 测试：test/pr.test.mjs::branch slug precedence uses flag then task metadata then current branch
+- 用例：CASE-076
+- 命令：node --test --test-name-pattern="branch slug precedence uses flag then task metadata then current branch" test/pr.test.mjs
+- 结果：passed
+- 退出码：0
+- 提交：382bec85adc09db3325952a6e3bab03acddd1f46
+- 代码树摘要：dcf7cfa4fcf0644e12f1aecc2997c9ad366d8a6884b83616fc2dcdee085be36d
+- 来源：executed
+- 时间：2026-10-22T09:43:32.031Z
+
+### run-3
+- 条件：AC-3
+- 测试：test/pr.test.mjs::pr verification section lists every recorded run in order
+- 用例：CASE-077
+- 命令：node --test --test-name-pattern="pr verification section lists every recorded run in order" test/pr.test.mjs
+- 结果：passed
+- 退出码：0
+- 提交：382bec85adc09db3325952a6e3bab03acddd1f46
+- 代码树摘要：dcf7cfa4fcf0644e12f1aecc2997c9ad366d8a6884b83616fc2dcdee085be36d
+- 来源：executed
+- 时间：2026-10-22T09:43:33.137Z
+
+### run-4
+- 条件：AC-4
+- 测试：test/pr.test.mjs::init platform selects github gitlab or both managed templates
+- 用例：CASE-078
+- 命令：node --test --test-name-pattern="init platform selects github gitlab or both managed templates" test/pr.test.mjs
+- 结果：passed
+- 退出码：0
+- 提交：382bec85adc09db3325952a6e3bab03acddd1f46
+- 代码树摘要：dcf7cfa4fcf0644e12f1aecc2997c9ad366d8a6884b83616fc2dcdee085be36d
+- 来源：executed
+- 时间：2026-10-22T09:43:34.303Z
+
+### run-5
+- 条件：AC-4
+- 测试：test/pr.test.mjs::upgrade adds only templates for the configured platform
+- 用例：CASE-079
+- 命令：node --test --test-name-pattern="upgrade adds only templates for the configured platform" test/pr.test.mjs
+- 结果：passed
+- 退出码：0
+- 提交：382bec85adc09db3325952a6e3bab03acddd1f46
+- 代码树摘要：dcf7cfa4fcf0644e12f1aecc2997c9ad366d8a6884b83616fc2dcdee085be36d
+- 来源：executed
+- 时间：2026-10-22T09:43:34.721Z
+
+### run-6
+- 条件：AC-5
+- 测试：test/pr.test.mjs::pr task section is plain text and PR MR neutral
+- 用例：CASE-080
+- 命令：node --test --test-name-pattern="pr task section is plain text and PR MR neutral" test/pr.test.mjs
+- 结果：passed
+- 退出码：0
+- 提交：382bec85adc09db3325952a6e3bab03acddd1f46
+- 代码树摘要：dcf7cfa4fcf0644e12f1aecc2997c9ad366d8a6884b83616fc2dcdee085be36d
+- 来源：executed
+- 时间：2026-10-22T09:43:35.165Z
+
+### run-7
+- 条件：AC-5
+- 测试：test/pr.test.mjs::pr draft derives title, five sections and current AC state
+- 用例：CASE-068
+- 命令：node --test --test-name-pattern="pr draft derives title, five sections and current AC state" test/pr.test.mjs
+- 结果：passed
+- 退出码：0
+- 提交：382bec85adc09db3325952a6e3bab03acddd1f46
+- 代码树摘要：dcf7cfa4fcf0644e12f1aecc2997c9ad366d8a6884b83616fc2dcdee085be36d
+- 来源：executed
+- 时间：2026-10-22T09:43:40.225Z
 
 ## 自检
 
 - [x] 需求确认有效
 - [x] 设计确认有效
-- [ ] 验收条件均有当前通过且绑定全局用例的测试引用
-- [ ] 每条验收条件均映射到本次验证引用的全局用例
+- [x] 验收条件均有当前通过且绑定全局用例的测试引用
+- [x] 每条验收条件均映射到本次验证引用的全局用例
 - [x] 验收条件与用例来源 criteria 相互指向或由本任务新增/修改
 - [x] 全局用例结构与引用有效
 - [x] 改动未超出范围
 - [x] 未弱化仍存在的测试
 - [x] 记录不含密钥或本机绝对路径
-
-阻塞项：
-- AC-1 尚无验证。
-- AC-2 尚无验证。
-- AC-3 尚无验证。
-- AC-4 尚无验证。
-- AC-5 尚无验证。
-- 交付范围存在未提交改动：.github/pull_request_template.md、.tiller/cases/index.md、.tiller/cases/modules/initialization/behavior.json、.tiller/cases/modules/workflow/behavior.json、.tiller/cases/modules/workflow/interface.json、.tiller/context/project.md、.tiller/project.json、.tiller/rules/activities/delivery.md、.tiller/rules/core.md、.tiller/specs/decisions.md、.tiller/specs/design.md、.tiller/specs/modules/initialization/design.md、.tiller/specs/modules/initialization/requirements.md、.tiller/specs/modules/standards/design.md、.tiller/specs/modules/standards/requirements.md、.tiller/specs/modules/verification/design.md、.tiller/specs/modules/verification/requirements.md、.tiller/specs/modules/workflow/design.md、.tiller/specs/modules/workflow/requirements.md、.tiller/specs/requirements.md、.tiller/usage.md、AGENTS.md、README.md、resources/entry.md、resources/merge_request_template.md、resources/pull_request_template.md、resources/rules/activities/delivery.md、resources/rules/core.md、resources/usage.md、scripts/package-smoke.mjs、src/branch-conventions.ts、src/cli.ts、src/core.ts、src/files.ts、src/flow.ts、src/pr.ts、src/project-metadata.ts、src/types.ts、src/upgrade.ts、test/pr.test.mjs、test/rules.test.mjs
 
 提示：
 - 49 条历史用例未绑定来源 AC；新用例请用 case add 写入 criteria，check 对已有 criteria 的用例执行反向校验。
