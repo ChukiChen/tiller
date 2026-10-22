@@ -23,10 +23,10 @@
 ## 已有资料
 
 - [第一批功能补齐任务](task/20261022-first-batch/task.md)
+- [任务阶段、关闭与规格清理](task/20261022-round8/task.md)
 - [全局用例说明](cases/index.md)
 - [总体需求](specs/requirements.md)、[总体设计](specs/design.md)、[决策记录](specs/decisions.md)
 - [初始化规格](specs/modules/initialization/requirements.md)、[工作流规格](specs/modules/workflow/requirements.md)、[验证规格](specs/modules/verification/requirements.md)、[规范规格](specs/modules/standards/requirements.md)
-- [旧规格归档](specs/archive/)
 - [模块用例、场景与用例先行](task/20261022-case-first/task.md)
 
 - [cases/index.md](cases/index.md)
@@ -45,7 +45,6 @@
 - [已有项目接手与项目开发规范建立](work/20261016-project-onboarding/work.md)
 - [实现进度记录：需求对应、验证边界与下一步](work/20261016-implementation-progress/work.md)
 - [功能分块与项目骨架推进](work/20261016-functional-planning/work.md)
-- [specs/archive/requirements-initial-2026-10-14.md](specs/archive/requirements-initial-2026-10-14.md)
 - [specs/decisions.md](specs/decisions.md)
 - [specs/design.md](specs/design.md)
 - [specs/modules/initialization/design.md](specs/modules/initialization/design.md)

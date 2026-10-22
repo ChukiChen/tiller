@@ -7,7 +7,7 @@ import { bindRuntime, runtimeStatus } from './runtime.js';
 import { initialize, inspectProject, recoverProject } from './core.js';
 import { applyUpgrade, planUpgrade } from './upgrade.js';
 import { addGlobalCase } from './cases.js';
-import { acceptFlow, checkFlow, confirmFlow, inspectFlow, resumeFlow, startFlow, verifyFlow } from './flow.js';
+import { acceptFlow, checkFlow, closeFlow, confirmFlow, inspectFlow, reopenFlow, resumeFlow, startFlow, verifyFlow } from './flow.js';
 import { confirmPlan, startPlan, statusPlan } from './plans.js';
 
 export const CLI_VERSION = '0.5.0';
@@ -28,6 +28,8 @@ const HELP = `tiller ${CLI_VERSION} — 默认工作流
   tiller verify <task-id> --criterion AC-1 [--criterion ...] --test <测试文件或用例引用> --command "<验证命令>" [--run "<同一命令>"] [--result passed|failed|skipped] [--path <root>]
   tiller check <task-id> [--path <root>]
   tiller accept <task-id> --quote "<用户原话>" [--commit <oid>] [--path <root>]
+  tiller close <task-id> --reason "<原因>" [--abandon] [--path <root>]
+  tiller reopen <task-id> --reason "<原因>" [--path <root>]
   tiller recover [path]
   tiller runtime status|bind [--path <root>]
   tiller upgrade [path] --plan
@@ -38,6 +40,7 @@ const HELP = `tiller ${CLI_VERSION} — 默认工作流
 - 默认人工节点只有需求、设计和交付验收；规划、合入、发布按需确认，没有阶段或审计命令。
 - 大功能可先写 .tiller/plans/<id>.md 并确认；start 挂到条目时默认继承粒度，依赖未验收会阻塞。
 - task.md 是唯一任务记录：需求和设计正文必须先写清；用户原话只作确认凭证，不替代正文。验证保存命令、结果、提交和代码树摘要。
+- 阶段由 task.md 事实推导；close 收尾已验收任务，未验收终止用 --abandon，必要时 reopen。
 - case add 自动分配 CASE 编号并写入来源 AC；check 会核对 AC→全局用例→测试→当前验证，校验模块/场景结构并提示相关回归，同时检查范围、测试弱化、密钥和本机绝对路径。
 - upgrade 刷新未修改的受管文件，保留并报告用户修改；版本号只在正式发布时修改。
 `;
@@ -73,14 +76,14 @@ export async function runCli(rawArgs = process.argv.slice(2)): Promise<void> {
       options: {
         help: { type: 'boolean', short: 'h' }, version: { type: 'boolean', short: 'v' },
         json: { type: 'boolean' }, mode: { type: 'string' }, repo: { type: 'string', multiple: true },
-        path: { type: 'string' }, title: { type: 'string' }, requirement: { type: 'string' },
+        path: { type: 'string' }, title: { type: 'string' }, requirement: { type: 'string' }, reason: { type: 'string' },
         type: { type: 'string' }, size: { type: 'string' }, target: { type: 'string', multiple: true },
         quote: { type: 'string' }, commit: { type: 'string' }, criterion: { type: 'string', multiple: true },
         test: { type: 'string' }, command: { type: 'string' }, run: { type: 'string' }, result: { type: 'string' },
         plan: { type: 'string' }, item: { type: 'string', multiple: true }, goal: { type: 'string' },
         spec: { type: 'string', multiple: true }, module: { type: 'string', multiple: true },
         kind: { type: 'string' }, scenario: { type: 'string' }, source: { type: 'string', multiple: true },
-        apply: { type: 'string' },
+        apply: { type: 'string' }, abandon: { type: 'boolean' },
       },
     });
     const seenOptions = new Set<string>();
@@ -95,7 +98,7 @@ export async function runCli(rawArgs = process.argv.slice(2)): Promise<void> {
       if (wantsJson) output({ ok: true, version: CLI_VERSION }); else process.stdout.write(`${CLI_VERSION}\n`);
     } else {
       const [command, second, third] = positionals;
-      const flowCommand = ['start', 'resume', 'confirm', 'verify', 'check', 'accept'].includes(command ?? '');
+      const flowCommand = ['start', 'resume', 'confirm', 'verify', 'check', 'accept', 'close', 'reopen'].includes(command ?? '');
       const planCommand = command === 'plan';
       const caseCommand = command === 'case';
       const allowed = flowCommand
@@ -103,7 +106,9 @@ export async function runCli(rawArgs = process.argv.slice(2)): Promise<void> {
           : command === 'resume' ? ['path']
             : command === 'confirm' ? ['path', 'quote', 'commit']
               : command === 'verify' ? ['path', 'criterion', 'test', 'command', 'run', 'result']
-                : command === 'accept' ? ['path', 'quote', 'commit'] : ['path']
+                : command === 'accept' ? ['path', 'quote', 'commit']
+                  : command === 'close' ? ['path', 'reason', 'abandon']
+                    : command === 'reopen' ? ['path', 'reason'] : ['path']
         : planCommand ? second === 'start' ? ['path', 'title', 'goal', 'spec', 'item']
           : second === 'confirm' ? ['path', 'quote', 'commit']
             : second === 'status' ? ['path'] : []
@@ -145,10 +150,18 @@ export async function runCli(rawArgs = process.argv.slice(2)): Promise<void> {
         } else if (command === 'check') {
           if (positionals.length !== 2) usage('check 需要一个任务标识。');
           const checked = await checkFlow(root, second!); result = checked; ready = checked.ready;
-        } else {
+        } else if (command === 'accept') {
           if (positionals.length !== 2) usage('accept 需要一个任务标识。');
           if (!values.quote) usage('accept 需要 --quote "<用户原话>"。');
           result = await acceptFlow(root, second!, values.quote, values.commit);
+        } else if (command === 'close') {
+          if (positionals.length !== 2) usage('close 需要一个任务标识。');
+          if (!values.reason) usage('close 需要 --reason "<关闭原因>"；未验收终止请同时使用 --abandon。');
+          result = await closeFlow(root, second!, values.reason, values.abandon === true);
+        } else {
+          if (positionals.length !== 2) usage('reopen 需要一个任务标识。');
+          if (!values.reason) usage('reopen 需要 --reason "<重开原因>"。');
+          result = await reopenFlow(root, second!, values.reason);
         }
       } else if (planCommand) {
         const root = resolve(values.path ?? process.cwd());

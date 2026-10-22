@@ -6,6 +6,7 @@ import { promisify } from 'node:util';
 import { readProjectMetadata } from './core.js';
 import { applyChanges, readTextIfExists, validateRelativePath, withProjectLock } from './files.js';
 import { validateTaskId } from './task-id.js';
+import type { FlowStage } from './flow.js';
 
 const execFileAsync = promisify(execFile);
 const PLAN_DIRECTORY = '.tiller/plans';
@@ -15,7 +16,7 @@ const PLAN_MARKER = '<!-- tiller-plan:v1 ';
 const PLAN_MARKER_END = ' -->';
 const ITEM_ID = /^[A-Za-z][A-Za-z0-9._-]{0,39}$/u;
 
-export const PLAN_ITEM_STATUSES = ['未开始', '进行中', '已验收'] as const;
+export const PLAN_ITEM_STATUSES = ['未开始', '进行中', '已验收', '已放弃'] as const;
 export type PlanItemStatus = typeof PLAN_ITEM_STATUSES[number];
 export type PlanSize = 'small' | 'standard';
 
@@ -69,7 +70,7 @@ export interface PlanItemState {
   requirements: string[];
   childPlan?: string;
   status: PlanItemStatus;
-  tasks: { id: string; accepted: boolean }[];
+  tasks: { id: string; stage: FlowStage; accepted: boolean }[];
   blockedBy: string[];
 }
 
@@ -350,32 +351,9 @@ async function currentCommit(root: string, requested?: string): Promise<string> 
   return (await head(root)) ?? 'no-git';
 }
 
-function sectionBody(content: string, title: string): string {
-  const match = new RegExp(`^## ${title}\\s*$`, 'mu').exec(content);
-  if (!match) return '';
-  const start = match.index + match[0].length;
-  const rest = content.slice(start);
-  const next = /^##\s+/mu.exec(rest);
-  return rest.slice(0, next?.index ?? rest.length);
-}
-
-function hasAcceptance(content: string): boolean {
-  const body = sectionBody(content, '确认');
-  for (const chunk of body.split(/^###\s+/mu).slice(1)) {
-    const lines = chunk.split(/\r?\n/u);
-    if (lines.shift()?.trim() !== 'acceptance') continue;
-    const fields = new Map(lines.map(value => {
-      const separator = value.indexOf('：');
-      return separator > 0 ? [value.slice(2, separator).trim(), value.slice(separator + 1).trim()] : ['', ''];
-    }));
-    if ((fields.get('用户原话') ?? '') && /^(?:[a-f0-9]{7,64}|no-git)$/u.test(fields.get('提交') ?? '')
-      && /^[a-f0-9]{64}$/u.test(fields.get('对象摘要') ?? '')) return true;
-  }
-  return false;
-}
-
-async function taskLinks(root: string, planId: string): Promise<Map<string, { id: string; accepted: boolean }[]>> {
-  const result = new Map<string, { id: string; accepted: boolean }[]>();
+async function taskLinks(root: string, planId: string): Promise<Map<string, { id: string; stage: FlowStage; accepted: boolean }[]>> {
+  const result = new Map<string, { id: string; stage: FlowStage; accepted: boolean }[]>();
+  const { taskStage } = await import('./flow.js');
   let entries;
   try { entries = await readdir(path.join(root, TASK_DIRECTORY), { withFileTypes: true }); }
   catch (error) { if ((error as NodeJS.ErrnoException).code === 'ENOENT') return result; throw error; }
@@ -391,7 +369,8 @@ async function taskLinks(root: string, planId: string): Promise<Map<string, { id
     try { meta = JSON.parse(marker[1]!) as Record<string, unknown>; } catch { continue; }
     if (meta.plan !== planId || typeof meta.item !== 'string') continue;
     const links = result.get(meta.item) ?? [];
-    links.push({ id: entry.name, accepted: hasAcceptance(content) });
+    const stage = await taskStage(root, entry.name);
+    links.push({ id: entry.name, stage: stage.stage, accepted: stage.stage === '已验收' || stage.stage === '已关闭' });
     result.set(meta.item, links);
   }
   return result;
@@ -411,7 +390,9 @@ export async function statusPlan(rootInput: string, id: string): Promise<PlanSta
   const preliminary = plan.meta.items.map(item => {
     const tasks = links.get(item.id) ?? [];
     const accepted = tasks.some(task => task.accepted);
-    return { item, tasks, status: (accepted ? '已验收' : tasks.length ? '进行中' : '未开始') as PlanItemStatus };
+    const active = tasks.some(task => !task.accepted && task.stage !== '已放弃');
+    const abandoned = tasks.length > 0 && tasks.every(task => !task.accepted && task.stage === '已放弃');
+    return { item, tasks, status: (accepted ? '已验收' : active ? '进行中' : abandoned ? '已放弃' : '未开始') as PlanItemStatus };
   });
   const statusById = new Map(preliminary.map(entry => [entry.item.id, entry.status]));
   const items: PlanItemState[] = preliminary.map(entry => ({

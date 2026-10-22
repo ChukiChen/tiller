@@ -95,6 +95,62 @@
       "criteria": [
         "20261022-first-batch#AC-2"
       ]
+    },
+    {
+      "id": "CASE-056",
+      "title": "任务阶段由记录事实推导并在失效时回退",
+      "requirements": [
+        ".tiller/specs/modules/workflow/requirements.md#flow-25-从事实推导任务阶段",
+        ".tiller/specs/modules/workflow/requirements.md#flow-09-依据验证结果判断交付"
+      ],
+      "modules": [
+        "workflow"
+      ],
+      "test_ref": "test/first-batch.test.mjs::task stages derive from task facts and fall back on invalid confirmation or stale verification",
+      "source": [
+        "src/flow.ts",
+        "src/plans.ts"
+      ],
+      "criteria": [
+        "20261022-round8#AC-2"
+      ]
+    },
+    {
+      "id": "CASE-057",
+      "title": "已验收任务关闭后阻塞推进并可重新打开",
+      "requirements": [
+        ".tiller/specs/modules/workflow/requirements.md#flow-26-关闭放弃与恢复",
+        ".tiller/specs/modules/workflow/requirements.md#flow-15-在关键节点取得人工确认"
+      ],
+      "modules": [
+        "workflow"
+      ],
+      "test_ref": "test/first-batch.test.mjs::accepted tasks close, block further confirm verify and accept, and reopen for another delivery",
+      "source": [
+        "src/flow.ts"
+      ],
+      "criteria": [
+        "20261022-round8#AC-3"
+      ]
+    },
+    {
+      "id": "CASE-058",
+      "title": "放弃任务不污染规划统计且可恢复",
+      "requirements": [
+        ".tiller/specs/modules/workflow/requirements.md#3-规划拆分",
+        ".tiller/specs/modules/workflow/requirements.md#flow-26-关闭放弃与恢复"
+      ],
+      "modules": [
+        "workflow"
+      ],
+      "test_ref": "test/first-batch.test.mjs::abandoned tasks are terminal, reopenable, and not counted as active or accepted plan work",
+      "source": [
+        "src/plans.ts",
+        "src/flow.ts"
+      ],
+      "criteria": [
+        "20261022-round8#AC-4"
+      ]
     }
   ]
 }

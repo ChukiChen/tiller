@@ -39,12 +39,13 @@ test('core and usage describe the only supported default-flow record path', () =
   assert.match(core, /版本号只在正式发布时修改/u);
   assert.doesNotMatch(core, /advanced|上一版本升级/u);
   const usage = read('usage.md');
-  for (const command of ['start', 'resume', 'confirm', 'verify', 'check', 'accept']) assert.ok(usage.includes(`run.cjs ${command}`), command);
+  for (const command of ['start', 'resume', 'confirm', 'verify', 'check', 'accept', 'close', 'reopen']) assert.ok(usage.includes(`run.cjs ${command}`), command);
   assert.match(usage, /--size small/u);
   assert.match(usage, /--size standard/u);
   assert.match(usage, /\.tiller\/cases\//u);
   assert.match(usage, /`task\.md` 只记录本次任务/u);
   assert.match(usage, /原话只作凭证，不替代正文/u);
+  assert.match(usage, /--abandon/u);
   assert.match(usage, /不保存全文快照和日志/u);
   assert.match(usage, /当前及直接兼容的上一资源契约/u);
   assert.doesNotMatch(usage, /advanced|上一版本到当前版本/u);
@@ -112,6 +113,8 @@ test('README describes only the default flow and release-time versioning', () =>
   assert.match(readme, /默认人工节点只有需求、设计/u);
   assert.match(readme, /单次任务以 `task\.md` 与 Git 追溯/u);
   assert.match(readme, /原话只是凭证，不能替代正文/u);
+  assert.match(readme, /close --abandon/u);
+  assert.match(readme, /reopen --reason/u);
   assert.match(readme, /\.tiller\/cases\//u);
   assert.match(readme, /版本号只在正式发布正式包时修改/u);
   assert.match(readme, /升级命令|升级支持当前及直接兼容的上一资源契约/u);
@@ -144,13 +147,13 @@ test('global cases use module kinds and scenarios with resolvable named tests', 
   const scenarios = readdirSync(join(directory, 'scenarios')).filter(name => name.endsWith('.json')).sort()
     .flatMap(name => JSON.parse(readFileSync(join(directory, 'scenarios', name), 'utf8')).scenarios);
   cases.push(...scenarios.map(item => ({ ...item, file: `scenarios/${item.id}` })));
-  assert.equal(cases.length, 55);
-  assert.deepEqual(cases.map(item => item.id).sort(), Array.from({ length: 55 }, (_, index) => `CASE-${String(index + 1).padStart(3, '0')}`));
+  assert.equal(cases.length, 59);
+  assert.deepEqual(cases.map(item => item.id).sort(), Array.from({ length: 59 }, (_, index) => `CASE-${String(index + 1).padStart(3, '0')}`));
   assert.deepEqual(counts, {
     initialization: { behavior: 3, interface: 0, performance: 11, security: 0 },
-    standards: { behavior: 1, interface: 0, performance: 0, security: 0 },
+    standards: { behavior: 2, interface: 0, performance: 0, security: 0 },
     verification: { behavior: 4, interface: 5, performance: 15, security: 0 },
-    workflow: { behavior: 6, interface: 5, performance: 0, security: 3 },
+    workflow: { behavior: 9, interface: 5, performance: 0, security: 3 },
   });
   for (const item of scenarios) {
     assert.ok(item.modules.length > 0 && item.modules.every(module => specs.includes(module)), `${item.id}: modules`);

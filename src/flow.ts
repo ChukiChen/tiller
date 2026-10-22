@@ -26,6 +26,7 @@ const CONFIRMATION_OBJECTS: Record<FlowGate, string> = {
   acceptance: '当前交付（需求、设计、验证与提交）',
 };
 const RESULTS = ['passed', 'failed', 'skipped'] as const;
+const FLOW_STAGES = ['已开始', '需求已确认', '设计已确认', '已验证', '已验收', '已关闭', '已放弃'] as const;
 const TASK_DIRECTORY = '.tiller/task';
 const TASK_FILE = 'task.md';
 const LEGACY_TASK_DIRECTORY = '.tiller/work';
@@ -34,6 +35,8 @@ export type FlowType = typeof TYPES[number];
 export type FlowSize = 'small' | 'standard';
 export type FlowGate = typeof CONFIRMATION_GATES[number];
 export type FlowResult = typeof RESULTS[number];
+export type FlowStage = typeof FLOW_STAGES[number];
+export type FlowCloseStatus = 'closed' | 'abandoned';
 
 export interface FlowMeta {
   version: 1; id: string; type: FlowType; size: FlowSize; created: string; base: string; scope: string[]; preExisting: Record<string, string>;
@@ -47,10 +50,14 @@ export interface FlowVerification {
   id: string; criterion: string; test: string; command: string; result: FlowResult;
   cases: string[]; exitCode: number | null; commit: string; at: string; tree: string; source: 'executed' | 'reported';
 }
+export interface FlowClosure {
+  action: 'close' | 'reopen'; status?: FlowCloseStatus; reason: string; at: string;
+}
 export interface FlowTask {
   meta: FlowMeta; title: string; requirement: string; design: string; criteria: FlowCriterion[];
-  confirmations: FlowConfirmation[]; verifications: FlowVerification[]; content: string; path: string;
+  confirmations: FlowConfirmation[]; verifications: FlowVerification[]; closures: FlowClosure[]; content: string; path: string;
 }
+export interface TaskStage { stage: FlowStage; reason: string }
 
 export interface FlowStartInput {
   title: string; requirement: string; type?: string; size?: string; targets?: string[]; criteria: string[]; plan?: string; item?: string;
@@ -235,6 +242,27 @@ function parseVerifications(content: string): FlowVerification[] {
   }
   return result;
 }
+function parseClosures(content: string): FlowClosure[] {
+  const body = sectionBody(content, '关闭');
+  if (!body) return [];
+  const result: FlowClosure[] = [];
+  for (const chunk of body.split(/^###\s+/mu).slice(1)) {
+    const lines = chunk.split(/\r?\n/u);
+    const action = lines.shift()?.trim();
+    if (action !== 'close' && action !== 'reopen') continue;
+    const field = (name: string) => {
+      const prefix = `- ${name}：`;
+      return lines.find(line => line.startsWith(prefix))?.slice(prefix.length).trim() ?? '';
+    };
+    const reason = field('原因');
+    const at = field('时间');
+    const statusText = field('状态');
+    const status = statusText === '已关闭' ? 'closed' : statusText === '已放弃' ? 'abandoned' : undefined;
+    if (!reason || !Number.isFinite(Date.parse(at)) || (action === 'close' && !status)) continue;
+    result.push({ action, ...(action === 'close' && status ? { status } : {}), reason, at });
+  }
+  return result;
+}
 function parseTask(content: string, id: string, relative: string): FlowTask {
   const marker = new RegExp(`${MARKER_PREFIX.replace(/[.*+?^${}()|[\]\\]/gu, '\\$&')}(\\{.*\\})${MARKER_SUFFIX.replace(/[.*+?^${}()|[\]\\]/gu, '\\$&')}`, 'u').exec(content);
   if (!marker) fail('FLOW_TASK_NOT_FOUND', `任务 ${id} 不是当前轻量记录。`);
@@ -245,7 +273,7 @@ function parseTask(content: string, id: string, relative: string): FlowTask {
   return {
     meta: parseMeta(marker[1]!, id), title, requirement, design: sectionBody(content, '设计'),
     criteria: parseCriteria(content), confirmations: parseConfirmations(content),
-    verifications: parseVerifications(content), content, path: relative,
+    verifications: parseVerifications(content), closures: parseClosures(content), content, path: relative,
   };
 }
 async function readTask(root: string, id: string): Promise<FlowTask> {
@@ -285,6 +313,14 @@ function renderVerifications(values: FlowVerification[]): string {
     `- 时间：${value.at}`,
   ].join('\n')).join('\n\n');
 }
+function renderClosures(values: FlowClosure[]): string {
+  return values.map(value => [
+    `### ${value.action}`,
+    ...(value.action === 'close' ? [`- 状态：${value.status === 'abandoned' ? '已放弃' : '已关闭'}`] : []),
+    `- 原因：${normalizeLine(value.reason)}`,
+    `- 时间：${value.at}`,
+  ].join('\n')).join('\n\n');
+}
 function renderTask(task: Omit<FlowTask, 'content' | 'path'>, selfCheck = ''): string {
   const parts = [
     `# ${task.title}`,
@@ -296,6 +332,7 @@ function renderTask(task: Omit<FlowTask, 'content' | 'path'>, selfCheck = ''): s
   if (task.design.trim()) parts.push('## 设计', task.design.trim());
   parts.push('## 确认', renderConfirmations(task.confirmations) || '尚无确认。');
   parts.push('## 验证', renderVerifications(task.verifications) || '尚无验证。');
+  if (task.closures.length) parts.push('## 关闭', renderClosures(task.closures));
   parts.push('## 自检', selfCheck.trim() || '交付前运行 check；验收后运行 accept。');
   return `${parts.join('\n\n').trimEnd()}\n`;
 }
@@ -375,7 +412,8 @@ export async function startFlow(rootInput: string, idInput: string, input: FlowS
     }
     const created = new Date().toISOString();
     const task = { meta: { version: 1 as const, id: idInput, type, size, created, base, scope, preExisting,
-      ...(plan && item ? { plan, item } : {}) }, title, requirement, design: '', criteria, confirmations: [], verifications: [] };
+      ...(plan && item ? { plan, item } : {}) }, title, requirement, design: '', criteria,
+      confirmations: [], verifications: [], closures: [] };
     const content = renderTask(task);
     await mkdir(path.dirname(path.join(root, relative)), { recursive: true });
     await applyChanges(root, [{ path: relative, before: null, after: content }]);
@@ -388,9 +426,12 @@ export async function resumeFlow(rootInput: string, id?: string) {
   const root = path.resolve(rootInput); await readProjectMetadata(root);
   if (id) {
     const task = await readTask(root, id);
+    const stage = await taskStageForTask(root, id, task);
     return { id, title: task.title, type: task.meta.type, size: task.meta.size, scope: task.meta.scope,
       path: task.path, ...(task.meta.plan && task.meta.item ? { plan: task.meta.plan, item: task.meta.item } : {}),
-      requirement: task.requirement, criteria: task.criteria, confirmations: task.confirmations, verifications: task.verifications };
+      stage: stage.stage, stageReason: stage.reason,
+      requirement: task.requirement, criteria: task.criteria, confirmations: task.confirmations, verifications: task.verifications,
+      closures: task.closures };
   }
   const directory = path.join(root, TASK_DIRECTORY);
   let entries;
@@ -403,8 +444,10 @@ export async function resumeFlow(rootInput: string, id?: string) {
       const content = await readTextIfExists(root, taskPath(entry.name));
       if (content?.includes(MARKER_PREFIX)) {
         const task = parseTask(content, entry.name, taskPath(entry.name));
+        const stage = await taskStageForTask(root, entry.name, task);
         tasks.push({ id: entry.name, title: task.title, type: task.meta.type, size: task.meta.size, path: task.path,
           ...(task.meta.plan && task.meta.item ? { plan: task.meta.plan, item: task.meta.item } : {}),
+          stage: stage.stage, stageReason: stage.reason,
           confirmed: task.confirmations.length, verified: task.verifications.length });
       }
     } catch { /* Other task formats are outside the default flow index. */ }
@@ -416,6 +459,7 @@ export async function confirmFlow(rootInput: string, id: string, gateInput: stri
   const root = path.resolve(rootInput);
   return withProjectLock(root, async () => {
     const task = await readTask(root, id);
+    assertTaskOpen(task);
     if (!CONFIRMATION_GATES.includes(gateInput as FlowGate)) fail('INVALID_CONFIRMATION_GATE', `确认节点必须是：${CONFIRMATION_GATES.join(', ')}。`);
     const gate = gateInput as FlowGate; const quote = safeInput(text(quoteInput, '用户原话', 4000), '用户原话');
     if (gate === 'requirements' && !task.criteria.length) fail('MISSING_REQUIREMENTS', '没有可确认的验收条件。');
@@ -599,6 +643,99 @@ async function caseChangedSinceBase(root: string, base: string, item: GlobalCase
   });
 }
 
+function latestAcceptance(task: Pick<FlowTask, 'confirmations' | 'closures'>): FlowConfirmation | undefined {
+  const reopenedAt = [...task.closures].reverse().find(item => item.action === 'reopen');
+  return [...task.confirmations].reverse().find(item => item.gate === 'acceptance'
+    && (!reopenedAt || Date.parse(item.at) > Date.parse(reopenedAt.at)));
+}
+
+function terminalStage(task: Pick<FlowTask, 'closures'>): TaskStage | null {
+  const closure = task.closures.at(-1);
+  if (closure?.action !== 'close') return null;
+  return closure.status === 'abandoned'
+    ? { stage: '已放弃', reason: `任务已放弃：${closure.reason}` }
+    : { stage: '已关闭', reason: `任务已关闭：${closure.reason}` };
+}
+
+function assertTaskOpen(task: Pick<FlowTask, 'closures' | 'title'>): void {
+  const terminal = terminalStage(task);
+  if (!terminal) return;
+  const code = terminal.stage === '已放弃' ? 'TASK_ABANDONED' : 'TASK_CLOSED';
+  fail(code, `任务 ${task.title} 当前阶段为${terminal.stage}；如需继续，先执行 reopen。`);
+}
+
+async function verificationStageIssues(root: string, id: string, task: FlowTask): Promise<string[]> {
+  const library = await readCaseLibrary(root);
+  const currentTree = await treeDigest(root, task.meta.scope, id);
+  const issues: string[] = [];
+  for (const criterion of task.criteria) {
+    const run = latestVerification(task, criterion.id);
+    if (!run) { issues.push(`${criterion.id} 尚无验证`); continue; }
+    if (run.result !== 'passed') { issues.push(`${criterion.id} 最新验证结果为 ${run.result}`); continue; }
+    if (run.tree !== currentTree) { issues.push(`${criterion.id} 验证已过期`); continue; }
+    if (!(await testExists(root, run.test))) { issues.push(`${criterion.id} 的测试引用不存在`); continue; }
+    if (!run.cases.length) { issues.push(`${criterion.id} 未绑定全局用例`); continue; }
+    const linked = run.cases.flatMap(caseId => {
+      const entry = library.cases.find(item => item.id === caseId);
+      return entry ? [entry] : [];
+    });
+    if (linked.length !== run.cases.length) { issues.push(`${criterion.id} 引用的全局用例不存在`); continue; }
+    let valid = true;
+    for (const entry of linked) {
+      if (!sameTestReference(run.test, entry.test_ref)) {
+        issues.push(`${criterion.id} 的测试引用与用例 ${entry.id} 不一致`);
+        valid = false;
+        continue;
+      }
+      const expected = `${id}#${criterion.id}`;
+      if (entry.criteria.length && !entry.criteria.includes(expected)
+        && !(await caseChangedSinceBase(root, task.meta.base, entry))) {
+        issues.push(`${criterion.id} 的用例 ${entry.id} 未回指当前 AC`);
+        valid = false;
+      }
+    }
+    if (!valid) continue;
+  }
+  return [...new Set(issues)];
+}
+
+async function taskStageForTask(root: string, id: string, task: FlowTask): Promise<TaskStage> {
+  const terminal = terminalStage(task);
+  if (terminal) return terminal;
+  const requirement = [...task.confirmations].reverse().find(item => item.gate === 'requirements');
+  if (!requirement) return { stage: '已开始', reason: '任务已建立，等待需求确认。' };
+  if (requirement.subject !== requirementsSubject(task)) {
+    return { stage: '已开始', reason: '需求确认已失效：需求正文、范围或验收条件已变化，需要重新确认。' };
+  }
+  if (requiresDesign(task)) {
+    if (!task.design.trim()) return { stage: '需求已确认', reason: '需求确认有效，等待填写设计。' };
+    const design = [...task.confirmations].reverse().find(item => item.gate === 'design');
+    if (!design) return { stage: '需求已确认', reason: '需求确认有效，等待设计确认。' };
+    if (design.subject !== designSubject(task)) {
+      return { stage: '需求已确认', reason: '设计确认已失效：需求或设计正文已变化，需要重新确认。' };
+    }
+  }
+  const fallback: FlowStage = requiresDesign(task) ? '设计已确认' : '需求已确认';
+  const verificationIssues = await verificationStageIssues(root, id, task);
+  if (verificationIssues.length) {
+    const shown = verificationIssues.slice(0, 3).join('；');
+    const rest = verificationIssues.length > 3 ? `；另有 ${verificationIssues.length - 3} 项` : '';
+    return { stage: fallback, reason: `验证未通过或已失效：${shown}${rest}。` };
+  }
+  const acceptance = latestAcceptance(task);
+  if (!acceptance) return { stage: '已验证', reason: '验证有效，等待交付验收。' };
+  if (acceptance.subject !== expectedSubject(task, 'acceptance', acceptance.commit)) {
+    return { stage: '已验证', reason: '交付验收已失效：交付内容已变化，需要重新验收。' };
+  }
+  return { stage: '已验收', reason: '交付验收有效。' };
+}
+
+export async function taskStage(rootInput: string, id: string): Promise<TaskStage> {
+  const root = path.resolve(rootInput);
+  const task = await readTask(root, id);
+  return taskStageForTask(root, id, task);
+}
+
 export interface FlowCheck {
   id: string; ready: boolean; issues: string[]; warnings: string[]; criteria: { id: string; covered: boolean; test?: string; cases?: string[]; result?: string; commit?: string }[];
   confirmations: { gate: FlowGate; confirmed: boolean; quote: string; commit: string; issue?: string }[];
@@ -614,7 +751,9 @@ async function evaluateFlow(root: string, id: string, task: FlowTask): Promise<F
   const currentTree = await treeDigest(root, task.meta.scope, id);
   const confirmationStates: FlowCheck['confirmations'] = [];
   for (const gate of ['requirements', 'design', 'acceptance'] as FlowGate[]) {
-    const item = [...task.confirmations].reverse().find(entry => entry.gate === gate);
+    const item = gate === 'acceptance'
+      ? latestAcceptance(task)
+      : [...task.confirmations].reverse().find(entry => entry.gate === gate);
     if (!item) { confirmationStates.push({ gate, confirmed: false, quote: '', commit: '' }); continue; }
     const expected = expectedSubject(task, gate, item.commit);
     const confirmed = item.subject === expected;
@@ -685,7 +824,7 @@ async function evaluateFlow(root: string, id: string, task: FlowTask): Promise<F
   if (uncommitted === null) warnings.push('未检测到可用 Git 提交，未提交改动检查已跳过。');
   else if (uncommitted.length) issues.push(`交付范围存在未提交改动：${uncommitted.join('、')}`);
   issues.push(...recordSafety(task.content));
-  const acceptance = [...task.confirmations].reverse().find(item => item.gate === 'acceptance');
+  const acceptance = latestAcceptance(task);
   const acceptanceConfirmed = acceptance !== undefined && acceptance.subject === expectedSubject(task, 'acceptance', acceptance.commit);
   if (acceptance && !acceptanceConfirmed) warnings.push('交付验收后任务对象已变化，需要重新验收。');
   const uniqueIssues = [...new Set(issues)];
@@ -728,6 +867,7 @@ export async function verifyFlow(rootInput: string, id: string, input: FlowVerif
   const root = path.resolve(rootInput);
   return withProjectLock(root, async () => {
     const task = await readTask(root, id);
+    assertTaskOpen(task);
     if (!input.criteria?.length) fail('INVALID_FLOW_INPUT', '至少提供一个 --criterion。');
     const criteria = [...new Set(input.criteria.map(value => value.trim()))];
     for (const criterion of criteria) if (!task.criteria.some(item => item.id === criterion)) fail('UNKNOWN_CRITERION', `验收条件不存在：${criterion}`);
@@ -774,7 +914,52 @@ function flowResult(value: string): FlowResult {
 }
 
 export async function acceptFlow(rootInput: string, id: string, quoteInput: string, commitInput?: string) {
+  const root = path.resolve(rootInput);
+  assertTaskOpen(await readTask(root, id));
   const checked = await checkFlow(rootInput, id);
   if (!checked.ready) fail('NOT_READY', `技术自检未通过：${checked.issues.join('；')}`);
   return confirmFlow(rootInput, id, 'acceptance', quoteInput, commitInput);
+}
+
+export async function closeFlow(rootInput: string, id: string, reasonInput: string, abandon = false) {
+  const root = path.resolve(rootInput);
+  const reason = safeInput(text(reasonInput, '关闭原因', 4000), '关闭原因');
+  return withProjectLock(root, async () => {
+    const task = await readTask(root, id);
+    const ended = terminalStage(task);
+    if (ended) fail('TASK_ENDED', `任务当前阶段为${ended.stage}；如需继续，先执行 reopen。`);
+    const current = await taskStageForTask(root, id, task);
+    if (current.stage === '已验收' && abandon) {
+      fail('ALREADY_ACCEPTED', '任务已验收；请使用 close 收尾，不要用 --abandon 把已验收任务标为放弃。');
+    }
+    if (current.stage !== '已验收' && !abandon) {
+      fail('NOT_ACCEPTED', `任务当前阶段为${current.stage}；只有已验收任务可以 close，未验收终止请使用 --abandon。`);
+    }
+    const closure: FlowClosure = {
+      action: 'close', status: abandon ? 'abandoned' : 'closed', reason,
+      at: new Date().toISOString(),
+    };
+    const next = { ...task, closures: [...task.closures, closure] };
+    const { content: _content, path: _path, ...body } = next;
+    await writeTask(root, id, task.content, renderTask(body, sectionBody(task.content, '自检')));
+    const stage = terminalStage(next)!;
+    return { id, stage: stage.stage, stageReason: stage.reason, reason, at: closure.at, path: task.path,
+      next: `如需继续修改，执行 tiller reopen ${id} --reason "<原因>".` };
+  });
+}
+
+export async function reopenFlow(rootInput: string, id: string, reasonInput: string) {
+  const root = path.resolve(rootInput);
+  const reason = safeInput(text(reasonInput, '重开原因', 4000), '重开原因');
+  return withProjectLock(root, async () => {
+    const task = await readTask(root, id);
+    if (!terminalStage(task)) fail('TASK_NOT_CLOSED', '任务尚未关闭或放弃，不能 reopen。');
+    const event: FlowClosure = { action: 'reopen', reason, at: new Date().toISOString() };
+    const next = { ...task, closures: [...task.closures, event] };
+    const { content: _content, path: _path, ...body } = next;
+    await writeTask(root, id, task.content, renderTask(body, sectionBody(task.content, '自检')));
+    const stage = await taskStage(root, id);
+    return { id, stage: stage.stage, stageReason: stage.reason, reason, at: event.at, path: task.path,
+      next: stage.stage === '已验收' ? `tiller close ${id} --reason "<原因>"` : `tiller resume ${id}` };
+  });
 }

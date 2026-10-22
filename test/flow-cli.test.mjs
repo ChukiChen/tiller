@@ -452,6 +452,8 @@ test('default help names the default flow and old audit commands are gone', t =>
   assert.match(normal.help, /--requirement/u);
   assert.match(normal.help, /tiller plan start/u);
   assert.match(normal.help, /tiller case add/u);
+  assert.match(normal.help, /tiller close/u);
+  assert.match(normal.help, /tiller reopen/u);
   assert.match(normal.help, /task\.md/u);
   assert.doesNotMatch(normal.help, /work\.md/u);
   assert.doesNotMatch(normal.help, /lite|lightweight/iu);

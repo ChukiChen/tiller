@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import test from 'node:test';
+import { fileURLToPath } from 'node:url';
 import { cli, failure, fixture, put, snapshot, success } from './helpers.mjs';
 
 const read = (root, relative) => readFileSync(join(root, relative), 'utf8');
@@ -20,6 +21,31 @@ function moduleSpec(root, name, heading = '默认工作流') {
 
 function topSpec(root) {
   put(root, '.tiller/specs/first-batch.md', '# 第一批功能\n\n## R1 基础能力\n\n## R2 后续能力\n\n## R3 待拆分能力\n');
+}
+
+function stageTask(root, id) {
+  return success(cli(root, 'resume', id)).stage;
+}
+
+function addDesign(root, id) {
+  const relative = `.tiller/task/${id}/task.md`;
+  const content = read(root, relative);
+  assert.match(content, /^## 确认$/mu);
+  put(root, relative, content.replace('\n## 确认\n', '\n## 设计\n\n使用任务记录中的结构化正文推进。\n\n## 确认\n'));
+}
+
+function activeFiles(root) {
+  const files = [];
+  const visit = relative => {
+    for (const entry of readdirSync(join(root, relative), { withFileTypes: true })) {
+      const child = `${relative}/${entry.name}`;
+      if (entry.isDirectory()) visit(child);
+      else if (/\.(?:md|json|cjs|ts)$/u.test(entry.name)) files.push(child);
+    }
+  };
+  for (const relative of ['.tiller/specs', '.tiller/rules', '.tiller/cases', 'resources']) visit(relative);
+  files.push('README.md', 'AGENTS.md', '.tiller/usage.md', '.tiller/index.md', '.tiller/context/project.md');
+  return files;
 }
 
 test('empty init creates the guided skeleton without overwriting existing files', async t => {
@@ -185,4 +211,136 @@ test('upgrade previews and applies a compatible resource refresh while preservin
   const conflict = failure(cli(root, 'upgrade', '--plan'));
   assert.ok(conflict.issues.some(issue => issue.includes('用户修改了受管文件') && issue.includes('首个差异')), conflict.issues.join('\n'));
   assert.equal(read(root, corePath), modified);
+});
+
+test('task stages derive from task facts and fall back on invalid confirmation or stale verification', async t => {
+  const root = await initialized(t);
+  moduleSpec(root, 'workflow');
+  put(root, 'src/lifecycle.mjs', 'export const lifecycle = 1;\n');
+  put(root, 'test/lifecycle.test.mjs', "import assert from 'node:assert/strict';\nimport test from 'node:test';\n\ntest('lifecycle stage behavior', () => assert.equal(1, 1));\n");
+  const id = '20261022-stage-flow';
+  success(cli(root, 'start', id, '--title', '阶段推导', '--requirement', 'Task stage behavior is derived from records.',
+    '--criterion', 'AC-1=Each confirmed fact advances the stage', '--size', 'standard',
+    '--target', 'src', '--target', 'test', '--target', '.tiller'));
+  assert.equal(stageTask(root, id), '已开始');
+  success(cli(root, 'confirm', id, 'requirements', '--quote', '确认阶段需求'));
+  assert.equal(stageTask(root, id), '需求已确认');
+  addDesign(root, id);
+  assert.equal(stageTask(root, id), '需求已确认');
+  success(cli(root, 'confirm', id, 'design', '--quote', '确认阶段设计'));
+  assert.equal(stageTask(root, id), '设计已确认');
+  success(cli(root, 'case', 'add', id, '--module', 'workflow', '--kind', 'behavior', '--title', '阶段推进',
+    '--test', 'test/lifecycle.test.mjs::lifecycle stage behavior', '--criterion', 'AC-1',
+    '--spec', '.tiller/specs/modules/workflow/requirements.md#2-开始与接续', '--source', 'src/lifecycle.mjs'));
+  success(cli(root, 'verify', id, '--criterion', 'AC-1', '--test', 'test/lifecycle.test.mjs::lifecycle stage behavior',
+    '--command', 'node --test test/lifecycle.test.mjs', '--result', 'passed'));
+  assert.equal(stageTask(root, id), '已验证');
+  success(cli(root, 'accept', id, '--quote', '验收阶段流程'));
+  assert.equal(stageTask(root, id), '已验收');
+  const taskPath = `.tiller/task/${id}/task.md`;
+  put(root, taskPath, read(root, taskPath).replace('Task stage behavior is derived from records.', 'Task stage behavior changed after confirmation.'));
+  const invalidated = success(cli(root, 'resume', id));
+  assert.equal(invalidated.stage, '已开始');
+  assert.match(invalidated.stageReason, /需求确认已失效/u);
+
+  const staleId = '20261022-stale-verification';
+  put(root, 'src/stale.mjs', 'export const stale = 1;\n');
+  put(root, 'test/stale.test.mjs', "import assert from 'node:assert/strict';\nimport test from 'node:test';\n\ntest('stale verification behavior', () => assert.equal(1, 1));\n");
+  success(cli(root, 'start', staleId, '--title', '验证过期', '--requirement', 'A stale verification falls back to requirements confirmed.',
+    '--criterion', 'AC-1=Expired verification is visible', '--size', 'small',
+    '--target', 'src', '--target', 'test', '--target', '.tiller'));
+  success(cli(root, 'confirm', staleId, 'requirements', '--quote', '确认过期验证需求'));
+  success(cli(root, 'case', 'add', staleId, '--module', 'workflow', '--kind', 'behavior', '--title', '验证过期回退',
+    '--test', 'test/stale.test.mjs::stale verification behavior', '--criterion', 'AC-1',
+    '--spec', '.tiller/specs/modules/workflow/requirements.md#flow-09-依据验证结果判断交付', '--source', 'src/stale.mjs'));
+  success(cli(root, 'verify', staleId, '--criterion', 'AC-1', '--test', 'test/stale.test.mjs::stale verification behavior',
+    '--command', 'node --test test/stale.test.mjs', '--result', 'passed'));
+  assert.equal(stageTask(root, staleId), '已验证');
+  put(root, 'src/stale.mjs', 'export const stale = 2;\n');
+  const stale = success(cli(root, 'resume', staleId));
+  assert.equal(stale.stage, '需求已确认');
+  assert.match(stale.stageReason, /验证已过期/u);
+});
+
+test('accepted tasks close, block further confirm verify and accept, and reopen for another delivery', async t => {
+  const root = await initialized(t);
+  moduleSpec(root, 'workflow');
+  put(root, 'src/close.mjs', 'export const close = 1;\n');
+  put(root, 'test/close.test.mjs', "import assert from 'node:assert/strict';\nimport test from 'node:test';\n\ntest('close lifecycle behavior', () => assert.equal(1, 1));\n");
+  const id = '20261022-close-flow';
+  success(cli(root, 'start', id, '--title', '关闭流程', '--requirement', 'An accepted task can be closed and reopened.',
+    '--criterion', 'AC-1=Close blocks terminal changes', '--size', 'small',
+    '--target', 'src', '--target', 'test', '--target', '.tiller'));
+  success(cli(root, 'confirm', id, 'requirements', '--quote', '确认关闭需求'));
+  success(cli(root, 'case', 'add', id, '--module', 'workflow', '--kind', 'behavior', '--title', '关闭与重开',
+    '--test', 'test/close.test.mjs::close lifecycle behavior', '--criterion', 'AC-1',
+    '--spec', '.tiller/specs/modules/workflow/requirements.md#flow-15-在关键节点取得人工确认', '--source', 'src/close.mjs'));
+  success(cli(root, 'verify', id, '--criterion', 'AC-1', '--test', 'test/close.test.mjs::close lifecycle behavior',
+    '--command', 'node --test test/close.test.mjs', '--result', 'passed'));
+  success(cli(root, 'accept', id, '--quote', '验收关闭流程'));
+  const alreadyAccepted = failure(cli(root, 'close', id, '--reason', '不能放弃', '--abandon'));
+  assert.equal(alreadyAccepted.error.code, 'ALREADY_ACCEPTED');
+  const closed = success(cli(root, 'close', id, '--reason', '交付完成并收尾'));
+  assert.equal(closed.stage, '已关闭');
+  const content = read(root, `.tiller/task/${id}/task.md`);
+  assert.match(content, /^## 关闭$/mu);
+  assert.match(content, /^- 状态：已关闭$/mu);
+  assert.match(content, /^- 原因：交付完成并收尾$/mu);
+  assert.match(content, /^- 时间：\d{4}-\d{2}-\d{2}T/mu);
+  const listed = success(cli(root, 'resume'));
+  assert.equal(listed.tasks.find(entry => entry.id === id).stage, '已关闭');
+  assert.equal(failure(cli(root, 'confirm', id, 'requirements', '--quote', '关闭后不能确认')).error.code, 'TASK_CLOSED');
+  assert.equal(failure(cli(root, 'verify', id, '--criterion', 'AC-1', '--test', 'test/close.test.mjs::close lifecycle behavior',
+    '--command', 'node --test test/close.test.mjs', '--result', 'passed')).error.code, 'TASK_CLOSED');
+  assert.equal(failure(cli(root, 'accept', id, '--quote', '关闭后不能验收')).error.code, 'TASK_CLOSED');
+  const reopened = success(cli(root, 'reopen', id, '--reason', '需要再次交付'));
+  assert.equal(reopened.stage, '已验证');
+  const checked = success(cli(root, 'check', id));
+  assert.equal(checked.confirmations.find(entry => entry.gate === 'acceptance').confirmed, false);
+  success(cli(root, 'accept', id, '--quote', '重新验收关闭流程'));
+  assert.equal(stageTask(root, id), '已验收');
+});
+
+test('abandoned tasks are terminal, reopenable, and not counted as active or accepted plan work', async t => {
+  const root = await initialized(t);
+  moduleSpec(root, 'workflow');
+  success(cli(root, 'plan', 'start', 'abandon-plan', '--title', '放弃统计', '--goal', '验证放弃任务不污染规划状态',
+    '--spec', '.tiller/specs/modules/workflow/requirements.md#3-规划拆分',
+    '--item', 'P-1=可放弃任务;size=small;deps=-;specs=.tiller/specs/modules/workflow/requirements.md#3-规划拆分'));
+  success(cli(root, 'plan', 'confirm', 'abandon-plan', '--quote', '确认放弃统计规划'));
+  const id = '20261022-abandon-flow';
+  success(cli(root, 'start', id, '--title', '放弃任务', '--requirement', 'An abandoned task stops active plan work.',
+    '--criterion', 'AC-1=Abandonment is visible in planning', '--plan', 'abandon-plan', '--item', 'P-1'));
+  success(cli(root, 'confirm', id, 'requirements', '--quote', '确认放弃任务需求'));
+  const active = success(cli(root, 'plan', 'status', 'abandon-plan'));
+  assert.equal(active.items[0].status, '进行中');
+  assert.equal(active.items[0].tasks[0].stage, '需求已确认');
+  const refused = failure(cli(root, 'close', id, '--reason', '未验收不能收尾'));
+  assert.equal(refused.error.code, 'NOT_ACCEPTED');
+  const abandoned = success(cli(root, 'close', id, '--reason', '需求取消', '--abandon'));
+  assert.equal(abandoned.stage, '已放弃');
+  assert.match(read(root, `.tiller/task/${id}/task.md`), /^- 状态：已放弃$/mu);
+  const status = success(cli(root, 'plan', 'status', 'abandon-plan'));
+  assert.equal(status.items[0].status, '已放弃');
+  assert.equal(status.items[0].tasks[0].stage, '已放弃');
+  assert.equal(status.items[0].tasks[0].accepted, false);
+  assert.equal(success(cli(root, 'resume')).tasks.find(entry => entry.id === id).stage, '已放弃');
+  assert.equal(failure(cli(root, 'confirm', id, 'requirements', '--quote', '放弃后不能确认')).error.code, 'TASK_ABANDONED');
+  assert.equal(failure(cli(root, 'verify', id, '--criterion', 'AC-1', '--test', 'test/missing.test.mjs::missing',
+    '--command', 'false', '--result', 'passed')).error.code, 'TASK_ABANDONED');
+  assert.equal(failure(cli(root, 'accept', id, '--quote', '放弃后不能验收')).error.code, 'TASK_ABANDONED');
+  const reopened = success(cli(root, 'reopen', id, '--reason', '需求恢复'));
+  assert.equal(reopened.stage, '需求已确认');
+  const resumedPlan = success(cli(root, 'plan', 'status', 'abandon-plan'));
+  assert.equal(resumedPlan.items[0].status, '进行中');
+  assert.equal(resumedPlan.items[0].tasks[0].stage, '需求已确认');
+});
+
+test('specs archive is removed and active guidance has no archival references', () => {
+  const repositoryRoot = fileURLToPath(new URL('../', import.meta.url));
+  assert.equal(existsSync(join(repositoryRoot, '.tiller/specs/archive')), false);
+  for (const relative of activeFiles(repositoryRoot)) {
+    const content = readFileSync(join(repositoryRoot, relative), 'utf8');
+    assert.doesNotMatch(content, /specs\/archive|archive\/|归档|旧规格/u, relative);
+  }
 });

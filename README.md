@@ -21,9 +21,12 @@ tiller verify <task-id> --criterion AC-1 --test "test/example.test.mjs::用例�
   --command "npm test" --run "npm test"
 tiller check <task-id>
 tiller accept <task-id> --quote "<用户原话>"
+tiller close <task-id> --reason "交付完成"
 ```
 
 单次任务以 `task.md` 与 Git 追溯。需求与设计正文必须完整写在该记录中；确认保存对象、用户原话、提交和摘要，原话只是凭证，不能替代正文。验证保存 AC、用例编号、测试引用、命令、结果、提交和代码树摘要。不保存全文快照、原始日志、自举工程或安装包。
+
+任务阶段由记录事实推导：已开始 → 需求已确认 → 设计已确认（small 可跳过）→ 已验证 → 已验收 → 已关闭/已放弃。确认失效或验证过期时，`resume` 显示回退后的真实阶段和原因。`close` 只收尾已验收任务；未验收终止使用 `close --abandon`；两者都可通过 `reopen --reason` 显式恢复，之后才能继续确认、验证或验收。
 
 ## 规划与全局用例
 
