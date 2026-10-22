@@ -71,7 +71,7 @@
 
 `verify` 会根据测试引用自动记录用例编号。`check` 会阻塞没有用例编号、引用了不存在的用例、验证测试与用例 `test_ref` 不一致、验证过期，或用例 `criteria` 未回指当前 AC 且该用例不是本任务新增/修改的情况。编号跨文件和场景唯一。
 
-`verify` 只接受 `--run`，记录即执行；node:test TAP/spec 输出必须核实具名测试通过。外部报告用 `--reported --command --result --reason`，理由必填并在默认检查中阻断，只有 `--allow-reported` 放行；PR/MR 草稿标明未执行。bugfix 的 `--expect-fail` 在任务基线临时工作树证明失败，并要求当前同一测试已核实通过。standard 任务必须声明 `--target`，small 缺省 `.`。历史无核实字段的记录保持原有兼容路径。
+`verify` 只声明测试，由 tiller 构造并执行 node:test，结果只从私有报告核实；stdout/stderr 只写 `.tiller/local/logs/`，不参与判定。报告缺失/损坏、匹配不唯一、失败或跳过均不能通过。外部报告用 `--reported --command --result --reason`，理由必填并在默认检查中阻断，只有 `--allow-reported` 放行；PR/MR 草稿标明未执行。bugfix 的 `--expect-fail --test` 在任务基线临时工作树走同一适配器证明失败，并要求当前同一测试已核实通过。standard 任务必须声明 `--target`，small 缺省 `.`。历史无核实字段的记录保持原有兼容路径。
 
 提交主题、分支名和 PR/MR 模板同样以真实具名测试登记为接口/行为用例。`pr <task-id>` 只生成本地草稿，标题摘要按显式、任务元数据、最早规范提交和任务标题回退，模块取范围首个，变更按时间正序，关联任务用纯文本，验证按 AC 用普通嵌套列表列出全部记录；平台模板由 init/upgrade 维护，结果和远端操作仍由人确认。
 

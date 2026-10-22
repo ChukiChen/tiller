@@ -26,7 +26,7 @@ const HELP = `tiller ${CLI_VERSION} — 默认工作流
   tiller confirm <task-id> requirements|design|acceptance [--by <确认人>] [--quote "<可选原话>"] [--commit <oid>] [--path <root>]
   tiller case add <task-id> --module <模块> --kind behavior|interface|performance|security --title <标题> --test "<文件::测试名>" --criterion AC-1 [--criterion ...] [--spec <引用> ...] --source <源码路径> [--source ...] [--path <root>]
   tiller case add <task-id> --scenario <场景名> --module <模块> [--module ...] --title <标题> --test "<文件::测试名>" --criterion AC-1 [--spec <引用> ...] --source <源码路径> [--source ...]
-  tiller verify <task-id> --criterion AC-1 [--criterion ...] --test <测试文件或用例引用> --run "<命令>" [--expect-fail] [--path <root>]
+  tiller verify <task-id> --criterion AC-1 [--criterion ...] --test <测试文件或用例引用> [--expect-fail] [--verbose] [--path <root>]
   tiller verify <task-id> --criterion AC-1 --test <测试文件或用例引用> --reported --command "<外部命令>" --result passed|failed|skipped --reason "<理由>" [--path <root>]
   tiller check <task-id> [--allow-reported] [--path <root>]
   tiller pr <task-id> [--summary <中文摘要>] [--slug <英文描述>] [--path <root>]
@@ -42,7 +42,7 @@ const HELP = `tiller ${CLI_VERSION} — 默认工作流
 - small：需求确认 → 实现 → 验证；standard：需求 → 设计 → 实现 → 验证。确认记录人、时间、摘要和提交，原话可选。
 - 默认人工节点只有需求、设计和交付验收；规划、合入、发布按需确认，没有阶段或审计命令。
 - 大功能可先写 .tiller/plans/<id>.md 并确认；start 挂到条目时默认继承粒度，依赖未验收会阻塞。
-- task.md 是唯一任务记录：start 生成结构化需求，standard 另有设计与影响；确认前校验正文，原话只作可选附注。verify 记录即执行，保存命令、结果、核实状态、提交和代码树摘要。
+- task.md 是唯一任务记录：start 生成结构化需求，标准任务另有设计与影响；确认前校验正文，原话只作可选附注。verify 自主执行测试并从私有报告核实，保存实际命令、结果、日志、提交和代码树摘要。
 - 阶段由 task.md 事实推导；close 收尾已验收任务，未验收终止用 --abandon，必要时 reopen。
 - case add 自动分配 CASE 编号并写入来源 AC；check 会核对 AC→全局用例→测试→当前验证，校验模块/场景结构并提示相关回归，同时检查范围、测试弱化、密钥和本机绝对路径。
 - pr 从 task.md 和 Git 提交生成五段 PR/MR 草稿及建议分支名；提交用“类型(模块): 中文摘要”，分支用“类型/任务编号[-描述]”；check 只提示格式问题。
@@ -86,6 +86,7 @@ export async function runCli(rawArgs = process.argv.slice(2)): Promise<void> {
         quote: { type: 'string' }, by: { type: 'string' }, commit: { type: 'string' }, criterion: { type: 'string', multiple: true },
         test: { type: 'string' }, command: { type: 'string' }, run: { type: 'string' }, result: { type: 'string' },
         reported: { type: 'boolean' }, 'expect-fail': { type: 'boolean' }, 'allow-reported': { type: 'boolean' },
+        verbose: { type: 'boolean' },
         plan: { type: 'string' }, item: { type: 'string', multiple: true }, goal: { type: 'string' },
         spec: { type: 'string', multiple: true }, module: { type: 'string', multiple: true },
         kind: { type: 'string' }, scenario: { type: 'string' }, source: { type: 'string', multiple: true },
@@ -112,7 +113,7 @@ export async function runCli(rawArgs = process.argv.slice(2)): Promise<void> {
         ? command === 'start' ? ['path', 'title', 'requirement', 'type', 'size', 'target', 'criterion', 'plan', 'item', 'slug', 'summary']
           : command === 'resume' ? ['path']
             : command === 'confirm' ? ['path', 'quote', 'by', 'commit', 'allow-reported']
-              : command === 'verify' ? ['path', 'criterion', 'test', 'command', 'run', 'result', 'reported', 'reason', 'expect-fail']
+              : command === 'verify' ? ['path', 'criterion', 'test', 'command', 'run', 'result', 'reported', 'reason', 'expect-fail', 'verbose']
                 : command === 'accept' ? ['path', 'quote', 'by', 'commit', 'allow-reported']
                   : command === 'close' ? ['path', 'reason', 'abandon']
                     : command === 'reopen' ? ['path', 'reason'] : ['path', 'allow-reported']
@@ -159,22 +160,19 @@ export async function runCli(rawArgs = process.argv.slice(2)): Promise<void> {
         } else if (command === 'verify') {
           if (positionals.length !== 2) usage('verify 需要一个任务标识。');
           if (!values.criterion?.length || !values.test) usage('verify 需要 --criterion 和 --test。');
-          if (values.run !== undefined) {
-            if (values.command !== undefined) usage('verify 现在只接受 --run "<命令>"；不能再用 --command 与 --run 分开提供。');
-            if (values.reported || values.result !== undefined || values.reason !== undefined) {
-              usage('执行验证只接受 --run；外部报告使用 --reported --command --result --reason。');
-            }
-          } else {
-            if (!values.reported) usage('verify 需要 --run "<命令>"；无法本机执行时使用 --reported --command --result --reason。');
+          if (values.run !== undefined) usage('verify 不再接受 --run；直接使用 --test "文件::测试名"，由 tiller 自主执行测试。');
+          if (values.reported) {
             if (!values.command || !values.result || !values.reason) usage('--reported 需要 --command、--result 和 --reason。');
+          } else if (values.command !== undefined || values.result !== undefined || values.reason !== undefined) {
+            usage('外部报告需要 --reported；普通验证只需 --test "文件::测试名"。');
           }
           result = await verifyFlow(root, second!, { criteria: values.criterion, test: values.test,
             ...(values.command === undefined ? {} : { command: values.command }),
-            ...(values.run === undefined ? {} : { run: values.run }),
             ...(values.result === undefined ? {} : { result: values.result }),
             ...(values.reported === undefined ? {} : { reported: values.reported }),
             ...(values.reason === undefined ? {} : { reason: values.reason }),
-            ...(values['expect-fail'] === undefined ? {} : { expectFail: values['expect-fail'] }) });
+            ...(values['expect-fail'] === undefined ? {} : { expectFail: values['expect-fail'] }),
+            ...(values.verbose === undefined ? {} : { verbose: values.verbose }) });
           ready = (result as { ready?: boolean }).ready !== false;
         } else if (command === 'check') {
           if (positionals.length !== 2) usage('check 需要一个任务标识。');

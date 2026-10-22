@@ -325,6 +325,41 @@
       "criteria": [
         "20261022-round14#AC-3"
       ]
+    },
+    {
+      "id": "CASE-094",
+      "title": "失败先行复用私有报告适配器",
+      "requirements": [
+        ".tiller/specs/modules/workflow/requirements.md"
+      ],
+      "modules": [
+        "workflow"
+      ],
+      "test_ref": "test/verification-integrity.test.mjs::bugfix verification requires baseline failure and current passing evidence",
+      "source": [
+        "src/flow.ts",
+        "src/test-output.ts"
+      ],
+      "criteria": [
+        "20261022-round15#AC-3"
+      ]
+    },
+    {
+      "id": "CASE-096",
+      "title": "验证摘要与详细日志",
+      "requirements": [
+        ".tiller/specs/modules/workflow/requirements.md"
+      ],
+      "modules": [
+        "workflow"
+      ],
+      "test_ref": "test/verification-integrity.test.mjs::verify writes a concise summary and verbose log",
+      "source": [
+        "src/flow.ts"
+      ],
+      "criteria": [
+        "20261022-round15#AC-5"
+      ]
     }
   ]
 }

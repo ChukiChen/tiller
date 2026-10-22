@@ -45,7 +45,7 @@ for (const path of ['dist/cli.js', 'dist/flow.js', 'resources/entry.md', 'resour
   assert.ok(paths.has(path), path);
 }
 for (const path of [...paths]) assert.ok(!/^resources\/(?:workflows|templates)\//u.test(path), path);
-const expectedModules = ['branch-conventions', 'cases', 'cli', 'commit-conventions', 'confirmer', 'core', 'files', 'flow', 'plans', 'pr', 'project-metadata', 'repository-paths', 'runtime', 'shared-paths', 'task-id', 'test-output', 'types', 'upgrade'];
+const expectedModules = ['branch-conventions', 'cases', 'cli', 'commit-conventions', 'confirmer', 'core', 'files', 'flow', 'plans', 'pr', 'project-metadata', 'repository-paths', 'runtime', 'shared-paths', 'task-id', 'test-output', 'test-reporter', 'types', 'upgrade'];
 const packagedModules = [...paths].filter(path => /^dist\/[^/]+\.js$/u.test(path)).map(path => path.slice(5, -3)).sort();
 assert.deepEqual(packagedModules, expectedModules);
 assert.ok(![...paths].some(path => /^(src|test|\.tiller|node_modules)\//u.test(path)));
@@ -116,8 +116,7 @@ const added = invoke(['case', 'add', taskId, '--module', 'package-smoke', '--kin
 assert.equal(added.id, 'CASE-001');
 mkdirSync(join(target, 'test'), { recursive: true });
 writeFileSync(join(target, 'test/package-smoke.test.mjs'), "import assert from 'node:assert/strict';\nimport test from 'node:test';\n\ntest('package flow works', () => { assert.equal(1, 1); });\n");
-const verified = invoke(['verify', taskId, '--criterion', 'AC-1', '--test', 'test/package-smoke.test.mjs::package flow works',
-  '--run', 'node test/package-smoke.test.mjs']);
+const verified = invoke(['verify', taskId, '--criterion', 'AC-1', '--test', 'test/package-smoke.test.mjs::package flow works']);
 assert.deepEqual(verified.cases, ['CASE-001']);
 const checked = invoke(['check', taskId]);
 assert.equal(checked.ready, true, checked.issues.join('\n'));

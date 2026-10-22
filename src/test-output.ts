@@ -1,21 +1,4 @@
-export type TestOutcome = 'passed' | 'failed' | 'skipped';
-
-export interface ObservedTest {
-  name: string;
-  outcome: TestOutcome;
-}
-
-export interface TestOutputObservation {
-  framework: string;
-  tests: ObservedTest[];
-  /** Failure count reported by the runner summary (e.g. TAP `# fail N`), when present. */
-  summaryFailures?: number;
-}
-
-export interface TestOutputParser {
-  name: string;
-  parse(output: string): TestOutputObservation | null;
-}
+import path from 'node:path';
 
 export interface TestReference {
   path: string;
@@ -25,91 +8,128 @@ export interface TestReference {
 export interface TestEvidence {
   verified: boolean;
   outcome?: 'passed' | 'failed';
-  framework?: string;
   reason: string;
-  /** Failed tests seen anywhere in the output (parsed results or runner summary). */
-  failures: number;
 }
 
-const ANSI = /\x1b\[[0-?]*[ -/]*[@-~]/gu;
-
-function cleanOutput(output: string): string {
-  return output.replace(ANSI, '');
+export interface TestRunPaths {
+  reporter: string;
+  report: string;
 }
 
-function unescapeTap(value: string): string {
-  return value.replace(/\\([\\#])/gu, '$1');
+export interface TestRunCommand {
+  executable: string;
+  args: string[];
+  display: string;
 }
 
-function tapParser(): TestOutputParser {
-  return {
-    name: 'node:test-tap',
-    parse(value) {
-      const tests: ObservedTest[] = [];
-      let summaryFailures: number | undefined;
-      for (const line of cleanOutput(value).split(/\r?\n/u)) {
-        const summary = /^#\s+fail\s+(\d+)\s*$/u.exec(line);
-        if (summary) summaryFailures = Math.max(summaryFailures ?? 0, Number(summary[1]));
-        const match = /^\s*(not ok|ok)\s+\d+\s+-\s+(.*)$/u.exec(line);
-        if (!match) continue;
-        const directive = /\s+#\s*(SKIP|TODO)\b.*$/iu.exec(match[2]!);
-        const rawName = (directive ? match[2]!.slice(0, directive.index) : match[2]!).trimEnd();
-        if (!rawName) continue;
-        tests.push({
-          name: unescapeTap(rawName),
-          outcome: directive ? 'skipped' : match[1] === 'not ok' ? 'failed' : 'passed',
-        });
-      }
-      return tests.length ? { framework: 'node:test-tap', tests, ...(summaryFailures === undefined ? {} : { summaryFailures }) } : null;
-    },
-  };
+export interface TestRunner {
+  name: string;
+  build(reference: TestReference, paths: TestRunPaths, pattern?: string): TestRunCommand;
+  parse(report: string, reference: TestReference, expectedFile: string): TestEvidence;
 }
 
-function specParser(): TestOutputParser {
-  return {
-    name: 'node:test-spec',
-    parse(value) {
-      const tests: ObservedTest[] = [];
-      let summaryFailures: number | undefined;
-      for (const line of cleanOutput(value).split(/\r?\n/u)) {
-        const summary = /^\s*ℹ\s+fail\s+(\d+)\s*$/u.exec(line);
-        if (summary) summaryFailures = Math.max(summaryFailures ?? 0, Number(summary[1]));
-        const match = /^\s*([✔✖﹣])\s+(.+?)(?:\s+\(\d+(?:\.\d+)?(?:ms|s)\))?\s*$/u.exec(line);
-        if (!match) continue;
-        tests.push({
-          name: match[2]!.trim(),
-          outcome: match[1] === '✔' ? 'passed' : match[1] === '✖' ? 'failed' : 'skipped',
-        });
-      }
-      return tests.length ? { framework: 'node:test-spec', tests, ...(summaryFailures === undefined ? {} : { summaryFailures }) } : null;
-    },
-  };
+interface ReportEvent {
+  type?: string;
+  name?: string;
+  path?: string;
+  outcome?: string;
+  file?: string | null;
+  success?: boolean;
 }
 
-// Register another framework here and return the same observation shape. The
-// first parser that recognizes the output supplies the evidence for verify.
-export const TEST_OUTPUT_PARSERS: TestOutputParser[] = [tapParser(), specParser()];
+function quote(value: string): string {
+  return /^[A-Za-z0-9_./:=@%+-]+$/u.test(value) ? value : `'${value.replaceAll("'", "'\\''")}'`;
+}
 
-export function inspectTestOutput(output: string, reference: TestReference): TestEvidence {
-  const observations = TEST_OUTPUT_PARSERS.map(parser => {
-    try { return parser.parse(output); }
+function escapePattern(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/gu, '\\$&');
+}
+
+function reportEvents(report: string): ReportEvent[] | null {
+  const events: ReportEvent[] = [];
+  for (const line of report.split(/\r?\n/u)) {
+    if (!line.trim()) continue;
+    let value: unknown;
+    try { value = JSON.parse(line); }
     catch { return null; }
-  }).filter((item): item is TestOutputObservation => item !== null);
-  if (!observations.length) return { verified: false, reason: '无法解析 node:test TAP 或 spec 输出。', failures: 0 };
-  const tests = observations.flatMap(item => item.tests);
-  const failures = Math.max(tests.filter(item => item.outcome === 'failed').length,
-    ...observations.map(item => item.summaryFailures ?? 0));
-  const framework = observations[0]!.framework;
-  if (reference.name) {
-    const matched = tests.filter(item => item.name === reference.name || unescapeTap(item.name) === reference.name);
-    if (!matched.length) {
-      return { verified: false, framework, reason: `测试输出中未找到具名测试：${reference.name}。`, failures };
-    }
-    if (matched.some(item => item.outcome === 'failed')) return { verified: true, outcome: 'failed', framework, reason: '具名测试结果为失败。', failures };
-    if (matched.some(item => item.outcome === 'passed')) return { verified: true, outcome: 'passed', framework, reason: '具名测试结果为通过。', failures };
-    return { verified: false, framework, reason: `具名测试未执行或被跳过：${reference.name}。`, failures };
+    if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
+    const item = value as Record<string, unknown>;
+    if (typeof item.type !== 'string') return null;
+    events.push({
+      type: item.type,
+      ...(typeof item.name === 'string' ? { name: item.name } : {}),
+      ...(typeof item.path === 'string' ? { path: item.path } : {}),
+      ...(typeof item.outcome === 'string' ? { outcome: item.outcome } : {}),
+      ...(typeof item.file === 'string' || item.file === null ? { file: item.file } : {}),
+      ...(typeof item.success === 'boolean' ? { success: item.success } : {}),
+    });
   }
-  if (tests.some(item => item.outcome === 'failed')) return { verified: true, outcome: 'failed', framework, reason: '文件测试存在失败项。', failures };
-  if (tests.some(item => item.outcome === 'passed')) return { verified: true, outcome: 'passed', framework, reason: '文件测试全部通过。', failures };
-  return { verified: false, framework, reason: '测试输出中没有可用的通过测试。', failures };
+  return events;
+}
+
+function sameFile(left: string | null | undefined, right: string): boolean {
+  if (!left) return false;
+  return path.resolve(left) === path.resolve(right);
+}
+
+function matches(reference: TestReference, event: ReportEvent): boolean {
+  if (!reference.name) return true;
+  return event.path === reference.name;
+}
+
+function inspectEvents(events: ReportEvent[], reference: TestReference, expectedFile: string): TestEvidence {
+  const tests = events.filter(event => (event.type === 'pass' || event.type === 'fail' || event.type === 'skip')
+    && event.name && sameFile(event.file, expectedFile));
+  const target = tests.filter(event => matches(reference, event));
+  const failures = tests.filter(event => event.outcome === 'failed');
+  if (!tests.length) return { verified: false, reason: '私有报告中没有可用的测试事件。' };
+  if (target.length !== 1) {
+    return { verified: false, reason: target.length ? `私有报告匹配到 ${target.length} 个测试。` : '私有报告未找到指定测试。' };
+  }
+  const found = target[0]!;
+  if (found.outcome === 'skipped') return { verified: false, reason: `测试被跳过：${found.path ?? found.name}。` };
+  if (reference.name && found.outcome === 'failed' && failures.length !== 1) {
+    return { verified: false, reason: '私有报告包含额外的失败事件。' };
+  }
+  if (found.outcome === 'passed' && failures.length) return { verified: false, reason: '私有报告包含失败事件。' };
+  if (events.some(event => event.type === 'summary' && event.success === false) && found.outcome !== 'failed') {
+    return { verified: false, reason: '私有报告总结为失败。' };
+  }
+  if (!reference.name) {
+    if (tests.some(event => event.outcome !== 'passed')) return { verified: false, reason: '文件内存在失败或跳过的测试。' };
+    return { verified: true, outcome: 'passed', reason: '文件内测试全部通过。' };
+  }
+  return { verified: true, outcome: found.outcome === 'failed' ? 'failed' : 'passed', reason: '私有报告中的测试结果已核实。' };
+}
+
+const nodeTestRunner: TestRunner = {
+  name: 'node-test',
+  build(reference, paths, pattern) {
+    const args = [
+      ...(pattern ? [`--test-name-pattern=${pattern}`] : []),
+      `--test-reporter=${paths.reporter}`,
+      `--test-reporter-destination=${paths.report}`,
+      reference.path,
+    ];
+    return { executable: process.execPath, args, display: ['node', ...args.map(quote)].join(' ') };
+  },
+  parse(report, reference, expectedFile) {
+    const events = reportEvents(report);
+    if (events === null) return { verified: false, reason: '私有报告损坏或无法解析。' };
+    return inspectEvents(events, reference, expectedFile);
+  },
+};
+
+export const TEST_RUNNERS: TestRunner[] = [nodeTestRunner];
+
+export function runnerFor(name = 'node-test'): TestRunner {
+  const runner = TEST_RUNNERS.find(item => item.name === name);
+  if (!runner) throw Object.assign(new Error(`未知验证运行器：${name}。`), { code: 'UNKNOWN_VERIFY_RUNNER' });
+  return runner;
+}
+
+export function namePattern(reference: TestReference): string | undefined {
+  if (!reference.name) return undefined;
+  const top = reference.name.split(' > ')[0]!.trim();
+  return top ? `^${escapePattern(top)}$` : undefined;
 }

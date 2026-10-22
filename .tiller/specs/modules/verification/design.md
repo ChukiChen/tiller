@@ -37,4 +37,4 @@
 
 ## 5. 边界
 
-该模块不生成或保存原始输出、自举工程、安装包和全文文件快照；`verify --run` 的子进程输出只作即时反馈和 node:test 证据解析。TAP/spec 解析器注册在 `src/test-output.ts`，新增框架沿用同一观察结果结构。需要审计时查看 task.md 的命令记录并从 Git/重新执行取得事实。
+该模块不提交原始输出、自举工程、安装包和全文文件快照。`verify` 的子进程输出只写 `.tiller/local/logs/`，默认不显示，`--verbose` 时同时转发；判定只读私有临时报告。`src/test-output.ts` 暴露 `TestRunner` 的构造命令与报告解析接口并注册适配器，`src/test-reporter.ts` 生成仅含测试事件和总结的 JSONL 报告。需要审计时查看 task.md 的实际命令、结果和日志路径，并从 Git/重新执行取得事实。

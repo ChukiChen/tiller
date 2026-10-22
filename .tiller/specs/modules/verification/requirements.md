@@ -14,11 +14,11 @@
 
 ## 3. 用例先行
 
-需求确认后先把 AC 转为新增或修改的全局用例，再按 `test_ref` 写测试，最后实现。验证时运行测试并把命中的用例编号写入 task.md。`verify` 只接受 `--run "<命令>"`，记录即执行；不能另行手填与执行结果矛盾的状态。
+需求确认后先把 AC 转为新增或修改的全局用例，再按 `test_ref` 写测试，最后实现。验证由 tiller 执行声明的测试并把命中的用例编号写入 task.md；不能手填与执行结果矛盾的状态。
 
-node:test TAP/spec 输出必须命中 `文件::测试名` 且通过；仅引用文件时要求测试存在且失败数为 0。无法核实要写入记录并由 `check` 阻断。其它框架通过 `src/test-output.ts` 的解析器注册表扩展。
+结果只从私有报告读取，stdout/stderr 不参与判定。文件与完整名称（嵌套按名称路径）必须精确匹配恰好一个通过事件且无失败；仅引用文件时要求全部通过。报告缺失/损坏、0/多个匹配、失败或跳过都不能核实，并由 `check` 阻断。`verify.prepare` 失败即验证失败；其它框架通过 `src/test-output.ts` 的 `TestRunner` 适配器扩展。
 
-无法本机执行时使用 `--reported --command --result --reason`，理由必填；`check`/`accept` 默认阻断，只有 `--allow-reported` 显式放行，PR/MR 草稿须标明未执行。bugfix 任务使用 `--expect-fail --run` 在任务基线临时工作树证明失败，并保留当前通过的同一测试证据。
+无法本机执行时使用 `--reported --command --result --reason`，理由必填；`check`/`accept` 默认阻断，只有 `--allow-reported` 显式放行，PR/MR 草稿须标明未执行。bugfix 任务使用 `--expect-fail --test` 在任务基线临时工作树走同一适配器和报告路径证明失败，并保留当前通过的同一测试证据。
 
 ## 4. 检查
 

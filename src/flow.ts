@@ -1,8 +1,9 @@
 import { createHash } from 'node:crypto';
 import { execFile, spawn } from 'node:child_process';
-import { copyFile, lstat, mkdir, mkdtemp, open, readFile, readdir, rm, symlink } from 'node:fs/promises';
+import { copyFile, lstat, mkdir, mkdtemp, readFile, readdir, rm, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { promisify } from 'node:util';
 import {
   casesForTest, fallbackTestReference, readCaseLibrary, regressionWarnings, sameTestReference, testBlocks,
@@ -15,7 +16,8 @@ import { readProjectMetadata } from './core.js';
 import { applyChanges, readTextIfExists, validateRelativePath, withProjectLock } from './files.js';
 import { readPlanItem } from './plans.js';
 import { validateTaskId } from './task-id.js';
-import { inspectTestOutput } from './test-output.js';
+import { namePattern, runnerFor, type TestEvidence, type TestReference } from './test-output.js';
+import type { ProjectMetadata } from './types.js';
 
 const execFileAsync = promisify(execFile);
 const MARKER_PREFIX = '<!-- tiller-task:v1 ';
@@ -68,7 +70,7 @@ export interface FlowVerification {
   id: string; criterion: string; test: string; command: string; result: FlowResult;
   cases: string[]; exitCode: number | null; commit: string; at: string; tree: string; source: 'executed' | 'reported';
   evidence: 'verified' | 'unverified' | 'not-run'; reason?: string; expectFail?: boolean; baseline?: string;
-  legacyEvidence?: boolean;
+  log?: string; legacyEvidence?: boolean;
 }
 export interface FlowClosure {
   action: 'close' | 'reopen'; status?: FlowCloseStatus; reason: string; at: string;
@@ -84,8 +86,8 @@ export interface FlowStartInput {
   criteria: string[]; plan?: string; item?: string; slug?: string; summary?: string;
 }
 export interface FlowVerifyInput {
-  criteria: string[]; test: string; run?: string; command?: string; result?: string;
-  reported?: boolean; reason?: string; expectFail?: boolean;
+  criteria: string[]; test: string; command?: string; result?: string;
+  reported?: boolean; reason?: string; expectFail?: boolean; verbose?: boolean;
 }
 export interface FlowConfirmInput { quote?: string; commit?: string; by?: string; allowReported?: boolean }
 export interface FlowCheckOptions { allowReported?: boolean }
@@ -298,11 +300,12 @@ function parseVerifications(content: string): FlowVerification[] {
     const reason = field('理由');
     const expectFail = field('预期') === '失败先行';
     const baseline = field('基线提交');
+    const log = field('日志');
     if (criterion && test && command && RESULTS.includes(resultValue) && validCommit(commit)
       && /^[a-f0-9]{64}$/u.test(tree) && Number.isFinite(Date.parse(at)) && (source === 'executed' || source === 'reported')) {
       result.push({ id, criterion, test, command, result: resultValue, cases, exitCode: exitText === '无' ? null : Number(exitText),
         commit, at, tree, source, evidence, ...(legacyEvidence ? { legacyEvidence } : {}), ...(reason ? { reason } : {}), ...(expectFail ? { expectFail } : {}),
-        ...(baseline && validCommit(baseline) ? { baseline } : {}) });
+        ...(baseline && validCommit(baseline) ? { baseline } : {}), ...(log ? { log } : {}) });
     }
   }
   return result;
@@ -398,6 +401,7 @@ function renderVerifications(values: FlowVerification[]): string {
       `- 核实：${value.evidence === 'verified' ? '已核实' : value.evidence === 'not-run' ? '未执行' : '未核实'}`,
       ...(value.reason ? [`- 理由：${value.reason}`] : []),
       ...(value.expectFail ? [`- 预期：失败先行`, ...(value.baseline ? [`- 基线提交：${value.baseline}`] : [])] : []),
+      ...(value.log ? [`- 日志：${value.log}`] : []),
       `- 提交：${value.commit}`,
       `- 代码树摘要：${value.tree}`,
       `- 时间：${value.at}`,
@@ -978,7 +982,7 @@ async function evaluateFlow(root: string, id: string, task: FlowTask, options: F
       && run.evidence === 'verified' && run.baseline === task.meta.base);
     if (!evidence.length) {
       failureFirstValid = false;
-      issues.push('bugfix 任务缺少失败先行验证：先在任务基线运行 verify --expect-fail --run "<命令>"。');
+      issues.push('bugfix 任务缺少失败先行验证：先在任务基线运行 verify --expect-fail --test "<文件::测试名>"。');
     } else if (!verifiedBaseline) {
       failureFirstValid = false;
       issues.push('bugfix 任务的失败先行记录未核实，或不是在任务基线上运行。');
@@ -1055,40 +1059,101 @@ export async function checkFlow(rootInput: string, id: string, options: FlowChec
   });
 }
 
-interface CommandRun { exitCode: number | null; output: string }
+interface ProcessRun { exitCode: number | null; timedOut: boolean }
+interface TestObservation { command: string; result: FlowResult; exitCode: number | null; evidence: 'verified' | 'unverified'; log: string }
 
-async function executeCommand(root: string, command: string): Promise<CommandRun> {
-  const holder = await mkdtemp(path.join(tmpdir(), 'tiller-exec-'));
-  const stdoutPath = path.join(holder, 'stdout');
-  const stderrPath = path.join(holder, 'stderr');
-  const stdout = await open(stdoutPath, 'w');
-  const stderr = await open(stderrPath, 'w');
+function displayCommand(executable: string, args: string[]): string {
+  return [executable, ...args].join(' ');
+}
+
+async function runProcess(cwd: string, executable: string, args: string[], label: string, log: string[], verbose: boolean): Promise<ProcessRun> {
+  const environment: NodeJS.ProcessEnv = { ...process.env, LC_ALL: 'C', FORCE_COLOR: '0' };
+  delete environment.NODE_TEST_CONTEXT;
+  log.push(`\n$ ${label}\n`);
+  return await new Promise<ProcessRun>((resolve, reject) => {
+    let timedOut = false;
+    const child = spawn(executable, args, { cwd, stdio: ['inherit', 'pipe', 'pipe'], env: environment });
+    const forward = (chunk: Buffer): void => {
+      const value = chunk.toString('utf8');
+      log.push(value);
+      if (verbose) process.stderr.write(value);
+    };
+    child.stdout?.on('data', forward);
+    child.stderr?.on('data', forward);
+    const timer = setTimeout(() => { timedOut = true; child.kill('SIGTERM'); }, 30 * 60 * 1000);
+    child.once('error', error => { clearTimeout(timer); reject(error); });
+    child.once('close', code => { clearTimeout(timer); resolve({ exitCode: code, timedOut }); });
+  });
+}
+
+async function nextLogPath(root: string, id: string, previousRuns: number): Promise<string> {
+  const relativeDirectory = `.tiller/local/logs/${id}`;
+  await mkdir(path.join(root, relativeDirectory), { recursive: true });
+  let maximum = previousRuns;
   try {
-    const environment: NodeJS.ProcessEnv = { ...process.env, LC_ALL: 'C', FORCE_COLOR: '0' };
-    delete environment.NODE_TEST_CONTEXT;
-    const result = await new Promise<{ code: number | null; timedOut: boolean }>((resolve, reject) => {
-      let timedOut = false;
-      const child = spawn(command, { cwd: root, shell: true, stdio: ['inherit', stdout.fd, stderr.fd],
-        env: environment });
-      const timer = setTimeout(() => { timedOut = true; child.kill('SIGTERM'); }, 30 * 60 * 1000);
-      child.on('error', error => { clearTimeout(timer); reject(error); });
-      child.on('exit', code => { clearTimeout(timer); resolve({ code, timedOut }); });
-    });
-    const maximum = 8 * 1024 * 1024;
-    const capturedStdout = (await readFile(stdoutPath, 'utf8')).slice(0, maximum);
-    const capturedStderr = (await readFile(stderrPath, 'utf8')).slice(0, maximum - Buffer.byteLength(capturedStdout));
-    process.stderr.write(capturedStdout);
-    process.stderr.write(capturedStderr);
-    if (result.timedOut) process.stderr.write('\n[tiller] 验证命令超时。\n');
-    return { exitCode: result.code, output: `${capturedStdout}\n${capturedStderr}${result.timedOut ? '\n[tiller] 验证命令超时。' : ''}` };
+    for (const name of await readdir(path.join(root, relativeDirectory))) {
+      const match = /^run-(\d+)\.log$/u.exec(name);
+      if (match) maximum = Math.max(maximum, Number(match[1]));
+    }
+  } catch { /* The directory was just created; a missing directory means start at one. */ }
+  return `${relativeDirectory}/run-${maximum + 1}.log`;
+}
+
+async function runAdapterTest(
+  workspace: string,
+  projectRoot: string,
+  metadata: ProjectMetadata,
+  reference: TestReference,
+  logPath: string,
+  verbose: boolean,
+): Promise<TestObservation> {
+  const config = metadata.verify ?? {};
+  const runner = runnerFor(config.runner);
+  const log: string[] = [];
+  await mkdir(path.join(workspace, '.tiller/local'), { recursive: true });
+  const reportDirectory = await mkdtemp(path.join(workspace, '.tiller/local/verify-'));
+  const reportAbsolute = path.join(reportDirectory, 'report.jsonl');
+  const reporterAbsolute = path.join(reportDirectory, 'reporter.mjs');
+  const reportRelative = path.relative(workspace, reportAbsolute).split(path.sep).join('/');
+  const reporterRelative = `./${path.relative(workspace, reporterAbsolute).split(path.sep).join('/')}`;
+  let command = '';
+  let evidence: TestEvidence = { verified: false, reason: '私有报告不存在。' };
+  try {
+    await copyFile(fileURLToPath(new URL('./test-reporter.js', import.meta.url)), reporterAbsolute);
+    if (config.prepare?.length) {
+      const [executable, ...args] = config.prepare;
+      const prepare = await runProcess(workspace, executable!, args, displayCommand(executable!, args), log, verbose);
+      if (prepare.exitCode !== 0) fail('VERIFY_PREPARE_FAILED', `验证准备步骤失败（退出码 ${prepare.exitCode ?? '无'}）。`);
+    }
+    const run = async (pattern: string | undefined): Promise<TestObservation> => {
+      await rm(reportAbsolute, { force: true });
+      const built = runner.build(reference, { reporter: reporterRelative, report: reportRelative }, pattern);
+      command = built.display;
+      const processRun = await runProcess(workspace, built.executable, built.args, command, log, verbose);
+      let reportText = '';
+      try { reportText = await readFile(reportAbsolute, 'utf8'); }
+      catch { /* Missing reports are unverified, never passed. */ }
+      evidence = runner.parse(reportText, reference, path.join(workspace, reference.path));
+      const result: FlowResult = evidence.outcome === 'failed' ? 'failed' : processRun.exitCode === 0 ? 'passed' : 'failed';
+      if (processRun.timedOut) log.push('\n[tiller] 验证命令超时。\n');
+      return { command, result, exitCode: processRun.exitCode, evidence: evidence.verified ? 'verified' : 'unverified', log: logPath };
+    };
+    return await run(namePattern(reference));
   } finally {
-    await stdout.close();
-    await stderr.close();
-    await rm(holder, { recursive: true, force: true });
+    await mkdir(path.dirname(path.join(projectRoot, logPath)), { recursive: true });
+    await writeFile(path.join(projectRoot, logPath), log.join(''), 'utf8');
+    await rm(reportDirectory, { recursive: true, force: true });
   }
 }
 
-async function executeBaseline(root: string, base: string, test: string, command: string): Promise<CommandRun> {
+async function executeBaseline(
+  root: string,
+  base: string,
+  metadata: ProjectMetadata,
+  reference: TestReference,
+  logPath: string,
+  verbose: boolean,
+): Promise<TestObservation> {
   if (base === 'no-git') fail('BASELINE_UNAVAILABLE', '失败先行验证需要 Git 基线，当前任务没有可用提交。');
   const holder = await mkdtemp(path.join(tmpdir(), 'tiller-baseline-'));
   const worktree = path.join(holder, 'worktree');
@@ -1097,17 +1162,15 @@ async function executeBaseline(root: string, base: string, test: string, command
     const created = await git(root, ['worktree', 'add', '--detach', worktree, base]);
     if (!created.ok) fail('BASELINE_WORKTREE_FAILED', `无法创建基线工作树：${created.stderr.trim()}`);
     added = true;
-    const relative = fallbackTestReference(test)?.path;
-    if (!relative) fail('INVALID_TEST_REFERENCE', `测试引用无效：${test}`);
-    await mkdir(path.dirname(path.join(worktree, relative)), { recursive: true });
-    await copyFile(path.join(root, relative), path.join(worktree, relative));
+    await mkdir(path.dirname(path.join(worktree, reference.path)), { recursive: true });
+    await copyFile(path.join(root, reference.path), path.join(worktree, reference.path));
     try {
       const dependencies = await lstat(path.join(root, 'node_modules'));
       if (dependencies.isDirectory()) await symlink(path.join(root, 'node_modules'), path.join(worktree, 'node_modules'), 'junction');
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
     }
-    return await executeCommand(worktree, command);
+    return await runAdapterTest(worktree, root, metadata, reference, logPath, verbose);
   } finally {
     if (added) await git(root, ['worktree', 'remove', '--force', worktree]);
     await git(root, ['worktree', 'prune']);
@@ -1137,33 +1200,25 @@ export async function verifyFlow(rootInput: string, id: string, input: FlowVerif
     let source: FlowVerification['source'];
     let evidence: FlowVerification['evidence'];
     let reason: string | undefined;
-    if (input.run !== undefined) {
-      if (input.command !== undefined) fail('VERIFY_LEGACY_USAGE', 'verify 现在只接受 --run "<命令>"；旧 --command 与 --run 分开提供的写法已删除。');
-      if (input.reported || input.reason !== undefined || input.result !== undefined) {
-        fail('VERIFY_INPUT_CONFLICT', '执行验证只接受 --run；外部报告请使用 --reported --command --result --reason。');
-      }
-      command = safeInput(text(input.run, '执行命令', 4000), '执行命令');
+    const legacyRun = (input as { run?: unknown }).run;
+    if (legacyRun !== undefined) fail('VERIFY_LEGACY_USAGE', 'verify 不再接受 --run；直接使用 --test "文件::测试名"，由 tiller 自主执行测试。');
+    let logPath: string | undefined;
+    if (!input.reported) {
+      const metadata = await readProjectMetadata(root);
+      logPath = await nextLogPath(root, id, task.verifications.length);
+      const observation = expectFail
+        ? await executeBaseline(root, task.meta.base, metadata, reference, logPath, input.verbose === true)
+        : await runAdapterTest(root, root, metadata, reference, logPath, input.verbose === true);
+      command = observation.command;
+      result = observation.result;
+      exitCode = observation.exitCode;
+      evidence = observation.evidence;
       source = 'executed';
-      const run = expectFail
-        ? await executeBaseline(root, task.meta.base, test, command)
-        : await executeCommand(root, command);
-      exitCode = run.exitCode;
-      result = exitCode === 0 ? 'passed' : 'failed';
-      const inspected = inspectTestOutput(run.output, reference);
-      // A zero exit code cannot outweigh failures visible in the runner output (e.g. `...; true`).
-      if (exitCode === 0 && (inspected.outcome === 'failed' || (!expectFail && inspected.failures > 0))) {
-        evidence = 'unverified';
-      } else {
-        evidence = inspected.verified ? 'verified' : 'unverified';
-      }
-      if (expectFail && inspected.verified && inspected.outcome !== 'failed') {
+      if (expectFail && evidence === 'verified' && result !== 'failed') {
         fail('EXPECTED_FAILURE_NOT_OBSERVED', `基线运行未出现具名测试失败：${reference.name}。`);
       }
     } else {
-      if (!input.reported) {
-        fail('VERIFY_EXECUTION_REQUIRED', 'verify 需要 --run "<命令>"；无法本机执行时使用 --reported --command --result --reason。');
-      }
-      if (expectFail) fail('INVALID_EXPECT_FAIL', '--expect-fail 必须使用 --run 在基线工作树中实际执行。');
+      if (expectFail) fail('INVALID_EXPECT_FAIL', '--expect-fail 必须由 tiller 在基线工作树中自主执行。');
       if (input.result === undefined) fail('INVALID_FLOW_INPUT', '外部报告必须提供 --result。');
       command = safeInput(text(input.command ?? '', '验证命令', 4000), '验证命令');
       reason = safeInput(text(input.reason ?? '', '外部报告理由', 1000), '外部报告理由');
@@ -1178,15 +1233,16 @@ export async function verifyFlow(rootInput: string, id: string, input: FlowVerif
       id: `run-${task.verifications.length + index + 1}`,
       criterion, test, cases, command, result, exitCode, commit, at, tree, source, evidence,
       ...(reason ? { reason } : {}), ...(expectFail ? { expectFail: true, baseline: task.meta.base } : {}),
+      ...(logPath ? { log: logPath } : {}),
     }));
     const next: FlowTask = { ...task, verifications: [...task.verifications, ...entries] };
     const { content: _content, path: _path, ...body } = next;
     await writeTask(root, id, task.content, renderTask(body, sectionBody(task.content, '自检')));
     const ready = expectFail ? evidence === 'verified' && result === 'failed' : result === 'passed';
     const nextCommand = expectFail
-      ? `修复后在当前代码运行：tiller verify ${id} --criterion ${criteria[0]} --test "${test}" --run "${command}"`
+      ? `修复后在当前代码运行：tiller verify ${id} --criterion ${criteria[0]} --test "${test}"`
       : evidence === 'unverified' ? `check 将阻断未核实记录：tiller check ${id}` : result === 'passed' ? `tiller check ${id}` : '修复后重新运行验证';
-    return { id, result, ready, cases, commit, tree, evidence, entries, next: nextCommand };
+    return { id, result, ready, cases, commit, tree, evidence, ...(logPath ? { log: logPath } : {}), entries, next: nextCommand };
   });
 }
 function flowResult(value: string): FlowResult {
