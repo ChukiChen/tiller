@@ -8,15 +8,15 @@
     ".gitignore": "be3b4c440af6f29b4dd5418e67a251ea1afb32edb5d7b81aaa9957998de7eba9",
     ".tiller/index.md": "6b9489b37713344ccebba6ad1d7a1456df69ad9c91bf1f5adf55896c41592c5f",
     ".tiller/rules/index.md": "82f2a5a79485e8d33d8b6d66c8697f1a85da3ef76776ea3e0809ab4e40e81cdb",
-    ".tiller/rules/core.md": "bf16eb7d0482c0b00338d4569e67f9302349f7ea64c4de7e4fbab937cf0740a3",
+    ".tiller/rules/core.md": "5c890f04a6777c48fc08624b8c056f772c9aebb21861a92ae844576dd3e2ca54",
     ".tiller/rules/activities/requirements.md": "9d8fa727d67fe5cd2bd83540777f6ace42e82eb555e0a53739fcc39febd36793",
     ".tiller/rules/activities/design.md": "b6985cdd2c9b57556a5cbee580805cf239562519ee0b5a1806ff51aacd8ea7bc",
     ".tiller/rules/activities/implementation.md": "8932252fb4fb77d0f3ab06e6dd47a10db4a78b4783b6632407273824a3f38569",
     ".tiller/rules/activities/delivery.md": "a0d6b17d9fdac513b562ed8971dd31047e9ac7912ace4ab8b0ea6ed9ea7f74b9",
     ".tiller/rules/quality/documents.md": "7c4117eb7f42751aa9e0f1099cedc70a1ad8b4c697ce231f9a0c0bad05aeb655",
     ".tiller/rules/quality/verification.md": "3ad9743284633d1c28d8e034738df87b89cb68199e173b384585a09e980a0c98",
-    ".tiller/usage.md": "231a32c9ffd94552d617b236effd0e7cdade3c5733c84e5090b2dbffdf011247",
-    ".tiller/run.cjs": "b23dcd61e31128a0ab8655617e0804bcf24b8d8617b6a8756ad25df3231400db"
+    ".tiller/usage.md": "3d9e7ec5bf3ee98bb6fd169928f8c7969cd9d8b0ae23f34b23b81cfc370850df",
+    ".tiller/run.cjs": "b1bb8f70c5c7dd0fc512e39c09dd2985622bf0b65768d177c1d6c8442ea6e466"
   },
   "createdAt": "2026-10-14T11:03:37.128Z",
   "repositoryPaths": {}

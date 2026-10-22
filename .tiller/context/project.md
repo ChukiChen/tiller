@@ -8,7 +8,7 @@ Codex 是主要开发 Agent，也是一等支持对象；其他工具的支持�
 
 0.5.0 默认入口为轻量标准流程：`start`、`resume`、`confirm`、`verify`、`check`、`accept`。小改动走“需求确认 → 实现 → 验证”，标准任务增加设计确认；规划、合入和发布按需操作。工作记录只维护 `work.md`，验收条件编号映射到测试引用，`check` 核对验证过期、范围越界、未提交改动、测试弱化、密钥和本机路径。旧流程、阶段、规划、任务、交付审计、全文快照和证据包路径已物理删除，`work.md` 与 Git 是唯一记录来源。
 
-版本号只在正式发布正式包时修改。本轮功能迭代不提升资源版本，升级命令只核对当前契约，不迁移历史版本或历史批准。当前仓库自身保持 0.5.0 并通过 `status` 检查。
+包、CLI、分发资源与自举工程元信息保持当前契约 0.5.0；版本号只在正式发布正式包时修改，升级命令只核对当前契约，不迁移历史版本或历史批准。本轮只刷新同版本受管摘要，不把规则或实现变化绑成资源升版。
 
 整体历史范围统一见[实现进度记录](../work/20261016-implementation-progress/work.md)；[首个交付工作](../work/initial-delivery/work.md)保留最初交付的事实；本轮实施见[轻量流程工作](../work/20261022-lightweight-flow/work.md)。用户通过任务直接给出本轮要求，尚未另行完成展示后的需求、设计确认和最终验收；技术结果不能替代用户验收或发布。
 
@@ -22,5 +22,5 @@ Codex 是主要开发 Agent，也是一等支持对象；其他工具的支持�
 - [工程初始化需求](../specs/modules/initialization/requirements.md)与[工程初始化设计](../specs/modules/initialization/design.md)：两种接入方式及升级、恢复的讨论稿。
 - [工作推进需求](../specs/modules/workflow/requirements.md)与[工作推进设计](../specs/modules/workflow/design.md)：总体资料编写、模块细化、开发交付、产物及执行恢复的历史需求与方案；当前轻量流程以入口规则为准。
 - [开发规范需求](../specs/modules/standards/requirements.md)与[开发规范设计](../specs/modules/standards/design.md)：AI 执行动作、产物质量、完成条件及规则读取与检查机制。
-- [验证与反馈需求](../specs/modules/verification/requirements.md)与[设计](../specs/modules/verification/design.md)：测试分类、长期用例、项目测试入口与本次执行证据。
+- [验证与反馈需求](../specs/modules/verification/requirements.md)与[设计](../specs/modules/verification/design.md)：测试分类、长期用例与执行证据的历史讨论；对应验证目录、用例和证据命令已删除，当前只以 `work.md` 与 Git 记录。
 - [原始需求草稿](../specs/archive/requirements-initial-2026-10-14.md)：历史归档，不作为当前要求。

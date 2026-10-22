@@ -480,23 +480,37 @@ async function scopedWorkingChanges(root: string, scope: string[], id: string): 
   return [...new Set([...tracked.stdout.split('\0'), ...untracked.stdout.split('\0')].filter(Boolean))]
     .filter(relative => !excludedPath(relative, id) && !relative.startsWith('.tiller/work/') && inScope(relative, scope)).sort();
 }
-async function weakensTests(root: string, base: string): Promise<string[]> {
-  if (base === 'no-git') return [];
+interface TestFindings { issues: string[]; warnings: string[] }
+interface TestBlock { name: string; assertions: number }
+
+function testBlocks(content: string): TestBlock[] {
+  const assertion = /\bassert\.|\bexpect\s*\(/gu;
+  const starts = [...content.matchAll(/\b(?:test|it)\s*\(\s*(['"`])(.*?)\1\s*,/gu)];
+  return starts.map((match, index) => {
+    const body = content.slice(match.index, starts[index + 1]?.index ?? content.length);
+    return { name: match[2]!, assertions: [...body.matchAll(assertion)].length };
+  });
+}
+
+async function weakensTests(root: string, base: string): Promise<TestFindings> {
+  if (base === 'no-git') return { issues: [], warnings: [] };
   const issues: string[] = [];
+  const warnings: string[] = [];
+  let deletedFiles = 0;
+  let removedCases = 0;
   const status = await git(root, ['diff', '--name-status', '-z', base, '--']);
   if (status.ok) {
     const fields = status.stdout.split('\0').filter(Boolean);
     for (let index = 0; index < fields.length; index += 2) {
       const kind = fields[index];
       const relative = fields[index + 1];
-      if (kind === 'D' && relative && /(?:^|\/)test\/|\.test\.|\.spec\./u.test(relative)) issues.push(`删除测试文件：${relative}`);
+      if (kind === 'D' && relative && /(?:^|\/)test\/|\.test\.|\.spec\./u.test(relative)) deletedFiles++;
     }
   }
+  if (deletedFiles) warnings.push(`删除 ${deletedFiles} 个测试文件（请确认对应功能已删除；详情见 Git diff）。`);
   const changed = await git(root, ['diff', '--name-only', '-z', base, '--']);
-  if (!changed.ok) return issues;
+  if (!changed.ok) return { issues, warnings };
   const count = (text: string, pattern: RegExp): number => [...text.matchAll(pattern)].length;
-  const active = /\b(?:test|it)\s*\(/gu;
-  const assertions = /\bassert\.|\bexpect\s*\(/gu;
   const skipped = /\b(?:test|it|describe)\.(?:skip|todo|only)\s*\(/gu;
   for (const relative of changed.stdout.split('\0').filter(Boolean)) {
     if (!/(?:^|\/)test\/|\.test\.|\.spec\./u.test(relative)) continue;
@@ -504,16 +518,20 @@ async function weakensTests(root: string, base: string): Promise<string[]> {
     if (!before.ok) continue;
     let after: string;
     try { after = await readFile(path.join(root, relative), 'utf8'); } catch { continue; }
-    const activeBefore = count(before.stdout, active);
-    const activeAfter = count(after, active);
-    const assertionsBefore = count(before.stdout, assertions);
-    const assertionsAfter = count(after, assertions);
     const skippedBefore = count(before.stdout, skipped);
     const skippedAfter = count(after, skipped);
-    if (activeAfter < activeBefore || assertionsAfter < assertionsBefore) issues.push(`弱化测试断言：${relative}`);
+    const beforeBlocks = new Map(testBlocks(before.stdout).map(block => [block.name, block.assertions]));
+    const afterBlocks = new Map(testBlocks(after).map(block => [block.name, block.assertions]));
+    for (const [name, assertions] of afterBlocks) {
+      const previous = beforeBlocks.get(name);
+      if (previous !== undefined && assertions < previous) issues.push(`弱化测试断言：${relative}::${name}`);
+    }
+    const removed = [...beforeBlocks.keys()].filter(name => !afterBlocks.has(name));
+    removedCases += removed.length;
     if (skippedAfter > skippedBefore) issues.push(`新增跳过或独占测试：${relative}`);
   }
-  return [...new Set(issues)];
+  if (removedCases) warnings.push(`修改的测试文件移除了 ${removedCases} 个测试用例（请确认对应功能已删除；详情见 Git diff）。`);
+  return { issues: [...new Set(issues)], warnings: [...new Set(warnings)] };
 }
 
 export interface LiteCheck {
@@ -567,7 +585,8 @@ async function evaluateLite(root: string, id: string, work: LiteWork): Promise<L
   }
   if (changedOutsideScope.length) issues.push(`改动超出范围：${changedOutsideScope.join('、')}`);
   const weakened = await weakensTests(root, work.meta.base);
-  issues.push(...weakened);
+  issues.push(...weakened.issues);
+  warnings.push(...weakened.warnings);
   const uncommitted = await scopedWorkingChanges(root, work.meta.scope, id);
   if (uncommitted === null) warnings.push('未检测到可用 Git 提交，未提交改动检查已跳过。');
   else if (uncommitted.length) issues.push(`交付范围存在未提交改动：${uncommitted.join('、')}`);
@@ -581,7 +600,7 @@ async function evaluateLite(root: string, id: string, work: LiteWork): Promise<L
     `- ${requiresDesign(work) && uniqueIssues.some(item => item.includes('设计')) ? '[ ]' : '[x]'} ${requiresDesign(work) ? '设计确认有效' : '该任务无需设计确认'}`,
     `- ${criteria.every(item => item.covered) ? '[x]' : '[ ]'} 验收条件均有当前通过的测试引用`,
     `- ${changedOutsideScope.length ? '[ ]' : '[x]'} 改动未超出范围`,
-    `- ${weakened.length ? '[ ]' : '[x]'} 未删除或弱化测试`,
+    `- ${weakened.issues.length ? '[ ]' : '[x]'} 未弱化仍存在的测试`,
     `- ${recordSafety(work.content).length ? '[ ]' : '[x]'} 记录不含密钥或本机绝对路径`,
     ...(uniqueIssues.length ? ['', '阻塞项：', ...uniqueIssues.map(item => `- ${item}`)] : []),
     ...(warnings.length ? ['', '提示：', ...warnings.map(item => `- ${item}`)] : []),

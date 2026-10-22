@@ -2,10 +2,6 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const { spawnSync } = require('node:child_process');
-const { pathToFileURL } = require('node:url');
-
-const CURRENT_RESOURCE_VERSION = '0.5.0';
-const CURRENT_CLI_VERSION = '0.5.0';
 
 const canonical = value => { const real = fs.realpathSync.native(value); return process.platform === 'win32' ? real.toLowerCase() : real; };
 const RECOVERY = '请使用已知可用的 tiller CLI 执行 runtime bind --path <工程根目录>，或在工程根目录执行 npm install --prefix .tiller/local/cli /path/to/tiller-VERSION.tgz（使用已核对的本地安装包）；不会自动联网安装。';
@@ -45,30 +41,39 @@ function readBinding(root) {
   catch (error) { if (error.code === 'ENOENT') return null; throw error; }
   return validateBinding(value, root);
 }
-function validateProjectContract(root) {
-  const metadata = jsonFile(path.join(root, '.tiller/project.json'));
-  if (!metadata || typeof metadata !== 'object' || Array.isArray(metadata) || metadata.schemaVersion !== 1 ||
-      metadata.resourceVersion !== CURRENT_RESOURCE_VERSION) {
-    throw new Error(`工程资源契约不受支持；仅支持当前资源 ${CURRENT_RESOURCE_VERSION}，原文件保留，不自动迁移。`);
-  }
+function versionParts(value) {
+  if (typeof value !== 'string' || !/^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/u.test(value)) return null;
+  return value.split('.').map(BigInt);
 }
-function inspectCli(file) {
+function olderThan(version, minimum) {
+  for (let index = 0; index < version.length; index++) {
+    if (version[index] !== minimum[index]) return version[index] < minimum[index];
+  }
+  return false;
+}
+function projectMinimum(root) {
+  const metadata = jsonFile(path.join(root, '.tiller/project.json'));
+  const version = versionParts(metadata?.resourceVersion);
+  if (!metadata || typeof metadata !== 'object' || Array.isArray(metadata) || metadata.schemaVersion !== 1 || !version) {
+    throw new Error('工程元信息或资源版本无效，无法选择兼容的 CLI；请先核对工程元信息。');
+  }
+  return olderThan(version, versionParts('0.3.2')) ? '0.3.2' : metadata.resourceVersion;
+}
+function validateCli(file, minimum = '0.3.2') {
   const cliPath = ordinary(file, true);
   if (path.basename(cliPath) !== 'cli.js' || path.basename(path.dirname(cliPath)) !== 'dist') throw new Error('CLI 必须是 tiller 安装包的 dist/cli.js。');
   const manifest = jsonFile(path.join(path.dirname(path.dirname(cliPath)), 'package.json'));
-  if (manifest?.name !== 'tiller' || manifest.type !== 'module' || manifest.bin?.tiller !== 'dist/cli.js' || manifest.version !== CURRENT_CLI_VERSION) {
-    throw new Error(`CLI 安装包身份、入口或版本无效，仅支持当前 tiller ${CURRENT_CLI_VERSION}。`);
+  const version = versionParts(manifest.version);
+  if (manifest.name !== 'tiller' || manifest.bin?.tiller !== 'dist/cli.js' || !version ||
+      olderThan(version, versionParts(minimum))) {
+    throw new Error(`CLI 安装包身份、入口或版本无效，当前工程需要 tiller ${minimum} 或更新版本。`);
   }
-  return { cliPath, version: manifest.version };
-}
-function validateCli(file) {
-  const cli = inspectCli(file);
-  const probe = spawnSync(process.execPath, [cli.cliPath, '--version'], {
+  const probe = spawnSync(process.execPath, [cliPath, '--version'], {
     encoding: 'utf8', shell: false, windowsHide: true, timeout: 10000, maxBuffer: 65536,
     env: { ...process.env, TILLER_RUNTIME_PROBE: '1' },
   });
-  if (probe.error || probe.status !== 0 || probe.stdout.trim() !== cli.version) throw new Error('CLI --version 验证失败，安装可能损坏或版本不一致。');
-  return cli;
+  if (probe.error || probe.status !== 0 || probe.stdout.trim() !== manifest.version) throw new Error('CLI --version 验证失败，安装可能损坏或版本不一致。');
+  return { cliPath, version: manifest.version };
 }
 function git(root, args) {
   const env = { ...process.env, GIT_TERMINAL_PROMPT: '0' };
@@ -93,54 +98,42 @@ function mainCheckout(root) {
       canonical(git(main, ['rev-parse', '--show-toplevel'])) !== canonical(main)) throw new Error('Git 主工程身份不匹配。');
   return main;
 }
-function* runtimeCandidates(inputRoot) {
-  const root = path.resolve(inputRoot);
-  ordinary(root, false);
-  // The active project's resources also govern installations borrowed from its main checkout.
-  validateProjectContract(root);
-  const roots = [root];
-  for (let index = 0; index < roots.length; index++) {
-    const candidateRoot = roots[index];
-    // Validate saved local data even when a preferred installation exists.
-    const binding = readBinding(candidateRoot);
-    const candidates = [
-      path.join(candidateRoot, '.tiller/local/cli/node_modules/tiller/dist/cli.js'),
-      path.join(candidateRoot, 'node_modules/tiller/dist/cli.js'),
-      ...(binding ? [binding.cliPath] : []),
-    ];
-    for (const candidate of candidates) yield { candidate, sourceRoot: candidateRoot };
-    if (index === 0) { const main = mainCheckout(root); if (main) roots.push(main); }
-  }
-}
 function resolveRuntime(inputRoot) {
+  const root = path.resolve(inputRoot);
   const issues = [];
   try {
-    for (const { candidate, sourceRoot } of runtimeCandidates(inputRoot)) {
-      try { return { ready: true, ...validateCli(candidate), sourceRoot, issues: [] }; }
-      catch (error) { if (error.code !== 'ENOENT') issues.push(error.message); }
+    ordinary(root, false);
+    // Resolve against the active project's resources, including when borrowing
+    // an installation from the registered main checkout.
+    const minimum = projectMinimum(root);
+    const roots = [root];
+    for (let index = 0; index < roots.length; index++) {
+      const candidateRoot = roots[index];
+      // Validate saved local data even when a preferred installation exists.
+      const binding = readBinding(candidateRoot);
+      const candidates = [
+        path.join(candidateRoot, '.tiller/local/cli/node_modules/tiller/dist/cli.js'),
+        path.join(candidateRoot, 'node_modules/tiller/dist/cli.js'),
+        ...(binding ? [binding.cliPath] : []),
+      ];
+      for (const candidate of candidates) {
+        try { return { ready: true, ...validateCli(candidate, minimum), sourceRoot: candidateRoot, issues: [] }; }
+        catch (error) { if (error.code !== 'ENOENT') issues.push(error.message); }
+      }
+      if (index === 0) { const main = mainCheckout(root); if (main) roots.push(main); }
     }
   } catch (error) { issues.push(error.message); }
   return { ready: false, issues: [...issues, RECOVERY] };
 }
-async function run() {
+function run() {
   if (process.env.TILLER_RUNTIME_PROBE === '1') { process.stderr.write('拒绝递归 CLI 启动器。\n'); process.exitCode = 1; return; }
   const root = path.dirname(__dirname);
-  const issues = []; let selected;
-  try {
-    for (const { candidate } of runtimeCandidates(root)) {
-      try {
-        const cli = inspectCli(candidate);
-        // Loading the complete dependency graph detects a damaged installation without a probe process.
-        const loaded = await import(pathToFileURL(cli.cliPath).href);
-        if (loaded.CLI_VERSION !== cli.version || typeof loaded.runCli !== 'function') throw new Error('CLI 导出契约或版本无效。');
-        selected = loaded; break;
-      } catch (error) { if (error.code !== 'ENOENT') issues.push(`CLI 验证失败：${error.message}`); }
-    }
-  } catch (error) { issues.push(error.message); }
-  if (!selected) { process.stderr.write(`tiller CLI 不可用：${[...issues, RECOVERY].join('\n')}\n`); process.exitCode = 1; return; }
-  // A command failure must never fall back to a second installation and execute again.
-  try { await selected.runCli(process.argv.slice(2)); }
-  catch (error) { process.stderr.write(`无法启动 tiller：${error.message}\n${RECOVERY}\n`); process.exitCode = 1; }
+  const result = resolveRuntime(root);
+  if (!result.ready) { process.stderr.write(`tiller CLI 不可用：${result.issues.join('\n')}\n`); process.exitCode = 1; return; }
+  const child = spawnSync(process.execPath, [result.cliPath, ...process.argv.slice(2)], { cwd: process.cwd(), stdio: 'inherit', shell: false, windowsHide: true });
+  if (child.error) { process.stderr.write(`无法启动 tiller：${child.error.message}\n${RECOVERY}\n`); process.exitCode = 1; }
+  else if (child.signal) { try { process.kill(process.pid, child.signal); } catch { process.exitCode = 1; } }
+  else process.exitCode = child.status ?? 1;
 }
 module.exports = { resolveRuntime, validateCli, validateBinding };
-if (require.main === module) void run();
+if (require.main === module) run();

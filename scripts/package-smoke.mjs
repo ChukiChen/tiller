@@ -70,7 +70,9 @@ assert.ok(!started.next.includes('advanced'));
 const resumed = invoke(['resume', workId]);
 assert.equal(resumed.criteria[0].text, 'package starts a work');
 assert.deepEqual(readdirSync(join(target, '.tiller/work', workId)), ['work.md']);
-assert.equal(invoke(['advanced'], 2).error.code, 'INVALID_ARGUMENT');
+for (const args of [['advanced'], ['work', 'create'], ['workflow', 'list'], ['planning'], ['task'], ['delivery-check']]) {
+  assert.equal(invoke(args, 2).error.code, 'INVALID_ARGUMENT', args.join(' '));
+}
 const upgrade = invoke(['upgrade', '--plan']);
 assert.equal(upgrade.ready, true);
 assert.deepEqual(upgrade.changes, []);

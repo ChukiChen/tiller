@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { existsSync, readFileSync, readdirSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync, unlinkSync } from 'node:fs';
 import { join } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import test from 'node:test';
@@ -160,13 +160,35 @@ test('test weakening and skipped tests block the delivery self-check', async t =
   success(cli(root, 'start', id, '--title', 'Protect tests', '--goal', 'Do not weaken coverage.',
     '--criterion', 'AC-1=Assertion remains active', '--size', 'small', '--target', 'test'));
   success(cli(root, 'confirm', id, 'requirements', '--quote', '确认'));
-  put(root, 'test/baseline.test.mjs', "import test from 'node:test';\ntest.skip('baseline', () => {});\n");
+  put(root, 'test/baseline.test.mjs', "import test from 'node:test';\ntest('baseline', () => {});\ntest.skip('skipped baseline', () => {});\n");
   success(cli(root, 'verify', id, '--criterion', 'AC-1', '--test', 'test/baseline.test.mjs', '--command', 'node --test test/baseline.test.mjs', '--result', 'passed'));
   git(root, 'add', 'test/baseline.test.mjs');
   git(root, 'commit', '--quiet', '-m', 'weaken test');
   const checked = failure(cli(root, 'check', id));
   assert.ok(checked.issues.some(issue => issue.includes('弱化测试断言')));
   assert.ok(checked.issues.some(issue => issue.includes('新增跳过或独占测试')));
+});
+
+test('removing a test with its retired feature is reported without masking retained assertion loss', async t => {
+  const root = await project(t);
+  put(root, 'test/legacy.test.mjs', "import test from 'node:test';\ntest('legacy', () => {});\n");
+  git(root, 'add', 'test/legacy.test.mjs');
+  git(root, 'commit', '--quiet', '-m', 'old feature test');
+  const id = '20261022-test-removal';
+  success(cli(root, 'start', id, '--title', 'Review test removal', '--goal', 'Keep retained tests intact.',
+    '--criterion', 'AC-1=The retained test proves behavior', '--size', 'small', '--target', 'test'));
+  success(cli(root, 'confirm', id, 'requirements', '--quote', '确认'));
+  unlinkSync(join(root, 'test/legacy.test.mjs'));
+  success(cli(root, 'verify', id, '--criterion', 'AC-1', '--test', 'test/baseline.test.mjs', '--command', 'node --test test/baseline.test.mjs', '--result', 'passed'));
+  git(root, 'add', '-A');
+  git(root, 'commit', '--quiet', '-m', 'remove old feature test');
+  const removed = success(cli(root, 'check', id));
+  assert.ok(removed.warnings.some(issue => issue.includes('删除 1 个测试文件')));
+  put(root, 'test/baseline.test.mjs', "import test from 'node:test';\ntest('baseline', () => {});\n");
+  git(root, 'add', 'test/baseline.test.mjs');
+  git(root, 'commit', '--quiet', '-m', 'weaken retained test');
+  const weakened = failure(cli(root, 'check', id));
+  assert.ok(weakened.issues.some(issue => issue.includes('弱化测试断言：test/baseline.test.mjs::baseline')));
 });
 
 test('unsafe paths and secrets are rejected from records before acceptance', async t => {
@@ -203,7 +225,9 @@ test('default help is lightweight and old audit commands are gone', t => {
   assert.match(normal.help, /轻量标准开发流程/u);
   assert.match(normal.help, /tiller start/u);
   assert.doesNotMatch(normal.help, /advanced|work plan register|workflow list/u);
-  const rejected = failure(cli(root, 'advanced'));
-  assert.equal(rejected.error.code, 'INVALID_ARGUMENT');
-  assert.match(rejected.error.message, /未知命令/u);
+  for (const args of [['advanced'], ['work', 'create'], ['workflow', 'list'], ['planning'], ['task'], ['delivery-check']]) {
+    const rejected = failure(cli(root, ...args));
+    assert.equal(rejected.error.code, 'INVALID_ARGUMENT', args.join(' '));
+    assert.match(rejected.error.message, /未知命令/u, args.join(' '));
+  }
 });

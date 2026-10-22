@@ -5,7 +5,7 @@ import test from 'node:test';
 import { initialize, inspectProject, recoverProject, readProjectMetadata, RESOURCE_VERSION, sha256, trackedContent } from '../dist/core.js';
 import { applyUpgrade, planUpgrade } from '../dist/upgrade.js';
 import { applyChanges, hasPendingTransaction, readTextIfExists, withProjectLock } from '../dist/files.js';
-import { cli, fixture, gitRepository, put, snapshot, success } from './helpers.mjs';
+import { cli, failure, fixture, gitRepository, put, snapshot, success } from './helpers.mjs';
 
 const read = (root, relative) => readFileSync(join(root, relative), 'utf8');
 const unsupportedVersions = ['0.1.0', '0.2.0', '0.3.0', '0.4.0', '0.5.1', '99.0.0'];
@@ -51,8 +51,13 @@ for (const workspace of [false, true]) test(`current noop preserves every origin
   assert.equal(result.changed, false);
   assert.deepEqual(result.metadata, metadata);
   assert.deepEqual(snapshot(root), before);
+  assert.equal((await applyUpgrade(root, (await planUpgrade(root)).planId)).changed, false);
+  assert.deepEqual(snapshot(root), before);
   assert.equal(await hasPendingTransaction(root), false);
   assert.equal(await readTextIfExists(root, '.tiller/local/lock.json'), null);
+  const rejected = failure(cli(root, 'work', 'resume', 'old'));
+  assert.equal(rejected.error.code, 'INVALID_ARGUMENT');
+  assert.deepEqual(snapshot(root), before);
 });
 
 for (const workspace of [false, true]) test(`old and unknown versions refuse without migration (${workspace})`, async t => {
@@ -71,7 +76,24 @@ for (const workspace of [false, true]) test(`old and unknown versions refuse wit
     await assert.rejects(readProjectMetadata(root), /不受支持/u);
     assert.deepEqual(snapshot(root), before, version);
     assert.equal(await hasPendingTransaction(root), false);
+    assert.equal(await readTextIfExists(root, '.tiller/local/lock.json'), null);
   }
+});
+
+for (const relative of ['AGENTS.md', '.tiller/rules/core.md']) test(`modified current managed content is preserved: ${relative}`, async t => {
+  const root = await current(t);
+  const text = read(root, relative);
+  const changed = relative === 'AGENTS.md' ? text.replace('tiller 工作入口', '项目修改的受管入口') : text + '\n项目自定义工作约定\n';
+  assert.notEqual(changed, text);
+  put(root, relative, changed);
+  const before = snapshot(root);
+  const plan = await planUpgrade(root);
+  assert.equal(plan.ready, false);
+  assert.match(plan.conflicts.join('\n'), /接入文件内容已变化/u);
+  assert.equal(JSON.parse(read(root, '.tiller/project.json')).resourceVersion, RESOURCE_VERSION);
+  assert.deepEqual(snapshot(root), before);
+  await assert.rejects(applyUpgrade(root, plan.planId), /冲突/u);
+  assert.deepEqual(snapshot(root), before);
 });
 
 test('stale plan binds section-external bytes and permissive clauses remain conflicts', async t => {
