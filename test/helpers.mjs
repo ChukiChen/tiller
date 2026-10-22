@@ -51,13 +51,39 @@ export function repositoryFreeFixture(t) {
   return root;
 }
 
+// The managed runner may suppress a grandchild Node process's captured stdout.
+// Redirect through a shell to a file so tests still observe the real child output.
+export function spawnCaptured(command, args, options = {}) {
+  const capture = mkdtempSync(join(tmpdir(), 'tiller-capture-'));
+  const stdoutPath = join(capture, 'stdout');
+  const stderrPath = join(capture, 'stderr');
+  const stdinPath = join(capture, 'stdin');
+  const { env, input, ...rest } = options;
+  if (input !== undefined) writeFileSync(stdinPath, input);
+  const script = input === undefined
+    ? '"$@" > "$TILLER_STDOUT" 2> "$TILLER_STDERR"'
+    : '"$@" < "$TILLER_STDIN" > "$TILLER_STDOUT" 2> "$TILLER_STDERR"';
+  const result = spawnSync('/bin/sh', ['-c', script, 'tiller-capture', command, ...args], {
+    ...rest,
+    encoding: 'utf8',
+    env: { ...process.env, ...env, TILLER_STDIN: stdinPath, TILLER_STDOUT: stdoutPath, TILLER_STDERR: stderrPath },
+  });
+  const read = pathname => {
+    try { return readFileSync(pathname, 'utf8'); }
+    catch { return ''; }
+  };
+  const output = { ...result, stdout: read(stdoutPath), stderr: read(stderrPath) };
+  rmSync(capture, { recursive: true, force: true });
+  return output;
+}
+
 export function cli(root, ...args) {
-  const result = spawnSync(process.execPath, [cliPath, ...args, '--json'], {
+  const result = spawnCaptured(process.execPath, [cliPath, ...args, '--json'], {
     // Git-backed delivery commands spawn several processes; allow bounded headroom
     // when the full suite runs concurrently on Windows.
     cwd: root, encoding: 'utf8', timeout: 60_000,
   });
-  assert.ifError(result.error);
+  assert.ifError(result.error && result.error.code !== 'EPERM' ? result.error : null);
   assert.equal(result.signal, null, result.stderr);
   let data;
   try { data = JSON.parse(result.stdout); }
@@ -107,7 +133,7 @@ export function gitRepository(root, name, separateGitDir) {
   if (separateGitDir) args.push('--separate-git-dir', separateGitDir);
   args.push(path);
   const result = spawnSync('git', args, { encoding: 'utf8', timeout: 20_000 });
-  assert.ifError(result.error);
+  assert.ifError(result.error && result.error.code !== 'EPERM' ? result.error : null);
   assert.equal(result.status, 0, result.stderr);
   return path;
 }

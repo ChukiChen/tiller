@@ -2,7 +2,7 @@ export type ProjectMode = 'project' | 'workspace';
 
 export interface ProjectMetadata {
   schemaVersion: 1;
-  resourceVersion: '0.5.0';
+  resourceVersion: string;
   mode: ProjectMode;
   repositories: string[];
   repositoryPaths: Record<string, string>;

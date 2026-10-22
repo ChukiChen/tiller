@@ -6,42 +6,95 @@
     {
       "id": "CASE-002",
       "title": "标准开发任务在需求确认后仍需设计确认",
-      "requirements": [".tiller/specs/modules/workflow/requirements.md#flow-03-选择必要工作与验证安排", ".tiller/specs/modules/workflow/requirements.md#flow-15-在关键节点取得人工确认"],
-      "modules": ["workflow"],
+      "requirements": [
+        ".tiller/specs/modules/workflow/requirements.md#flow-03-选择必要工作与验证安排",
+        ".tiller/specs/modules/workflow/requirements.md#flow-15-在关键节点取得人工确认"
+      ],
+      "modules": [
+        "workflow"
+      ],
       "test_ref": "test/flow-cli.test.mjs::standard flow blocks before design confirmation and accepts design after requirements",
-      "source": ["src/flow.ts"]
+      "source": [
+        "src/flow.ts"
+      ]
     },
     {
       "id": "CASE-003",
       "title": "需求和范围变化会使命中旧确认失效",
-      "requirements": [".tiller/specs/modules/workflow/requirements.md#flow-02-明确要求与交付边界", ".tiller/specs/modules/workflow/requirements.md#flow-15-在关键节点取得人工确认"],
-      "modules": ["workflow"],
+      "requirements": [
+        ".tiller/specs/modules/workflow/requirements.md#flow-02-明确要求与交付边界",
+        ".tiller/specs/modules/workflow/requirements.md#flow-15-在关键节点取得人工确认"
+      ],
+      "modules": [
+        "workflow"
+      ],
       "test_ref": "test/flow-cli.test.mjs::requirements confirmation binds the declared scope",
-      "source": ["src/flow.ts"]
+      "source": [
+        "src/flow.ts"
+      ]
     },
     {
       "id": "CASE-010",
       "title": "未通过技术自检的任务不能记录交付验收",
-      "requirements": [".tiller/specs/modules/workflow/requirements.md#flow-09-依据验证结果判断交付", ".tiller/specs/modules/workflow/requirements.md#flow-15-在关键节点取得人工确认"],
-      "modules": ["workflow"],
+      "requirements": [
+        ".tiller/specs/modules/workflow/requirements.md#flow-09-依据验证结果判断交付",
+        ".tiller/specs/modules/workflow/requirements.md#flow-15-在关键节点取得人工确认"
+      ],
+      "modules": [
+        "workflow"
+      ],
       "test_ref": "test/flow-cli.test.mjs::accept refuses an unverified task and leaves no acceptance record",
-      "source": ["src/flow.ts"]
+      "source": [
+        "src/flow.ts"
+      ]
     },
     {
       "id": "CASE-013",
       "title": "需求确认绑定已写明的需求正文，正文变化后确认失效",
-      "requirements": [".tiller/rules/core.md#人工确认", ".tiller/rules/core.md#任务记录约定"],
-      "modules": ["workflow"],
+      "requirements": [
+        ".tiller/rules/core.md#人工确认",
+        ".tiller/rules/core.md#任务记录约定"
+      ],
+      "modules": [
+        "workflow"
+      ],
       "test_ref": "test/flow-cli.test.mjs::requirements confirmation binds the written requirement rather than the quote",
-      "source": ["src/flow.ts"]
+      "source": [
+        "src/flow.ts"
+      ]
     },
     {
       "id": "CASE-014",
       "title": "用户原话不能替代缺失的需求正文",
-      "requirements": [".tiller/rules/core.md#人工确认", ".tiller/rules/activities/requirements.md#确认"],
-      "modules": ["workflow"],
+      "requirements": [
+        ".tiller/rules/core.md#人工确认",
+        ".tiller/rules/activities/requirements.md#确认"
+      ],
+      "modules": [
+        "workflow"
+      ],
       "test_ref": "test/flow-cli.test.mjs::an empty requirement cannot be confirmed by a user quote alone",
-      "source": ["src/flow.ts"]
+      "source": [
+        "src/flow.ts"
+      ]
+    },
+    {
+      "id": "CASE-052",
+      "title": "规划依赖阻塞、未覆盖需求提示与正文失效",
+      "requirements": [
+        ".tiller/specs/modules/workflow/requirements.md#3-规划拆分"
+      ],
+      "modules": [
+        "workflow"
+      ],
+      "test_ref": "test/first-batch.test.mjs::planning blocks unfinished dependencies, reports uncovered requirements and invalidates body edits",
+      "source": [
+        "src/plans.ts",
+        "src/flow.ts"
+      ],
+      "criteria": [
+        "20261022-first-batch#AC-2"
+      ]
     }
   ]
 }

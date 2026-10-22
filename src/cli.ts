@@ -6,7 +6,9 @@ import { realpathSync } from 'node:fs';
 import { bindRuntime, runtimeStatus } from './runtime.js';
 import { initialize, inspectProject, recoverProject } from './core.js';
 import { applyUpgrade, planUpgrade } from './upgrade.js';
+import { addGlobalCase } from './cases.js';
 import { acceptFlow, checkFlow, confirmFlow, inspectFlow, resumeFlow, startFlow, verifyFlow } from './flow.js';
+import { confirmPlan, startPlan, statusPlan } from './plans.js';
 
 export const CLI_VERSION = '0.5.0';
 
@@ -15,9 +17,14 @@ const HELP = `tiller ${CLI_VERSION} — 默认工作流
 用法：
   tiller init [path] [--mode project|workspace] [--repo <repository-path> ...]
   tiller status [path]
-  tiller start <task-id> --title <标题> --requirement <需求正文> --criterion "AC-1=<验收条件>" [--criterion ...] [--type feature] [--size small|standard] [--target <相对路径> ...] [--path <root>]
+  tiller plan start <plan-id> --title <标题> --goal <目标> --spec <specs 引用> [--spec ...] --item "P-1=标题;size=small;deps=P-0;specs=<引用>;plan=<子规划>" [--item ...]
+  tiller plan confirm <plan-id> --quote "<用户原话>" [--commit <oid>] [--path <root>]
+  tiller plan status <plan-id> [--path <root>]
+  tiller start <task-id> --title <标题> --requirement <需求正文> --criterion "AC-1=<验收条件>" [--criterion ...] [--type feature] [--size small|standard] [--target <相对路径> ...] [--plan <plan-id> --item <条目>] [--path <root>]
   tiller resume [task-id] [--path <root>]
   tiller confirm <task-id> requirements|design|acceptance --quote "<用户原话>" [--commit <oid>] [--path <root>]
+  tiller case add <task-id> --module <模块> --kind behavior|interface|performance|security --title <标题> --test "<文件::测试名>" --criterion AC-1 [--criterion ...] [--spec <引用> ...] --source <源码路径> [--source ...] [--path <root>]
+  tiller case add <task-id> --scenario <场景名> --module <模块> [--module ...] --title <标题> --test "<文件::测试名>" --criterion AC-1 [--spec <引用> ...] --source <源码路径> [--source ...]
   tiller verify <task-id> --criterion AC-1 [--criterion ...] --test <测试文件或用例引用> --command "<验证命令>" [--run "<同一命令>"] [--result passed|failed|skipped] [--path <root>]
   tiller check <task-id> [--path <root>]
   tiller accept <task-id> --quote "<用户原话>" [--commit <oid>] [--path <root>]
@@ -28,10 +35,11 @@ const HELP = `tiller ${CLI_VERSION} — 默认工作流
 
 默认工作流：
 - small：需求确认 → 实现 → 验证；standard：需求 → 设计 → 实现 → 验证。验收始终需要真实用户原话。
-- 默认人工节点只有需求、设计和交付验收；没有规划、任务、阶段或合入审计命令。
+- 默认人工节点只有需求、设计和交付验收；规划、合入、发布按需确认，没有阶段或审计命令。
+- 大功能可先写 .tiller/plans/<id>.md 并确认；start 挂到条目时默认继承粒度，依赖未验收会阻塞。
 - task.md 是唯一任务记录：需求和设计正文必须先写清；用户原话只作确认凭证，不替代正文。验证保存命令、结果、提交和代码树摘要。
-- check 会核对 AC→全局用例→测试→当前验证，校验模块/场景结构并提示相关回归，同时检查范围、测试弱化、密钥和本机绝对路径；accept 只接受 check 通过的当前对象。
-- upgrade 只核对当前资源契约，不改写文件或版本；版本号只在正式发布时修改。
+- case add 自动分配 CASE 编号并写入来源 AC；check 会核对 AC→全局用例→测试→当前验证，校验模块/场景结构并提示相关回归，同时检查范围、测试弱化、密钥和本机绝对路径。
+- upgrade 刷新未修改的受管文件，保留并报告用户修改；版本号只在正式发布时修改。
 `;
 
 function usage(message: string): never {
@@ -47,13 +55,21 @@ async function bindAfterSetup(root: string) {
 
 export async function runCli(rawArgs = process.argv.slice(2)): Promise<void> {
   const wantsJson = rawArgs.includes('--json');
+  const commandIndex = rawArgs.findIndex(value => !value.startsWith('-'));
+  const normalizedArgs = [...rawArgs];
+  if (commandIndex >= 0 && rawArgs[commandIndex] === 'upgrade') {
+    const planIndex = normalizedArgs.findIndex((value, index) => index > commandIndex && value === '--plan');
+    if (planIndex >= 0 && (normalizedArgs[planIndex + 1] === undefined || normalizedArgs[planIndex + 1]!.startsWith('-'))) {
+      normalizedArgs[planIndex] = '--plan=preview';
+    }
+  }
   function output(value: unknown): void {
     process.stdout.write(JSON.stringify(value, null, wantsJson ? undefined : 2) + '\n');
   }
 
   try {
     const { values, positionals, tokens } = parseArgs({
-      args: rawArgs, allowPositionals: true, strict: true, tokens: true,
+      args: normalizedArgs, allowPositionals: true, strict: true, tokens: true,
       options: {
         help: { type: 'boolean', short: 'h' }, version: { type: 'boolean', short: 'v' },
         json: { type: 'boolean' }, mode: { type: 'string' }, repo: { type: 'string', multiple: true },
@@ -61,12 +77,15 @@ export async function runCli(rawArgs = process.argv.slice(2)): Promise<void> {
         type: { type: 'string' }, size: { type: 'string' }, target: { type: 'string', multiple: true },
         quote: { type: 'string' }, commit: { type: 'string' }, criterion: { type: 'string', multiple: true },
         test: { type: 'string' }, command: { type: 'string' }, run: { type: 'string' }, result: { type: 'string' },
-        plan: { type: 'boolean' }, apply: { type: 'string' },
+        plan: { type: 'string' }, item: { type: 'string', multiple: true }, goal: { type: 'string' },
+        spec: { type: 'string', multiple: true }, module: { type: 'string', multiple: true },
+        kind: { type: 'string' }, scenario: { type: 'string' }, source: { type: 'string', multiple: true },
+        apply: { type: 'string' },
       },
     });
     const seenOptions = new Set<string>();
     for (const token of tokens) {
-      if (token.kind !== 'option' || ['repo', 'target', 'criterion'].includes(token.name)) continue;
+      if (token.kind !== 'option' || ['repo', 'target', 'criterion', 'item', 'spec', 'module', 'source'].includes(token.name)) continue;
       if (seenOptions.has(token.name)) usage(`选项 --${token.name} 不能重复。`);
       seenOptions.add(token.name);
     }
@@ -77,15 +96,21 @@ export async function runCli(rawArgs = process.argv.slice(2)): Promise<void> {
     } else {
       const [command, second, third] = positionals;
       const flowCommand = ['start', 'resume', 'confirm', 'verify', 'check', 'accept'].includes(command ?? '');
+      const planCommand = command === 'plan';
+      const caseCommand = command === 'case';
       const allowed = flowCommand
-        ? command === 'start' ? ['path', 'title', 'requirement', 'type', 'size', 'target', 'criterion']
+        ? command === 'start' ? ['path', 'title', 'requirement', 'type', 'size', 'target', 'criterion', 'plan', 'item']
           : command === 'resume' ? ['path']
             : command === 'confirm' ? ['path', 'quote', 'commit']
               : command === 'verify' ? ['path', 'criterion', 'test', 'command', 'run', 'result']
                 : command === 'accept' ? ['path', 'quote', 'commit'] : ['path']
-        : command === 'init' ? ['mode', 'repo']
-          : command === 'upgrade' ? ['plan', 'apply']
-            : command === 'runtime' ? ['path'] : [];
+        : planCommand ? second === 'start' ? ['path', 'title', 'goal', 'spec', 'item']
+          : second === 'confirm' ? ['path', 'quote', 'commit']
+            : second === 'status' ? ['path'] : []
+          : caseCommand ? second === 'add' ? ['path', 'module', 'kind', 'scenario', 'title', 'test', 'criterion', 'spec', 'source'] : []
+            : command === 'init' ? ['mode', 'repo']
+              : command === 'upgrade' ? ['plan', 'apply']
+                : command === 'runtime' ? ['path'] : [];
       for (const name of Object.keys(values)) {
         if (!['json', ...allowed].includes(name)) usage(`选项 --${name} 不适用于该命令。`);
       }
@@ -97,9 +122,12 @@ export async function runCli(rawArgs = process.argv.slice(2)): Promise<void> {
           if (positionals.length !== 2) usage('start 需要一个任务标识。');
           if (!values.title || !values.requirement) usage('start 需要 --title 和 --requirement；需求正文必须先写清，验收条件使用可重复的 --criterion。');
           if (!values.criterion?.length) usage('start 至少需要一个 --criterion，例如 --criterion "AC-1=命令正常退出"。');
+          if ((values.plan === undefined) !== (values.item === undefined)) usage('start 的 --plan 和 --item 必须同时提供。');
+          if (values.item && values.item.length !== 1) usage('start 的 --item 只能提供一个条目。');
           result = await startFlow(root, second!, { title: values.title, requirement: values.requirement,
             ...(values.type === undefined ? {} : { type: values.type }), ...(values.size === undefined ? {} : { size: values.size }),
-            ...(values.target === undefined ? {} : { targets: values.target }), criteria: values.criterion });
+            ...(values.target === undefined ? {} : { targets: values.target }), criteria: values.criterion,
+            ...(values.plan !== undefined && values.item ? { plan: values.plan, item: values.item[0]! } : {}) });
         } else if (command === 'resume') {
           if (positionals.length > 2) usage('resume 最多接受一个任务标识。');
           if (second) result = { ...await resumeFlow(root, second), check: await inspectFlow(root, second) };
@@ -122,6 +150,36 @@ export async function runCli(rawArgs = process.argv.slice(2)): Promise<void> {
           if (!values.quote) usage('accept 需要 --quote "<用户原话>"。');
           result = await acceptFlow(root, second!, values.quote, values.commit);
         }
+      } else if (planCommand) {
+        const root = resolve(values.path ?? process.cwd());
+        if (second === 'start') {
+          if (positionals.length !== 3) usage('plan start 需要一个规划标识。');
+          if (!values.title || !values.goal || !values.spec?.length || !values.item?.length) usage('plan start 需要 --title、--goal、--spec 和至少一个 --item。');
+          result = await startPlan(root, third!, { title: values.title, goal: values.goal, requirements: values.spec, items: values.item });
+        } else if (second === 'confirm') {
+          if (positionals.length !== 3) usage('plan confirm 需要一个规划标识。');
+          if (!values.quote) usage('plan confirm 需要 --quote "<用户原话>"。');
+          result = await confirmPlan(root, third!, values.quote, values.commit);
+        } else if (second === 'status') {
+          if (positionals.length !== 3) usage('plan status 需要一个规划标识。');
+          result = await statusPlan(root, third!);
+        } else usage('plan 支持 start、confirm 或 status。');
+      } else if (caseCommand) {
+        if (second !== 'add' || positionals.length !== 3) usage('case 支持 add <task-id>。');
+        if (!values.title || !values.test || !values.criterion?.length || !values.module?.length) {
+          usage('case add 需要 --module、--title、--test 和至少一个 --criterion。');
+        }
+        if (!values.scenario && !values.kind) usage('case add 需要 --kind，或使用 --scenario 登记端到端场景。');
+        if (!values.scenario && values.module.length !== 1) usage('模块用例只能指定一个 --module；场景可重复 --module 声明经过模块。');
+        if (values.scenario && values.kind) usage('--scenario 与 --kind 不能同时使用。');
+        const root = resolve(values.path ?? process.cwd());
+        result = await addGlobalCase(root, {
+          task: third!, title: values.title, test: values.test, criteria: values.criterion,
+          requirements: values.spec ?? [], source: values.source ?? [], modules: values.module,
+          ...(values.module[0] === undefined ? {} : { module: values.module[0] }),
+          ...(values.kind === undefined ? {} : { kind: values.kind }),
+          ...(values.scenario === undefined ? {} : { scenario: values.scenario }),
+        });
       } else if (command === 'init' || command === 'status' || command === 'recover') {
         if (positionals.length > 2) usage('位置参数过多。');
         const root = second ?? process.cwd();
@@ -139,6 +197,7 @@ export async function runCli(rawArgs = process.argv.slice(2)): Promise<void> {
         } else result = await recoverProject(root);
       } else if (command === 'upgrade') {
         if (positionals.length > 2 || Boolean(values.plan) === Boolean(values.apply)) usage('upgrade 需要 --plan 或 --apply <plan-id>，两者不能同时使用。');
+        if (values.plan && values.plan !== 'preview') usage('--plan 只需作为预览开关使用，不接收值。');
         const root = second ?? process.cwd();
         if (values.apply) {
           const upgraded = await applyUpgrade(root, values.apply);

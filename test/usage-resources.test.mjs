@@ -122,9 +122,10 @@ test('current metadata requires the complete managed set and rejects historical 
   delete noMappings.repositoryPaths;
   assert.throws(() => parseMetadata(JSON.stringify(noMappings)));
   const before = snapshot(root);
-  for (const version of ['0.1.0', '0.2.0', '0.3.0', '0.4.0', '0.5.1', '99.0.0']) {
+  for (const version of ['0.1.0', '0.2.0', '0.3.0', '0.5.1', '99.0.0']) {
     assert.throws(() => parseMetadata(JSON.stringify({ ...metadata, resourceVersion: version })), /版本不受支持/u);
   }
+  assert.equal(parseMetadata(JSON.stringify({ ...metadata, resourceVersion: '0.4.0' })).resourceVersion, '0.4.0');
   assert.deepEqual(snapshot(root), before);
 });
 

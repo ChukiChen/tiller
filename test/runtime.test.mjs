@@ -7,6 +7,7 @@ import { spawnSync } from 'node:child_process';
 import { test } from 'node:test';
 import { bindRuntime, runtimeStatus } from '../dist/runtime.js';
 import { initialize, inspectProject, sha256 } from '../dist/core.js';
+import { spawnCaptured } from './helpers.mjs';
 
 const CLI_VERSION = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8')).version;
 
@@ -35,7 +36,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(realpathSync(process.ar
   return file;
 }
 function launch(root, args = [], options = {}) {
-  return spawnSync(process.execPath, [path.join(root, '.tiller/run.cjs'), ...args], { cwd: root, encoding: 'utf8', input: 'stdin value', ...options });
+  return spawnCaptured(process.execPath, [path.join(root, '.tiller/run.cjs'), ...args], { cwd: root, encoding: 'utf8', input: 'stdin value', ...options });
 }
 function git(root, ...args) {
   const result = spawnSync('git', ['-C', root, ...args], { encoding: 'utf8' });

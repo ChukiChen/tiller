@@ -5,10 +5,11 @@ import path from 'node:path';
 import { promisify } from 'node:util';
 import {
   casesForTest, readCaseLibrary, regressionWarnings, sameTestReference, testBlocks,
-  type CaseLibrary,
+  type CaseLibrary, type GlobalCase,
 } from './cases.js';
 import { readProjectMetadata } from './core.js';
 import { applyChanges, readTextIfExists, validateRelativePath, withProjectLock } from './files.js';
+import { readPlanItem } from './plans.js';
 import { validateTaskId } from './task-id.js';
 
 const execFileAsync = promisify(execFile);
@@ -36,6 +37,7 @@ export type FlowResult = typeof RESULTS[number];
 
 export interface FlowMeta {
   version: 1; id: string; type: FlowType; size: FlowSize; created: string; base: string; scope: string[]; preExisting: Record<string, string>;
+  plan?: string; item?: string;
 }
 export interface FlowCriterion { id: string; text: string }
 export interface FlowConfirmation {
@@ -51,7 +53,7 @@ export interface FlowTask {
 }
 
 export interface FlowStartInput {
-  title: string; requirement: string; type?: string; size?: string; targets?: string[]; criteria: string[];
+  title: string; requirement: string; type?: string; size?: string; targets?: string[]; criteria: string[]; plan?: string; item?: string;
 }
 export interface FlowVerifyInput {
   criteria: string[]; test: string; command: string; result?: string; run?: string;
@@ -149,7 +151,16 @@ function parseMeta(marker: string, id: string): FlowMeta {
       preExisting[relative] = digest;
     }
   }
-  return { version: 1, id, type, size, created, base, scope: scopeValues(value.scope as string[]), preExisting };
+  let plan: string | undefined;
+  let item: string | undefined;
+  if (value.plan !== undefined || value.item !== undefined) {
+    if (typeof value.plan !== 'string' || typeof value.item !== 'string') fail('INVALID_FLOW_TASK', '规划归属必须同时包含 plan 和 item。');
+    validateTaskId(value.plan);
+    if (!/^[A-Za-z][A-Za-z0-9._-]{0,39}$/u.test(value.item)) fail('INVALID_FLOW_TASK', '规划条目编号无效。');
+    plan = value.plan; item = value.item;
+  }
+  return { version: 1, id, type, size, created, base, scope: scopeValues(value.scope as string[]), preExisting,
+    ...(plan && item ? { plan, item } : {}) };
 }
 function sectionBody(content: string, title: string): string {
   const match = new RegExp(`^## ${title}\\s*$`, 'mu').exec(content);
@@ -281,6 +292,7 @@ function renderTask(task: Omit<FlowTask, 'content' | 'path'>, selfCheck = ''): s
     '## 需求', task.requirement,
     '## 验收条件', task.criteria.map(item => `- ${item.id}: ${normalizeLine(item.text)}`).join('\n'),
   ];
+  if (task.meta.plan && task.meta.item) parts.push('## 规划', `- 规划：${task.meta.plan}\n- 条目：${task.meta.item}`);
   if (task.design.trim()) parts.push('## 设计', task.design.trim());
   parts.push('## 确认', renderConfirmations(task.confirmations) || '尚无确认。');
   parts.push('## 验证', renderVerifications(task.verifications) || '尚无验证。');
@@ -336,13 +348,24 @@ export async function startFlow(rootInput: string, idInput: string, input: FlowS
   const root = path.resolve(rootInput); validateTaskId(idInput);
   const title = safeInput(text(input.title, '标题', 200), '标题');
   const requirement = safeInput(text(input.requirement, '需求正文'), '需求正文');
-  const type = flowType(input.type); const size = flowSize(input.size);
+  const type = flowType(input.type);
   const scope = scopeValues(input.targets);
   const criteria = criteriaList(input.criteria).map(item => ({ ...item, text: safeInput(item.text, `${item.id} 验收条件`) }));
+  if ((input.plan === undefined) !== (input.item === undefined)) fail('INVALID_FLOW_INPUT', '--plan 和 --item 必须同时提供。');
   const relative = taskPath(idInput);
   return withProjectLock(root, async () => {
     await readProjectMetadata(root);
     if (await readTextIfExists(root, relative) !== null) fail('TASK_EXISTS', `任务 ${idInput} 已存在，不能覆盖。`);
+    let plan: string | undefined;
+    let item: string | undefined;
+    let size = flowSize(input.size);
+    if (input.plan !== undefined && input.item !== undefined) {
+      const planned = await readPlanItem(root, input.plan, input.item);
+      if (input.size !== undefined && flowSize(input.size) !== planned.item.size) {
+        fail('PLAN_SIZE_MISMATCH', `任务规模 ${input.size} 与规划条目 ${input.item} 的 ${planned.item.size} 不一致。`);
+      }
+      size = planned.item.size; plan = input.plan; item = input.item;
+    }
     const base = (await head(root)) ?? 'no-git';
     const preExisting: Record<string, string> = {};
     for (const changed of (await changedFiles(root, base)) ?? []) {
@@ -351,11 +374,13 @@ export async function startFlow(rootInput: string, idInput: string, input: FlowS
       catch { /* Deleted pre-existing paths cannot be compared later. */ }
     }
     const created = new Date().toISOString();
-    const task = { meta: { version: 1 as const, id: idInput, type, size, created, base, scope, preExisting }, title, requirement, design: '', criteria, confirmations: [], verifications: [] };
+    const task = { meta: { version: 1 as const, id: idInput, type, size, created, base, scope, preExisting,
+      ...(plan && item ? { plan, item } : {}) }, title, requirement, design: '', criteria, confirmations: [], verifications: [] };
     const content = renderTask(task);
     await mkdir(path.dirname(path.join(root, relative)), { recursive: true });
     await applyChanges(root, [{ path: relative, before: null, after: content }]);
-    return { id: idInput, path: relative, type, size, base, scope, criteria, next: `核对需求正文后确认：tiller confirm ${idInput} requirements --quote "<用户原话>"` };
+    return { id: idInput, path: relative, type, size, base, scope, criteria, ...(plan && item ? { plan, item } : {}),
+      next: `核对需求正文后确认：tiller confirm ${idInput} requirements --quote "<用户原话>"` };
   });
 }
 
@@ -364,7 +389,8 @@ export async function resumeFlow(rootInput: string, id?: string) {
   if (id) {
     const task = await readTask(root, id);
     return { id, title: task.title, type: task.meta.type, size: task.meta.size, scope: task.meta.scope,
-      path: task.path, requirement: task.requirement, criteria: task.criteria, confirmations: task.confirmations, verifications: task.verifications };
+      path: task.path, ...(task.meta.plan && task.meta.item ? { plan: task.meta.plan, item: task.meta.item } : {}),
+      requirement: task.requirement, criteria: task.criteria, confirmations: task.confirmations, verifications: task.verifications };
   }
   const directory = path.join(root, TASK_DIRECTORY);
   let entries;
@@ -378,6 +404,7 @@ export async function resumeFlow(rootInput: string, id?: string) {
       if (content?.includes(MARKER_PREFIX)) {
         const task = parseTask(content, entry.name, taskPath(entry.name));
         tasks.push({ id: entry.name, title: task.title, type: task.meta.type, size: task.meta.size, path: task.path,
+          ...(task.meta.plan && task.meta.item ? { plan: task.meta.plan, item: task.meta.item } : {}),
           confirmed: task.confirmations.length, verified: task.verifications.length });
       }
     } catch { /* Other task formats are outside the default flow index. */ }
@@ -548,6 +575,30 @@ async function weakensTests(root: string, base: string): Promise<TestFindings> {
   return { issues: [...new Set(issues)], warnings: [...new Set(warnings)] };
 }
 
+function caseSignature(item: Record<string, unknown>): string {
+  return JSON.stringify({
+    title: item.title, requirements: item.requirements, modules: item.modules, test_ref: item.test_ref,
+    source: item.source, criteria: item.criteria ?? [],
+  });
+}
+
+async function caseChangedSinceBase(root: string, base: string, item: GlobalCase): Promise<boolean> {
+  if (base === 'no-git') return false;
+  const previous = await git(root, ['show', `${base}:${item.file}`]);
+  if (!previous.ok) return true;
+  let value: Record<string, unknown>;
+  try { value = JSON.parse(previous.stdout) as Record<string, unknown>; }
+  catch { return true; }
+  const entries = [...(Array.isArray(value.cases) ? value.cases : []), ...(Array.isArray(value.scenarios) ? value.scenarios : [])];
+  const old = entries.find(entry => entry && typeof entry === 'object' && !Array.isArray(entry)
+    && (entry as Record<string, unknown>).id === item.id) as Record<string, unknown> | undefined;
+  if (!old) return true;
+  return caseSignature(old) !== caseSignature({
+    title: item.title, requirements: item.requirements, modules: item.modules, test_ref: item.test_ref,
+    source: item.source, criteria: item.criteria,
+  });
+}
+
 export interface FlowCheck {
   id: string; ready: boolean; issues: string[]; warnings: string[]; criteria: { id: string; covered: boolean; test?: string; cases?: string[]; result?: string; commit?: string }[];
   confirmations: { gate: FlowGate; confirmed: boolean; quote: string; commit: string; issue?: string }[];
@@ -581,6 +632,7 @@ async function evaluateFlow(root: string, id: string, task: FlowTask): Promise<F
   issues.push(...library.issues);
   warnings.push(...library.warnings);
   let matched = 0;
+  let criteriaBindingValid = true;
   const criteria = await Promise.all(task.criteria.map(async item => {
     const run = latestVerification(task, item.id);
     if (!run) { issues.push(`${item.id} 尚无验证。`); return { id: item.id, covered: false }; }
@@ -594,6 +646,15 @@ async function evaluateFlow(root: string, id: string, task: FlowTask): Promise<F
     for (const caseId of run.cases) if (!library.cases.some(entry => entry.id === caseId)) issues.push(`${item.id} 引用的全局用例不存在：${caseId}`);
     for (const entry of linked) if (!sameTestReference(run.test, entry.test_ref)) {
       issues.push(`${item.id} 的验证测试 ${run.test} 与全局用例 ${entry.id} 的 test_ref 不一致。`);
+    }
+    for (const entry of linked) {
+      const expected = `${id}#${item.id}`;
+      if (!entry.criteria.length) {
+        warnings.push(`${item.id} 引用的历史用例 ${entry.id} 未绑定来源 AC；可在本次修改该用例时补上 criteria: ["${expected}"]。`);
+      } else if (!entry.criteria.includes(expected) && !(await caseChangedSinceBase(root, task.meta.base, entry))) {
+        criteriaBindingValid = false;
+        issues.push(`${item.id} 引用的用例 ${entry.id} 未在其 criteria 中回指 ${expected}，且本任务没有新增或修改该用例。`);
+      }
     }
     if (valid) matched++;
     const covered = valid && run.result === 'passed' && run.tree === currentTree && await testExists(root, run.test);
@@ -633,6 +694,7 @@ async function evaluateFlow(root: string, id: string, task: FlowTask): Promise<F
     `- ${requiresDesign(task) && uniqueIssues.some(item => item.includes('设计')) ? '[ ]' : '[x]'} ${requiresDesign(task) ? '设计确认有效' : '该任务无需设计确认'}`,
     `- ${criteria.every(item => item.covered) ? '[x]' : '[ ]'} 验收条件均有当前通过且绑定全局用例的测试引用`,
     `- ${matched === task.criteria.length && task.criteria.length > 0 ? '[x]' : '[ ]'} 每条验收条件均映射到本次验证引用的全局用例`,
+    `- ${criteriaBindingValid ? '[x]' : '[ ]'} 验收条件与用例来源 criteria 相互指向或由本任务新增/修改`,
     `- ${library.issues.length ? '[ ]' : '[x]'} 全局用例结构与引用有效`,
     `- ${changedOutsideScope.length ? '[ ]' : '[x]'} 改动未超出范围`,
     `- ${weakened.issues.length ? '[ ]' : '[x]'} 未弱化仍存在的测试`,

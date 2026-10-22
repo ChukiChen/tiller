@@ -1,5 +1,6 @@
 'use strict';
 const fs = require('node:fs');
+const os = require('node:os');
 const path = require('node:path');
 const { spawnSync } = require('node:child_process');
 const { pathToFileURL } = require('node:url');
@@ -8,6 +9,20 @@ const CURRENT_RESOURCE_VERSION = '0.5.0';
 const CURRENT_CLI_VERSION = '0.5.0';
 
 const canonical = value => { const real = fs.realpathSync.native(value); return process.platform === 'win32' ? real.toLowerCase() : real; };
+function capture(command, args, options = {}) {
+  if (process.platform === 'win32') return spawnSync(command, args, { encoding: 'utf8', ...options });
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'tiller-capture-'));
+  const stdoutPath = path.join(directory, 'stdout');
+  const stderrPath = path.join(directory, 'stderr');
+  const result = spawnSync('/bin/sh', ['-c', '"$@" > "$TILLER_STDOUT" 2> "$TILLER_STDERR"', 'tiller-capture', command, ...args], {
+    ...options, stdio: 'inherit', env: { ...(options.env ?? process.env), TILLER_STDOUT: stdoutPath, TILLER_STDERR: stderrPath },
+  });
+  let stdout = ''; let stderr = '';
+  try { stdout = fs.readFileSync(stdoutPath, 'utf8'); } catch { /* A failed command may not write stdout. */ }
+  try { stderr = fs.readFileSync(stderrPath, 'utf8'); } catch { /* A failed command may not write stderr. */ }
+  fs.rmSync(directory, { recursive: true, force: true });
+  return { ...result, stdout, stderr };
+}
 const RECOVERY = '请使用已知可用的 tiller CLI 执行 runtime bind --path <工程根目录>，或在工程根目录执行 npm install --prefix .tiller/local/cli /path/to/tiller-VERSION.tgz（使用已核对的本地安装包）；不会自动联网安装。';
 function ordinary(absolute, file) {
   const resolved = path.resolve(absolute);
@@ -48,8 +63,8 @@ function readBinding(root) {
 function validateProjectContract(root) {
   const metadata = jsonFile(path.join(root, '.tiller/project.json'));
   if (!metadata || typeof metadata !== 'object' || Array.isArray(metadata) || metadata.schemaVersion !== 1 ||
-      metadata.resourceVersion !== CURRENT_RESOURCE_VERSION) {
-    throw new Error(`工程资源契约不受支持；仅支持当前资源 ${CURRENT_RESOURCE_VERSION}，原文件保留，不自动迁移。`);
+      !['0.4.0', CURRENT_RESOURCE_VERSION].includes(metadata.resourceVersion)) {
+    throw new Error(`工程资源契约不受支持；仅支持当前资源 ${CURRENT_RESOURCE_VERSION} 及直接兼容的上一版本，原文件保留，不自动迁移。`);
   }
 }
 function inspectCli(file) {
@@ -63,17 +78,19 @@ function inspectCli(file) {
 }
 function validateCli(file) {
   const cli = inspectCli(file);
-  const probe = spawnSync(process.execPath, [cli.cliPath, '--version'], {
-    encoding: 'utf8', shell: false, windowsHide: true, timeout: 10000, maxBuffer: 65536,
+  const probe = capture(process.execPath, [cli.cliPath, '--version'], {
+    shell: false, windowsHide: true, timeout: 10000, maxBuffer: 65536,
     env: { ...process.env, TILLER_RUNTIME_PROBE: '1' },
   });
-  if (probe.error || probe.status !== 0 || probe.stdout.trim() !== cli.version) throw new Error('CLI --version 验证失败，安装可能损坏或版本不一致。');
+  if (probe.error || probe.status !== 0 || probe.stdout.trim() !== cli.version) {
+    throw new Error('CLI --version 验证失败，安装可能损坏或版本不一致。');
+  }
   return cli;
 }
 function git(root, args) {
   const env = { ...process.env, GIT_TERMINAL_PROMPT: '0' };
   for (const key of Object.keys(env)) if (key.toUpperCase().startsWith('GIT_') && key !== 'GIT_TERMINAL_PROMPT') delete env[key];
-  const result = spawnSync('git', ['-C', root, ...args], { encoding: 'utf8', shell: false, windowsHide: true, timeout: 10000, env });
+  const result = capture('git', ['-C', root, ...args], { shell: false, windowsHide: true, timeout: 10000, env });
   if (result.error || result.status !== 0) throw new Error('无法验证 Git worktree 登记。');
   return result.stdout.trim();
 }

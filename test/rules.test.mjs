@@ -35,7 +35,7 @@ test('core and usage describe the only supported default-flow record path', () =
   assert.match(core, /同一问题连续两次尝试失败时停止自动修复/u);
   assert.match(core, /以下变化需要同步 `\.tiller\/context\/`/u);
   assert.match(core, /交付前自检：逐条核对验收条件；检查 diff 是否越界；确认测试未被删除或弱化/u);
-  assert.match(core, /只支持当前资源契约/u);
+  assert.match(core, /只支持当前及直接兼容的上一资源契约/u);
   assert.match(core, /版本号只在正式发布时修改/u);
   assert.doesNotMatch(core, /advanced|上一版本升级/u);
   const usage = read('usage.md');
@@ -46,7 +46,7 @@ test('core and usage describe the only supported default-flow record path', () =
   assert.match(usage, /`task\.md` 只记录本次任务/u);
   assert.match(usage, /原话只作凭证，不替代正文/u);
   assert.match(usage, /不保存全文快照和日志/u);
-  assert.match(usage, /只核对当前资源契约/u);
+  assert.match(usage, /当前及直接兼容的上一资源契约/u);
   assert.doesNotMatch(usage, /advanced|上一版本到当前版本/u);
   assert.match(read('rules/index.md'), /规则按需读取/u);
 });
@@ -114,7 +114,7 @@ test('README describes only the default flow and release-time versioning', () =>
   assert.match(readme, /原话只是凭证，不能替代正文/u);
   assert.match(readme, /\.tiller\/cases\//u);
   assert.match(readme, /版本号只在正式发布正式包时修改/u);
-  assert.match(readme, /升级命令只核对当前契约/u);
+  assert.match(readme, /升级命令|升级支持当前及直接兼容的上一资源契约/u);
   assert.doesNotMatch(readme, /advanced|0\.4\.0 升级到 0\.5\.0/u);
 });
 
@@ -144,21 +144,31 @@ test('global cases use module kinds and scenarios with resolvable named tests', 
   const scenarios = readdirSync(join(directory, 'scenarios')).filter(name => name.endsWith('.json')).sort()
     .flatMap(name => JSON.parse(readFileSync(join(directory, 'scenarios', name), 'utf8')).scenarios);
   cases.push(...scenarios.map(item => ({ ...item, file: `scenarios/${item.id}` })));
-  assert.equal(cases.length, 49);
-  assert.deepEqual(cases.map(item => item.id).sort(), Array.from({ length: 49 }, (_, index) => `CASE-${String(index + 1).padStart(3, '0')}`));
+  assert.equal(cases.length, 55);
+  assert.deepEqual(cases.map(item => item.id).sort(), Array.from({ length: 55 }, (_, index) => `CASE-${String(index + 1).padStart(3, '0')}`));
   assert.deepEqual(counts, {
-    initialization: { behavior: 1, interface: 0, performance: 11, security: 0 },
+    initialization: { behavior: 3, interface: 0, performance: 11, security: 0 },
     standards: { behavior: 1, interface: 0, performance: 0, security: 0 },
-    verification: { behavior: 3, interface: 4, performance: 15, security: 0 },
-    workflow: { behavior: 5, interface: 5, performance: 0, security: 3 },
+    verification: { behavior: 4, interface: 5, performance: 15, security: 0 },
+    workflow: { behavior: 6, interface: 5, performance: 0, security: 3 },
   });
   for (const item of scenarios) {
     assert.ok(item.modules.length > 0 && item.modules.every(module => specs.includes(module)), `${item.id}: modules`);
   }
+  for (const item of cases.filter(entry => Number(entry.id.slice(5)) >= 50)) {
+    assert.ok(Array.isArray(item.criteria) && item.criteria.length > 0, `${item.id}: criteria`);
+  }
+  const slug = value => value.toLowerCase().trim().replace(/[^\p{L}\p{N}\s-]/gu, '').replace(/\s+/gu, '-');
   for (const item of cases) {
     assert.ok(item.requirements.length > 0 && item.source.length > 0, `${item.id}: references`);
     for (const reference of [...item.requirements, ...item.source]) {
-      assert.ok(existsSync(join(repository, reference.split('#')[0])), `${item.id}: missing ${reference}`);
+      const [file, anchor] = reference.split('#');
+      const target = join(repository, file);
+      assert.ok(existsSync(target), `${item.id}: missing ${reference}`);
+      if (anchor) {
+        const headings = [...readFileSync(target, 'utf8').matchAll(/^#+\s+(.+)$/gmu)].map(match => slug(match[1]));
+        assert.ok(headings.includes(decodeURIComponent(anchor)), `${item.id}: missing heading ${reference}`);
+      }
     }
     const [testFile, testName] = item.test_ref.split('::');
     assert.ok(testFile && testName, `${item.id}: named test_ref`);

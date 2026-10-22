@@ -10,6 +10,7 @@
 
 - `specs/`：总体与模块需求、设计及长期决定。
 - `cases/`：产品级回归用例事实，保存编号、需求/模块引用、测试引用和源码路径。
+- `plans/`：大功能的规划与任务拆分，按需建立；单次任务仍以 `task.md` 为准。
 - `rules/`：通用规则及已有项目约定。
 - `context/`：项目背景、现状与资料索引。
 - `task/`：当前任务记录，按任务标识读取结构化需求、设计、确认与验证。
@@ -21,6 +22,11 @@
 
 ## 已有资料
 
+- [第一批功能补齐任务](task/20261022-first-batch/task.md)
+- [全局用例说明](cases/index.md)
+- [总体需求](specs/requirements.md)、[总体设计](specs/design.md)、[决策记录](specs/decisions.md)
+- [初始化规格](specs/modules/initialization/requirements.md)、[工作流规格](specs/modules/workflow/requirements.md)、[验证规格](specs/modules/verification/requirements.md)、[规范规格](specs/modules/standards/requirements.md)
+- [旧规格归档](specs/archive/)
 - [模块用例、场景与用例先行](task/20261022-case-first/task.md)
 
 - [cases/index.md](cases/index.md)
@@ -35,7 +41,6 @@
 
 - [任务推进与交付门禁：技术验证完成、待验收](work/20261019-task-delivery-gates/work.md)
 - [测试用例与验证证据管理（历史；长期验证目录已删除）](work/20261019-testing-verification/work.md)
-- [验证与反馈需求（历史讨论稿）](specs/modules/verification/requirements.md)与[设计（历史讨论稿）](specs/modules/verification/design.md)
 - [实施规划与任务拆分流程完善](work/20261017-implementation-planning/work.md)
 - [已有项目接手与项目开发规范建立](work/20261016-project-onboarding/work.md)
 - [实现进度记录：需求对应、验证边界与下一步](work/20261016-implementation-progress/work.md)

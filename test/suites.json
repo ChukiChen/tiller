@@ -17,6 +17,7 @@
     "usage-resources.test.mjs"
   ],
   "e2e": [
-    "flow-cli.test.mjs"
+    "flow-cli.test.mjs",
+    "first-batch.test.mjs"
   ]
 }

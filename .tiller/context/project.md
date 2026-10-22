@@ -1,27 +1,46 @@
 # tiller 项目背景
 
-tiller 是一套开源的 AI 软件工程方法论与工具集，帮助开发者完成需求、设计、编码、测试、评审、发布和运维工作，并用可核查的依据判断交付结果。CLI 命令名为 `tiller`。
+tiller 是一套开源的 AI 软件工程方法论与工具集，帮助开发者完成需求、设计、编码、测试、评审和发布工作，并用可核查的依据判断交付结果。CLI 命令名为 `tiller`。
 
-Codex 是主要开发 Agent，也是一等支持对象；其他工具的支持范围按项目决策推进。tiller 本身也使用 tiller 的方法与资料约定开发，自举要求以总体需求为依据。
+Codex 是主要开发 Agent，也是一等支持对象；tiller 自身也使用这套方法与资料约定开发。
 
-## 当前资料与状态
+## 当前状态
 
-0.5.0 的默认工作流提供 `start`、`resume`、`confirm`、`verify`、`check`、`accept`。小改动走“需求确认 → 实现 → 验证”，标准任务增加设计确认；规划、合入和发布按需操作。单次任务只维护 `.tiller/task/<id>/task.md`；需求与设计正文必须先写清，用户原话只作确认凭证。需求确认后先把每条 AC 转为全局用例，再按 `test_ref` 写测试并实现；`verify` 记录命中的用例编号，`check` 强制 AC→用例→测试→当前验证，并核对模块/场景结构、回归提示、范围、测试弱化、密钥和本机路径。产品级回归事实按 `.tiller/cases/modules/<模块>/{behavior,interface,performance,security}.json` 和 `.tiller/cases/scenarios/` 组织，不保存执行日志、全文快照或证据包。旧流程、阶段、规划、审计和全文快照路径已物理删除；历史 `.tiller/work/` 只读保留，不自动迁移。
+当前包与分发资源为 0.5.0，默认流程是 `start`、`resume`、`confirm`、`verify`、`check`、`accept`。小改动走“需求确认 → 实现 → 验证”，standard 代码任务增加设计确认；默认人工节点只有需求、设计和交付验收，规划/合入/发布按需确认。
 
-包、CLI 与分发资源保持当前契约 0.5.0；自举工程元信息保持原有 `resourceVersion` 0.4.0，本轮只刷新其受管摘要，不把规则或实现变化绑成资源升版。版本号只在正式发布正式包时修改，升级命令只核对当前契约，不迁移历史版本或历史批准。
+- 单次任务记录在 `.tiller/task/<id>/task.md`；需求与设计正文必须先写清，用户原话只作确认凭证。
+- `.tiller/plans/<id>.md` 支持目标、关联 specs、任务条目、粒度和依赖；依赖未验收时阻塞开工。
+- `.tiller/cases/` 是产品级回归事实源，按模块 behavior/interface/performance/security 和 scenarios 组织；需求确认后先改用例，再写测试和实现。
+- `check` 校验 AC→用例→测试→当前验证、反向 `criteria`、模块/场景结构、范围、测试弱化、密钥和本机路径。
+- `init` 生成最小 specs/context/cases/plans 骨架；`upgrade` 只刷新未修改的受管文件，兼容当前和直接兼容的上一资源契约。
 
-整体历史范围统一见[实现进度记录](../work/20261016-implementation-progress/work.md)；[首个交付工作](../work/initial-delivery/work.md)保留最初交付的事实；[轻量流程工作](../work/20261022-lightweight-flow/work.md)和 [flow 命名工作](../work/20261022-flow-naming/work.md)保留上一轮结果。本轮见[模块用例、场景与用例先行](../task/20261022-case-first/task.md)。用户通过任务直接给出要求，尚未另行完成展示后的需求、设计确认和最终验收；技术结果不能替代用户验收或发布。
+旧审计、reviews 快照、全文确认快照、证据包、advanced 和旧 verification CLI 不保留。历史 `.tiller/work/` 只读；需要历史时从 Git 取回或重跑。
 
-根目录 `AGENTS.md` 提供通用工作入口，项目专属限制见[项目规则](../rules/project.md)。工程规格集中在 `.tiller/specs/`，全局用例位于 `.tiller/cases/`，源码位于 `src/`，分发规则、使用指引与启动器位于 `resources/`，测试位于 `test/`。自举和宿主接入以实际验证记录为准。
+## 本轮状态
+
+当前 specs 已按轻量方案重写，旧全文保存在 `.tiller/specs/archive/`；活动 specs 约 28 KB。自举工程 `project.json` 已由受管升级从 0.4.0 同步到当前资源契约 0.5.0，包版本、CLI 版本和资源常量保持 0.5.0，不构成发布升版。
+
+本轮见[第一批功能补齐任务](../task/20261022-first-batch/task.md)。用户直接给出任务要求，尚未完成展示后的需求/设计确认和最终验收；技术验证不能替代用户验收或发布。
+
+## 目录
+
+- `src/`：CLI、默认流程、规划、全局用例、初始化和升级实现。
+- `resources/`：分发入口、usage、规则和启动器。
+- `test/`：规则、契约、性能、集成和端到端测试。
+- `.tiller/specs/`：当前总体/模块需求、设计和决定；`archive/` 只作历史。
+- `.tiller/context/`：项目背景和当前入口说明。
+- `.tiller/cases/`：跨任务回归用例；`.tiller/task/` 保存单次任务。
+- `.tiller/plans/`：按需建立的大功能规划。
 
 ## 资料索引
 
-- [总体需求](../specs/requirements.md)：产品目标、场景、核心需求与验收方向。
-- [总体设计](../specs/design.md)：主要构成、协作关系、技术方案与资料组织。
-- [决策记录](../specs/decisions.md)：已确定事项、待讨论选择及历史问题。
-- [工程初始化需求](../specs/modules/initialization/requirements.md)与[工程初始化设计](../specs/modules/initialization/design.md)：两种接入方式及升级、恢复的讨论稿。
-- [工作推进需求](../specs/modules/workflow/requirements.md)与[工作推进设计](../specs/modules/workflow/design.md)：总体资料编写、模块细化、开发交付、产物及执行恢复的历史需求与方案；当前轻量流程以入口规则为准。
-- [开发规范需求](../specs/modules/standards/requirements.md)与[开发规范设计](../specs/modules/standards/design.md)：AI 执行动作、产物质量、完成条件及规则读取与检查机制。
-- [验证与反馈需求](../specs/modules/verification/requirements.md)与[设计](../specs/modules/verification/design.md)：测试分类、长期用例与执行证据的历史讨论；旧验证目录、重模块和证据命令已删除，当前只保留[全局用例](../cases/index.md)事实与任务记录。
-- [全局用例说明](../cases/index.md)：模块/类型/场景结构、用例先行流程及与单次 `task.md` 的分工。
-- [原始需求草稿](../specs/archive/requirements-initial-2026-10-14.md)：历史归档，不作为当前要求。
+- [总体需求](../specs/requirements.md)
+- [总体设计](../specs/design.md)
+- [决策记录](../specs/decisions.md)
+- [初始化需求](../specs/modules/initialization/requirements.md) / [设计](../specs/modules/initialization/design.md)
+- [工作流需求](../specs/modules/workflow/requirements.md) / [设计](../specs/modules/workflow/design.md)
+- [验证需求](../specs/modules/verification/requirements.md) / [设计](../specs/modules/verification/design.md)
+- [规范需求](../specs/modules/standards/requirements.md) / [设计](../specs/modules/standards/design.md)
+- [全局用例说明](../cases/index.md)
+- [第一批功能补齐任务](../task/20261022-first-batch/task.md)
+- 历史实现记录：[实现进度](../work/20261016-implementation-progress/work.md)、[轻量流程](../work/20261022-lightweight-flow/work.md)、[flow 命名](../work/20261022-flow-naming/work.md)

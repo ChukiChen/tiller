@@ -8,7 +8,7 @@ import { applyChanges, hasPendingTransaction, readTextIfExists, withProjectLock 
 import { cli, failure, fixture, gitRepository, put, snapshot, success } from './helpers.mjs';
 
 const read = (root, relative) => readFileSync(join(root, relative), 'utf8');
-const unsupportedVersions = ['0.1.0', '0.2.0', '0.3.0', '0.4.0', '0.5.1', '99.0.0'];
+const unsupportedVersions = ['0.1.0', '0.2.0', '0.3.0', '0.5.1', '99.0.0'];
 async function current(t, workspace = false) {
   const root = fixture(t);
   if (workspace) {
@@ -89,11 +89,38 @@ for (const relative of ['AGENTS.md', '.tiller/rules/core.md']) test(`modified cu
   const before = snapshot(root);
   const plan = await planUpgrade(root);
   assert.equal(plan.ready, false);
-  assert.match(plan.conflicts.join('\n'), /接入文件内容已变化/u);
+  assert.match(plan.conflicts.join('\n'), /用户修改了受管文件/u);
+  assert.match(plan.conflicts.join('\n'), /首个差异/u);
   assert.equal(JSON.parse(read(root, '.tiller/project.json')).resourceVersion, RESOURCE_VERSION);
   assert.deepEqual(snapshot(root), before);
   await assert.rejects(applyUpgrade(root, plan.planId), /冲突/u);
   assert.deepEqual(snapshot(root), before);
+});
+
+test('compatible previous resources refresh unmodified managed files and metadata atomically', async t => {
+  const root = await current(t);
+  const metadata = JSON.parse(read(root, '.tiller/project.json'));
+  const relative = '.tiller/rules/core.md';
+  const previous = '# Previous core rules\n';
+  put(root, relative, previous);
+  metadata.resourceVersion = '0.4.0';
+  metadata.managedFiles[relative] = sha256(previous);
+  put(root, '.tiller/project.json', JSON.stringify(metadata, null, 2) + '\n');
+  const before = snapshot(root);
+  const plan = await planUpgrade(root);
+  assert.equal(plan.ready, true, plan.conflicts.join('\n'));
+  assert.equal(plan.sourceVersion, '0.4.0');
+  assert.equal(plan.targetVersion, '0.5.0');
+  assert.ok(plan.changes.some(change => change.path === relative));
+  assert.ok(plan.changes.some(change => change.path === '.tiller/project.json'));
+  assert.deepEqual(snapshot(root), before, 'preview must not write');
+  const applied = await applyUpgrade(root, plan.planId);
+  assert.equal(applied.ready, true);
+  assert.equal(read(root, relative), readFileSync(new URL('../resources/rules/core.md', import.meta.url), 'utf8'));
+  const upgraded = JSON.parse(read(root, '.tiller/project.json'));
+  assert.equal(upgraded.resourceVersion, RESOURCE_VERSION);
+  assert.equal(upgraded.managedFiles[relative], sha256(read(root, relative)));
+  assert.equal((await planUpgrade(root)).changes.length, 0);
 });
 
 test('stale plan binds section-external bytes and permissive clauses remain conflicts', async t => {

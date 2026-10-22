@@ -273,7 +273,7 @@ test('only current resource metadata is readable and historical bytes remain unt
   assert.equal(initialized.compatibility, 'read-write');
   const filename = path.join(root, '.tiller/project.json');
   const current = JSON.parse(await readFile(filename, 'utf8'));
-  for (const resourceVersion of ['0.1.0', '0.2.0', '0.2.1', '0.2.2', '0.3.0', '0.3.1', '0.3.2', '0.3.3', '0.3.4', '0.3.5', '0.3.6', '0.4.0', '99.0.0']) {
+  for (const resourceVersion of ['0.1.0', '0.2.0', '0.2.1', '0.2.2', '0.3.0', '0.3.1', '0.3.2', '0.3.3', '0.3.4', '0.3.5', '0.3.6', '99.0.0']) {
     const original = JSON.stringify({ ...current, resourceVersion });
     await writeFile(filename, original);
     assert.throws(() => parseMetadata(original), /版本不受支持/u);
@@ -286,6 +286,11 @@ test('only current resource metadata is readable and historical bytes remain unt
     assert.equal(await readTextIfExists(root, '.tiller/local/lock.json'), null);
     assert.equal(await readTextIfExists(root, '.tiller/local/transaction.json'), null);
   }
+  const previous = JSON.stringify({ ...current, resourceVersion: '0.4.0' });
+  await writeFile(filename, previous);
+  assert.equal(parseMetadata(previous).resourceVersion, '0.4.0');
+  assert.equal((await inspectProject(root)).ready, true);
+  assert.equal((await readProjectMetadata(root)).resourceVersion, '0.4.0');
 });
 
 test('shared path checks honor ancestor ignores and reject bare repositories', async t => {

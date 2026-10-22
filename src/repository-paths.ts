@@ -1,10 +1,11 @@
 import type { ProjectMetadata } from './types.js';
 
 type RepositoryMetadata = Pick<ProjectMetadata, 'mode' | 'repositories' | 'repositoryPaths' | 'resourceVersion'>;
+const SUPPORTED_RESOURCE_VERSIONS = ['0.4.0', '0.5.0'] as const;
 
 /** Pure validation: usable while resolving delivery locations without loading the project again. */
 export function validateRepositoryMappings(metadata: RepositoryMetadata): void {
-  if (metadata.resourceVersion !== '0.5.0') {
+  if (!SUPPORTED_RESOURCE_VERSIONS.includes(metadata.resourceVersion as typeof SUPPORTED_RESOURCE_VERSIONS[number])) {
     throw new Error('工程资源版本不受支持，不能解析仓库映射。');
   }
   if (!Array.isArray(metadata.repositories)) throw new Error('工程仓库清单格式无效。');

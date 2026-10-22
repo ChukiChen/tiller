@@ -87,6 +87,10 @@ export function matchesManagedDigest(relative: string, text: string, digest: str
   return sha256(normalized) === digest || sha256(normalized.replace(/\n/gu, '\r\n')) === digest;
 }
 
+export function managedDigest(relative: string, text: string): string {
+  return sha256(normalizedManagedContent(relative, trackedContent(relative, text)));
+}
+
 function appendSection(before: string | null, body: string, start: string, end: string): string {
   const block = `${start}\n${body.trimEnd()}\n${end}`;
   if (before !== null) {
@@ -207,6 +211,7 @@ export function buildIndexSection(mode: ProjectMode): string {
     '## 资料分类', '',
     '- `specs/`：总体与模块需求、设计及长期决定。',
     '- `cases/`：产品级回归用例事实，保存编号、需求/模块引用、测试引用和源码路径。',
+    '- `plans/`：大功能的规划与任务拆分，按需建立；单次任务仍以 `task.md` 为准。',
     '- `rules/`：通用规则及已有项目约定。',
     '- `context/`：项目背景、现状与资料索引。',
     '- `task/`：当前任务记录，按任务标识读取结构化需求、设计、确认与验证。',
@@ -217,10 +222,52 @@ export function buildIndexSection(mode: ProjectMode): string {
   ].join('\n');
 }
 
+const SKELETON_FILES: { path: string; content: string }[] = [
+  {
+    path: '.tiller/specs/requirements.md',
+    content: '# 项目需求\n\n写面向谁、要解决什么问题、范围、关键行为与编号验收条件。单次任务需求写进 `task.md`；跨任务需求维护在这里。\n',
+  },
+  {
+    path: '.tiller/specs/design.md',
+    content: '# 项目设计\n\n写当前有效的架构、模块边界、关键接口、数据流、失败处理与验证入口。简单实现细节留在代码和任务记录中。\n',
+  },
+  {
+    path: '.tiller/specs/decisions.md',
+    content: '# 长期决定\n\n只记录仍然有效、会约束后续实现的取舍。每条写背景、决定、代价和日期；被推翻的决定标注替代关系。\n',
+  },
+  {
+    path: '.tiller/specs/modules/README.md',
+    content: '# 模块规格\n\n每个模块建立同名目录，按需放 `requirements.md` 与 `design.md`。模块名使用小写字母、数字和连字符；全局用例目录必须使用同一名称。\n',
+  },
+  {
+    path: '.tiller/context/project.md',
+    content: '# 项目背景\n\n记录项目目标、用户、当前状态、目录职责、构建/测试入口、主要依赖和已知限制。架构或入口变化时同步更新。\n',
+  },
+  {
+    path: '.tiller/cases/index.md',
+    content: '# 全局用例\n\n这里是跨任务回归事实源；单次任务记录留在 `.tiller/task/<id>/task.md`。\n\n```text\ncases/modules/<模块>/{behavior,interface,performance,security}.json\ncases/scenarios/<场景>.json\n```\n\n模块名须与 `.tiller/specs/modules/` 一致。用 `tiller case add <task-id> --criterion AC-1 ...` 新增用例；每条用例保存稳定编号、需求/模块引用、来源 AC、具名 `test_ref` 和源码路径。场景额外声明经过的 `modules`。需求确认后先把 AC 转为用例，再写测试、实现和验证。\n',
+  },
+  { path: '.tiller/cases/modules/.gitkeep', content: '' },
+  { path: '.tiller/cases/scenarios/.gitkeep', content: '' },
+  {
+    path: '.tiller/plans/README.md',
+    content: '# 实施规划\n\n大功能用 `tiller plan start <id> --title ... --goal ... --spec ... --item ...` 建一份规划，确认后用 `start --plan <id> --item <编号>` 挂接任务。依赖未验收时默认阻塞开工。单次小改动不必建规划。\n',
+  },
+];
+
+async function skeletonChanges(root: string): Promise<FileChange[]> {
+  const changes: FileChange[] = [];
+  for (const item of SKELETON_FILES) {
+    const before = await readTextIfExists(root, item.path);
+    if (before === null) changes.push({ path: item.path, before: null, after: item.content });
+  }
+  return changes;
+}
+
 async function buildIndex(root: string, mode: ProjectMode, repositories: string[], repositoryPaths: Record<string, string>): Promise<string> {
   const lines = [buildIndexSection(mode), '', '## 已有资料', ''];
   let count = 0;
-  for (const category of ['specs', 'cases', 'context', 'task', 'work', 'rules']) {
+  for (const category of ['specs', 'cases', 'plans', 'context', 'task', 'work', 'rules']) {
     const base = `.tiller/${category}`;
     async function visit(relative: string): Promise<void> {
       const absolute = await assertSafePath(root, relative);
@@ -335,10 +382,15 @@ export async function initialize(options: InitializeOptions): Promise<ProjectIns
     if (existing !== null) {
       const inspection = await inspectProject(root);
       if (!inspection.ready) throw new Error(inspection.issues.join('\n'));
-      return { ...inspection, changed: false };
+      const skeleton = await skeletonChanges(root);
+      if (!skeleton.length) return { ...inspection, changed: false };
+      await applyChanges(root, skeleton);
+      const completed = await inspectProject(root);
+      if (!completed.ready) throw new Error(`补齐项目骨架后检查未通过：${completed.issues.join('\n')}`);
+      return { ...completed, changed: true };
     }
     if (await hasPendingTransaction(root)) throw new Error('存在未完成事务，请先执行 tiller recover。');
-    const changes: FileChange[] = [];
+    const changes: FileChange[] = await skeletonChanges(root);
     const managedFiles: Record<string, string> = {};
     for (const resource of SHARED_RESOURCES) {
       const content = await readFile(new URL(`../resources/${resource}`, import.meta.url), 'utf8');
@@ -347,24 +399,24 @@ export async function initialize(options: InitializeOptions): Promise<ProjectIns
       const before = await readTextIfExists(root, relative);
       if (before !== null && !equivalentManagedContent(relative, before, content)) throw new Error(`已有文件与分发资源冲突，未覆盖：${relative}`);
       changes.push({ path: relative, before, after: before ?? content });
-      managedFiles[relative] = sha256(normalizedManagedContent(relative, content));
+      managedFiles[relative] = managedDigest(relative, content);
     }
     const entry = await readFile(new URL('../resources/entry.md', import.meta.url), 'utf8');
     if (!entry.trim()) throw new Error('分发入口资源为空。');
     const agentsBefore = await readTextIfExists(root, 'AGENTS.md');
     const agentsAfter = appendSection(agentsBefore, entry, ENTRY_START, ENTRY_END);
     changes.push({ path: 'AGENTS.md', before: agentsBefore, after: agentsAfter });
-    managedFiles['AGENTS.md'] = sha256(normalizedManagedContent('AGENTS.md', trackedContent('AGENTS.md', agentsAfter)));
+    managedFiles['AGENTS.md'] = managedDigest('AGENTS.md', agentsAfter);
     const ignoreBefore = await readTextIfExists(root, '.gitignore');
     const ignoreBody = ['/.tiller/local/', ...repositoryIgnorePatterns({ repositories, repositoryPaths })].join('\n');
     const ignoreAfter = appendSection(ignoreBefore, ignoreBody, IGNORE_START, IGNORE_END);
     changes.push({ path: '.gitignore', before: ignoreBefore, after: ignoreAfter });
-    managedFiles['.gitignore'] = sha256(normalizedManagedContent('.gitignore', trackedContent('.gitignore', ignoreAfter)));
+    managedFiles['.gitignore'] = managedDigest('.gitignore', ignoreAfter);
     const indexBefore = await readTextIfExists(root, '.tiller/index.md');
     const indexAfter = await buildIndex(root, mode, repositories, repositoryPaths);
     if (indexBefore !== null && indexBefore !== indexAfter) throw new Error('已有 .tiller/index.md 需要协调接入，未覆盖原有索引。');
     changes.push({ path: '.tiller/index.md', before: indexBefore, after: indexAfter });
-    managedFiles['.tiller/index.md'] = sha256(normalizedManagedContent('.tiller/index.md', trackedContent('.tiller/index.md', indexAfter)));
+    managedFiles['.tiller/index.md'] = managedDigest('.tiller/index.md', indexAfter);
     const metadata: ProjectMetadata = {
       schemaVersion: SCHEMA_VERSION, resourceVersion: RESOURCE_VERSION, mode, repositories, repositoryPaths,
       managedFiles, createdAt: new Date().toISOString(),

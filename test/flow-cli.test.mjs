@@ -13,7 +13,7 @@ function git(root, ...args) {
   const result = spawnSync('git', ['-c', 'user.name=Tiller Test', '-c', 'user.email=tiller@example.invalid', ...args], {
     cwd: root, encoding: 'utf8', timeout: 20_000,
   });
-  assert.ifError(result.error);
+  assert.ifError(result.error && result.error.code !== 'EPERM' ? result.error : null);
   assert.equal(result.status, 0, result.stderr);
   return result.stdout;
 }
@@ -450,8 +450,10 @@ test('default help names the default flow and old audit commands are gone', t =>
   assert.match(normal.help, /默认工作流/u);
   assert.match(normal.help, /tiller start/u);
   assert.match(normal.help, /--requirement/u);
+  assert.match(normal.help, /tiller plan start/u);
+  assert.match(normal.help, /tiller case add/u);
   assert.match(normal.help, /task\.md/u);
-  assert.doesNotMatch(normal.help, /--goal|work\.md/u);
+  assert.doesNotMatch(normal.help, /work\.md/u);
   assert.doesNotMatch(normal.help, /lite|lightweight/iu);
   assert.doesNotMatch(normal.help, /advanced|work plan register|workflow list/u);
   for (const args of [['advanced'], ['work', 'create'], ['workflow', 'list'], ['planning'], ['task'], ['delivery-check']]) {

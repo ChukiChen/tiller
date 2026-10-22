@@ -1,6 +1,8 @@
 import { lstat, readFile, readdir } from 'node:fs/promises';
 import path from 'node:path';
-import { validateRelativePath } from './files.js';
+import { applyChanges, readTextIfExists, validateRelativePath, withProjectLock } from './files.js';
+import { readProjectMetadata } from './core.js';
+import { validateTaskId } from './task-id.js';
 
 export const CASE_ROOT = '.tiller/cases';
 export const CASE_KINDS = ['behavior', 'interface', 'performance', 'security'] as const;
@@ -14,8 +16,22 @@ export interface GlobalCase {
   modules: string[];
   test_ref: string;
   source: string[];
+  criteria: string[];
   kind: CaseScope;
   file: string;
+}
+
+export interface AddCaseInput {
+  task: string;
+  title: string;
+  test: string;
+  criteria: string[];
+  requirements: string[];
+  source: string[];
+  module?: string;
+  modules?: string[];
+  kind?: string;
+  scenario?: string;
 }
 
 export interface CaseModuleSummary {
@@ -109,6 +125,13 @@ function references(value: unknown, modules = false): string[] | null {
   return [...new Set(value.map(item => item.trim()))];
 }
 
+function caseCriteria(value: unknown): string[] | null {
+  if (value === undefined) return [];
+  if (!Array.isArray(value) || value.some(item => typeof item !== 'string'
+    || !/^(?:[0-9]{8}-)?[a-z][a-z0-9]*(?:-[a-z0-9]+)*#AC-\d+$/u.test(item))) return null;
+  return [...new Set(value.map(item => item.trim()))];
+}
+
 async function directoryNames(root: string, relative: string): Promise<string[] | null> {
   try {
     const entries = await readdir(path.join(root, relative), { withFileTypes: true });
@@ -143,6 +166,7 @@ export async function readCaseLibrary(root: string): Promise<CaseLibrary> {
   const ids = new Map<string, string>();
   const fileExists = new Map<string, boolean>();
   const testContents = new Map<string, string | null>();
+  let historicalCases = 0;
 
   let rootEntries;
   try { rootEntries = await readdir(path.join(root, CASE_ROOT), { withFileTypes: true }); }
@@ -166,6 +190,7 @@ export async function readCaseLibrary(root: string): Promise<CaseLibrary> {
     const requirements = references(item.requirements);
     const modules = references(item.modules, true);
     const source = references(item.source);
+    const criteria = caseCriteria(item.criteria);
     const testRef = text(item.test_ref, 1000);
     if (!id || !/^[A-Za-z0-9][A-Za-z0-9._-]*$/u.test(id)) { issues.push(`${label} 缺少有效 id。`); return; }
     const subject = `全局${kind === 'scenario' ? '场景' : '用例'} ${relative} ${id}`;
@@ -173,6 +198,7 @@ export async function readCaseLibrary(root: string): Promise<CaseLibrary> {
     if (!requirements) issues.push(`${subject} 的 requirements 必须是非空路径数组。`);
     if (!modules) issues.push(`${subject} 的 modules 必须是非空模块名数组。`);
     if (!source) issues.push(`${subject} 的 source 必须是非空路径数组。`);
+    if (criteria === null) issues.push(`${subject} 的 criteria 必须是 <任务标识>#AC-<编号> 数组。`);
     const test = testRef ? fallbackTestReference(testRef) : null;
     if (!testRef || !test) issues.push(`${subject} 缺少有效 test_ref。`);
     else if (!test.name) issues.push(`${subject} 的 test_ref 必须用 :: 指定测试名。`);
@@ -204,7 +230,10 @@ export async function readCaseLibrary(root: string): Promise<CaseLibrary> {
         issues.push(`${subject} 的 test_ref 用例不存在：${test.path}::${test.name}`);
       }
     }
-    if (title && requirements && modules && source && test?.name) cases.push({ id, title, requirements, modules, test_ref: testRef!, source, kind, file: relative });
+    if (title && requirements && modules && source && criteria && test?.name) {
+      if (!criteria.length) historicalCases++;
+      cases.push({ id, title, requirements, modules, test_ref: testRef!, source, criteria, kind, file: relative });
+    }
   }
 
   const moduleNames = await directoryNames(root, `${CASE_ROOT}/modules`);
@@ -270,5 +299,148 @@ export async function readCaseLibrary(root: string): Promise<CaseLibrary> {
   const scenarioModules = new Set(scenarios.flatMap(item => item.modules));
   const uncovered = specModules.filter(module => !scenarioModules.has(module));
   for (const module of uncovered) warnings.push(`模块 ${module} 未被任何场景覆盖；请按需补充端到端场景。`);
+  if (historicalCases) warnings.push(`${historicalCases} 条历史用例未绑定来源 AC；新用例请用 case add 写入 criteria，check 对已有 criteria 的用例执行反向校验。`);
   return { cases, issues: [...new Set(issues)], warnings: [...new Set(warnings.filter(Boolean))], modules, scenarios, uncovered };
+}
+
+function requiredText(value: unknown, label: string, maximum: number): string {
+  if (typeof value !== 'string' || !value.trim() || value.length > maximum || /[\x00-\x1f]/u.test(value)) {
+    throw Object.assign(new Error(`${label}必须是非空单行文本，且不超过 ${maximum} 字符。`), { code: 'INVALID_CASE_INPUT' });
+  }
+  return value.trim();
+}
+
+function sectionBody(content: string, title: string): string {
+  const match = new RegExp(`^## ${title}\\s*$`, 'mu').exec(content);
+  if (!match) return '';
+  const rest = content.slice(match.index + match[0].length);
+  const next = /^##\s+/mu.exec(rest);
+  return rest.slice(0, next?.index ?? rest.length);
+}
+
+async function taskCriteria(root: string, taskId: string): Promise<Set<string>> {
+  validateTaskId(taskId);
+  const content = await readTextIfExists(root, `.tiller/task/${taskId}/task.md`);
+  if (content === null || !content.includes(`<!-- tiller-task:v1 {"version":1,"id":"${taskId}"`)) {
+    throw Object.assign(new Error(`任务 ${taskId} 不存在或不是当前格式；先执行 start。`), { code: 'TASK_NOT_FOUND' });
+  }
+  const ids = new Set<string>();
+  for (const match of sectionBody(content, '验收条件').matchAll(/^-\s+(AC-\d+):/gmu)) ids.add(match[1]!);
+  if (!ids.size) throw Object.assign(new Error(`任务 ${taskId} 没有验收条件。`), { code: 'MISSING_REQUIREMENTS' });
+  return ids;
+}
+
+async function allocateCaseId(root: string): Promise<string> {
+  let maximum = 0;
+  async function visit(relative: string): Promise<void> {
+    let entries;
+    try { entries = await readdir(path.join(root, relative), { withFileTypes: true }); }
+    catch (error) { if ((error as NodeJS.ErrnoException).code === 'ENOENT') return; throw error; }
+    for (const entry of entries) {
+      const child = `${relative}/${entry.name}`;
+      if (entry.isDirectory()) { await visit(child); continue; }
+      if (!entry.isFile() || !entry.name.endsWith('.json')) continue;
+      let value: unknown;
+      try { value = JSON.parse(await readFile(path.join(root, child), 'utf8')); } catch { continue; }
+      const entriesValue = value && typeof value === 'object' && !Array.isArray(value)
+        ? [...((value as Record<string, unknown>).cases as unknown[] ?? []), ...((value as Record<string, unknown>).scenarios as unknown[] ?? [])]
+        : [];
+      for (const item of entriesValue) {
+        if (!item || typeof item !== 'object' || Array.isArray(item)) continue;
+        const id = (item as Record<string, unknown>).id;
+        const match = typeof id === 'string' ? /^CASE-(\d+)$/u.exec(id) : null;
+        if (match) maximum = Math.max(maximum, Number(match[1]));
+      }
+    }
+  }
+  await visit(CASE_ROOT);
+  return `CASE-${String(maximum + 1).padStart(3, '0')}`;
+}
+
+export async function addGlobalCase(rootInput: string, input: AddCaseInput) {
+  const root = path.resolve(rootInput);
+  validateTaskId(input.task);
+  const title = requiredText(input.title, '用例标题', 200);
+  const test = fallbackTestReference(requiredText(input.test, '测试引用', 1000));
+  if (!test?.name) throw Object.assign(new Error('测试引用必须是 文件::测试名（或 文件#测试名）。'), { code: 'INVALID_TEST_REFERENCE' });
+  const testRef = `${test.path}::${test.name}`;
+  const available = await taskCriteria(root, input.task);
+  const criteria = [...new Set(input.criteria.map(raw => {
+    const value = raw.trim();
+    const direct = /^((?:[0-9]{8}-)?[a-z][a-z0-9]*(?:-[a-z0-9]+)*)#(AC-\d+)$/u.exec(value);
+    if (direct) {
+      if (direct[1] !== input.task) throw Object.assign(new Error(`来源 AC 必须属于任务 ${input.task}：${value}`), { code: 'INVALID_CASE_INPUT' });
+      if (!available.has(direct[2]!)) throw Object.assign(new Error(`任务 ${input.task} 没有验收条件：${direct[2]}`), { code: 'UNKNOWN_CRITERION' });
+      return value;
+    }
+    if (!/^AC-\d+$/u.test(value)) throw Object.assign(new Error(`来源 AC 格式为 AC-1 或 ${input.task}#AC-1：${value}`), { code: 'INVALID_CASE_INPUT' });
+    if (!available.has(value)) throw Object.assign(new Error(`任务 ${input.task} 没有验收条件：${value}`), { code: 'UNKNOWN_CRITERION' });
+    return `${input.task}#${value}`;
+  }))];
+  if (!criteria.length) throw Object.assign(new Error('case add 至少需要一个 --criterion，记录来源 AC。'), { code: 'INVALID_CASE_INPUT' });
+  const moduleNames = await directoryNames(root, '.tiller/specs/modules') ?? [];
+  const scenario = input.scenario === undefined ? undefined : requiredText(input.scenario, '场景名', 64);
+  if (scenario && !/^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/u.test(scenario)) {
+    throw Object.assign(new Error('场景名须为小写字母、数字和连字符。'), { code: 'INVALID_CASE_INPUT' });
+  }
+  let modules: string[];
+  let kind: CaseScope;
+  if (scenario) {
+    modules = [...new Set([...(input.modules ?? []), ...(input.module ? [input.module] : [])].map(value => value.trim()))];
+    if (!modules.length) throw Object.assign(new Error('场景用例至少需要一个 --module，声明经过的模块。'), { code: 'INVALID_CASE_INPUT' });
+    kind = 'scenario';
+  } else {
+    const module = requiredText(input.module, '模块名', 64);
+    if (!/^[a-z][a-z0-9_-]*$/u.test(module)) throw Object.assign(new Error('模块名须为小写字母、数字、下划线或连字符。'), { code: 'INVALID_CASE_INPUT' });
+    if (!CASE_KINDS.includes(input.kind as CaseKind)) {
+      throw Object.assign(new Error(`用例类型必须是：${CASE_KINDS.join(', ')}。`), { code: 'INVALID_CASE_KIND' });
+    }
+    modules = [module]; kind = input.kind as CaseKind;
+  }
+  for (const module of modules) {
+    if (!moduleNames.includes(module)) {
+      throw Object.assign(new Error(`模块 ${module} 不存在；先建立 .tiller/specs/modules/${module}/requirements.md 与 design.md，再登记用例。`), {
+        code: 'CASE_MODULE_NOT_FOUND',
+      });
+    }
+  }
+  const requirements = references(input.requirements.length ? input.requirements : [`.tiller/specs/modules/${modules[0]}/requirements.md`]);
+  if (!requirements) throw Object.assign(new Error('需求引用必须是存在的工程路径数组。'), { code: 'INVALID_CASE_INPUT' });
+  for (const reference of requirements) {
+    const relative = referencePath(reference);
+    if (!relative) throw Object.assign(new Error(`需求引用无效：${reference}`), { code: 'INVALID_CASE_INPUT' });
+    try { if (!(await lstat(path.join(root, relative))).isFile()) throw new Error(); }
+    catch { throw Object.assign(new Error(`需求引用文件不存在：${relative}`), { code: 'CASE_REFERENCE_NOT_FOUND' }); }
+  }
+  const sources = references(input.source);
+  if (!sources) throw Object.assign(new Error('至少提供一个 --source，指向实现该用例的源码路径。'), { code: 'INVALID_CASE_INPUT' });
+  return withProjectLock(root, async () => {
+    await readProjectMetadata(root);
+    const id = await allocateCaseId(root);
+    const relative = scenario ? `${CASE_ROOT}/scenarios/${scenario}.json` : `${CASE_ROOT}/modules/${modules[0]}/${kind}.json`;
+    const before = await readTextIfExists(root, relative);
+    let value: Record<string, unknown>;
+    if (before === null) {
+      value = scenario
+        ? { schemaVersion: 1, scenarios: [] }
+        : { schemaVersion: 1, module: modules[0], kind, cases: [] };
+    } else {
+      try { value = JSON.parse(before) as Record<string, unknown>; }
+      catch { throw Object.assign(new Error(`已有用例文件不是有效 JSON：${relative}`), { code: 'INVALID_CASE_LIBRARY' }); }
+    }
+    const entry = { id, title, requirements, modules, test_ref: testRef, source: sources, criteria };
+    const field = scenario ? 'scenarios' : 'cases';
+    const current = value[field];
+    if (!Array.isArray(current)) throw Object.assign(new Error(`已有用例文件缺少 ${field} 数组：${relative}`), { code: 'INVALID_CASE_LIBRARY' });
+    const after = `${JSON.stringify({ ...value, [field]: [...current, entry] }, null, 2)}\n`;
+    await applyChanges(root, [{ path: relative, before, after }]);
+    let testExists = false;
+    try { testExists = (await lstat(path.join(root, test.path))).isFile(); } catch { testExists = false; }
+    return {
+      id, title, path: relative, kind, modules, criteria, test_ref: testRef,
+      next: testExists ? `运行测试并记录：tiller verify ${input.task} --criterion ${criteria[0]!.split('#')[1]} --test "${testRef}" --command "<命令>" --run "<同一命令>"`
+        : `先编写测试 ${test.path}::${test.name}，再运行 verify。`,
+      ...(testExists ? {} : { skeleton: `import test from 'node:test';\n\ntest('${test.name}', () => {\n  // TODO: 实现 ${criteria.join(', ')} 的断言\n});\n` }),
+    };
+  });
 }
