@@ -206,6 +206,7 @@ export function buildIndexSection(mode: ProjectMode): string {
     '本入口只表示文件接入；宿主实际读取和规则执行尚未验证。', '',
     '## 资料分类', '',
     '- `specs/`：总体与模块需求、设计及长期决定。',
+    '- `cases/`：产品级回归用例事实，保存编号、需求/模块引用、测试引用和源码路径。',
     '- `rules/`：通用规则及已有项目约定。',
     '- `context/`：项目背景、现状与资料索引。',
     '- `work/`：按实际目录查找工作记录，读取目标、进展、阻碍、证据及下一步。',
@@ -218,7 +219,7 @@ export function buildIndexSection(mode: ProjectMode): string {
 async function buildIndex(root: string, mode: ProjectMode, repositories: string[], repositoryPaths: Record<string, string>): Promise<string> {
   const lines = [buildIndexSection(mode), '', '## 已有资料', ''];
   let count = 0;
-  for (const category of ['specs', 'context', 'work', 'rules']) {
+  for (const category of ['specs', 'cases', 'context', 'work', 'rules']) {
     const base = `.tiller/${category}`;
     async function visit(relative: string): Promise<void> {
       const absolute = await assertSafePath(root, relative);

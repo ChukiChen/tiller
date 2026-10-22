@@ -1,0 +1,101 @@
+{
+  "schemaVersion": 1,
+  "cases": [
+    {
+      "id": "CASE-001",
+      "title": "小改动只生成 work.md，并在当前验证后记录交付验收",
+      "requirements": [".tiller/specs/modules/workflow/requirements.md#flow-03-选择必要工作与验证安排", ".tiller/specs/modules/workflow/requirements.md#flow-24-在各环节形成测试依据并保存执行事实"],
+      "modules": ["src/flow.ts"],
+      "test_ref": "test/flow-cli.test.mjs::small flow produces one work file and records verified acceptance without raw logs",
+      "source": ["src/flow.ts"]
+    },
+    {
+      "id": "CASE-002",
+      "title": "标准开发任务在需求确认后仍需设计确认",
+      "requirements": [".tiller/specs/modules/workflow/requirements.md#flow-03-选择必要工作与验证安排", ".tiller/specs/modules/workflow/requirements.md#flow-15-在关键节点取得人工确认"],
+      "modules": ["src/flow.ts"],
+      "test_ref": "test/flow-cli.test.mjs::standard flow blocks before design confirmation and accepts design after requirements",
+      "source": ["src/flow.ts"]
+    },
+    {
+      "id": "CASE-003",
+      "title": "需求和范围变化会使命中旧确认失效",
+      "requirements": [".tiller/specs/modules/workflow/requirements.md#flow-02-明确要求与交付边界", ".tiller/specs/modules/workflow/requirements.md#flow-15-在关键节点取得人工确认"],
+      "modules": ["src/flow.ts"],
+      "test_ref": "test/flow-cli.test.mjs::requirements confirmation binds the declared scope",
+      "source": ["src/flow.ts"]
+    },
+    {
+      "id": "CASE-004",
+      "title": "范围检查分别报告越界提交和未提交改动",
+      "requirements": [".tiller/specs/modules/workflow/requirements.md#flow-04-在授权范围内持续推进"],
+      "modules": ["src/flow.ts"],
+      "test_ref": "test/flow-cli.test.mjs::scope checks report committed and uncommitted out-of-scope changes",
+      "source": ["src/flow.ts"]
+    },
+    {
+      "id": "CASE-005",
+      "title": "开工前未变化的外部改动不会冒充本次越界",
+      "requirements": [".tiller/specs/modules/workflow/requirements.md#flow-04-在授权范围内持续推进"],
+      "modules": ["src/flow.ts"],
+      "test_ref": "test/flow-cli.test.mjs::pre-existing changes are excluded from scope findings only while unchanged",
+      "source": ["src/flow.ts"]
+    },
+    {
+      "id": "CASE-006",
+      "title": "范围内变化会使既有验证过期",
+      "requirements": [".tiller/specs/modules/workflow/requirements.md#flow-06-处理要求和方案变化", ".tiller/specs/modules/workflow/requirements.md#flow-09-依据验证结果判断交付"],
+      "modules": ["src/flow.ts"],
+      "test_ref": "test/flow-cli.test.mjs::verification becomes stale after an in-scope change",
+      "source": ["src/flow.ts"]
+    },
+    {
+      "id": "CASE-007",
+      "title": "删除断言或新增跳过测试会阻塞交付自检",
+      "requirements": [".tiller/specs/modules/workflow/requirements.md#flow-24-在各环节形成测试依据并保存执行事实"],
+      "modules": ["src/flow.ts"],
+      "test_ref": "test/flow-cli.test.mjs::test weakening and skipped tests block the delivery self-check",
+      "source": ["src/flow.ts"]
+    },
+    {
+      "id": "CASE-008",
+      "title": "功能下线删除测试会提示，但保留测试的断言损失仍会阻塞",
+      "requirements": [".tiller/specs/modules/workflow/requirements.md#flow-05-处理失败与阻碍", ".tiller/specs/modules/workflow/requirements.md#flow-24-在各环节形成测试依据并保存执行事实"],
+      "modules": ["src/flow.ts"],
+      "test_ref": "test/flow-cli.test.mjs::removing a test with its retired feature is reported without masking retained assertion loss",
+      "source": ["src/flow.ts"]
+    },
+    {
+      "id": "CASE-009",
+      "title": "记录中的密钥和本机绝对路径会被拒绝",
+      "requirements": [".tiller/rules/core.md#工作记录约定"],
+      "modules": ["src/flow.ts"],
+      "test_ref": "test/flow-cli.test.mjs::unsafe paths and secrets are rejected from records before acceptance",
+      "source": ["src/flow.ts"]
+    },
+    {
+      "id": "CASE-010",
+      "title": "未通过技术自检的任务不能记录交付验收",
+      "requirements": [".tiller/specs/modules/workflow/requirements.md#flow-09-依据验证结果判断交付", ".tiller/specs/modules/workflow/requirements.md#flow-15-在关键节点取得人工确认"],
+      "modules": ["src/flow.ts"],
+      "test_ref": "test/flow-cli.test.mjs::accept refuses an unverified work and leaves no acceptance record",
+      "source": ["src/flow.ts"]
+    },
+    {
+      "id": "CASE-011",
+      "title": "默认帮助只展示轻量工作流，旧审计命令不可用",
+      "requirements": [".tiller/rules/core.md#按目标选择流程"],
+      "modules": ["src/cli.ts"],
+      "test_ref": "test/flow-cli.test.mjs::default help names the default flow and old audit commands are gone",
+      "source": ["src/cli.ts"]
+    },
+    {
+      "id": "CASE-012",
+      "title": "全局用例拒绝坏引用，并提示未命中的本次验证",
+      "requirements": [".tiller/specs/modules/workflow/requirements.md#flow-24-在各环节形成测试依据并保存执行事实"],
+      "modules": ["src/flow.ts"],
+      "test_ref": "test/flow-cli.test.mjs::global cases accept resolvable refs and report unmapped verification tests",
+      "source": ["src/flow.ts"]
+    }
+  ]
+}

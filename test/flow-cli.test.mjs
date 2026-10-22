@@ -37,6 +37,15 @@ function editWork(root, id, change) {
   put(root, relative, after);
 }
 
+function addCaseLibrary(root, files) {
+  put(root, '.tiller/specs/cases.md', '# Regression cases\n\nProduct-level requirements.\n');
+  for (const [name, value] of Object.entries(files)) {
+    put(root, `.tiller/cases/${name}`, `${JSON.stringify(value, null, 2)}\n`);
+  }
+  git(root, 'add', '.tiller/specs/cases.md', '.tiller/cases');
+  git(root, 'commit', '--quiet', '-m', 'global regression cases');
+}
+
 test('small flow produces one work file and records verified acceptance without raw logs', async t => {
   const root = await project(t);
   const id = '20261022-small-flow';
@@ -217,6 +226,71 @@ test('accept refuses an unverified work and leaves no acceptance record', async 
   const rejected = failure(cli(root, 'accept', id, '--quote', '验收通过'));
   assert.equal(rejected.error.code, 'NOT_READY');
   assert.doesNotMatch(read(root, work(root, id)), /验收通过/u);
+});
+
+test('global cases accept resolvable refs and report unmapped verification tests', async t => {
+  const root = await project(t);
+  put(root, 'test/other.test.mjs', "import test from 'node:test';\ntest('other', () => {});\n");
+  git(root, 'add', 'test/other.test.mjs');
+  addCaseLibrary(root, {
+    'flow.json': {
+      schemaVersion: 1,
+      cases: [{
+        id: 'CASE-OTHER', title: 'Other behavior',
+        requirements: ['.tiller/specs/cases.md#regression-cases'],
+        modules: ['src/value.txt'],
+        test_ref: 'test/other.test.mjs::other',
+        source: ['src/value.txt'],
+      }],
+    },
+  });
+  const id = '20261022-global-cases-mapped';
+  success(cli(root, 'start', id, '--title', 'Global case mapping', '--goal', 'Check regression facts.',
+    '--criterion', 'AC-1=The baseline test remains relevant', '--size', 'small', '--target', 'src', '--target', 'test'));
+  success(cli(root, 'confirm', id, 'requirements', '--quote', '确认'));
+  put(root, 'src/value.txt', 'mapped\n');
+  success(cli(root, 'verify', id, '--criterion', 'AC-1', '--test', 'test/baseline.test.mjs::baseline',
+    '--command', 'node --test test/baseline.test.mjs', '--result', 'passed'));
+  git(root, 'add', 'src/value.txt');
+  git(root, 'commit', '--quiet', '-m', 'mapped change');
+  const checked = success(cli(root, 'check', id));
+  assert.deepEqual(checked.cases, { count: 1, matched: 0 });
+  assert.ok(checked.warnings.some(item => item.includes('未落在全局用例 test_ref')));
+});
+
+test('global cases block broken references and duplicate ids', async t => {
+  const root = await project(t);
+  addCaseLibrary(root, {
+    'a.json': {
+      schemaVersion: 1,
+      cases: [{
+        id: 'CASE-DUP', title: 'Broken case',
+        requirements: ['missing.md'], modules: ['src/value.txt'],
+        test_ref: 'test/baseline.test.mjs::missing', source: ['src/value.txt'],
+      }],
+    },
+    'b.json': {
+      schemaVersion: 1,
+      cases: [{
+        id: 'CASE-DUP', title: 'Duplicate case',
+        requirements: ['.tiller/specs/cases.md'], modules: ['src/value.txt'],
+        test_ref: 'test/baseline.test.mjs::baseline', source: ['src/value.txt'],
+      }],
+    },
+  });
+  const id = '20261022-global-cases-broken';
+  success(cli(root, 'start', id, '--title', 'Broken global cases', '--goal', 'Reject stale facts.',
+    '--criterion', 'AC-1=The test exists', '--size', 'small', '--target', 'src', '--target', 'test'));
+  success(cli(root, 'confirm', id, 'requirements', '--quote', '确认'));
+  put(root, 'src/value.txt', 'broken cases\n');
+  success(cli(root, 'verify', id, '--criterion', 'AC-1', '--test', 'test/baseline.test.mjs::baseline',
+    '--command', 'node --test test/baseline.test.mjs', '--result', 'passed'));
+  git(root, 'add', 'src/value.txt');
+  git(root, 'commit', '--quiet', '-m', 'checked change');
+  const checked = failure(cli(root, 'check', id));
+  assert.ok(checked.issues.some(item => item.includes('id 重复')));
+  assert.ok(checked.issues.some(item => item.includes('文件不存在：missing.md')));
+  assert.ok(checked.issues.some(item => item.includes('test_ref 用例不存在')));
 });
 
 test('default help names the default flow and old audit commands are gone', t => {

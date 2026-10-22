@@ -45,6 +45,11 @@ export interface FlowVerifyInput {
   criteria: string[]; test: string; command: string; result?: string; run?: string;
 }
 
+interface GlobalCase {
+  id: string; title: string; requirements: string[]; modules: string[]; test_ref: string; source: string[];
+}
+interface CaseLibrary { cases: GlobalCase[]; issues: string[]; warnings: string[] }
+
 function fail(code: string, message: string): never {
   throw Object.assign(new Error(message), { code });
 }
@@ -408,6 +413,122 @@ async function testExists(root: string, value: string): Promise<boolean> {
   catch { return false; }
 }
 
+function referencePath(value: string): string | null {
+  const relative = value.trim().split('::')[0]!.split('#')[0]!;
+  if (!relative || path.isAbsolute(relative) || relative.includes('\\')) return null;
+  try { validateRelativePath(relative); } catch { return null; }
+  return relative;
+}
+function fallbackTestReference(value: string): { path: string; name?: string } | null {
+  const normalized = value.trim();
+  const separator = normalized.includes('::') ? '::' : normalized.includes('#') ? '#' : null;
+  const [pathPart, ...rest] = normalized.split(separator ?? '\0');
+  const relative = referencePath(pathPart ?? '');
+  if (!relative) return null;
+  const name = rest.join(separator ?? '').trim();
+  if (separator && !name) return null;
+  return { path: relative, ...(name ? { name } : {}) };
+}
+function sameTestReference(left: string, right: string): boolean {
+  const a = fallbackTestReference(left); const b = fallbackTestReference(right);
+  if (!a || !b || a.path !== b.path) return false;
+  return !a.name || !b.name || a.name === b.name;
+}
+function caseText(value: unknown, maximum: number): string | null {
+  if (typeof value !== 'string' || !value.trim() || value.length > maximum || /[\x00-\x1f]/u.test(value)) return null;
+  return value.trim();
+}
+function caseReferences(value: unknown): string[] | null {
+  if (!Array.isArray(value) || !value.length || value.some(item => typeof item !== 'string' || !referencePath(item))) return null;
+  return [...new Set(value.map(item => item.trim()))];
+}
+async function readGlobalCases(root: string): Promise<CaseLibrary> {
+  const issues: string[] = [];
+  const warnings: string[] = [];
+  const cases: GlobalCase[] = [];
+  const ids = new Map<string, string>();
+  const fileExists = new Map<string, boolean>();
+  const testContents = new Map<string, string | null>();
+  let entries;
+  try { entries = await readdir(path.join(root, '.tiller/cases'), { withFileTypes: true }); }
+  catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return { cases, issues, warnings };
+    return { cases, issues: [`无法读取全局用例目录 .tiller/cases：${(error as Error).message}`], warnings };
+  }
+  for (const entry of entries.filter(item => item.isFile() && item.name.endsWith('.json')).sort((a, b) => a.name.localeCompare(b.name))) {
+    const relative = `.tiller/cases/${entry.name}`;
+    let value: unknown;
+    try { value = JSON.parse(await readFile(path.join(root, relative), 'utf8')); }
+    catch { issues.push(`全局用例 ${relative} 不是有效 JSON。`); continue; }
+    if (!value || typeof value !== 'object' || Array.isArray(value)
+      || (value as Record<string, unknown>).schemaVersion !== 1 || !Array.isArray((value as Record<string, unknown>).cases)) {
+      issues.push(`全局用例 ${relative} 必须包含 schemaVersion: 1 和 cases 数组。`);
+      continue;
+    }
+    for (const [index, raw] of ((value as { cases: unknown[] }).cases).entries()) {
+      const label = `${relative} 第 ${index + 1} 个用例`;
+      if (!raw || typeof raw !== 'object' || Array.isArray(raw)) { issues.push(`${label} 格式无效。`); continue; }
+      const item = raw as Record<string, unknown>;
+      const id = caseText(item.id, 80);
+      const title = caseText(item.title, 200);
+      const requirements = caseReferences(item.requirements);
+      const modules = caseReferences(item.modules);
+      const source = caseReferences(item.source);
+      const testRef = caseText(item.test_ref, 1000);
+      if (!id || !/^[A-Za-z0-9][A-Za-z0-9._-]*$/u.test(id)) { issues.push(`${label} 缺少有效 id。`); continue; }
+      const subject = `全局用例 ${relative} ${id}`;
+      if (!title) issues.push(`${subject} 缺少有效标题。`);
+      if (!requirements) issues.push(`${subject} 的 requirements 必须是非空路径数组。`);
+      if (!modules) issues.push(`${subject} 的 modules 必须是非空路径数组。`);
+      if (!source) issues.push(`${subject} 的 source 必须是非空路径数组。`);
+      const test = testRef ? fallbackTestReference(testRef) : null;
+      if (!test) issues.push(`${subject} 缺少有效 test_ref。`);
+      if (ids.has(id)) issues.push(`${subject} 与 ${ids.get(id)} 的 id 重复。`);
+      else ids.set(id, relative);
+      for (const [field, values] of [['requirements', requirements], ['modules', modules], ['source', source]] as const) {
+        for (const reference of values ?? []) {
+          const relativePath = referencePath(reference);
+          if (!relativePath) continue;
+          let exists = fileExists.get(relativePath);
+          if (exists === undefined) {
+            try { exists = (await lstat(path.join(root, relativePath))).isFile(); } catch { exists = false; }
+            fileExists.set(relativePath, exists);
+          }
+          if (!exists) issues.push(`${subject} 的 ${field} 文件不存在：${relativePath}`);
+        }
+      }
+      if (test) {
+        let content = testContents.get(test.path);
+        if (content === undefined) {
+          try { content = (await lstat(path.join(root, test.path))).isFile() ? await readFile(path.join(root, test.path), 'utf8') : null; }
+          catch { content = null; }
+          testContents.set(test.path, content);
+        }
+        if (content === null) issues.push(`${subject} 的 test_ref 文件不存在：${test.path}`);
+        else if (test.name && !testBlocks(content).some(block => block.name === test.name)) {
+          issues.push(`${subject} 的 test_ref 用例不存在：${test.path}::${test.name}`);
+        }
+      }
+      if (title && requirements && modules && source && test) {
+        cases.push({ id, title, requirements, modules, test_ref: testRef!, source });
+      }
+    }
+  }
+  return { cases, issues: [...new Set(issues)], warnings };
+}
+
+async function evaluateGlobalCases(root: string, work: FlowWork): Promise<CaseLibrary & { matched: number }> {
+  const library = await readGlobalCases(root);
+  let matched = 0;
+  for (const criterion of work.criteria) {
+    const run = latestVerification(work, criterion.id);
+    if (!run) continue;
+    if (library.cases.some(item => sameTestReference(run.test, item.test_ref))) matched++;
+    else if (library.cases.length) library.warnings.push(`${criterion.id} 的测试引用未落在全局用例 test_ref：${run.test}`);
+  }
+  return { ...library, warnings: [...new Set(library.warnings)], matched };
+}
+
 function excludedPath(relative: string, id: string): boolean {
   return relative === `.tiller/work/${id}` || relative.startsWith(`.tiller/work/${id}/`)
     || relative.startsWith('.tiller/local/') || relative.startsWith('.git/') || relative.includes('/node_modules/');
@@ -538,7 +659,7 @@ export interface FlowCheck {
   id: string; ready: boolean; issues: string[]; warnings: string[]; criteria: { id: string; covered: boolean; test?: string; result?: string; commit?: string }[];
   confirmations: { gate: FlowGate; confirmed: boolean; quote: string; commit: string; issue?: string }[];
   acceptance: { confirmed: boolean; quote?: string; commit?: string };
-  changedOutsideScope: string[]; selfCheck: string;
+  changedOutsideScope: string[]; cases: { count: number; matched: number }; selfCheck: string;
 }
 
 async function evaluateFlow(root: string, id: string, work: FlowWork): Promise<FlowCheck> {
@@ -571,6 +692,9 @@ async function evaluateFlow(root: string, id: string, work: FlowWork): Promise<F
     if (run.source === 'reported') warnings.push(`${item.id} 使用外部报告结果，未由本次命令重新执行。`);
     return { id: item.id, covered, test: run.test, result: run.result, commit: run.commit };
   }));
+  const cases = await evaluateGlobalCases(root, work);
+  issues.push(...cases.issues);
+  warnings.push(...cases.warnings);
   const changed = await changedFiles(root, work.meta.base);
   const changedOutsideScope: string[] = [];
   if (changed === null) warnings.push('未检测到可用 Git 基线，范围检查已跳过。');
@@ -599,6 +723,7 @@ async function evaluateFlow(root: string, id: string, work: FlowWork): Promise<F
     `- ${uniqueIssues.includes('缺少需求确认。') || uniqueIssues.some(item => item.startsWith('需求确认后')) ? '[ ]' : '[x]'} 需求确认有效`,
     `- ${requiresDesign(work) && uniqueIssues.some(item => item.includes('设计')) ? '[ ]' : '[x]'} ${requiresDesign(work) ? '设计确认有效' : '该任务无需设计确认'}`,
     `- ${criteria.every(item => item.covered) ? '[x]' : '[ ]'} 验收条件均有当前通过的测试引用`,
+    `- ${cases.issues.length ? '[ ]' : '[x]'} 全局用例引用有效`,
     `- ${changedOutsideScope.length ? '[ ]' : '[x]'} 改动未超出范围`,
     `- ${weakened.issues.length ? '[ ]' : '[x]'} 未弱化仍存在的测试`,
     `- ${recordSafety(work.content).length ? '[ ]' : '[x]'} 记录不含密钥或本机绝对路径`,
@@ -607,7 +732,7 @@ async function evaluateFlow(root: string, id: string, work: FlowWork): Promise<F
   ].join('\n');
   return { id, ready: uniqueIssues.length === 0, issues: uniqueIssues, warnings, criteria, confirmations: confirmationStates,
     acceptance: { confirmed: acceptanceConfirmed, ...(acceptance ? { quote: acceptance.quote, commit: acceptance.commit } : {}) },
-    changedOutsideScope, selfCheck };
+    changedOutsideScope, cases: { count: cases.cases.length, matched: cases.matched }, selfCheck };
 }
 
 export async function inspectFlow(rootInput: string, id: string): Promise<FlowCheck> {

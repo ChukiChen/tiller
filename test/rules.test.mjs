@@ -6,6 +6,7 @@ import test from 'node:test';
 import { cli, fixture, success } from './helpers.mjs';
 
 const resources = fileURLToPath(new URL('../resources/', import.meta.url));
+const repository = fileURLToPath(new URL('../', import.meta.url));
 const read = path => readFileSync(join(resources, path), 'utf8');
 
 test('entry keeps the small and standard flows explicit and bounded', () => {
@@ -40,6 +41,8 @@ test('core and usage describe the only supported default-flow record path', () =
   for (const command of ['start', 'resume', 'confirm', 'verify', 'check', 'accept']) assert.ok(usage.includes(`run.cjs ${command}`), command);
   assert.match(usage, /--size small/u);
   assert.match(usage, /--size standard/u);
+  assert.match(usage, /\.tiller\/cases\//u);
+  assert.match(usage, /`work\.md` 只记录本次任务/u);
   assert.match(usage, /不保存全文快照和日志/u);
   assert.match(usage, /只检查当前资源契约/u);
   assert.doesNotMatch(usage, /advanced|上一版本到当前版本/u);
@@ -103,8 +106,28 @@ test('README describes only the default flow and release-time versioning', () =>
   assert.match(readme, /小改动：需求确认 → 实现 → 验证/u);
   assert.match(readme, /标准或大功能：需求确认 → 设计确认 → 实现 → 验证/u);
   assert.match(readme, /默认人工节点只有需求、设计/u);
-  assert.match(readme, /只以 `work\.md` 与 Git 作为记录来源/u);
+  assert.match(readme, /单次任务以 `work\.md` 与 Git 追溯/u);
+  assert.match(readme, /\.tiller\/cases\//u);
   assert.match(readme, /版本号只在正式发布正式包时修改/u);
   assert.match(readme, /升级命令只核对当前契约/u);
   assert.doesNotMatch(readme, /advanced|0\.4\.0 升级到 0\.5\.0/u);
+});
+
+test('global cases map to existing requirements, sources and named tests', () => {
+  const directory = join(repository, '.tiller/cases');
+  const files = readdirSync(directory).filter(name => name.endsWith('.json')).sort();
+  assert.deepEqual(files, ['flow.json']);
+  const cases = files.flatMap(name => JSON.parse(readFileSync(join(directory, name), 'utf8')).cases);
+  assert.equal(cases.length, 12);
+  assert.equal(new Set(cases.map(item => item.id)).size, cases.length);
+  for (const item of cases) {
+    for (const reference of [...item.requirements, ...item.modules, ...item.source]) {
+      const relative = reference.split('#')[0];
+      assert.ok(existsSync(join(repository, relative)), `${item.id}: missing ${reference}`);
+    }
+    const [testFile, testName] = item.test_ref.split('::');
+    const content = readFileSync(join(repository, testFile), 'utf8');
+    const names = [...content.matchAll(/\b(?:test|it)\s*\(\s*(['"`])(.*?)\1\s*,/gu)].map(match => match[2]);
+    assert.ok(names.includes(testName), `${item.id}: missing ${item.test_ref}`);
+  }
 });

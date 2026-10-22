@@ -23,11 +23,13 @@ tiller check <work-id>
 tiller accept <work-id> --quote "<用户原话>"
 ```
 
-工作记录只维护 `.tiller/work/<id>/work.md`。确认保存用户原话、提交和对象摘要；验证保存验收条件、测试引用、命令、结果、提交和代码树摘要。需要细节时从 Git 取回或重跑，不保存全文快照、原始日志、自举工程或安装包。
+单次任务记录只维护 `.tiller/work/<id>/work.md`。确认保存用户原话、提交和对象摘要；验证保存验收条件、测试引用、命令、结果、提交和代码树摘要。需要细节时从 Git 取回或重跑，不保存全文快照、原始日志、自举工程或安装包。
 
-`check` 会核对验收条件覆盖、验证是否过期、范围越界、未提交改动、测试删除或弱化、密钥和本机绝对路径。`accept` 只在技术自检通过后记录真实验收原话。
+跨任务回归事实集中维护在 `.tiller/cases/*.json`：每条用例保存稳定编号、标题、需求/模块引用、自动化 `test_ref` 和源码路径。`work.md` 只服务本次任务；用例库只存声明，不存执行日志或证据包。`verify --test` 优先引用用例的 `test_ref`，`check` 会校验全局用例并提示未命中的本次测试。
 
-旧类型流程、阶段、规划、任务、交付审计和全文快照路径已删除；只以 `work.md` 与 Git 作为记录来源。
+`check` 还会核对验收条件覆盖、验证是否过期、范围越界、未提交改动、测试删除或弱化、密钥和本机绝对路径。`accept` 只在技术自检通过后记录真实验收原话。
+
+旧类型流程、阶段、规划、任务、交付审计和全文快照路径已删除；单次任务以 `work.md` 与 Git 追溯，跨任务回归以 `.tiller/cases/` 声明为准。
 
 ## 安装与接入
 
@@ -66,7 +68,7 @@ tiller init ./management-project --mode workspace \
 src/          TypeScript CLI
 resources/    随工程安装的入口、规则、使用指引和启动器
 test/         规则、契约、集成和端到端测试
-.tiller/      当前工程的需求、设计、决定、背景和工作记录
+.tiller/      当前工程的需求、设计、决定、背景、全局用例和工作记录
 ```
 
 项目背景和长期决定分别维护在 `.tiller/context/` 与 `.tiller/specs/`。目录、关键模块职责、构建/启动/测试入口、主要接口或数据流、外部依赖变化时更新背景；普通实现细节不重复记录。
@@ -99,5 +101,6 @@ tiller upgrade --apply <plan-id>
 - [总体需求](.tiller/specs/requirements.md)
 - [总体设计](.tiller/specs/design.md)
 - [决策记录](.tiller/specs/decisions.md)
+- [全局用例说明](.tiller/cases/index.md)
 - [默认工作流模块命名工作记录](.tiller/work/20261022-flow-naming/work.md)
 - [本轮默认工作流工作记录](.tiller/work/20261022-lightweight-flow/work.md)
