@@ -22,7 +22,38 @@
 
 ## 验证
 
-尚无验证。
+### run-1
+- 条件：AC-1
+- 测试：test/flow-cli.test.mjs
+- 命令：npm run test:e2e
+- 结果：passed
+- 退出码：0
+- 提交：fb3fb1a03062b63b084021936876fb6848677efe
+- 代码树摘要：d929ec6f4b1cc1cca41cd125bd1a0d620750b7301d8f1f91fcadc317336682c7
+- 来源：executed
+- 时间：2026-10-22T00:29:21.503Z
+
+### run-2
+- 条件：AC-2
+- 测试：test/flow-cli.test.mjs
+- 命令：npm run test:rules && npm run test:e2e
+- 结果：passed
+- 退出码：0
+- 提交：fb3fb1a03062b63b084021936876fb6848677efe
+- 代码树摘要：d929ec6f4b1cc1cca41cd125bd1a0d620750b7301d8f1f91fcadc317336682c7
+- 来源：executed
+- 时间：2026-10-22T00:29:21.503Z
+
+### run-3
+- 条件：AC-3
+- 测试：test/suites.json
+- 命令：npm run build && npm run lint && npm run typecheck && npm test && npm run test:package
+- 结果：passed
+- 退出码：0
+- 提交：fb3fb1a03062b63b084021936876fb6848677efe
+- 代码树摘要：d929ec6f4b1cc1cca41cd125bd1a0d620750b7301d8f1f91fcadc317336682c7
+- 来源：executed
+- 时间：2026-10-22T00:29:21.503Z
 
 ## 自检
 
