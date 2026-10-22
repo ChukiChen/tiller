@@ -36,7 +36,7 @@
       "id": "CASE-046",
       "title": "旧用例布局、未知类型、缺失模块和坏引用被拒绝",
       "requirements": [
-        ".tiller/specs/modules/verification/requirements.md#6-当前轻量实现约束2026-10-22"
+        ".tiller/specs/modules/verification/requirements.md#5-当前轻量实现约束2026-10-22"
       ],
       "modules": [
         "verification"
@@ -51,7 +51,7 @@
       "title": "全局用例按模块类型和场景组织且引用可解析",
       "requirements": [
         ".tiller/cases/index.md",
-        ".tiller/specs/modules/verification/requirements.md#6-当前轻量实现约束2026-10-22"
+        ".tiller/specs/modules/verification/requirements.md#5-当前轻量实现约束2026-10-22"
       ],
       "modules": [
         "verification"

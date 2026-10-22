@@ -145,7 +145,7 @@ test('check blocks a verified case whose criteria do not point back to the task 
     }],
   }, null, 2) + '\n');
   success(cli(root, 'verify', taskId, '--criterion', 'AC-1', '--test', 'test/alpha.test.mjs::alpha behaves',
-    '--command', 'node --test test/alpha.test.mjs', '--result', 'passed'));
+    '--run', 'node test/alpha.test.mjs'));
   const checked = failure(cli(root, 'check', taskId));
   assert.ok(checked.issues.some(issue => issue.includes('未在其 criteria 中回指')), checked.issues.join('\n'));
 });
@@ -173,7 +173,7 @@ test('new project runs init, plan, start, confirm, case add, verify, check and a
   put(root, 'src/sample.mjs', 'export const sample = () => 42;\n');
   put(root, 'test/sample.test.mjs', "import assert from 'node:assert/strict';\nimport test from 'node:test';\nimport { sample } from '../src/sample.mjs';\n\ntest('sample flow works', () => { assert.equal(sample(), 42); });\n");
   const verified = success(cli(root, 'verify', taskId, '--criterion', 'AC-1', '--test', 'test/sample.test.mjs::sample flow works',
-    '--command', 'node --test test/sample.test.mjs', '--run', 'node --test test/sample.test.mjs'));
+    '--run', 'node test/sample.test.mjs'));
   assert.deepEqual(verified.cases, ['CASE-001']);
   const checked = success(cli(root, 'check', taskId));
   assert.equal(checked.ready, true, checked.issues.join('\n'));
@@ -235,7 +235,7 @@ test('task stages derive from task facts and fall back on invalid confirmation o
     '--test', 'test/lifecycle.test.mjs::lifecycle stage behavior', '--criterion', 'AC-1',
     '--spec', '.tiller/specs/modules/workflow/requirements.md#2-开始与接续', '--source', 'src/lifecycle.mjs'));
   success(cli(root, 'verify', id, '--criterion', 'AC-1', '--test', 'test/lifecycle.test.mjs::lifecycle stage behavior',
-    '--command', 'node --test test/lifecycle.test.mjs', '--result', 'passed'));
+    '--run', 'node test/lifecycle.test.mjs'));
   assert.equal(stageTask(root, id), '已验证');
   success(cli(root, 'accept', id, '--quote', '验收阶段流程'));
   assert.equal(stageTask(root, id), '已验收');
@@ -256,7 +256,7 @@ test('task stages derive from task facts and fall back on invalid confirmation o
     '--test', 'test/stale.test.mjs::stale verification behavior', '--criterion', 'AC-1',
     '--spec', '.tiller/specs/modules/workflow/requirements.md#flow-09-依据验证结果判断交付', '--source', 'src/stale.mjs'));
   success(cli(root, 'verify', staleId, '--criterion', 'AC-1', '--test', 'test/stale.test.mjs::stale verification behavior',
-    '--command', 'node --test test/stale.test.mjs', '--result', 'passed'));
+    '--run', 'node test/stale.test.mjs'));
   assert.equal(stageTask(root, staleId), '已验证');
   put(root, 'src/stale.mjs', 'export const stale = 2;\n');
   const stale = success(cli(root, 'resume', staleId));
@@ -278,7 +278,7 @@ test('accepted tasks close, block further confirm verify and accept, and reopen 
     '--test', 'test/close.test.mjs::close lifecycle behavior', '--criterion', 'AC-1',
     '--spec', '.tiller/specs/modules/workflow/requirements.md#flow-15-在关键节点取得人工确认', '--source', 'src/close.mjs'));
   success(cli(root, 'verify', id, '--criterion', 'AC-1', '--test', 'test/close.test.mjs::close lifecycle behavior',
-    '--command', 'node --test test/close.test.mjs', '--result', 'passed'));
+    '--run', 'node test/close.test.mjs'));
   success(cli(root, 'accept', id, '--quote', '验收关闭流程'));
   const alreadyAccepted = failure(cli(root, 'close', id, '--reason', '不能放弃', '--abandon'));
   assert.equal(alreadyAccepted.error.code, 'ALREADY_ACCEPTED');
@@ -293,7 +293,7 @@ test('accepted tasks close, block further confirm verify and accept, and reopen 
   assert.equal(listed.tasks.find(entry => entry.id === id).stage, '已关闭');
   assert.equal(failure(cli(root, 'confirm', id, 'requirements', '--quote', '关闭后不能确认')).error.code, 'TASK_CLOSED');
   assert.equal(failure(cli(root, 'verify', id, '--criterion', 'AC-1', '--test', 'test/close.test.mjs::close lifecycle behavior',
-    '--command', 'node --test test/close.test.mjs', '--result', 'passed')).error.code, 'TASK_CLOSED');
+    '--run', 'node test/close.test.mjs')).error.code, 'TASK_CLOSED');
   assert.equal(failure(cli(root, 'accept', id, '--quote', '关闭后不能验收')).error.code, 'TASK_CLOSED');
   const reopened = success(cli(root, 'reopen', id, '--reason', '需要再次交付'));
   assert.equal(reopened.stage, '已验证');
@@ -329,7 +329,7 @@ test('abandoned tasks are terminal, reopenable, and not counted as active or acc
   assert.equal(success(cli(root, 'resume')).tasks.find(entry => entry.id === id).stage, '已放弃');
   assert.equal(failure(cli(root, 'confirm', id, 'requirements', '--quote', '放弃后不能确认')).error.code, 'TASK_ABANDONED');
   assert.equal(failure(cli(root, 'verify', id, '--criterion', 'AC-1', '--test', 'test/missing.test.mjs::missing',
-    '--command', 'false', '--result', 'passed')).error.code, 'TASK_ABANDONED');
+    '--run', 'false')).error.code, 'TASK_ABANDONED');
   assert.equal(failure(cli(root, 'accept', id, '--quote', '放弃后不能验收')).error.code, 'TASK_ABANDONED');
   const reopened = success(cli(root, 'reopen', id, '--reason', '需求恢复'));
   assert.equal(reopened.stage, '需求已确认');

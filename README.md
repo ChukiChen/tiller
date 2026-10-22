@@ -18,7 +18,7 @@ tiller start <task-id> --title <标题> --summary <中文摘要> --requirement <
 tiller resume [task-id]
 tiller confirm <task-id> requirements [--by "<确认人>"]
 tiller verify <task-id> --criterion AC-1 --test "test/example.test.mjs::用例名" \
-  --command "npm test" --run "npm test"
+  --run "node --test-name-pattern=用例名 test/example.test.mjs"
 tiller check <task-id>
 tiller accept <task-id> [--by "<验收人>"]
 tiller close <task-id> --reason "交付完成"
@@ -26,7 +26,13 @@ tiller close <task-id> --reason "交付完成"
 
 单次任务以 `task.md` 与 Git 追溯。`start` 在需求中生成目标、范围和编号 AC；standard 任务同时生成方案、取舍、影响与风险。确认前校验必填段，自动保存确认部分、确认人、时间、提交和正文摘要；需求与设计独立失效。原话只是可选凭证，不能替代正文。
 
-验证保存 AC、用例编号、测试引用、命令、结果、提交和代码树摘要。单个任务只保留一份 `task.md`；完成后把长期有效结论同步到 `.tiller/specs/`，超大设计先用 plan 拆成多个任务。不保存全文快照、原始日志、自举工程或安装包。
+`verify` 只接受 `--run "<命令>"`，记录即执行：输出会捕获并转发，node:test 的 TAP/spec 结果必须命中 `文件::测试名` 且通过；仅引用文件时要求测试存在且失败数为 0。引用具名测试时，命令需输出 `ok N - <测试名>` 或 `✔ <测试名>`，可直接运行 `node test/<文件>.mjs` 或使用 `node --test-name-pattern=<名称> test/<文件>.mjs`。未核实会写入记录并由 `check` 阻断。其它框架可在 `src/test-output.ts` 的解析器注册表中扩展。
+
+无法本机执行时，用 `verify ... --reported --command ... --result ... --reason "<理由>"` 记录外部报告；理由必填，`check`/`accept` 默认阻断，只有 `--allow-reported` 显式放行，`pr` 会标明“未执行（外部报告）”。
+
+bugfix 任务先用 `verify --expect-fail --run` 在任务基线工作树留下失败先行证据，再记录当前通过；`check` 要求两侧证据齐全。standard 任务 `start` 必须声明 `--target`，small 缺省 `.`。
+
+验证保存 AC、用例编号、测试引用、命令、结果、核实状态、提交和代码树摘要。单个任务只保留一份 `task.md`；完成后把长期有效结论同步到 `.tiller/specs/`，超大设计先用 plan 拆成多个任务。不保存全文快照、原始日志、自举工程或安装包。
 
 任务阶段由记录事实推导：已开始 → 需求已确认 → 设计已确认（small 可跳过）→ 已验证 → 已验收 → 已关闭/已放弃。确认失效或验证过期时，`resume` 显示回退后的真实阶段和原因。`close` 只收尾已验收任务；未验收终止使用 `close --abandon`；两者都可通过 `reopen --reason` 显式恢复，之后才能继续确认、验证或验收。
 

@@ -235,6 +235,42 @@
       "criteria": [
         "20261022-round13#AC-3"
       ]
+    },
+    {
+      "id": "CASE-086",
+      "title": "verify 只执行并记录同一命令，拒绝旧拆分参数",
+      "requirements": [
+        ".tiller/specs/modules/workflow/requirements.md#flow-24-在各环节形成测试依据并保存执行事实"
+      ],
+      "modules": [
+        "workflow"
+      ],
+      "test_ref": "test/verification-integrity.test.mjs::verify executes the recorded command, rejects legacy inputs and reads old records",
+      "source": [
+        "src/flow.ts",
+        "src/cli.ts"
+      ],
+      "criteria": [
+        "20261022-round14#AC-1"
+      ]
+    },
+    {
+      "id": "CASE-090",
+      "title": "standard 开工必须声明范围，small 默认仓库根",
+      "requirements": [
+        ".tiller/specs/modules/workflow/requirements.md#2-开始与接续"
+      ],
+      "modules": [
+        "workflow"
+      ],
+      "test_ref": "test/verification-integrity.test.mjs::standard starts require explicit targets while small defaults to repository root",
+      "source": [
+        "src/flow.ts",
+        "src/cli.ts"
+      ],
+      "criteria": [
+        "20261022-round14#AC-5"
+      ]
     }
   ]
 }

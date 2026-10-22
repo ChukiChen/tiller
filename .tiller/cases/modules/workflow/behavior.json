@@ -307,6 +307,24 @@
       "criteria": [
         "20261022-round13#AC-2"
       ]
+    },
+    {
+      "id": "CASE-088",
+      "title": "按 node:test 输出核实具名测试与文件结果",
+      "requirements": [
+        ".tiller/specs/modules/verification/requirements.md#3-用例先行"
+      ],
+      "modules": [
+        "workflow"
+      ],
+      "test_ref": "test/verification-integrity.test.mjs::named node test output is verified for TAP, spec and nested special characters",
+      "source": [
+        "src/flow.ts",
+        "src/test-output.ts"
+      ],
+      "criteria": [
+        "20261022-round14#AC-3"
+      ]
     }
   ]
 }

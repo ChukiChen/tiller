@@ -1,10 +1,11 @@
 import { createHash } from 'node:crypto';
 import { execFile, spawn } from 'node:child_process';
-import { lstat, mkdir, readFile, readdir } from 'node:fs/promises';
+import { copyFile, lstat, mkdir, mkdtemp, open, readFile, readdir, rm, symlink } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { promisify } from 'node:util';
 import {
-  casesForTest, readCaseLibrary, regressionWarnings, sameTestReference, testBlocks,
+  casesForTest, fallbackTestReference, readCaseLibrary, regressionWarnings, sameTestReference, testBlocks,
   type CaseLibrary, type GlobalCase,
 } from './cases.js';
 import { resolveConfirmer } from './confirmer.js';
@@ -14,6 +15,7 @@ import { readProjectMetadata } from './core.js';
 import { applyChanges, readTextIfExists, validateRelativePath, withProjectLock } from './files.js';
 import { readPlanItem } from './plans.js';
 import { validateTaskId } from './task-id.js';
+import { inspectTestOutput } from './test-output.js';
 
 const execFileAsync = promisify(execFile);
 const MARKER_PREFIX = '<!-- tiller-task:v1 ';
@@ -65,6 +67,8 @@ export interface FlowConfirmation {
 export interface FlowVerification {
   id: string; criterion: string; test: string; command: string; result: FlowResult;
   cases: string[]; exitCode: number | null; commit: string; at: string; tree: string; source: 'executed' | 'reported';
+  evidence: 'verified' | 'unverified' | 'not-run'; reason?: string; expectFail?: boolean; baseline?: string;
+  legacyEvidence?: boolean;
 }
 export interface FlowClosure {
   action: 'close' | 'reopen'; status?: FlowCloseStatus; reason: string; at: string;
@@ -80,9 +84,11 @@ export interface FlowStartInput {
   criteria: string[]; plan?: string; item?: string; slug?: string; summary?: string;
 }
 export interface FlowVerifyInput {
-  criteria: string[]; test: string; command: string; result?: string; run?: string;
+  criteria: string[]; test: string; run?: string; command?: string; result?: string;
+  reported?: boolean; reason?: string; expectFail?: boolean;
 }
-export interface FlowConfirmInput { quote?: string; commit?: string; by?: string }
+export interface FlowConfirmInput { quote?: string; commit?: string; by?: string; allowReported?: boolean }
+export interface FlowCheckOptions { allowReported?: boolean }
 
 function fail(code: string, message: string): never {
   throw Object.assign(new Error(message), { code });
@@ -101,7 +107,10 @@ function safeInput(value: string, label: string): string {
   return value;
 }
 function taskPath(id: string): string { return `${TASK_DIRECTORY}/${id}/${TASK_FILE}`; }
-function scopeValues(values: string[] | undefined): string[] {
+function scopeValues(values: string[] | undefined, size?: FlowSize): string[] {
+  if (size === 'standard' && !values?.length) {
+    fail('MISSING_FLOW_SCOPE', 'standard 任务必须用至少一个 --target 声明交付范围；small 任务可省略并默认整个仓库。');
+  }
   const raw = values?.length ? values : ['.'];
   const result = raw.map(value => value.trim().replace(/^\.\//u, '').replace(/\/+$/u, '') || '.');
   for (const value of result) {
@@ -282,10 +291,18 @@ function parseVerifications(content: string): FlowVerification[] {
     const at = field('时间');
     const tree = field('代码树摘要');
     const source = field('来源') as FlowVerification['source'];
+    const evidenceText = field('核实');
+    const evidence: FlowVerification['evidence'] = evidenceText === '已核实' ? 'verified'
+      : evidenceText === '未执行' ? 'not-run' : 'unverified';
+    const legacyEvidence = !evidenceText;
+    const reason = field('理由');
+    const expectFail = field('预期') === '失败先行';
+    const baseline = field('基线提交');
     if (criterion && test && command && RESULTS.includes(resultValue) && validCommit(commit)
       && /^[a-f0-9]{64}$/u.test(tree) && Number.isFinite(Date.parse(at)) && (source === 'executed' || source === 'reported')) {
       result.push({ id, criterion, test, command, result: resultValue, cases, exitCode: exitText === '无' ? null : Number(exitText),
-        commit, at, tree, source });
+        commit, at, tree, source, evidence, ...(legacyEvidence ? { legacyEvidence } : {}), ...(reason ? { reason } : {}), ...(expectFail ? { expectFail } : {}),
+        ...(baseline && validCommit(baseline) ? { baseline } : {}) });
     }
   }
   return result;
@@ -362,19 +379,30 @@ function renderConfirmations(values: FlowConfirmation[]): string {
 }
 function renderVerifications(values: FlowVerification[]): string {
   if (!values.length) return '';
-  return values.map(value => [
-    `### ${value.id}`,
-    `- 条件：${value.criterion}`,
-    `- 测试：${value.test}`,
-    `- 用例：${value.cases.length ? value.cases.join(', ') : '无'}`,
-    `- 命令：${value.command}`,
-    `- 结果：${value.result}`,
-    `- 退出码：${value.exitCode === null ? '无' : value.exitCode}`,
-    `- 提交：${value.commit}`,
-    `- 代码树摘要：${value.tree}`,
-    `- 来源：${value.source}`,
-    `- 时间：${value.at}`,
-  ].join('\n')).join('\n\n');
+  return values.map(value => {
+    const common = [
+      `### ${value.id}`,
+      `- 条件：${value.criterion}`,
+      `- 测试：${value.test}`,
+      `- 用例：${value.cases.length ? value.cases.join(', ') : '无'}`,
+      `- 命令：${value.command}`,
+      `- 结果：${value.result}`,
+      `- 退出码：${value.exitCode === null ? '无' : value.exitCode}`,
+    ];
+    if (value.legacyEvidence) {
+      return [...common, `- 提交：${value.commit}`, `- 代码树摘要：${value.tree}`, `- 来源：${value.source}`,
+        `- 时间：${value.at}`].join('\n');
+    }
+    return [...common,
+      `- 来源：${value.source}`,
+      `- 核实：${value.evidence === 'verified' ? '已核实' : value.evidence === 'not-run' ? '未执行' : '未核实'}`,
+      ...(value.reason ? [`- 理由：${value.reason}`] : []),
+      ...(value.expectFail ? [`- 预期：失败先行`, ...(value.baseline ? [`- 基线提交：${value.baseline}`] : [])] : []),
+      `- 提交：${value.commit}`,
+      `- 代码树摘要：${value.tree}`,
+      `- 时间：${value.at}`,
+    ].join('\n');
+  }).join('\n\n');
 }
 function renderClosures(values: FlowClosure[]): string {
   return values.map(value => [
@@ -437,7 +465,7 @@ function designSubject(task: Pick<FlowTask, 'meta' | 'requirement' | 'criteria' 
   return sha(JSON.stringify({ requirements: requirementsSubject(task), design: task.design.trim() }));
 }
 function latestVerification(task: Pick<FlowTask, 'verifications'>, criterion: string): FlowVerification | undefined {
-  return [...task.verifications].reverse().find(item => item.criterion === criterion);
+  return [...task.verifications].reverse().find(item => item.criterion === criterion && !item.expectFail);
 }
 function deliverySubject(task: FlowTask, commit: string): string {
   return sha(JSON.stringify({
@@ -459,7 +487,6 @@ export async function startFlow(rootInput: string, idInput: string, input: FlowS
   const title = safeInput(text(input.title, '标题', 200), '标题');
   const requirement = safeInput(text(input.requirement, '需求正文'), '需求正文');
   const type = flowType(input.type);
-  const scope = scopeValues(input.targets);
   const criteria = criteriaList(input.criteria).map(item => ({ ...item, text: safeInput(item.text, `${item.id} 验收条件`) }));
   const slug = input.slug === undefined ? undefined : normalizeBranchSlug(input.slug);
   if (input.slug !== undefined && !slug) fail('INVALID_FLOW_INPUT', '--slug 必须是 1-64 位英文、数字或连字符组成的简短描述。');
@@ -479,6 +506,7 @@ export async function startFlow(rootInput: string, idInput: string, input: FlowS
       }
       size = planned.item.size; plan = input.plan; item = input.item;
     }
+    const scope = scopeValues(input.targets, size);
     const base = (await head(root)) ?? 'no-git';
     const preExisting: Record<string, string> = {};
     for (const changed of (await changedFiles(root, base)) ?? []) {
@@ -584,7 +612,7 @@ export async function confirmFlow(rootInput: string, id: string, gateInput: stri
       if (safety.length) fail('UNSAFE_RECORD', `设计正文${safety.join('；')}`);
     }
     if (gate === 'acceptance') {
-      const checked = await inspectFlow(root, id);
+      const checked = await inspectFlow(root, id, { allowReported: input.allowReported === true });
       if (!checked.ready) fail('NOT_READY', `技术自检未通过：${checked.issues.join('；')}`);
     }
     const commit = await currentCommit(root, input.commit);
@@ -779,12 +807,19 @@ function assertTaskOpen(task: Pick<FlowTask, 'closures' | 'title'>): void {
 async function verificationStageIssues(root: string, id: string, task: FlowTask): Promise<string[]> {
   const library = await readCaseLibrary(root);
   const currentTree = await treeDigest(root, task.meta.scope, id);
+  const historicalAccepted = latestAcceptance(task) !== undefined;
   const issues: string[] = [];
   for (const criterion of task.criteria) {
     const run = latestVerification(task, criterion.id);
     if (!run) { issues.push(`${criterion.id} 尚无验证`); continue; }
     if (run.result !== 'passed') { issues.push(`${criterion.id} 最新验证结果为 ${run.result}`); continue; }
     if (run.tree !== currentTree) { issues.push(`${criterion.id} 验证已过期`); continue; }
+    if (!historicalAccepted && !run.legacyEvidence && run.source === 'reported') {
+      issues.push(`${criterion.id} 的验证未实际执行（外部报告）`); continue;
+    }
+    if (!historicalAccepted && !run.legacyEvidence && run.source === 'executed' && run.evidence !== 'verified') {
+      issues.push(`${criterion.id} 的验证未核实`); continue;
+    }
     if (!(await testExists(root, run.test))) { issues.push(`${criterion.id} 的测试引用不存在`); continue; }
     if (!run.cases.length) { issues.push(`${criterion.id} 未绑定全局用例`); continue; }
     const linked = run.cases.flatMap(caseId => {
@@ -857,8 +892,9 @@ export interface FlowCheck {
   selfCheck: string;
 }
 
-async function evaluateFlow(root: string, id: string, task: FlowTask): Promise<FlowCheck> {
+async function evaluateFlow(root: string, id: string, task: FlowTask, options: FlowCheckOptions = {}): Promise<FlowCheck> {
   const issues: string[] = []; const warnings: string[] = [];
+  const historicalAccepted = latestAcceptance(task) !== undefined;
   const requirement = [...task.confirmations].reverse().find(item => item.gate === 'requirements');
   const currentTree = await treeDigest(root, task.meta.scope, id);
   const confirmationStates: FlowCheck['confirmations'] = [];
@@ -917,13 +953,45 @@ async function evaluateFlow(root: string, id: string, task: FlowTask): Promise<F
       }
     }
     if (valid) matched++;
-    const covered = valid && run.result === 'passed' && run.tree === currentTree && await testExists(root, run.test);
+    const missingReportReason = run.source === 'reported' && !run.legacyEvidence && !run.reason;
+    const evidenceValid = historicalAccepted || run.legacyEvidence || (!missingReportReason
+      && (run.source === 'reported' ? options.allowReported === true : run.evidence === 'verified'));
+    const covered = valid && run.result === 'passed' && run.tree === currentTree && evidenceValid && await testExists(root, run.test);
     if (run.result !== 'passed') issues.push(`${item.id} 最新验证结果为 ${run.result}。`);
     else if (run.tree !== currentTree) issues.push(`${item.id} 的验证已过期：范围内代码已变化。`);
     else if (!(await testExists(root, run.test))) issues.push(`${item.id} 的测试引用不存在：${run.test}`);
-    if (run.source === 'reported') warnings.push(`${item.id} 使用外部报告结果，未由本次命令重新执行。`);
+    if (!historicalAccepted && !run.legacyEvidence && missingReportReason) {
+      issues.push(`${item.id} 的外部报告缺少理由；请重新记录并写明 --reason。`);
+    } else if (!historicalAccepted && !run.legacyEvidence && run.source === 'reported') {
+      const detail = run.reason ? `：${run.reason}` : '（未记录理由）';
+      if (options.allowReported) warnings.push(`${item.id} 使用外部报告结果，已通过 --allow-reported 放行${detail}。`);
+      else issues.push(`${item.id} 的验证未实际执行（外部报告）${detail}；确认事实后使用 --allow-reported 放行。`);
+    } else if (!historicalAccepted && !run.legacyEvidence && run.source === 'executed' && run.evidence !== 'verified') {
+      issues.push(`${item.id} 的验证未核实：命令输出中没有可确认的通过测试记录。`);
+    }
     return { id: item.id, covered, test: run.test, cases: run.cases, result: run.result, commit: run.commit };
   }));
+  let failureFirstValid = true;
+  if (task.meta.type === 'bugfix' && !historicalAccepted) {
+    const evidence = task.verifications.filter(run => run.expectFail);
+    const verifiedBaseline = evidence.find(run => run.source === 'executed' && run.result === 'failed'
+      && run.evidence === 'verified' && run.baseline === task.meta.base);
+    if (!evidence.length) {
+      failureFirstValid = false;
+      issues.push('bugfix 任务缺少失败先行验证：先在任务基线运行 verify --expect-fail --run "<命令>"。');
+    } else if (!verifiedBaseline) {
+      failureFirstValid = false;
+      issues.push('bugfix 任务的失败先行记录未核实，或不是在任务基线上运行。');
+    } else {
+      const currentPass = task.verifications.some(run => !run.expectFail && run.source === 'executed'
+        && run.result === 'passed' && run.evidence === 'verified' && run.tree === currentTree
+        && sameTestReference(run.test, verifiedBaseline.test));
+      if (!currentPass) {
+        failureFirstValid = false;
+        issues.push(`bugfix 任务的失败先行测试 ${verifiedBaseline.test} 在当前代码缺少已核实的通过记录。`);
+      }
+    }
+  }
   const changed = await changedFiles(root, task.meta.base);
   const changedOutsideScope: string[] = [];
   if (changed === null) warnings.push('未检测到可用 Git 基线，范围检查已跳过。');
@@ -955,6 +1023,8 @@ async function evaluateFlow(root: string, id: string, task: FlowTask): Promise<F
     `- ${criteria.every(item => item.covered) ? '[x]' : '[ ]'} 验收条件均有当前通过且绑定全局用例的测试引用`,
     `- ${matched === task.criteria.length && task.criteria.length > 0 ? '[x]' : '[ ]'} 每条验收条件均映射到本次验证引用的全局用例`,
     `- ${criteriaBindingValid ? '[x]' : '[ ]'} 验收条件与用例来源 criteria 相互指向或由本任务新增/修改`,
+    `- ${criteria.every(item => item.covered) ? '[x]' : '[ ]'} 验证命令已执行且测试输出已核实`,
+    ...(task.meta.type === 'bugfix' ? [`- ${failureFirstValid ? '[x]' : '[ ]'} 缺陷修复包含基线失败与当前通过证据`] : []),
     `- ${library.issues.length ? '[ ]' : '[x]'} 全局用例结构与引用有效`,
     `- ${changedOutsideScope.length ? '[ ]' : '[x]'} 改动未超出范围`,
     `- ${weakened.issues.length ? '[ ]' : '[x]'} 未弱化仍存在的测试`,
@@ -969,20 +1039,80 @@ async function evaluateFlow(root: string, id: string, task: FlowTask): Promise<F
     cases: { count: library.cases.length, matched, modules: library.modules, scenarios: library.scenarios, uncovered: library.uncovered }, selfCheck };
 }
 
-export async function inspectFlow(rootInput: string, id: string): Promise<FlowCheck> {
+export async function inspectFlow(rootInput: string, id: string, options: FlowCheckOptions = {}): Promise<FlowCheck> {
   const root = path.resolve(rootInput); const task = await readTask(root, id);
-  return evaluateFlow(root, id, task);
+  return evaluateFlow(root, id, task, options);
 }
 
-export async function checkFlow(rootInput: string, id: string): Promise<FlowCheck> {
+export async function checkFlow(rootInput: string, id: string, options: FlowCheckOptions = {}): Promise<FlowCheck> {
   const root = path.resolve(rootInput);
   return withProjectLock(root, async () => {
     const task = await readTask(root, id);
-    const checked = await evaluateFlow(root, id, task);
+    const checked = await evaluateFlow(root, id, task, options);
     const next = renderTask(task, checked.selfCheck);
     if (next !== task.content) await writeTask(root, id, task.content, next);
     return checked;
   });
+}
+
+interface CommandRun { exitCode: number | null; output: string }
+
+async function executeCommand(root: string, command: string): Promise<CommandRun> {
+  const holder = await mkdtemp(path.join(tmpdir(), 'tiller-exec-'));
+  const stdoutPath = path.join(holder, 'stdout');
+  const stderrPath = path.join(holder, 'stderr');
+  const stdout = await open(stdoutPath, 'w');
+  const stderr = await open(stderrPath, 'w');
+  try {
+    const environment: NodeJS.ProcessEnv = { ...process.env, LC_ALL: 'C', FORCE_COLOR: '0' };
+    delete environment.NODE_TEST_CONTEXT;
+    const result = await new Promise<{ code: number | null; timedOut: boolean }>((resolve, reject) => {
+      let timedOut = false;
+      const child = spawn(command, { cwd: root, shell: true, stdio: ['inherit', stdout.fd, stderr.fd],
+        env: environment });
+      const timer = setTimeout(() => { timedOut = true; child.kill('SIGTERM'); }, 30 * 60 * 1000);
+      child.on('error', error => { clearTimeout(timer); reject(error); });
+      child.on('exit', code => { clearTimeout(timer); resolve({ code, timedOut }); });
+    });
+    const maximum = 8 * 1024 * 1024;
+    const capturedStdout = (await readFile(stdoutPath, 'utf8')).slice(0, maximum);
+    const capturedStderr = (await readFile(stderrPath, 'utf8')).slice(0, maximum - Buffer.byteLength(capturedStdout));
+    process.stderr.write(capturedStdout);
+    process.stderr.write(capturedStderr);
+    if (result.timedOut) process.stderr.write('\n[tiller] 验证命令超时。\n');
+    return { exitCode: result.code, output: `${capturedStdout}\n${capturedStderr}${result.timedOut ? '\n[tiller] 验证命令超时。' : ''}` };
+  } finally {
+    await stdout.close();
+    await stderr.close();
+    await rm(holder, { recursive: true, force: true });
+  }
+}
+
+async function executeBaseline(root: string, base: string, test: string, command: string): Promise<CommandRun> {
+  if (base === 'no-git') fail('BASELINE_UNAVAILABLE', '失败先行验证需要 Git 基线，当前任务没有可用提交。');
+  const holder = await mkdtemp(path.join(tmpdir(), 'tiller-baseline-'));
+  const worktree = path.join(holder, 'worktree');
+  let added = false;
+  try {
+    const created = await git(root, ['worktree', 'add', '--detach', worktree, base]);
+    if (!created.ok) fail('BASELINE_WORKTREE_FAILED', `无法创建基线工作树：${created.stderr.trim()}`);
+    added = true;
+    const relative = fallbackTestReference(test)?.path;
+    if (!relative) fail('INVALID_TEST_REFERENCE', `测试引用无效：${test}`);
+    await mkdir(path.dirname(path.join(worktree, relative)), { recursive: true });
+    await copyFile(path.join(root, relative), path.join(worktree, relative));
+    try {
+      const dependencies = await lstat(path.join(root, 'node_modules'));
+      if (dependencies.isDirectory()) await symlink(path.join(root, 'node_modules'), path.join(worktree, 'node_modules'), 'junction');
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
+    }
+    return await executeCommand(worktree, command);
+  } finally {
+    if (added) await git(root, ['worktree', 'remove', '--force', worktree]);
+    await git(root, ['worktree', 'prune']);
+    await rm(holder, { recursive: true, force: true });
+  }
 }
 
 export async function verifyFlow(rootInput: string, id: string, input: FlowVerifyInput) {
@@ -994,40 +1124,69 @@ export async function verifyFlow(rootInput: string, id: string, input: FlowVerif
     const criteria = [...new Set(input.criteria.map(value => value.trim()))];
     for (const criterion of criteria) if (!task.criteria.some(item => item.id === criterion)) fail('UNKNOWN_CRITERION', `验收条件不存在：${criterion}`);
     const test = testReference(input.test);
+    const reference = fallbackTestReference(test);
+    if (!reference) fail('INVALID_TEST_REFERENCE', `测试引用无效：${test}`);
     if (!(await testExists(root, test))) fail('TEST_NOT_FOUND', `测试引用不存在：${test}`);
     const cases = casesForTest(await readCaseLibrary(root), test).map(item => item.id);
-    const command = safeInput(text(input.command, '验证命令', 4000), '验证命令');
-    if (input.run !== undefined) safeInput(text(input.run, '执行命令', 4000), '执行命令');
+    const expectFail = input.expectFail === true;
+    if (expectFail && task.meta.type !== 'bugfix') fail('INVALID_EXPECT_FAIL', '--expect-fail 仅适用于 bugfix 任务。');
+    if (expectFail && !reference.name) fail('INVALID_EXPECT_FAIL', '失败先行验证必须引用具名测试（文件::测试名）。');
+    let command: string;
     let result: FlowResult;
     let exitCode: number | null = null;
-    let source: FlowVerification['source'] = 'reported';
+    let source: FlowVerification['source'];
+    let evidence: FlowVerification['evidence'];
+    let reason: string | undefined;
     if (input.run !== undefined) {
+      if (input.command !== undefined) fail('VERIFY_LEGACY_USAGE', 'verify 现在只接受 --run "<命令>"；旧 --command 与 --run 分开提供的写法已删除。');
+      if (input.reported || input.reason !== undefined || input.result !== undefined) {
+        fail('VERIFY_INPUT_CONFLICT', '执行验证只接受 --run；外部报告请使用 --reported --command --result --reason。');
+      }
+      command = safeInput(text(input.run, '执行命令', 4000), '执行命令');
       source = 'executed';
-      const exit = await new Promise<number | null>((resolve, reject) => {
-        const child = spawn(input.run!, { cwd: root, shell: true, stdio: ['inherit', 'pipe', 'pipe'], env: { ...process.env, LC_ALL: 'C' } });
-        const timer = setTimeout(() => { child.kill('SIGTERM'); }, 30 * 60 * 1000);
-        child.stdout?.on('data', chunk => process.stderr.write(chunk));
-        child.stderr?.on('data', chunk => process.stderr.write(chunk));
-        child.on('error', error => { clearTimeout(timer); reject(error); });
-        child.on('exit', code => { clearTimeout(timer); resolve(code); });
-      });
-      exitCode = exit;
-      result = exit === 0 ? 'passed' : 'failed';
-      if (input.result !== undefined && flowResult(input.result) !== result) fail('RESULT_MISMATCH', `命令结果 ${result} 与 --result 不一致。`);
+      const run = expectFail
+        ? await executeBaseline(root, task.meta.base, test, command)
+        : await executeCommand(root, command);
+      exitCode = run.exitCode;
+      result = exitCode === 0 ? 'passed' : 'failed';
+      const inspected = inspectTestOutput(run.output, reference);
+      // A zero exit code cannot outweigh failures visible in the runner output (e.g. `...; true`).
+      if (exitCode === 0 && (inspected.outcome === 'failed' || (!expectFail && inspected.failures > 0))) {
+        evidence = 'unverified';
+      } else {
+        evidence = inspected.verified ? 'verified' : 'unverified';
+      }
+      if (expectFail && inspected.verified && inspected.outcome !== 'failed') {
+        fail('EXPECTED_FAILURE_NOT_OBSERVED', `基线运行未出现具名测试失败：${reference.name}。`);
+      }
     } else {
-      result = flowResult(input.result ?? 'passed');
+      if (!input.reported) {
+        fail('VERIFY_EXECUTION_REQUIRED', 'verify 需要 --run "<命令>"；无法本机执行时使用 --reported --command --result --reason。');
+      }
+      if (expectFail) fail('INVALID_EXPECT_FAIL', '--expect-fail 必须使用 --run 在基线工作树中实际执行。');
+      if (input.result === undefined) fail('INVALID_FLOW_INPUT', '外部报告必须提供 --result。');
+      command = safeInput(text(input.command ?? '', '验证命令', 4000), '验证命令');
+      reason = safeInput(text(input.reason ?? '', '外部报告理由', 1000), '外部报告理由');
+      result = flowResult(input.result);
+      source = 'reported';
+      evidence = 'not-run';
     }
     const commit = await currentCommit(root, undefined);
     const tree = await treeDigest(root, task.meta.scope, id);
     const at = new Date().toISOString();
     const entries: FlowVerification[] = criteria.map((criterion, index) => ({
       id: `run-${task.verifications.length + index + 1}`,
-      criterion, test, cases, command, result, exitCode, commit, at, tree, source,
+      criterion, test, cases, command, result, exitCode, commit, at, tree, source, evidence,
+      ...(reason ? { reason } : {}), ...(expectFail ? { expectFail: true, baseline: task.meta.base } : {}),
     }));
     const next: FlowTask = { ...task, verifications: [...task.verifications, ...entries] };
     const { content: _content, path: _path, ...body } = next;
     await writeTask(root, id, task.content, renderTask(body, sectionBody(task.content, '自检')));
-    return { id, result, cases, commit, tree, entries, next: result === 'passed' ? `tiller check ${id}` : `修复后重新运行验证` };
+    const ready = expectFail ? evidence === 'verified' && result === 'failed' : result === 'passed';
+    const nextCommand = expectFail
+      ? `修复后在当前代码运行：tiller verify ${id} --criterion ${criteria[0]} --test "${test}" --run "${command}"`
+      : evidence === 'unverified' ? `check 将阻断未核实记录：tiller check ${id}` : result === 'passed' ? `tiller check ${id}` : '修复后重新运行验证';
+    return { id, result, ready, cases, commit, tree, evidence, entries, next: nextCommand };
   });
 }
 function flowResult(value: string): FlowResult {
@@ -1038,7 +1197,7 @@ function flowResult(value: string): FlowResult {
 export async function acceptFlow(rootInput: string, id: string, input: FlowConfirmInput = {}) {
   const root = path.resolve(rootInput);
   assertTaskOpen(await readTask(root, id));
-  const checked = await checkFlow(rootInput, id);
+  const checked = await checkFlow(rootInput, id, { allowReported: input.allowReported === true });
   if (!checked.ready) fail('NOT_READY', `技术自检未通过：${checked.issues.join('；')}`);
   return confirmFlow(rootInput, id, 'acceptance', input);
 }
