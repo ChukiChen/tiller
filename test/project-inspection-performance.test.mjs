@@ -26,7 +26,7 @@ async function countGit(root, action) {
   }
 }
 
-test('metadata input is strict and performs no Git or managed-resource inspection', async t => {
+test('CASE-026 metadata input is strict and performs no Git or managed-resource inspection', async t => {
   const root = await project(t);
   appendFileSync(join(root, '.tiller/rules/core.md'), '\nChanged rule.\n');
   appendFileSync(join(root, '.gitignore'), '\n/.tiller/usage.md\n');
@@ -40,7 +40,7 @@ test('metadata input is strict and performs no Git or managed-resource inspectio
   assert.match(inspection.issues.join('\n'), /忽略/u);
 });
 
-test('metadata reads return independent current values without result reuse', async t => {
+test('CASE-027 metadata reads return independent current values without result reuse', async t => {
   const root = await project(t);
   const first = await core.readProjectMetadata(root);
   first.createdAt = '2026-01-03T00:00:00.000Z';
@@ -49,7 +49,7 @@ test('metadata reads return independent current values without result reuse', as
   assert.equal((await core.readProjectMetadata(root)).createdAt, first.createdAt);
 });
 
-test('unknown and missing metadata reject without creating a lock', async t => {
+test('CASE-028 unknown and missing metadata reject without creating a lock', async t => {
   const root = await project(t);
   const metadata = JSON.parse(readFileSync(join(root, core.META), 'utf8'));
   const original = JSON.stringify({ ...metadata, schemaVersion: 99 });

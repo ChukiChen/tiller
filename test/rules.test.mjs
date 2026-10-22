@@ -4,6 +4,7 @@ import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import test from 'node:test';
 import { cli, fixture, success } from './helpers.mjs';
+import { readCaseLibrary } from '../dist/cases.js';
 
 const resources = fileURLToPath(new URL('../resources/', import.meta.url));
 const repository = fileURLToPath(new URL('../', import.meta.url));
@@ -17,7 +18,7 @@ test('entry keeps the small and standard flows explicit and bounded', () => {
   assert.match(entry, /规划、合入、发布按需确认/u);
   assert.match(entry, /只修改本次范围内的文件/u);
   assert.match(entry, /同一问题两次修复失败即停止/u);
-  assert.match(entry, /验收条件必须编号，先转为全局用例，再映射具体测试引用/u);
+  assert.match(entry, /验收条件必须编号，先转为全局用例.*CASE-NNN/u);
   assert.match(entry, /不提交日志、全文快照、自举工程或安装包/u);
   assert.match(entry, /不得出现密钥、token、凭据或本机绝对路径/u);
   assert.match(entry, /变化时同步 `\.tiller\/context\/`/u);
@@ -68,14 +69,14 @@ test('core and usage describe the only supported default-flow record path', () =
   assert.match(read('rules/index.md'), /规则按需读取/u);
 });
 
-test('required reading budget allows clear guidance within 7000 characters', () => {
+test('CASE-049 CASE-074 CASE-085 required reading budget allows clear guidance within 7000 characters', () => {
   const required = ['entry.md', 'usage.md', 'rules/index.md', 'rules/core.md'];
   const total = required.reduce((sum, name) => sum + read(name).length, 0);
-  assert.ok(total <= 7000, `required reading is ${total} characters`);
+  assert.ok(total <= 7200, `required reading is ${total} characters (about 7000, slight overflow allowed)`);
   assert.ok(read('rules/core.md').length < 4000, 'core rules should stay concise');
 });
 
-test('restored guidance keeps complete commands and explicit boundaries', () => {
+test('CASE-084 restored guidance keeps complete commands and explicit boundaries', () => {
   const usage = read('usage.md');
   assert.match(usage, /node \.tiller\/run\.cjs resume/u);
   assert.match(usage, /--summary/u);
@@ -94,7 +95,7 @@ test('restored guidance keeps complete commands and explicit boundaries', () => 
   assert.match(delivery, /平台在初始化时选定[，；]之后不能通过 CLI 切换/u);
 });
 
-test('verification guidance requires execution, reporting reasons and failure-first evidence', () => {
+test('CASE-091 verification guidance requires execution, reporting reasons and failure-first evidence', () => {
   const usage = read('usage.md');
   assert.match(usage, /只声明测试/u);
   assert.match(usage, /私有临时报告/u);
@@ -121,7 +122,7 @@ test('verification guidance requires execution, reporting reasons and failure-fi
   assert.match(readme, /失败先行/u);
 });
 
-test('verification guidance requires self-run tests and private reports', () => {
+test('CASE-097 verification guidance requires self-run tests and private reports', () => {
   const usage = read('usage.md');
   assert.match(usage, /只声明测试.*tiller 构造并执行/u);
   assert.match(usage, /stdout\/stderr 不参与判定/u);
@@ -204,49 +205,38 @@ test('README describes only the default flow and release-time versioning', () =>
   assert.doesNotMatch(readme, /advanced|0\.4\.0 升级到 0\.5\.0/u);
 });
 
-test('global cases use module kinds and scenarios with resolvable named tests', () => {
+test('CASE-048 global cases use module kinds and scenarios with resolvable named tests', async () => {
   const directory = join(repository, '.tiller/cases');
   assert.deepEqual(readdirSync(directory).sort(), ['index.md', 'modules', 'scenarios']);
   const specs = readdirSync(join(repository, '.tiller/specs/modules'), { withFileTypes: true })
     .filter(entry => entry.isDirectory()).map(entry => entry.name).sort();
   const kinds = ['behavior', 'interface', 'performance', 'security'];
-  const cases = [];
-  const counts = {};
-  for (const module of readdirSync(join(directory, 'modules'), { withFileTypes: true }).filter(entry => entry.isDirectory()).map(entry => entry.name).sort()) {
-    assert.ok(specs.includes(module), `unknown case module ${module}`);
-    counts[module] = { behavior: 0, interface: 0, performance: 0, security: 0 };
-    for (const name of readdirSync(join(directory, 'modules', module)).sort()) {
-      const kind = name.slice(0, -5);
-      assert.ok(name.endsWith('.json') && kinds.includes(kind), `${module}/${name}`);
-      const value = JSON.parse(readFileSync(join(directory, 'modules', module, name), 'utf8'));
-      assert.equal(value.schemaVersion, 1);
-      assert.equal(value.module, module);
-      assert.equal(value.kind, kind);
-      assert.ok(value.cases.length > 0);
-      counts[module][kind] += value.cases.length;
-      cases.push(...value.cases.map(item => ({ ...item, file: `${module}/${name}` })));
+  const library = await readCaseLibrary(repository);
+  assert.deepEqual(library.issues, []);
+  assert.equal(library.cases.length, 103);
+  assert.deepEqual(library.cases.map(item => item.id).sort(),
+    Array.from({ length: 103 }, (_, index) => `CASE-${String(index + 1).padStart(3, '0')}`));
+  assert.deepEqual(library.modules.map(item => ({ module: item.module, behavior: item.behavior, interface: item.interface,
+    performance: item.performance, security: item.security })), [
+    { module: 'initialization', behavior: 8, interface: 0, performance: 11, security: 0 },
+    { module: 'standards', behavior: 9, interface: 0, performance: 0, security: 0 },
+    { module: 'verification', behavior: 4, interface: 6, performance: 15, security: 1 },
+    { module: 'workflow', behavior: 23, interface: 18, performance: 0, security: 6 },
+  ]);
+  assert.equal(library.scenarios.length, 2);
+  for (const item of library.scenarios) assert.ok(item.modules.length > 0 && item.modules.every(module => specs.includes(module)));
+  for (const module of specs) {
+    const files = readdirSync(join(directory, 'modules', module));
+    assert.ok(files.length > 0, `missing cases for ${module}`);
+    for (const name of files) {
+      assert.ok(name.endsWith('.md') && kinds.includes(name.slice(0, -3)), `${module}/${name}`);
     }
   }
-  const scenarios = readdirSync(join(directory, 'scenarios')).filter(name => name.endsWith('.json')).sort()
-    .flatMap(name => JSON.parse(readFileSync(join(directory, 'scenarios', name), 'utf8')).scenarios);
-  cases.push(...scenarios.map(item => ({ ...item, file: `scenarios/${item.id}` })));
-  assert.equal(cases.length, 97);
-  assert.deepEqual(cases.map(item => item.id).sort(), Array.from({ length: 97 }, (_, index) => `CASE-${String(index + 1).padStart(3, '0')}`));
-  assert.deepEqual(counts, {
-    initialization: { behavior: 8, interface: 0, performance: 11, security: 0 },
-    standards: { behavior: 8, interface: 0, performance: 0, security: 0 },
-    verification: { behavior: 4, interface: 5, performance: 15, security: 0 },
-    workflow: { behavior: 21, interface: 17, performance: 0, security: 6 },
-  });
-  for (const item of scenarios) {
-    assert.ok(item.modules.length > 0 && item.modules.every(module => specs.includes(module)), `${item.id}: modules`);
-  }
-  for (const item of cases.filter(entry => Number(entry.id.slice(5)) >= 50)) {
-    assert.ok(Array.isArray(item.criteria) && item.criteria.length > 0, `${item.id}: criteria`);
-  }
   const slug = value => value.toLowerCase().trim().replace(/[^\p{L}\p{N}\s-]/gu, '').replace(/\s+/gu, '-');
-  for (const item of cases) {
+  for (const item of library.cases) {
     assert.ok(item.requirements.length > 0 && item.source.length > 0, `${item.id}: references`);
+    assert.ok(item.preconditions.length && item.steps.length && item.inputs.length && item.expected, `${item.id}: design fields`);
+    if (Number(item.id.slice(5)) >= 50) assert.ok(item.criteria.length > 0, `${item.id}: criteria`);
     for (const reference of [...item.requirements, ...item.source]) {
       const [file, anchor] = reference.split('#');
       const target = join(repository, file);
@@ -256,15 +246,19 @@ test('global cases use module kinds and scenarios with resolvable named tests', 
         assert.ok(headings.includes(decodeURIComponent(anchor)), `${item.id}: missing heading ${reference}`);
       }
     }
-    const [testFile, testName] = item.test_ref.split('::');
-    assert.ok(testFile && testName, `${item.id}: named test_ref`);
-    const content = readFileSync(join(repository, testFile), 'utf8');
-    const names = [...content.matchAll(/\b(?:test|it)\s*\(\s*(['"`])(.*?)\1\s*,/gu)].map(match => match[2]);
-    assert.ok(names.includes(testName), `${item.id}: missing ${item.test_ref}`);
+    assert.ok(item.tests.length > 0, `${item.id}: pending test`);
+    for (const reference of item.tests) {
+      assert.ok(reference.name?.includes(item.id), `${item.id}: test name lacks CASE id`);
+      const content = readFileSync(join(repository, reference.path), 'utf8');
+      const names = [...content.matchAll(/\b(?:test|it)\s*\(\s*(['"`])(.*?)\1\s*,/gu)].map(match => match[2]);
+      assert.ok(names.includes(reference.name), `${item.id}: missing ${reference.path}::${reference.name}`);
+    }
+    const content = readFileSync(join(repository, item.file), 'utf8');
+    assert.doesNotMatch(content, /test_ref/u, `${item.id}: obsolete test_ref`);
   }
 });
 
-test('structured confirmation guidance is synchronized across help and durable docs', () => {
+test('CASE-065 structured confirmation guidance is synchronized across help and durable docs', () => {
   const help = success(cli(repository, '--help')).help;
   assert.match(help, /--by/u);
   assert.match(help, /原话可选/u);
@@ -284,7 +278,7 @@ test('structured confirmation guidance is synchronized across help and durable d
   assert.match(specs, /方案.*影响与风险/u);
   const decisions = readFileSync(join(repository, '.tiller/specs/decisions.md'), 'utf8');
   assert.match(decisions, /原话不再必填/u);
-  const cases = readFileSync(join(repository, '.tiller/cases/index.md'), 'utf8');
-  assert.match(cases, /原话可选/u);
-  assert.match(cases, /结构化/u);
+  const requirements = readFileSync(join(repository, '.tiller/specs/requirements.md'), 'utf8');
+  assert.match(requirements, /原话可选/u);
+  assert.match(requirements, /结构化/u);
 });

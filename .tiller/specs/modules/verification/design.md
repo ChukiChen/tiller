@@ -2,21 +2,31 @@
 
 ## 1. 用例文件
 
-模块文件：
+模块用例使用 Markdown，例如：
 
-```json
-{"schemaVersion":1,"module":"workflow","kind":"behavior","cases":[{
-  "id":"CASE-050","title":"...","requirements":[".tiller/specs/..."],
-  "modules":["workflow"],"test_ref":"test/example.test.mjs::name",
-  "source":["src/flow.ts"],"criteria":["20261022-task#AC-1"]
-}]}
+```md
+## CASE-050 用例标题
+
+- 类型：behavior
+- 优先级：medium
+- 模块：workflow
+- 关联 AC：`20261022-task#AC-1`
+- 需求：`.tiller/specs/modules/workflow/requirements.md`
+- 源码：`src/flow.ts`
+
+### 前置条件
+### 步骤
+### 输入
+### 预期结果
 ```
 
-场景文件使用 `schemaVersion` 与 `scenarios` 数组；每条场景必须有 `modules` 和具名 `test_ref`。读取器缓存测试文件内容，按文件实际内容确认具名测试存在。
+场景使用同一格式，类型为 `scenario` 并声明经过的 `modules`。读取器解析固定字段，校验模块、类型白名单、编号唯一和必备测试设计字段。
 
-## 2. 编号与写入
+## 2. 编号、写入与反查
 
-`case add` 在工程锁内遍历 `cases/`，取最大 `CASE-NNN` 加一。编号跨模块和场景全局唯一，不复用。写入前校验任务存在且 AC 属于该任务，模块在 specs 中存在，类型合法，`test_ref` 为 `文件::测试名`，来源路径非空。场景模块取重复 `--module`。
+`case add` 在工程锁内只扫描用例二级标题中的已有 `CASE-NNN`，取最大编号加一；正文中的示例编号不占用编号。编号跨模块和场景全局唯一，不复用。写入前校验任务存在且 AC 属于该任务，模块在 specs 中存在，类型合法，来源路径非空。场景模块取重复 `--module`。
+
+测试扫描器遍历 `test/**/*.test.*` 与 `*.spec.*`，解析 `test`/`it` 名称，并读取测试前紧邻注释中的 `CASE-NNN`。扫描结果构成 case→tests 反查；一个测试可关联多个编号，一个用例可保留多个测试。未知编号写入用例库错误；无引用用例标记待实现。
 
 ## 3. 回归提示
 
@@ -24,17 +34,17 @@
 
 ## 4. 检查算法
 
-对每条 AC：
+`check` 按任务阶段读取用例库：
 
-1. 读取最新验证；
-2. 按 `test_ref` 找匹配用例；
-3. 校验结果是 passed、代码树等于当前树、测试文件仍存在；
+1. 需求/设计确认后，每条 AC 必须映射至少一个带完整设计字段的用例；
+2. 有验证记录后，每个用例必须有至少一个测试名或紧邻注释引用它；
+3. 校验最新验证覆盖对应测试、结果为 passed、代码树等于当前树且测试文件仍存在；
 4. 校验执行证据已核实；外部报告理由存在且显式允许；bugfix 的失败先行测试与当前通过测试一致；
 5. 校验用例 `criteria` 包含 `<task>#<AC>`，除非用例相对任务基线新增或修改；
 6. 把覆盖状态写入结果和 task 自检。
 
-结构错误、缺失测试和错配是阻塞项；历史空 criteria、无 Git、未覆盖场景、提交或分支格式不合规是提示。PR/MR 草稿复用同一检查结果，不另造状态。
+结构错误、缺失用例、待实现测试、缺失测试和错配是阻塞项；历史空 criteria、无 Git、未覆盖场景、提交或分支格式不合规是提示。
 
 ## 5. 边界
 
-该模块不提交原始输出、自举工程、安装包和全文文件快照。`verify` 的子进程输出只写 `.tiller/local/logs/`，默认不显示，`--verbose` 时同时转发；判定只读私有临时报告。`src/test-output.ts` 暴露 `TestRunner` 的构造命令与报告解析接口并注册适配器，`src/test-reporter.ts` 生成仅含测试事件和总结的 JSONL 报告。需要审计时查看 task.md 的实际命令、结果和日志路径，并从 Git/重新执行取得事实。
+该模块不提交原始输出、自举工程、安装包和全文文件快照。`verify` 子进程输出只写 `.tiller/local/logs/`，默认不显示，`--verbose` 时同时转发；判定只读私有临时报告。`src/test-output.ts` 暴露 `TestRunner` 的构造命令与报告解析接口并注册适配器，`src/test-reporter.ts` 生成仅含测试事件和总结的 JSONL 报告。需要复查时查看 task.md 的实际命令和日志路径，并从 Git 或重跑取得事实。

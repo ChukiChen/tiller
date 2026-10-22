@@ -216,7 +216,7 @@ export function buildIndexSection(mode: ProjectMode): string {
     '本入口只表示文件接入；宿主实际读取和规则执行尚未验证。', '',
     '## 资料分类', '',
     '- `specs/`：总体与模块需求、设计及长期决定。',
-    '- `cases/`：产品级回归用例事实，保存编号、需求/模块引用、测试引用和源码路径。',
+    '- `cases/`：产品级测试设计与回归事实，保存编号、前置条件、步骤、输入、预期结果、来源 AC、需求/模块引用和源码路径；测试名引用 CASE 编号。',
     '- `plans/`：大功能的规划与任务拆分，按需建立；单次任务仍以 `task.md` 为准。',
     '- `rules/`：通用规则及已有项目约定。',
     '- `context/`：项目背景、现状与资料索引。',
@@ -284,7 +284,7 @@ const SKELETON_FILES: { path: string; content: string }[] = [
   },
   {
     path: '.tiller/cases/index.md',
-    content: '# 全局用例\n\n这里是跨任务回归事实源；单次任务记录留在 `.tiller/task/<id>/task.md`。\n\n```text\ncases/modules/<模块>/{behavior,interface,performance,security}.json\ncases/scenarios/<场景>.json\n```\n\n模块名须与 `.tiller/specs/modules/` 一致。用 `tiller case add <task-id> --criterion AC-1 ...` 新增用例；每条用例保存稳定编号、需求/模块引用、来源 AC、具名 `test_ref` 和源码路径。场景额外声明经过的 `modules`。需求确认后先把 AC 转为用例，再写测试、实现和验证。\n',
+    content: '# 全局用例\n\n这里是跨任务的测试设计与回归事实源；单次任务记录留在 `.tiller/task/<id>/task.md`。\n\n```text\ncases/modules/<模块>/{behavior,interface,performance,security}.md\ncases/scenarios/<场景>.md\n```\n\n模块名须与 `.tiller/specs/modules/` 一致。每条 Markdown 用例含前置条件、步骤、输入、预期结果、类型、优先级和来源 AC。先用 `tiller case add` 登记用例，再让测试名引用 `CASE-NNN`；tiller 扫描测试建立反查。没有测试引用时用例显示为待实现。场景额外声明经过的 `modules`。\n',
   },
   { path: '.tiller/cases/modules/.gitkeep', content: '' },
   { path: '.tiller/cases/scenarios/.gitkeep', content: '' },

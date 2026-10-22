@@ -7,7 +7,7 @@ import { initialize, readRepositoryMetadata, META } from '../dist/core.js';
 import { readTextInputs, verifyTextInputs } from '../dist/files.js';
 import { fixture, gitRepository, put } from './helpers.mjs';
 
-test('repository metadata has no hidden read round and observes each independent read', async t => {
+test('CASE-029 repository metadata has no hidden read round and observes each independent read', async t => {
   const root = fixture(t);
   await initialize({ root });
   const original = fs.readFile;
@@ -27,7 +27,7 @@ test('repository metadata has no hidden read round and observes each independent
   } finally { fs.readFile = original; syncBuiltinESMExports(); }
 });
 
-test('explicit metadata inputs can be verified without implicit source retention', async t => {
+test('CASE-030 explicit metadata inputs can be verified without implicit source retention', async t => {
   const root = fixture(t);
   await initialize({ root });
   const inputs = await readTextInputs(root, [META]);

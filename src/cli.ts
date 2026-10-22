@@ -24,10 +24,11 @@ const HELP = `tiller ${CLI_VERSION} — 默认工作流
   tiller start <task-id> --title <标题> --requirement <需求正文> --criterion "AC-1=<验收条件>" [--criterion ...] [--type feature] [--size small|standard] [--target <相对路径> ...] [--summary <中文摘要>] [--slug <英文描述>] [--plan <plan-id> --item <条目>] [--path <root>]
   tiller resume [task-id] [--path <root>]
   tiller confirm <task-id> requirements|design|acceptance [--by <确认人>] [--quote "<可选原话>"] [--commit <oid>] [--path <root>]
-  tiller case add <task-id> --module <模块> --kind behavior|interface|performance|security --title <标题> --test "<文件::测试名>" --criterion AC-1 [--criterion ...] [--spec <引用> ...] --source <源码路径> [--source ...] [--path <root>]
-  tiller case add <task-id> --scenario <场景名> --module <模块> [--module ...] --title <标题> --test "<文件::测试名>" --criterion AC-1 [--spec <引用> ...] --source <源码路径> [--source ...]
-  tiller verify <task-id> --criterion AC-1 [--criterion ...] --test <测试文件或用例引用> [--expect-fail] [--verbose] [--path <root>]
-  tiller verify <task-id> --criterion AC-1 --test <测试文件或用例引用> --reported --command "<外部命令>" --result passed|failed|skipped --reason "<理由>" [--path <root>]
+  tiller case add <task-id> --module <模块> --kind behavior|interface|performance|security --title <标题> --criterion AC-1 [--criterion ...] --expected "<预期结果>" [--precondition <条件> ...] [--step <步骤> ...] [--input <输入> ...] [--priority high|medium|low] [--spec <引用> ...] --source <源码路径> [--source ...] [--path <root>]
+  tiller case add <task-id> --scenario <场景名> --module <模块> [--module ...] --title <标题> --criterion AC-1 --expected "<预期结果>" [--spec <引用> ...] --source <源码路径> [--source ...]
+  tiller verify <task-id> --criterion AC-1 [--criterion ...] --test "<文件::测试名>" [--expect-fail] [--verbose] [--path <root>]
+  tiller verify <task-id> [--criterion AC-1 ...] --case CASE-NNN [--verbose] [--path <root>]
+  tiller verify <task-id> --criterion AC-1 --test "<文件::测试名>" --reported --command "<外部命令>" --result passed|failed|skipped --reason "<理由>" [--path <root>]
   tiller check <task-id> [--allow-reported] [--path <root>]
   tiller pr <task-id> [--summary <中文摘要>] [--slug <英文描述>] [--path <root>]
   tiller accept <task-id> [--by <确认人>] [--quote "<可选原话>"] [--commit <oid>] [--allow-reported] [--path <root>]
@@ -44,7 +45,7 @@ const HELP = `tiller ${CLI_VERSION} — 默认工作流
 - 大功能可先写 .tiller/plans/<id>.md 并确认；start 挂到条目时默认继承粒度，依赖未验收会阻塞。
 - task.md 是唯一任务记录：start 生成结构化需求，标准任务另有设计与影响；确认前校验正文，原话只作可选附注。verify 自主执行测试并从私有报告核实，保存实际命令、结果、日志、提交和代码树摘要。
 - 阶段由 task.md 事实推导；close 收尾已验收任务，未验收终止用 --abandon，必要时 reopen。
-- case add 自动分配 CASE 编号并写入来源 AC；check 会核对 AC→全局用例→测试→当前验证，校验模块/场景结构并提示相关回归，同时检查范围、测试弱化、密钥和本机绝对路径。
+- case add 在测试之前登记测试设计（前置条件、步骤、输入、预期结果、类型、优先级、来源 AC），自动分配 CASE 编号；测试名引用 CASE 编号形成反查。check 分阶段核对 AC→用例→测试→当前验证，校验模块/场景结构并提示相关回归，同时检查范围、测试弱化、密钥和本机绝对路径。
 - pr 从 task.md 和 Git 提交生成五段 PR/MR 草稿及建议分支名；提交用“类型(模块): 中文摘要”，分支用“类型/任务编号[-描述]”；check 只提示格式问题。
 - upgrade 刷新未修改的受管文件，保留并报告用户修改；版本号只在正式发布时修改。
 `;
@@ -90,12 +91,14 @@ export async function runCli(rawArgs = process.argv.slice(2)): Promise<void> {
         plan: { type: 'string' }, item: { type: 'string', multiple: true }, goal: { type: 'string' },
         spec: { type: 'string', multiple: true }, module: { type: 'string', multiple: true },
         kind: { type: 'string' }, scenario: { type: 'string' }, source: { type: 'string', multiple: true },
+        expected: { type: 'string' }, precondition: { type: 'string', multiple: true }, step: { type: 'string', multiple: true },
+        input: { type: 'string', multiple: true }, priority: { type: 'string' }, case: { type: 'string' },
         apply: { type: 'string' }, abandon: { type: 'boolean' },
       },
     });
     const seenOptions = new Set<string>();
     for (const token of tokens) {
-      if (token.kind !== 'option' || ['repo', 'target', 'criterion', 'item', 'spec', 'module', 'source'].includes(token.name)) continue;
+      if (token.kind !== 'option' || ['repo', 'target', 'criterion', 'item', 'spec', 'module', 'source', 'precondition', 'step', 'input'].includes(token.name)) continue;
       if (seenOptions.has(token.name)) usage(`选项 --${token.name} 不能重复。`);
       seenOptions.add(token.name);
     }
@@ -113,14 +116,14 @@ export async function runCli(rawArgs = process.argv.slice(2)): Promise<void> {
         ? command === 'start' ? ['path', 'title', 'requirement', 'type', 'size', 'target', 'criterion', 'plan', 'item', 'slug', 'summary']
           : command === 'resume' ? ['path']
             : command === 'confirm' ? ['path', 'quote', 'by', 'commit', 'allow-reported']
-              : command === 'verify' ? ['path', 'criterion', 'test', 'command', 'run', 'result', 'reported', 'reason', 'expect-fail', 'verbose']
+              : command === 'verify' ? ['path', 'criterion', 'test', 'case', 'command', 'run', 'result', 'reported', 'reason', 'expect-fail', 'verbose']
                 : command === 'accept' ? ['path', 'quote', 'by', 'commit', 'allow-reported']
                   : command === 'close' ? ['path', 'reason', 'abandon']
                     : command === 'reopen' ? ['path', 'reason'] : ['path', 'allow-reported']
         : planCommand ? second === 'start' ? ['path', 'title', 'goal', 'spec', 'item']
           : second === 'confirm' ? ['path', 'quote', 'by', 'commit']
             : second === 'status' ? ['path'] : []
-          : caseCommand ? second === 'add' ? ['path', 'module', 'kind', 'scenario', 'title', 'test', 'criterion', 'spec', 'source'] : []
+          : caseCommand ? second === 'add' ? ['path', 'module', 'kind', 'scenario', 'title', 'criterion', 'spec', 'source', 'expected', 'precondition', 'step', 'input', 'priority'] : []
             : prCommand ? ['path', 'slug', 'summary']
               : command === 'init' ? ['mode', 'repo', 'platform']
               : command === 'upgrade' ? ['plan', 'apply']
@@ -159,14 +162,19 @@ export async function runCli(rawArgs = process.argv.slice(2)): Promise<void> {
           });
         } else if (command === 'verify') {
           if (positionals.length !== 2) usage('verify 需要一个任务标识。');
-          if (!values.criterion?.length || !values.test) usage('verify 需要 --criterion 和 --test。');
-          if (values.run !== undefined) usage('verify 不再接受 --run；直接使用 --test "文件::测试名"，由 tiller 自主执行测试。');
+          if (!values.test && !values.case) usage('verify 需要 --test "文件::测试名" 或 --case CASE-xxx。');
+          if (!values.criterion?.length && !values.case) usage('verify 未指定 --case 时至少需要一个 --criterion。');
+          if (values.test && values.case) usage('--test 与 --case 只能选一个。');
+          if (values.run !== undefined) usage('verify 不再接受 --run；使用 --test "文件::测试名" 或 --case CASE-xxx，由 tiller 自主执行测试。');
           if (values.reported) {
+            if (!values.test) usage('--reported 需要 --test；--case 必须由 tiller 执行。');
             if (!values.command || !values.result || !values.reason) usage('--reported 需要 --command、--result 和 --reason。');
           } else if (values.command !== undefined || values.result !== undefined || values.reason !== undefined) {
-            usage('外部报告需要 --reported；普通验证只需 --test "文件::测试名"。');
+            usage('外部报告需要 --reported；普通验证只需 --test 或 --case。');
           }
-          result = await verifyFlow(root, second!, { criteria: values.criterion, test: values.test,
+          result = await verifyFlow(root, second!, { criteria: values.criterion ?? [],
+            ...(values.test === undefined ? {} : { test: values.test }),
+            ...(values.case === undefined ? {} : { case: values.case }),
             ...(values.command === undefined ? {} : { command: values.command }),
             ...(values.result === undefined ? {} : { result: values.result }),
             ...(values.reported === undefined ? {} : { reported: values.reported }),
@@ -213,16 +221,19 @@ export async function runCli(rawArgs = process.argv.slice(2)): Promise<void> {
         } else usage('plan 支持 start、confirm 或 status。');
       } else if (caseCommand) {
         if (second !== 'add' || positionals.length !== 3) usage('case 支持 add <task-id>。');
-        if (!values.title || !values.test || !values.criterion?.length || !values.module?.length) {
-          usage('case add 需要 --module、--title、--test 和至少一个 --criterion。');
+        if (!values.title || !values.criterion?.length || !values.module?.length || !values.expected) {
+          usage('case add 需要 --module、--title、--criterion 和 --expected（预期结果）。');
         }
         if (!values.scenario && !values.kind) usage('case add 需要 --kind，或使用 --scenario 登记端到端场景。');
         if (!values.scenario && values.module.length !== 1) usage('模块用例只能指定一个 --module；场景可重复 --module 声明经过模块。');
         if (values.scenario && values.kind) usage('--scenario 与 --kind 不能同时使用。');
         const root = resolve(values.path ?? process.cwd());
         result = await addGlobalCase(root, {
-          task: third!, title: values.title, test: values.test, criteria: values.criterion,
+          task: third!, title: values.title, criteria: values.criterion,
           requirements: values.spec ?? [], source: values.source ?? [], modules: values.module,
+          preconditions: values.precondition ?? [], steps: values.step ?? [], inputs: values.input ?? [],
+          expected: values.expected,
+          ...(values.priority === undefined ? {} : { priority: values.priority }),
           ...(values.module[0] === undefined ? {} : { module: values.module[0] }),
           ...(values.kind === undefined ? {} : { kind: values.kind }),
           ...(values.scenario === undefined ? {} : { scenario: values.scenario }),

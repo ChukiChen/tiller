@@ -40,18 +40,20 @@
 ```text
 .tiller/cases/
   index.md
-  modules/<模块>/{behavior,interface,performance,security}.json
-  scenarios/<场景>.json
+  modules/<模块>/{behavior,interface,performance,security}.md
+  scenarios/<场景>.md
 ```
 
-模块文件声明 `module`/`kind`，场景声明 `modules`。每条用例必有 `id`、`title`、`requirements`、`modules`、`test_ref`、`source`；新用例另有 `criteria`。读取时校验路径、模块、类型白名单、编号唯一、具名测试存在和场景模块存在。`case add` 在工程锁内分配下一个 `CASE-NNN`，写入对应文件，缺测试文件时返回建议骨架。
+每个 Markdown 用例以二级标题中的 `CASE-NNN` 为稳定编号，段内字段声明类型、优先级、模块、来源 AC、需求与源码，三级段声明前置条件、步骤、输入和预期结果。场景额外声明经过的 `modules`。读取时校验路径、模块、类型白名单、编号唯一、必备设计字段和场景模块存在。
+
+`case add`：在工程锁内只扫描用例标题分配下一个未占用编号，不把正文示例编号当作占用；写入前校验任务 AC、模块和类型，不要求测试文件，返回待实现状态与测试骨架。测试扫描 `test/**/*.test.*` 和 `*.spec.*`，从测试名或紧邻注释提取 `CASE-NNN`，建立 case→tests 反查；未知编号进入错误列表。
 
 ## 6. 用例先行与检查
 
-`verify` 以 `test_ref` 命中用例编号写入 `task.md`。`check` 要求：
+`verify --test` 从测试引用反查用例，`verify --case` 执行覆盖该用例的全部测试；两者都走私有报告核实。`check` 分阶段要求：
 
-1. 每条 AC 有最新验证和至少一个用例；
-2. 用例存在、测试引用一致且仍存在；
+1. AC 有带完整测试设计的用例；缺失用例编号为阻塞项；
+2. 验证或验收阶段每个用例至少一个引用测试；无测试显示待实现并阻塞；
 3. 用例 `criteria` 回指当前任务 AC，或该用例在本任务新增/修改；
 4. 最新验证通过、命令由 tiller 实际执行且私有报告已核实，代码树未变化；
 5. 外部报告有理由并仅经 `--allow-reported` 放行，bugfix 有基线失败先行与当前通过；

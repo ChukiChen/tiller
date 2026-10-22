@@ -29,7 +29,7 @@ async function countIgnore(root, action) {
   }
 }
 
-test('one write boundary merges eligibility declarations and independently detects a new ignore rule', async t => {
+test('CASE-031 one write boundary merges eligibility declarations and independently detects a new ignore rule', async t => {
   const root = await project(t);
   put(root, 'docs/first.md', '# First\n'); put(root, 'docs/second.md', '# Second\n');
   const proofs = [
@@ -42,7 +42,7 @@ test('one write boundary merges eligibility declarations and independently detec
   await assert.rejects(assertSharedWriteProofs(proofs), /被 Git 忽略/u);
 });
 
-test('batch text reads check inputs without Git and explicit proof rejects changed or newly created files', async t => {
+test('CASE-032 batch text reads check inputs without Git and explicit proof rejects changed or newly created files', async t => {
   const root = await project(t);
   put(root, '.tiller/specs/a.md', 'a');
   appendFileSync(join(root, '.git/info/exclude'), '\n/.tiller/specs/a.md\n');
@@ -56,7 +56,7 @@ test('batch text reads check inputs without Git and explicit proof rejects chang
   await assert.rejects(verifyTextInputs(root, inputs), error => error.code === 'INPUT_CHANGED');
 });
 
-test('explicit text proof rejects changed, removed and replaced hard-linked inputs', async t => {
+test('CASE-033 explicit text proof rejects changed, removed and replaced hard-linked inputs', async t => {
   const root = await project(t);
   const relative = '.tiller/specs/observed.md';
   const target = put(root, relative, 'Original bytes.');
@@ -70,7 +70,7 @@ test('explicit text proof rejects changed, removed and replaced hard-linked inpu
   await assert.rejects(verifyTextInputs(root, inputs), /硬链接/u);
 });
 
-test('shared writes batch long path lists through one Git stdin request', async t => {
+test('CASE-034 shared writes batch long path lists through one Git stdin request', async t => {
   const root = await project(t);
   const paths = Array.from({ length: 1100 }, (_, index) => `.tiller/specs/material-${index}.md`);
   assert.equal(await countIgnore(root, () => assertSharedWritePaths(root, paths)), 1);
@@ -78,7 +78,7 @@ test('shared writes batch long path lists through one Git stdin request', async 
   await assert.rejects(assertSharedWritePaths(root, paths), /共享资料被 Git 忽略/u);
 });
 
-test('repository discovery avoids non-repository processes and notices later and ancestor repositories', async t => {
+test('CASE-035 repository discovery avoids non-repository processes and notices later and ancestor repositories', async t => {
   const root = repositoryFreeFixture(t);
   if (!root) return;
   await initialize({root});
@@ -91,7 +91,7 @@ test('repository discovery avoids non-repository processes and notices later and
   await assert.rejects(assertSharedWritePaths(join(root, 'nested'), ['shared.md']), /忽略/u);
 });
 
-test('transaction boundary rejects ignored writes before journal or content changes', async t => {
+test('CASE-036 transaction boundary rejects ignored writes before journal or content changes', async t => {
   const root = await project(t);
   const relative = '.tiller/specs/hidden.md';
   appendFileSync(join(root, '.git/info/exclude'), `\n/${relative}\n`);
@@ -100,7 +100,7 @@ test('transaction boundary rejects ignored writes before journal or content chan
   assert.equal(await readTextIfExists(root, '.tiller/local/transaction.json'), null);
 });
 
-test('batch readers reject hard links and invalid UTF8', async t => {
+test('CASE-037 batch readers reject hard links and invalid UTF8', async t => {
   const root = await project(t);
   put(root, '.tiller/specs/source.md', 'source');
   linkSync(join(root, '.tiller/specs/source.md'), join(root, '.tiller/specs/linked.md'));
@@ -109,7 +109,7 @@ test('batch readers reject hard links and invalid UTF8', async t => {
   await assert.rejects(readTextInputs(root, ['.tiller/specs/invalid.md']), /UTF-8/u);
 });
 
-test('transaction refuses an unknown current or replacement metadata version', async t => {
+test('CASE-038 transaction refuses an unknown current or replacement metadata version', async t => {
   const root = await project(t);
   const original = await readTextIfExists(root, META);
   const invalid = JSON.stringify({ ...JSON.parse(original), resourceVersion: 'unknown' });
@@ -119,7 +119,7 @@ test('transaction refuses an unknown current or replacement metadata version', a
   assert.equal(await readTextIfExists(root, '.tiller/specs/new.md'), null);
 });
 
-test('batch input collection visits common parents once and reads each declared file once', async t => {
+test('CASE-039 batch input collection visits common parents once and reads each declared file once', async t => {
   const root = await project(t);
   put(root, '.tiller/specs/a.md', 'a');
   put(root, '.tiller/specs/b.md', 'b');
@@ -149,7 +149,7 @@ test('batch input collection visits common parents once and reads each declared 
   }
 });
 
-test('bounded text inputs reject oversized bytes before allocation and recheck growth after read', async t => {
+test('CASE-040 bounded text inputs reject oversized bytes before allocation and recheck growth after read', async t => {
   const root = await project(t);
   const relative = '.tiller/specs/bounded.md';
   const target = join(root, relative);
@@ -180,7 +180,7 @@ test('bounded text inputs reject oversized bytes before allocation and recheck g
   } finally { fs.readFile = original; syncBuiltinESMExports(); }
 });
 
-test('text input limits accept zero for empty files and reject invalid option values', async t => {
+test('CASE-041 text input limits accept zero for empty files and reject invalid option values', async t => {
   const root = await project(t);
   put(root, '.tiller/specs/empty.md', '');
   assert.equal((await readTextInputs(root, ['.tiller/specs/empty.md'], { maxBytes: 0 }))[0].text, '');

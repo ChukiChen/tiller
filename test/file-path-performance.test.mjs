@@ -11,7 +11,7 @@ const readPaths = (root, paths) => files.assertSafePaths
   ? files.assertSafePaths(root, paths)
   : Promise.all(paths.map(path => files.assertSafePath(root, path)));
 
-test('one path batch checks common parents once and independent batches start fresh', async t => {
+test('CASE-016 one path batch checks common parents once and independent batches start fresh', async t => {
   const root = fixture(t);
   const paths = Array.from({ length: 48 }, (_, index) => `common/deep/inputs/file-${index}.txt`);
   for (const path of paths) put(root, path, 'input\n');
@@ -33,7 +33,7 @@ test('one path batch checks common parents once and independent batches start fr
   } finally { fs.lstat = original; syncBuiltinESMExports(); }
 });
 
-test('path batches preserve file links, bad parents and new changes between calls', async t => {
+test('CASE-017 path batches preserve file links, bad parents and new changes between calls', async t => {
   const root = fixture(t);
   put(root, 'common/source.txt', 'source\n');
   await fs.link(join(root, 'common/source.txt'), join(root, 'common/hard.txt'));
@@ -46,7 +46,7 @@ test('path batches preserve file links, bad parents and new changes between call
   await assert.rejects(readPaths(root, ['new/child.txt']), /父路径不是目录/u);
 });
 
-test('one proof boundary reconciles declarations and observes revocation after material reads', async t => {
+test('CASE-018 one proof boundary reconciles declarations and observes revocation after material reads', async t => {
   const root = fixture(t);
   put(root, 'material.txt', 'current'); put(root, 'control.txt', 'approved');
   const proofs = [
@@ -73,7 +73,7 @@ test('one proof boundary reconciles declarations and observes revocation after m
   } finally { fs.readFile = original; syncBuiltinESMExports(); }
 });
 
-test('an explicit operation input reads once, isolates roots and proves changes independently', async t => {
+test('CASE-019 an explicit operation input reads once, isolates roots and proves changes independently', async t => {
   const root = fixture(t); const other = fixture(t);
   put(root, 'input.txt', 'first'); put(other, 'input.txt', 'other');
   const input = new files.TextReadInput();
