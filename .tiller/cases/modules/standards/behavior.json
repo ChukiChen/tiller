@@ -5,7 +5,7 @@
   "cases": [
     {
       "id": "CASE-049",
-      "title": "默认必读资料保持在 5000 字符预算内",
+      "title": "默认必读资料保持在 7000 字符预算内",
       "requirements": [
         ".tiller/rules/index.md",
         ".tiller/rules/core.md"
@@ -13,7 +13,7 @@
       "modules": [
         "standards"
       ],
-      "test_ref": "test/rules.test.mjs::required reading stays within the default-flow budget",
+      "test_ref": "test/rules.test.mjs::required reading budget allows clear guidance within 7000 characters",
       "source": [
         "resources/entry.md",
         "resources/usage.md",
@@ -67,13 +67,50 @@
       "modules": [
         "standards"
       ],
-      "test_ref": "test/rules.test.mjs::required reading stays within the default-flow budget",
+      "test_ref": "test/rules.test.mjs::required reading budget allows clear guidance within 7000 characters",
       "source": [
         "resources/rules/activities/delivery.md",
         "resources/usage.md"
       ],
       "criteria": [
         "20261022-round11#AC-5"
+      ]
+    },
+    {
+      "id": "CASE-084",
+      "title": "恢复清晰的入口 usage 与规则文案",
+      "requirements": [
+        ".tiller/specs/modules/standards/requirements.md#2-必读与按需读取"
+      ],
+      "modules": [
+        "standards"
+      ],
+      "test_ref": "test/rules.test.mjs::restored guidance keeps complete commands and explicit boundaries",
+      "source": [
+        "resources/usage.md",
+        "resources/rules/core.md",
+        "resources/entry.md"
+      ],
+      "criteria": [
+        "20261022-round13#AC-4"
+      ]
+    },
+    {
+      "id": "CASE-085",
+      "title": "必读资料预算放宽到约 7000 字符",
+      "requirements": [
+        ".tiller/specs/modules/standards/requirements.md#2-必读与按需读取"
+      ],
+      "modules": [
+        "standards"
+      ],
+      "test_ref": "test/rules.test.mjs::required reading budget allows clear guidance within 7000 characters",
+      "source": [
+        "test/rules.test.mjs",
+        ".tiller/specs/modules/standards/requirements.md"
+      ],
+      "criteria": [
+        "20261022-round13#AC-5"
       ]
     }
   ]

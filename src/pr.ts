@@ -2,7 +2,7 @@ import { readdir } from 'node:fs/promises';
 import path from 'node:path';
 import { branchDescriptionForTask, currentBranch, normalizeBranchSlug, suggestedBranchNameFor } from './branch-conventions.js';
 import { readCaseLibrary } from './cases.js';
-import { commitTypeForTaskType, taskCommits, type CommitType, type TaskCommit } from './commit-conventions.js';
+import { commitSubjectIssue, commitTypeForTaskType, taskCommits, type CommitType, type TaskCommit } from './commit-conventions.js';
 import { inspectFlow, readTask } from './flow.js';
 import type { FlowTask } from './flow.js';
 
@@ -65,6 +65,32 @@ function impactText(task: FlowTask): string {
   return impact || IMPACT_PLACEHOLDER;
 }
 
+function oneLine(value: string): string {
+  return value.replace(/\s+/gu, ' ').trim();
+}
+
+function explicitSummary(value: string): string {
+  const summary = value.trim();
+  if (!summary || summary.length > 200 || /[\x00-\x1f]/u.test(summary)) {
+    throw Object.assign(new Error('--summary 必须是非空单行文本，且不超过 200 字符。'), { code: 'INVALID_SUMMARY' });
+  }
+  return summary;
+}
+
+function commitSummary(commit: TaskCommit, available: string[]): string | null {
+  const match = /^(?:feat|fix)(?:\(([a-z][a-z0-9_-]*)\))?: (.+)$/u.exec(commit.subject);
+  if (!match || commitSubjectIssue(commit.subject, available)) return null;
+  return match[2]!.trim();
+}
+
+function earliestCommitSummary(commits: TaskCommit[], available: string[]): string | null {
+  for (const commit of commits) {
+    const summary = commitSummary(commit, available);
+    if (summary) return summary;
+  }
+  return null;
+}
+
 function bodyMarkdown(task: FlowTask, commits: TaskCommit[], covered: Map<string, boolean>): string {
   const sections = new Map<string, string[]>();
   sections.set('关联任务', [`任务 ${task.meta.id}，记录见 \`.tiller/task/${task.meta.id}/task.md\``]);
@@ -73,12 +99,13 @@ function bodyMarkdown(task: FlowTask, commits: TaskCommit[], covered: Map<string
   sections.set('验证结果', task.criteria.map(criterion => {
     const state = covered.get(criterion.id) ? '当前有效' : '当前未覆盖或已过期';
     const runs = task.verifications.filter(item => item.criterion === criterion.id);
-    if (!runs.length) return `- ${criterion.id}：尚无验证记录。`;
+    const heading = `- ${criterion.id}：${oneLine(criterion.text)}（${runs.length ? state : '尚无验证记录'}）`;
+    if (!runs.length) return heading;
     return [
-      `- ${criterion.id}：${state}。`,
-      ...runs.map((run, index) => {
-        const cases = run.cases.length ? `；用例 ${run.cases.join(', ')}` : '';
-        return `  - ${index + 1}. ${run.result}；测试 \`${run.test}\`${cases}；命令 \`${run.command}\`；提交 \`${run.commit}\`。`;
+      heading,
+      ...runs.map(run => {
+        const cases = run.cases.length ? `；用例：${run.cases.join(', ')}` : '';
+        return `  - 测试：\`${run.test}\`；命令：\`${run.command}\`；结果：${run.result}；提交：\`${run.commit}\`${cases}`;
       }),
     ].join('\n');
   }));
@@ -89,7 +116,7 @@ function bodyMarkdown(task: FlowTask, commits: TaskCommit[], covered: Map<string
 export async function draftPullRequest(
   rootInput: string,
   id: string,
-  options: { slug?: string } = {},
+  options: { slug?: string; summary?: string } = {},
 ): Promise<PullRequestDraft & { markdown: string }> {
   const root = path.resolve(rootInput);
   const task = await readTask(root, id);
@@ -112,11 +139,14 @@ export async function draftPullRequest(
     throw Object.assign(new Error('--slug 必须是 1-64 位英文、数字或连字符组成的简短描述。'), { code: 'INVALID_SLUG' });
   }
   const module = resolvedModules[0] ?? null;
+  const commits = await taskCommits(root, task.meta.base);
+  const summary = options.summary !== undefined
+    ? explicitSummary(options.summary)
+    : task.meta.summary ?? earliestCommitSummary(commits.commits, available) ?? task.title;
   const warnings: string[] = [];
   if (resolvedModules.length > 1) warnings.push(`任务涉及多个模块（${resolvedModules.join(', ')}），PR/MR 标题使用首个主模块 ${module}，请人工确认。`);
-  const title = `${type}${module ? `(${module})` : ''}: ${task.title} [${task.meta.id}]`;
+  const title = `${type}${module ? `(${module})` : ''}: ${summary} [${task.meta.id}]`;
   const branch = suggestedBranchNameFor(type, task.meta.id, branchDescription);
-  const commits = await taskCommits(root, task.meta.base);
   if (commits.warning) warnings.push(commits.warning);
   const covered = new Map(checked.criteria.map(item => [item.id, item.covered]));
   const body = bodyMarkdown(task, commits.commits, covered);

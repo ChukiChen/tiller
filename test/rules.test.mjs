@@ -68,11 +68,30 @@ test('core and usage describe the only supported default-flow record path', () =
   assert.match(read('rules/index.md'), /规则按需读取/u);
 });
 
-test('required reading stays within the default-flow budget', () => {
+test('required reading budget allows clear guidance within 7000 characters', () => {
   const required = ['entry.md', 'usage.md', 'rules/index.md', 'rules/core.md'];
   const total = required.reduce((sum, name) => sum + read(name).length, 0);
-  assert.ok(total <= 5000, `required reading is ${total} characters`);
-  assert.ok(read('rules/core.md').length < 3000, 'core rules should stay concise');
+  assert.ok(total <= 7000, `required reading is ${total} characters`);
+  assert.ok(read('rules/core.md').length < 4000, 'core rules should stay concise');
+});
+
+test('restored guidance keeps complete commands and explicit boundaries', () => {
+  const usage = read('usage.md');
+  assert.match(usage, /node \.tiller\/run\.cjs resume/u);
+  assert.match(usage, /--summary/u);
+  assert.match(usage, /标题摘要优先取 `pr --summary`/u);
+  assert.match(usage, /变更内容按提交时间正序/u);
+  assert.match(usage, /平台在初始化时选定[，；]之后不能通过 CLI 切换/u);
+  assert.match(usage, /需手动修改 `\.tiller\/project\.json` 并补齐对应模板/u);
+
+  const core = read('rules/core.md');
+  assert.match(core, /CLI 只检查受控操作和读取到的数据/u);
+  assert.match(core, /不认证身份，也不阻止宿主直接写入/u);
+  assert.match(core, /约 7000 字符/u);
+
+  const delivery = read('rules/activities/delivery.md');
+  assert.match(delivery, /`pr <task-id>`.*生成标题、五段说明和建议分支/u);
+  assert.match(delivery, /平台在初始化时选定[，；]之后不能通过 CLI 切换/u);
 });
 
 test('initialization preserves the guidance reading chain and valid links', t => {
@@ -165,13 +184,13 @@ test('global cases use module kinds and scenarios with resolvable named tests', 
   const scenarios = readdirSync(join(directory, 'scenarios')).filter(name => name.endsWith('.json')).sort()
     .flatMap(name => JSON.parse(readFileSync(join(directory, 'scenarios', name), 'utf8')).scenarios);
   cases.push(...scenarios.map(item => ({ ...item, file: `scenarios/${item.id}` })));
-  assert.equal(cases.length, 80);
-  assert.deepEqual(cases.map(item => item.id).sort(), Array.from({ length: 80 }, (_, index) => `CASE-${String(index + 1).padStart(3, '0')}`));
+  assert.equal(cases.length, 85);
+  assert.deepEqual(cases.map(item => item.id).sort(), Array.from({ length: 85 }, (_, index) => `CASE-${String(index + 1).padStart(3, '0')}`));
   assert.deepEqual(counts, {
     initialization: { behavior: 7, interface: 0, performance: 11, security: 0 },
-    standards: { behavior: 4, interface: 0, performance: 0, security: 0 },
+    standards: { behavior: 6, interface: 0, performance: 0, security: 0 },
     verification: { behavior: 4, interface: 5, performance: 15, security: 0 },
-    workflow: { behavior: 16, interface: 13, performance: 0, security: 3 },
+    workflow: { behavior: 18, interface: 14, performance: 0, security: 3 },
   });
   for (const item of scenarios) {
     assert.ok(item.modules.length > 0 && item.modules.every(module => specs.includes(module)), `${item.id}: modules`);

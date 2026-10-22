@@ -218,6 +218,23 @@
       "criteria": [
         "20261022-round12#AC-5"
       ]
+    },
+    {
+      "id": "CASE-083",
+      "title": "PR 验证结果按 AC 使用普通嵌套列表",
+      "requirements": [
+        ".tiller/specs/modules/workflow/requirements.md#5-提交与-prmr-草稿"
+      ],
+      "modules": [
+        "workflow"
+      ],
+      "test_ref": "test/pr.test.mjs::pr verification section uses plain nested records without numbered bullets",
+      "source": [
+        "src/pr.ts"
+      ],
+      "criteria": [
+        "20261022-round13#AC-3"
+      ]
     }
   ]
 }

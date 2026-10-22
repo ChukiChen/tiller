@@ -270,6 +270,43 @@
       "criteria": [
         "20261022-round12#AC-3"
       ]
+    },
+    {
+      "id": "CASE-081",
+      "title": "PR 标题摘要按显式、元数据、提交、任务标题回退",
+      "requirements": [
+        ".tiller/specs/modules/workflow/requirements.md#5-提交与-prmr-草稿"
+      ],
+      "modules": [
+        "workflow"
+      ],
+      "test_ref": "test/pr.test.mjs::pr summary prefers flag then metadata then earliest conventional commit then task title",
+      "source": [
+        "src/pr.ts",
+        "src/flow.ts",
+        "src/cli.ts"
+      ],
+      "criteria": [
+        "20261022-round13#AC-1"
+      ]
+    },
+    {
+      "id": "CASE-082",
+      "title": "PR 变更内容按提交时间正序",
+      "requirements": [
+        ".tiller/specs/modules/workflow/requirements.md#5-提交与-prmr-草稿"
+      ],
+      "modules": [
+        "workflow"
+      ],
+      "test_ref": "test/pr.test.mjs::pr change list orders commits from oldest to newest",
+      "source": [
+        "src/pr.ts",
+        "src/commit-conventions.ts"
+      ],
+      "criteria": [
+        "20261022-round13#AC-2"
+      ]
     }
   ]
 }

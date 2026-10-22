@@ -10,7 +10,7 @@
 
 ## 3. 元信息
 
-`project.json` 的 `schemaVersion` 固定为 1；`resourceVersion` 只能是受支持契约；可选 `platform` 为 github、gitlab 或 both，缺省视为 github。`managedFiles` 必须恰好覆盖当前平台完整受管集或可补齐的兼容子集。校验在取得锁和写入前完成，失败不留下部分文件。
+`project.json` 的 `schemaVersion` 固定为 1；`resourceVersion` 只能是受支持契约；可选 `platform` 为 github、gitlab 或 both，缺省视为 github。平台在初始化时选定，CLI 不提供切换命令；手动切换需同步修改 `platform` 并补齐对应模板。`managedFiles` 必须恰好覆盖当前平台完整受管集或可补齐的兼容子集。校验在取得锁和写入前完成，失败不留下部分文件。
 
 ## 4. 升级算法
 
