@@ -1,0 +1,39 @@
+{
+  "schemaVersion": 1,
+  "module": "verification",
+  "kind": "interface",
+  "cases": [
+    {
+      "id": "CASE-012",
+      "title": "未绑定全局用例的验证会阻塞交付自检",
+      "requirements": [".tiller/specs/modules/workflow/requirements.md#flow-24-在各环节形成测试依据并保存执行事实"],
+      "modules": ["verification"],
+      "test_ref": "test/flow-cli.test.mjs::check blocks a criterion whose verification test has no global case",
+      "source": ["src/cases.ts", "src/flow.ts"]
+    },
+    {
+      "id": "CASE-045",
+      "title": "验证测试与引用用例的 test_ref 不一致时阻塞",
+      "requirements": [".tiller/rules/quality/verification.md#记录方式"],
+      "modules": ["verification"],
+      "test_ref": "test/flow-cli.test.mjs::check rejects a case whose test_ref differs from the recorded verification",
+      "source": ["src/flow.ts"]
+    },
+    {
+      "id": "CASE-046",
+      "title": "旧用例布局、未知类型、缺失模块和坏引用被拒绝",
+      "requirements": [".tiller/specs/modules/verification/requirements.md#6-当前轻量实现约束2026-10-22"],
+      "modules": ["verification"],
+      "test_ref": "test/flow-cli.test.mjs::global cases block legacy layout, unknown kinds, missing modules and broken refs",
+      "source": ["src/cases.ts"]
+    },
+    {
+      "id": "CASE-048",
+      "title": "全局用例按模块类型和场景组织且引用可解析",
+      "requirements": [".tiller/cases/index.md", ".tiller/specs/modules/verification/requirements.md#6-当前轻量实现约束2026-10-22"],
+      "modules": ["verification"],
+      "test_ref": "test/rules.test.mjs::global cases use module kinds and scenarios with resolvable named tests",
+      "source": [".tiller/cases/index.md", "src/cases.ts"]
+    }
+  ]
+}

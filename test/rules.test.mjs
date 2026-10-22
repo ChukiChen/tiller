@@ -17,7 +17,7 @@ test('entry keeps the small and standard flows explicit and bounded', () => {
   assert.match(entry, /规划、合入、发布按需确认/u);
   assert.match(entry, /只修改本次范围内的文件/u);
   assert.match(entry, /同一问题连续两次修复失败就停止/u);
-  assert.match(entry, /验收条件必须编号，并映射到具体测试引用/u);
+  assert.match(entry, /验收条件必须编号，先转为全局用例，再映射具体测试引用/u);
   assert.match(entry, /不保存原始日志、全文快照、自举工程或安装包/u);
   assert.match(entry, /不得出现密钥、token、凭据或本机绝对路径/u);
   assert.match(entry, /同步更新 `\.tiller\/context\/`/u);
@@ -44,9 +44,9 @@ test('core and usage describe the only supported default-flow record path', () =
   assert.match(usage, /--size standard/u);
   assert.match(usage, /\.tiller\/cases\//u);
   assert.match(usage, /`task\.md` 只记录本次任务/u);
-  assert.match(usage, /原话只作确认凭证/u);
+  assert.match(usage, /原话只作凭证，不替代正文/u);
   assert.match(usage, /不保存全文快照和日志/u);
-  assert.match(usage, /只检查当前资源契约/u);
+  assert.match(usage, /只核对当前资源契约/u);
   assert.doesNotMatch(usage, /advanced|上一版本到当前版本/u);
   assert.match(read('rules/index.md'), /规则按需读取/u);
 });
@@ -86,8 +86,8 @@ test('initialization preserves the guidance reading chain and valid links', t =>
 test('task records use Git and one task.md rather than snapshots or evidence packages', () => {
   const core = read('rules/core.md');
   assert.match(core, /确认记录对象、原话、提交和摘要/u);
-  assert.match(core, /原话不得替代需求或设计正文/u);
-  assert.match(core, /验证记录命令、结果、提交和代码树摘要/u);
+  assert.match(core, /原话只作凭证，不能替代正文/u);
+  assert.match(core, /验证记录用例、命令、结果、提交和代码树摘要/u);
   assert.match(core, /从 Git 取回或重跑/u);
   assert.doesNotMatch(core, /`work\.md`/u);
   assert.doesNotMatch(core, /record\.json.*必须|reviews\/|证据包/u);
@@ -118,19 +118,50 @@ test('README describes only the default flow and release-time versioning', () =>
   assert.doesNotMatch(readme, /advanced|0\.4\.0 升级到 0\.5\.0/u);
 });
 
-test('global cases map to existing requirements, sources and named tests', () => {
+test('global cases use module kinds and scenarios with resolvable named tests', () => {
   const directory = join(repository, '.tiller/cases');
-  const files = readdirSync(directory).filter(name => name.endsWith('.json')).sort();
-  assert.deepEqual(files, ['flow.json']);
-  const cases = files.flatMap(name => JSON.parse(readFileSync(join(directory, name), 'utf8')).cases);
-  assert.equal(cases.length, 15);
-  assert.equal(new Set(cases.map(item => item.id)).size, cases.length);
+  assert.deepEqual(readdirSync(directory).sort(), ['index.md', 'modules', 'scenarios']);
+  const specs = readdirSync(join(repository, '.tiller/specs/modules'), { withFileTypes: true })
+    .filter(entry => entry.isDirectory()).map(entry => entry.name).sort();
+  const kinds = ['behavior', 'interface', 'performance', 'security'];
+  const cases = [];
+  const counts = {};
+  for (const module of readdirSync(join(directory, 'modules'), { withFileTypes: true }).filter(entry => entry.isDirectory()).map(entry => entry.name).sort()) {
+    assert.ok(specs.includes(module), `unknown case module ${module}`);
+    counts[module] = { behavior: 0, interface: 0, performance: 0, security: 0 };
+    for (const name of readdirSync(join(directory, 'modules', module)).sort()) {
+      const kind = name.slice(0, -5);
+      assert.ok(name.endsWith('.json') && kinds.includes(kind), `${module}/${name}`);
+      const value = JSON.parse(readFileSync(join(directory, 'modules', module, name), 'utf8'));
+      assert.equal(value.schemaVersion, 1);
+      assert.equal(value.module, module);
+      assert.equal(value.kind, kind);
+      assert.ok(value.cases.length > 0);
+      counts[module][kind] += value.cases.length;
+      cases.push(...value.cases.map(item => ({ ...item, file: `${module}/${name}` })));
+    }
+  }
+  const scenarios = readdirSync(join(directory, 'scenarios')).filter(name => name.endsWith('.json')).sort()
+    .flatMap(name => JSON.parse(readFileSync(join(directory, 'scenarios', name), 'utf8')).scenarios);
+  cases.push(...scenarios.map(item => ({ ...item, file: `scenarios/${item.id}` })));
+  assert.equal(cases.length, 49);
+  assert.deepEqual(cases.map(item => item.id).sort(), Array.from({ length: 49 }, (_, index) => `CASE-${String(index + 1).padStart(3, '0')}`));
+  assert.deepEqual(counts, {
+    initialization: { behavior: 1, interface: 0, performance: 11, security: 0 },
+    standards: { behavior: 1, interface: 0, performance: 0, security: 0 },
+    verification: { behavior: 3, interface: 4, performance: 15, security: 0 },
+    workflow: { behavior: 5, interface: 5, performance: 0, security: 3 },
+  });
+  for (const item of scenarios) {
+    assert.ok(item.modules.length > 0 && item.modules.every(module => specs.includes(module)), `${item.id}: modules`);
+  }
   for (const item of cases) {
-    for (const reference of [...item.requirements, ...item.modules, ...item.source]) {
-      const relative = reference.split('#')[0];
-      assert.ok(existsSync(join(repository, relative)), `${item.id}: missing ${reference}`);
+    assert.ok(item.requirements.length > 0 && item.source.length > 0, `${item.id}: references`);
+    for (const reference of [...item.requirements, ...item.source]) {
+      assert.ok(existsSync(join(repository, reference.split('#')[0])), `${item.id}: missing ${reference}`);
     }
     const [testFile, testName] = item.test_ref.split('::');
+    assert.ok(testFile && testName, `${item.id}: named test_ref`);
     const content = readFileSync(join(repository, testFile), 'utf8');
     const names = [...content.matchAll(/\b(?:test|it)\s*\(\s*(['"`])(.*?)\1\s*,/gu)].map(match => match[2]);
     assert.ok(names.includes(testName), `${item.id}: missing ${item.test_ref}`);

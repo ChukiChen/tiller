@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "module": "standards",
+  "kind": "behavior",
+  "cases": [
+    {
+      "id": "CASE-049",
+      "title": "默认必读资料保持在 5000 字符预算内",
+      "requirements": [".tiller/rules/index.md", ".tiller/rules/core.md"],
+      "modules": ["standards"],
+      "test_ref": "test/rules.test.mjs::required reading stays within the default-flow budget",
+      "source": [
+        "resources/entry.md",
+        "resources/usage.md",
+        "resources/rules/index.md",
+        "resources/rules/core.md"
+      ]
+    }
+  ]
+}

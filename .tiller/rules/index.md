@@ -12,4 +12,4 @@
 | 文档组织与质量 | [文档质量](quality/documents.md) |
 | 测试范围与证据 | [验证依据](quality/verification.md) |
 
-规则按需读取。命令参数和任务记录格式以 `--help` 及命令提示为准；不预置文档模板，单次变更优先引用已有规格并在 `task.md` 记录，跨任务回归在 `.tiller/cases/` 声明。
+规则按需读取。命令参数和任务记录格式以 `--help` 及命令提示为准；不预置文档模板，单次变更优先引用已有规格并在 `task.md` 记录，跨任务回归按 `.tiller/cases/modules/` 与 `scenarios/` 声明。

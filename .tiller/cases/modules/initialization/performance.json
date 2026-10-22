@@ -1,0 +1,95 @@
+{
+  "schemaVersion": 1,
+  "module": "initialization",
+  "kind": "performance",
+  "cases": [
+    {
+      "id": "CASE-020",
+      "title": "启动器版本和帮助只启动一个 Node 进程",
+      "requirements": [".tiller/specs/modules/initialization/requirements.md"],
+      "modules": ["initialization"],
+      "test_ref": "test/launcher-performance.test.mjs::launcher ${argument} uses one Node process after loading the full CLI",
+      "source": ["src/runtime.ts", "src/cli.ts"]
+    },
+    {
+      "id": "CASE-021",
+      "title": "导入完整 CLI 不执行命令或产生输出",
+      "requirements": [".tiller/specs/modules/initialization/requirements.md"],
+      "modules": ["initialization"],
+      "test_ref": "test/launcher-performance.test.mjs::importing the complete CLI performs no command or output",
+      "source": ["src/cli.ts"]
+    },
+    {
+      "id": "CASE-022",
+      "title": "从标准输入导入 CLI 不要求文件入口或执行命令",
+      "requirements": [".tiller/specs/modules/initialization/requirements.md"],
+      "modules": ["initialization"],
+      "test_ref": "test/launcher-performance.test.mjs::importing the CLI from stdin does not require a file entry or run a command",
+      "source": ["src/cli.ts"]
+    },
+    {
+      "id": "CASE-023",
+      "title": "启动器在执行命令前拒绝未选业务模块的语法错误",
+      "requirements": [".tiller/specs/modules/initialization/requirements.md"],
+      "modules": ["initialization"],
+      "test_ref": "test/launcher-performance.test.mjs::launcher rejects a syntax error in a nonselected business module before running a command",
+      "source": ["src/runtime.ts"]
+    },
+    {
+      "id": "CASE-024",
+      "title": "启动器拒绝无效导出契约且不产生命令副作用",
+      "requirements": [".tiller/specs/modules/initialization/requirements.md"],
+      "modules": ["initialization"],
+      "test_ref": "test/launcher-performance.test.mjs::launcher rejects an invalid exported ${reason} without command side effects",
+      "source": ["src/runtime.ts"]
+    },
+    {
+      "id": "CASE-025",
+      "title": "选定命令失败不会切换安装或重复执行",
+      "requirements": [".tiller/specs/modules/initialization/requirements.md"],
+      "modules": ["initialization"],
+      "test_ref": "test/launcher-performance.test.mjs::a selected command failure does not select another installation or execute twice",
+      "source": ["src/runtime.ts"]
+    },
+    {
+      "id": "CASE-026",
+      "title": "元信息检查不启动 Git 或受管资源扫描",
+      "requirements": [".tiller/specs/modules/initialization/requirements.md"],
+      "modules": ["initialization"],
+      "test_ref": "test/project-inspection-performance.test.mjs::metadata input is strict and performs no Git or managed-resource inspection",
+      "source": ["src/core.ts", "src/project-metadata.ts"]
+    },
+    {
+      "id": "CASE-027",
+      "title": "元信息读取每次返回独立当前值而不复用结果",
+      "requirements": [".tiller/specs/modules/initialization/requirements.md"],
+      "modules": ["initialization"],
+      "test_ref": "test/project-inspection-performance.test.mjs::metadata reads return independent current values without result reuse",
+      "source": ["src/core.ts", "src/project-metadata.ts"]
+    },
+    {
+      "id": "CASE-028",
+      "title": "未知或缺失元信息在创建锁之前拒绝",
+      "requirements": [".tiller/specs/modules/initialization/requirements.md"],
+      "modules": ["initialization"],
+      "test_ref": "test/project-inspection-performance.test.mjs::unknown and missing metadata reject without creating a lock",
+      "source": ["src/core.ts", "src/project-metadata.ts"]
+    },
+    {
+      "id": "CASE-029",
+      "title": "仓库元信息没有隐藏读取轮次并观察独立读取",
+      "requirements": [".tiller/specs/modules/initialization/requirements.md"],
+      "modules": ["initialization"],
+      "test_ref": "test/repository-metadata-performance.test.mjs::repository metadata has no hidden read round and observes each independent read",
+      "source": ["src/core.ts"]
+    },
+    {
+      "id": "CASE-030",
+      "title": "显式元信息输入可校验且不隐式保留来源",
+      "requirements": [".tiller/specs/modules/initialization/requirements.md"],
+      "modules": ["initialization"],
+      "test_ref": "test/repository-metadata-performance.test.mjs::explicit metadata inputs can be verified without implicit source retention",
+      "source": ["src/files.ts", "src/repository-paths.ts"]
+    }
+  ]
+}

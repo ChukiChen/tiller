@@ -1,0 +1,47 @@
+{
+  "schemaVersion": 1,
+  "module": "workflow",
+  "kind": "interface",
+  "cases": [
+    {
+      "id": "CASE-011",
+      "title": "默认帮助只展示默认工作流，旧审计命令不可用",
+      "requirements": [".tiller/rules/core.md#按目标选择流程"],
+      "modules": ["workflow"],
+      "test_ref": "test/flow-cli.test.mjs::default help names the default flow and old audit commands are gone",
+      "source": ["src/cli.ts"]
+    },
+    {
+      "id": "CASE-042",
+      "title": "CLI JSON 版本输出形状和值稳定",
+      "requirements": [".tiller/rules/core.md#按目标选择流程"],
+      "modules": ["workflow"],
+      "test_ref": "test/flow-cli.test.mjs::CLI JSON version and invalid argument contracts stay stable",
+      "source": ["src/cli.ts"]
+    },
+    {
+      "id": "CASE-043",
+      "title": "未知命令以退出码 2 返回稳定的 JSON 错误形状",
+      "requirements": [".tiller/rules/core.md#按目标选择流程"],
+      "modules": ["workflow"],
+      "test_ref": "test/flow-cli.test.mjs::CLI JSON version and invalid argument contracts stay stable",
+      "source": ["src/cli.ts"]
+    },
+    {
+      "id": "CASE-044",
+      "title": "start 缺少需求或验收条件时退出码为 2 且不生成任务",
+      "requirements": [".tiller/rules/activities/requirements.md#本次需求", ".tiller/rules/core.md#按目标选择流程"],
+      "modules": ["workflow"],
+      "test_ref": "test/flow-cli.test.mjs::start rejects missing requirement or criterion with exit code 2",
+      "source": ["src/cli.ts", "src/flow.ts"]
+    },
+    {
+      "id": "CASE-047",
+      "title": "check 汇总模块用例、场景并提示本次相关回归",
+      "requirements": [".tiller/rules/core.md#测试与验证资料"],
+      "modules": ["workflow"],
+      "test_ref": "test/flow-cli.test.mjs::module cases and scenarios report counts and regression hints",
+      "source": ["src/cases.ts", "src/flow.ts"]
+    }
+  ]
+}

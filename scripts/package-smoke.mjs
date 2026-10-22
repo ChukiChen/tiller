@@ -36,7 +36,7 @@ for (const path of ['dist/cli.js', 'dist/flow.js', 'resources/entry.md', 'resour
   assert.ok(paths.has(path), path);
 }
 for (const path of [...paths]) assert.ok(!/^resources\/(?:workflows|templates)\//u.test(path), path);
-const expectedModules = ['cli', 'core', 'files', 'flow', 'project-metadata', 'repository-paths', 'runtime', 'shared-paths', 'task-id', 'types', 'upgrade'];
+const expectedModules = ['cases', 'cli', 'core', 'files', 'flow', 'project-metadata', 'repository-paths', 'runtime', 'shared-paths', 'task-id', 'types', 'upgrade'];
 const packagedModules = [...paths].filter(path => /^dist\/[^/]+\.js$/u.test(path)).map(path => path.slice(5, -3)).sort();
 assert.deepEqual(packagedModules, expectedModules);
 assert.ok(![...paths].some(path => /^(src|test|\.tiller|node_modules)\//u.test(path)));

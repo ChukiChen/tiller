@@ -17,7 +17,7 @@ tiller start <task-id> --title <标题> --requirement <需求正文> \
   --criterion "AC-1=<验收条件>" --size small --target src --target test
 tiller resume [task-id]
 tiller confirm <task-id> requirements --quote "<用户原话>"
-tiller verify <task-id> --criterion AC-1 --test test/example.test.mjs \
+tiller verify <task-id> --criterion AC-1 --test "test/example.test.mjs::用例名" \
   --command "npm test" --run "npm test"
 tiller check <task-id>
 tiller accept <task-id> --quote "<用户原话>"
@@ -25,9 +25,9 @@ tiller accept <task-id> --quote "<用户原话>"
 
 单次任务记录只维护 `.tiller/task/<id>/task.md`。需求与设计正文必须完整写在该记录中；确认保存对象、用户原话、提交和对象摘要，原话只是凭证，不能替代正文。验证保存验收条件、测试引用、命令、结果、提交和代码树摘要。需要细节时从 Git 取回或重跑，不保存全文快照、原始日志、自举工程或安装包。
 
-跨任务回归事实集中维护在 `.tiller/cases/*.json`：每条用例保存稳定编号、标题、需求/模块引用、自动化 `test_ref` 和源码路径。`task.md` 只服务本次任务；用例库只存声明，不存执行日志或证据包。`verify --test` 优先引用用例的 `test_ref`，`check` 会校验全局用例并提示未命中的本次测试。
+跨任务回归事实按模块维护在 `.tiller/cases/modules/<模块>/{behavior,interface,performance,security}.json`，跨模块端到端路径放在 `.tiller/cases/scenarios/`。每条用例保存稳定编号、标题、需求/模块引用、自动化 `test_ref` 和源码路径。`task.md` 只服务本次任务；用例库只存声明，不存执行日志或证据包。
 
-`check` 还会核对验收条件覆盖、验证是否过期、范围越界、未提交改动、测试删除或弱化、密钥和本机绝对路径。`accept` 只在技术自检通过后记录真实验收原话。
+需求确认后先为每条验收条件新增或修改全局用例，再按 `test_ref` 写测试，最后实现；`verify` 自动把命中的用例编号写入任务验证。`check` 会阻塞缺少用例映射、用例引用失效、测试与用例不一致或验证过期的情况，并汇总各模块各类型用例数、场景和未覆盖模块；本次改动命中模块时提示回归相关用例与场景。`accept` 只在技术自检通过后记录真实验收原话。
 
 旧类型流程、阶段、规划、审计和全文快照路径已删除；单次任务以 `task.md` 与 Git 追溯，跨任务回归以 `.tiller/cases/` 声明为准。历史 `.tiller/work/` 只读保留，不自动迁移。
 

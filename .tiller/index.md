@@ -21,6 +21,8 @@
 
 ## 已有资料
 
+- [模块用例、场景与用例先行](task/20261022-case-first/task.md)
+
 - [cases/index.md](cases/index.md)
 
 - [确认语义与 work → task 重命名](task/20261022-confirm-task/task.md)

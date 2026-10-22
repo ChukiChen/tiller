@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "scenarios": [
+    {
+      "id": "CASE-001",
+      "title": "小改动只生成 task.md，并在当前验证后记录交付验收",
+      "requirements": [
+        ".tiller/specs/modules/workflow/requirements.md#flow-03-选择必要工作与验证安排",
+        ".tiller/specs/modules/workflow/requirements.md#flow-24-在各环节形成测试依据并保存执行事实"
+      ],
+      "modules": ["workflow", "verification", "initialization"],
+      "test_ref": "test/flow-cli.test.mjs::small flow produces one task file and records verified acceptance without raw logs",
+      "source": ["src/flow.ts", "src/cases.ts", "src/core.ts"]
+    }
+  ]
+}

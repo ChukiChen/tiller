@@ -3,6 +3,10 @@ import { execFile, spawn } from 'node:child_process';
 import { lstat, mkdir, readFile, readdir } from 'node:fs/promises';
 import path from 'node:path';
 import { promisify } from 'node:util';
+import {
+  casesForTest, readCaseLibrary, regressionWarnings, sameTestReference, testBlocks,
+  type CaseLibrary,
+} from './cases.js';
 import { readProjectMetadata } from './core.js';
 import { applyChanges, readTextIfExists, validateRelativePath, withProjectLock } from './files.js';
 import { validateTaskId } from './task-id.js';
@@ -39,7 +43,7 @@ export interface FlowConfirmation {
 }
 export interface FlowVerification {
   id: string; criterion: string; test: string; command: string; result: FlowResult;
-  exitCode: number | null; commit: string; at: string; tree: string; source: 'executed' | 'reported';
+  cases: string[]; exitCode: number | null; commit: string; at: string; tree: string; source: 'executed' | 'reported';
 }
 export interface FlowTask {
   meta: FlowMeta; title: string; requirement: string; design: string; criteria: FlowCriterion[];
@@ -52,11 +56,6 @@ export interface FlowStartInput {
 export interface FlowVerifyInput {
   criteria: string[]; test: string; command: string; result?: string; run?: string;
 }
-
-interface GlobalCase {
-  id: string; title: string; requirements: string[]; modules: string[]; test_ref: string; source: string[];
-}
-interface CaseLibrary { cases: GlobalCase[]; issues: string[]; warnings: string[] }
 
 function fail(code: string, message: string): never {
   throw Object.assign(new Error(message), { code });
@@ -208,6 +207,8 @@ function parseVerifications(content: string): FlowVerification[] {
     };
     const criterion = field('条件');
     const test = field('测试');
+    const caseText = field('用例');
+    const cases = caseText && caseText !== '无' ? caseText.split(/[,，\s]+/u).filter(Boolean) : [];
     const command = field('命令');
     const resultValue = field('结果') as FlowResult;
     const exitText = field('退出码');
@@ -217,7 +218,7 @@ function parseVerifications(content: string): FlowVerification[] {
     const source = field('来源') as FlowVerification['source'];
     if (criterion && test && command && RESULTS.includes(resultValue) && validCommit(commit)
       && /^[a-f0-9]{64}$/u.test(tree) && Number.isFinite(Date.parse(at)) && (source === 'executed' || source === 'reported')) {
-      result.push({ id, criterion, test, command, result: resultValue, exitCode: exitText === '无' ? null : Number(exitText),
+      result.push({ id, criterion, test, command, result: resultValue, cases, exitCode: exitText === '无' ? null : Number(exitText),
         commit, at, tree, source });
     }
   }
@@ -263,6 +264,7 @@ function renderVerifications(values: FlowVerification[]): string {
     `### ${value.id}`,
     `- 条件：${value.criterion}`,
     `- 测试：${value.test}`,
+    `- 用例：${value.cases.length ? value.cases.join(', ') : '无'}`,
     `- 命令：${value.command}`,
     `- 结果：${value.result}`,
     `- 退出码：${value.exitCode === null ? '无' : value.exitCode}`,
@@ -320,7 +322,7 @@ function deliverySubject(task: FlowTask, commit: string): string {
     requirements: requirementsSubject(task), design: task.design.trim() ? designSubject(task) : null,
     commit, criteria: task.criteria.map(item => {
       const run = latestVerification(task, item.id);
-      return [item.id, run ? { test: run.test, command: run.command, result: run.result, tree: run.tree } : null];
+      return [item.id, run ? { test: run.test, cases: run.cases, command: run.command, result: run.result, tree: run.tree } : null];
     }),
   }));
 }
@@ -427,122 +429,6 @@ async function testExists(root: string, value: string): Promise<boolean> {
   catch { return false; }
 }
 
-function referencePath(value: string): string | null {
-  const relative = value.trim().split('::')[0]!.split('#')[0]!;
-  if (!relative || path.isAbsolute(relative) || relative.includes('\\')) return null;
-  try { validateRelativePath(relative); } catch { return null; }
-  return relative;
-}
-function fallbackTestReference(value: string): { path: string; name?: string } | null {
-  const normalized = value.trim();
-  const separator = normalized.includes('::') ? '::' : normalized.includes('#') ? '#' : null;
-  const [pathPart, ...rest] = normalized.split(separator ?? '\0');
-  const relative = referencePath(pathPart ?? '');
-  if (!relative) return null;
-  const name = rest.join(separator ?? '').trim();
-  if (separator && !name) return null;
-  return { path: relative, ...(name ? { name } : {}) };
-}
-function sameTestReference(left: string, right: string): boolean {
-  const a = fallbackTestReference(left); const b = fallbackTestReference(right);
-  if (!a || !b || a.path !== b.path) return false;
-  return !a.name || !b.name || a.name === b.name;
-}
-function caseText(value: unknown, maximum: number): string | null {
-  if (typeof value !== 'string' || !value.trim() || value.length > maximum || /[\x00-\x1f]/u.test(value)) return null;
-  return value.trim();
-}
-function caseReferences(value: unknown): string[] | null {
-  if (!Array.isArray(value) || !value.length || value.some(item => typeof item !== 'string' || !referencePath(item))) return null;
-  return [...new Set(value.map(item => item.trim()))];
-}
-async function readGlobalCases(root: string): Promise<CaseLibrary> {
-  const issues: string[] = [];
-  const warnings: string[] = [];
-  const cases: GlobalCase[] = [];
-  const ids = new Map<string, string>();
-  const fileExists = new Map<string, boolean>();
-  const testContents = new Map<string, string | null>();
-  let entries;
-  try { entries = await readdir(path.join(root, '.tiller/cases'), { withFileTypes: true }); }
-  catch (error) {
-    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return { cases, issues, warnings };
-    return { cases, issues: [`无法读取全局用例目录 .tiller/cases：${(error as Error).message}`], warnings };
-  }
-  for (const entry of entries.filter(item => item.isFile() && item.name.endsWith('.json')).sort((a, b) => a.name.localeCompare(b.name))) {
-    const relative = `.tiller/cases/${entry.name}`;
-    let value: unknown;
-    try { value = JSON.parse(await readFile(path.join(root, relative), 'utf8')); }
-    catch { issues.push(`全局用例 ${relative} 不是有效 JSON。`); continue; }
-    if (!value || typeof value !== 'object' || Array.isArray(value)
-      || (value as Record<string, unknown>).schemaVersion !== 1 || !Array.isArray((value as Record<string, unknown>).cases)) {
-      issues.push(`全局用例 ${relative} 必须包含 schemaVersion: 1 和 cases 数组。`);
-      continue;
-    }
-    for (const [index, raw] of ((value as { cases: unknown[] }).cases).entries()) {
-      const label = `${relative} 第 ${index + 1} 个用例`;
-      if (!raw || typeof raw !== 'object' || Array.isArray(raw)) { issues.push(`${label} 格式无效。`); continue; }
-      const item = raw as Record<string, unknown>;
-      const id = caseText(item.id, 80);
-      const title = caseText(item.title, 200);
-      const requirements = caseReferences(item.requirements);
-      const modules = caseReferences(item.modules);
-      const source = caseReferences(item.source);
-      const testRef = caseText(item.test_ref, 1000);
-      if (!id || !/^[A-Za-z0-9][A-Za-z0-9._-]*$/u.test(id)) { issues.push(`${label} 缺少有效 id。`); continue; }
-      const subject = `全局用例 ${relative} ${id}`;
-      if (!title) issues.push(`${subject} 缺少有效标题。`);
-      if (!requirements) issues.push(`${subject} 的 requirements 必须是非空路径数组。`);
-      if (!modules) issues.push(`${subject} 的 modules 必须是非空路径数组。`);
-      if (!source) issues.push(`${subject} 的 source 必须是非空路径数组。`);
-      const test = testRef ? fallbackTestReference(testRef) : null;
-      if (!test) issues.push(`${subject} 缺少有效 test_ref。`);
-      if (ids.has(id)) issues.push(`${subject} 与 ${ids.get(id)} 的 id 重复。`);
-      else ids.set(id, relative);
-      for (const [field, values] of [['requirements', requirements], ['modules', modules], ['source', source]] as const) {
-        for (const reference of values ?? []) {
-          const relativePath = referencePath(reference);
-          if (!relativePath) continue;
-          let exists = fileExists.get(relativePath);
-          if (exists === undefined) {
-            try { exists = (await lstat(path.join(root, relativePath))).isFile(); } catch { exists = false; }
-            fileExists.set(relativePath, exists);
-          }
-          if (!exists) issues.push(`${subject} 的 ${field} 文件不存在：${relativePath}`);
-        }
-      }
-      if (test) {
-        let content = testContents.get(test.path);
-        if (content === undefined) {
-          try { content = (await lstat(path.join(root, test.path))).isFile() ? await readFile(path.join(root, test.path), 'utf8') : null; }
-          catch { content = null; }
-          testContents.set(test.path, content);
-        }
-        if (content === null) issues.push(`${subject} 的 test_ref 文件不存在：${test.path}`);
-        else if (test.name && !testBlocks(content).some(block => block.name === test.name)) {
-          issues.push(`${subject} 的 test_ref 用例不存在：${test.path}::${test.name}`);
-        }
-      }
-      if (title && requirements && modules && source && test) {
-        cases.push({ id, title, requirements, modules, test_ref: testRef!, source });
-      }
-    }
-  }
-  return { cases, issues: [...new Set(issues)], warnings };
-}
-
-async function evaluateGlobalCases(root: string, task: FlowTask): Promise<CaseLibrary & { matched: number }> {
-  const library = await readGlobalCases(root);
-  let matched = 0;
-  for (const criterion of task.criteria) {
-    const run = latestVerification(task, criterion.id);
-    if (!run) continue;
-    if (library.cases.some(item => sameTestReference(run.test, item.test_ref))) matched++;
-    else if (library.cases.length) library.warnings.push(`${criterion.id} 的测试引用未落在全局用例 test_ref：${run.test}`);
-  }
-  return { ...library, warnings: [...new Set(library.warnings)], matched };
-}
-
 function excludedPath(relative: string, id: string): boolean {
   return relative === `${TASK_DIRECTORY}/${id}` || relative.startsWith(`${TASK_DIRECTORY}/${id}/`)
     || relative.startsWith('.tiller/local/') || relative.startsWith('.git/') || relative.includes('/node_modules/');
@@ -619,16 +505,6 @@ async function scopedWorkingChanges(root: string, scope: string[], id: string): 
     .filter(relative => !excludedPath(relative, id) && !taskRecordPath(relative) && inScope(relative, scope)).sort();
 }
 interface TestFindings { issues: string[]; warnings: string[] }
-interface TestBlock { name: string; assertions: number }
-
-function testBlocks(content: string): TestBlock[] {
-  const assertion = /\bassert\.|\bexpect\s*\(/gu;
-  const starts = [...content.matchAll(/\b(?:test|it)\s*\(\s*(['"`])(.*?)\1\s*,/gu)];
-  return starts.map((match, index) => {
-    const body = content.slice(match.index, starts[index + 1]?.index ?? content.length);
-    return { name: match[2]!, assertions: [...body.matchAll(assertion)].length };
-  });
-}
 
 async function weakensTests(root: string, base: string): Promise<TestFindings> {
   if (base === 'no-git') return { issues: [], warnings: [] };
@@ -673,10 +549,12 @@ async function weakensTests(root: string, base: string): Promise<TestFindings> {
 }
 
 export interface FlowCheck {
-  id: string; ready: boolean; issues: string[]; warnings: string[]; criteria: { id: string; covered: boolean; test?: string; result?: string; commit?: string }[];
+  id: string; ready: boolean; issues: string[]; warnings: string[]; criteria: { id: string; covered: boolean; test?: string; cases?: string[]; result?: string; commit?: string }[];
   confirmations: { gate: FlowGate; confirmed: boolean; quote: string; commit: string; issue?: string }[];
   acceptance: { confirmed: boolean; quote?: string; commit?: string };
-  changedOutsideScope: string[]; cases: { count: number; matched: number }; selfCheck: string;
+  changedOutsideScope: string[];
+  cases: { count: number; matched: number; modules: CaseLibrary['modules']; scenarios: CaseLibrary['scenarios']; uncovered: string[] };
+  selfCheck: string;
 }
 
 async function evaluateFlow(root: string, id: string, task: FlowTask): Promise<FlowCheck> {
@@ -699,19 +577,32 @@ async function evaluateFlow(root: string, id: string, task: FlowTask): Promise<F
     if (!design) issues.push('缺少设计确认。');
     else if (design.subject !== designSubject(task)) issues.push('设计确认后需求或设计已变化，需要重新确认。');
   }
+  const library = await readCaseLibrary(root);
+  issues.push(...library.issues);
+  warnings.push(...library.warnings);
+  let matched = 0;
   const criteria = await Promise.all(task.criteria.map(async item => {
     const run = latestVerification(task, item.id);
     if (!run) { issues.push(`${item.id} 尚无验证。`); return { id: item.id, covered: false }; }
-    const covered = run.result === 'passed' && run.tree === currentTree && await testExists(root, run.test);
+    const linked = run.cases.flatMap(caseId => {
+      const entry = library.cases.find(item => item.id === caseId);
+      return entry ? [entry] : [];
+    });
+    const valid = run.cases.length > 0 && linked.length === run.cases.length
+      && linked.every(entry => sameTestReference(run.test, entry.test_ref));
+    if (!run.cases.length) issues.push(`${item.id} 未绑定全局用例；先把验收条件转为 .tiller/cases 用例，再用其 test_ref 验证。`);
+    for (const caseId of run.cases) if (!library.cases.some(entry => entry.id === caseId)) issues.push(`${item.id} 引用的全局用例不存在：${caseId}`);
+    for (const entry of linked) if (!sameTestReference(run.test, entry.test_ref)) {
+      issues.push(`${item.id} 的验证测试 ${run.test} 与全局用例 ${entry.id} 的 test_ref 不一致。`);
+    }
+    if (valid) matched++;
+    const covered = valid && run.result === 'passed' && run.tree === currentTree && await testExists(root, run.test);
     if (run.result !== 'passed') issues.push(`${item.id} 最新验证结果为 ${run.result}。`);
     else if (run.tree !== currentTree) issues.push(`${item.id} 的验证已过期：范围内代码已变化。`);
     else if (!(await testExists(root, run.test))) issues.push(`${item.id} 的测试引用不存在：${run.test}`);
     if (run.source === 'reported') warnings.push(`${item.id} 使用外部报告结果，未由本次命令重新执行。`);
-    return { id: item.id, covered, test: run.test, result: run.result, commit: run.commit };
+    return { id: item.id, covered, test: run.test, cases: run.cases, result: run.result, commit: run.commit };
   }));
-  const cases = await evaluateGlobalCases(root, task);
-  issues.push(...cases.issues);
-  warnings.push(...cases.warnings);
   const changed = await changedFiles(root, task.meta.base);
   const changedOutsideScope: string[] = [];
   if (changed === null) warnings.push('未检测到可用 Git 基线，范围检查已跳过。');
@@ -724,6 +615,7 @@ async function evaluateFlow(root: string, id: string, task: FlowTask): Promise<F
     }
     if (!inScope(relative, task.meta.scope)) changedOutsideScope.push(relative);
   }
+  warnings.push(...regressionWarnings(library, changed ?? []));
   if (changedOutsideScope.length) issues.push(`改动超出范围：${changedOutsideScope.join('、')}`);
   const weakened = await weakensTests(root, task.meta.base);
   issues.push(...weakened.issues);
@@ -739,8 +631,9 @@ async function evaluateFlow(root: string, id: string, task: FlowTask): Promise<F
   const selfCheck = [
     `- ${uniqueIssues.includes('缺少需求确认。') || uniqueIssues.some(item => item.startsWith('需求确认后')) ? '[ ]' : '[x]'} 需求确认有效`,
     `- ${requiresDesign(task) && uniqueIssues.some(item => item.includes('设计')) ? '[ ]' : '[x]'} ${requiresDesign(task) ? '设计确认有效' : '该任务无需设计确认'}`,
-    `- ${criteria.every(item => item.covered) ? '[x]' : '[ ]'} 验收条件均有当前通过的测试引用`,
-    `- ${cases.issues.length ? '[ ]' : '[x]'} 全局用例引用有效`,
+    `- ${criteria.every(item => item.covered) ? '[x]' : '[ ]'} 验收条件均有当前通过且绑定全局用例的测试引用`,
+    `- ${matched === task.criteria.length && task.criteria.length > 0 ? '[x]' : '[ ]'} 每条验收条件均映射到本次验证引用的全局用例`,
+    `- ${library.issues.length ? '[ ]' : '[x]'} 全局用例结构与引用有效`,
     `- ${changedOutsideScope.length ? '[ ]' : '[x]'} 改动未超出范围`,
     `- ${weakened.issues.length ? '[ ]' : '[x]'} 未弱化仍存在的测试`,
     `- ${recordSafety(task.content).length ? '[ ]' : '[x]'} 记录不含密钥或本机绝对路径`,
@@ -749,7 +642,8 @@ async function evaluateFlow(root: string, id: string, task: FlowTask): Promise<F
   ].join('\n');
   return { id, ready: uniqueIssues.length === 0, issues: uniqueIssues, warnings, criteria, confirmations: confirmationStates,
     acceptance: { confirmed: acceptanceConfirmed, ...(acceptance ? { quote: acceptance.quote, commit: acceptance.commit } : {}) },
-    changedOutsideScope, cases: { count: cases.cases.length, matched: cases.matched }, selfCheck };
+    changedOutsideScope,
+    cases: { count: library.cases.length, matched, modules: library.modules, scenarios: library.scenarios, uncovered: library.uncovered }, selfCheck };
 }
 
 export async function inspectFlow(rootInput: string, id: string): Promise<FlowCheck> {
@@ -777,6 +671,7 @@ export async function verifyFlow(rootInput: string, id: string, input: FlowVerif
     for (const criterion of criteria) if (!task.criteria.some(item => item.id === criterion)) fail('UNKNOWN_CRITERION', `验收条件不存在：${criterion}`);
     const test = testReference(input.test);
     if (!(await testExists(root, test))) fail('TEST_NOT_FOUND', `测试引用不存在：${test}`);
+    const cases = casesForTest(await readCaseLibrary(root), test).map(item => item.id);
     const command = safeInput(text(input.command, '验证命令', 4000), '验证命令');
     if (input.run !== undefined) safeInput(text(input.run, '执行命令', 4000), '执行命令');
     let result: FlowResult;
@@ -803,12 +698,12 @@ export async function verifyFlow(rootInput: string, id: string, input: FlowVerif
     const at = new Date().toISOString();
     const entries: FlowVerification[] = criteria.map((criterion, index) => ({
       id: `run-${task.verifications.length + index + 1}`,
-      criterion, test, command, result, exitCode, commit, at, tree, source,
+      criterion, test, cases, command, result, exitCode, commit, at, tree, source,
     }));
     const next: FlowTask = { ...task, verifications: [...task.verifications, ...entries] };
     const { content: _content, path: _path, ...body } = next;
     await writeTask(root, id, task.content, renderTask(body, sectionBody(task.content, '自检')));
-    return { id, result, commit, tree, entries, next: result === 'passed' ? `tiller check ${id}` : `修复后重新运行验证` };
+    return { id, result, cases, commit, tree, entries, next: result === 'passed' ? `tiller check ${id}` : `修复后重新运行验证` };
   });
 }
 function flowResult(value: string): FlowResult {

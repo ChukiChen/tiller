@@ -7,8 +7,9 @@
 
 | 日期 | 决策 | 说明 |
 |---|---|---|
+| 2026-10-22 | 全局用例按模块/类型与场景组织，并实行用例先行 | 模块用例固定为 `.tiller/cases/modules/<模块>/{behavior,interface,performance,security}.json`，模块名与 `.tiller/specs/modules/` 一致；跨模块端到端路径写入 `scenarios/`。需求确认后先把每条 AC 转为用例，再按 `test_ref` 写测试并实现；`verify` 记录命中的用例编号，`check` 阻塞缺失、失效、错配或过期的 AC→用例→测试→验证链路，并报告模块统计、未覆盖模块和相关回归提示。旧 `flow.json` 与整条旧审计路径删除。来源为本任务用户原话，实施记录见[模块用例、场景与用例先行](../task/20261022-case-first/task.md) |
 | 2026-10-22 | 确认绑定结构化正文，work 改为 task | 用户原话只作确认凭证，需求与设计必须写入任务记录后才能确认；新路径为 `.tiller/task/<id>/task.md`，历史 `.tiller/work/` 只读保留。来源见[本轮任务](../task/20261022-confirm-task/task.md) |
-| 2026-10-22 | 恢复轻量全局用例事实库 | 用户明确 `work.md` 只服务单次任务，需要类似旧 `.tiller/verification/*.yaml` 的产品级回归清单，但不恢复 check/report/证据包审计体系。当前使用 `.tiller/cases/*.json` 保存编号、标题、需求/模块、`test_ref` 和源码路径；`check` 只做基础引用校验，不新增用例命令。来源为本任务用户原话，见[本轮工作](../work/20261022-global-cases/work.md) |
+| 2026-10-22 | 恢复轻量全局用例事实库 | 用户明确 `work.md` 只服务单次任务，需要类似旧 `.tiller/verification/*.yaml` 的产品级回归清单，但不恢复 check/report/证据包审计体系。当时使用 `.tiller/cases/*.json` 保存编号、标题、需求/模块、`test_ref` 和源码路径；该单文件结构后来已由上方模块/场景结构取代，历史实施见[本轮工作](../work/20261022-global-cases/work.md) |
 | 2026-10-22 | 删除旧审计并固定版本发布策略 | 负责人明确不再保留 `reviews/*.json`、全文确认快照、证据包、旧多文件 `work create` 与 workflow 审计路径；只以 `work.md` 与 Git 记录。版本号只在最终发布正式包时修改，本轮不提升 `package.json`、CLI 或资源版本，升级仅核对当前契约。来源为本任务用户原话，见[本轮工作](../work/20261022-lightweight-flow/work.md) |
 | 2026-10-16 | 完善已有项目接手与新项目规范建立流程 | 用户审阅现状基线、总体资料补足、规范随设计形成与骨架检查落实方案后要求“请优化”；按已展示范围落实 FLOW-22、FLOW-23、RULE-13、分发规则及资源兼容更新，见[本次工作](../work/20261016-project-onboarding/work.md)。不表示历史规格全部获批，不包含验收、提交或发布 |
 | 2026-10-16 | 补齐功能分块及空项目骨架优先流程 | 用户在讨论总体依据、功能增量、依赖及最小骨架后要求优化调整；落实 FLOW-20、FLOW-21、RULE-12 与规则分发，见[本次工作](../work/20261016-functional-planning/work.md)。具体计划由人与 AI 维护，不宣称新增自动调度；不含提交、发布或交付验收 |

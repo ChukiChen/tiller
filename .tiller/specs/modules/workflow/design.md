@@ -657,3 +657,9 @@ Git 操作由 TypeScript 调用本机 Git，使用参数数组和明确 cwd，�
 delivery-check 只读返回 scope、technicalReady、processEvidence、issues、exceptions、basisDigest；delivery-ready 另保存第 9.2 节当前版本的不可变回执，不增加 tasks revision，也不自动验收。acceptance 可绑定 deliveryBinding={deliveryCheckId,deliveryBasisDigest}，技术未就绪但明确验收显示 accepted-with-exceptions。release 必须绑定同对象 acceptance；mergeBinding 同时绑定整体对象及 Git 状态。普通文档验收不能代替整体验收。进行中的 commit/push/review 仍按实际授权执行并展示 readiness，整体门禁不扩大提交/远端操作权限。
 
 严格格式统一见第 9.2 节，阶段、任务和整体控制状态共同参与当前判断。未知版本、字段或不完整依据拒绝，旧文件保留原位。验证从观察前 capture 或真实 run 取得 ID，record 不得事后采集当前对象冒充过去结果。自动运行成功、逐项结果、任务技术通过、整体操作允许、用户验收与发布分别呈现。
+
+## 10. 当前轻量用例实现（2026-10-22）
+
+全局用例目录固定为 `.tiller/cases/modules/<模块>/<behavior|interface|performance|security>.json` 与 `.tiller/cases/scenarios/<场景>.json`。模块名取自 `.tiller/specs/modules/` 实际目录；模块文件内的 `module`、`kind` 必须与路径一致，场景还需声明经过的模块和端到端测试。旧根目录 `*.json` 不再读取。
+
+`verify` 按测试引用匹配用例并写入任务验证的 `用例` 字段，不要求手写 JSON。`check` 将每条 AC 的最新验证绑定到存在且 `test_ref` 一致的用例，验证结果、代码树和测试缺失均按阻塞处理；同时汇总模块类型数量、场景和未覆盖模块，并按改动文件给出回归提示。该实现只服务默认工作流，不恢复旧验证重模块、证据包或全文快照。

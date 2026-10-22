@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "module": "verification",
+  "kind": "behavior",
+  "cases": [
+    {
+      "id": "CASE-006",
+      "title": "范围内变化会使既有验证过期",
+      "requirements": [".tiller/specs/modules/workflow/requirements.md#flow-06-处理要求和方案变化", ".tiller/specs/modules/workflow/requirements.md#flow-09-依据验证结果判断交付"],
+      "modules": ["verification"],
+      "test_ref": "test/flow-cli.test.mjs::verification becomes stale after an in-scope change",
+      "source": ["src/flow.ts"]
+    },
+    {
+      "id": "CASE-007",
+      "title": "删除断言或新增跳过测试会阻塞交付自检",
+      "requirements": [".tiller/specs/modules/workflow/requirements.md#flow-24-在各环节形成测试依据并保存执行事实"],
+      "modules": ["verification"],
+      "test_ref": "test/flow-cli.test.mjs::test weakening and skipped tests block the delivery self-check",
+      "source": ["src/flow.ts"]
+    },
+    {
+      "id": "CASE-008",
+      "title": "功能下线删除测试会提示，但保留测试的断言损失仍会阻塞",
+      "requirements": [".tiller/specs/modules/workflow/requirements.md#flow-05-处理失败与阻碍", ".tiller/specs/modules/workflow/requirements.md#flow-24-在各环节形成测试依据并保存执行事实"],
+      "modules": ["verification"],
+      "test_ref": "test/flow-cli.test.mjs::removing a test with its retired feature is reported without masking retained assertion loss",
+      "source": ["src/flow.ts"]
+    }
+  ]
+}
