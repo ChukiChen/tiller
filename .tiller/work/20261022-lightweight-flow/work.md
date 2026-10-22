@@ -35,8 +35,8 @@
 - 命令：npm run test:rules
 - 结果：passed
 - 退出码：0
-- 提交：64b26df763840edf9e1776b21253d45f0f909b5e
-- 代码树摘要：17ae065fd86eba16f95008a7a86e3e0eb205944979891da1d263357ea15e17a8
+- 提交：291a176e48ad706eecbba6c8df7a1c36b83ff5b5
+- 代码树摘要：e1a6da5bf424ca09158a2b00beccee2bdf66eb2e867f0809e35fe254cb6d6837
 - 来源：executed
 - 时间：2026-10-22T00:02:59.454Z
 
@@ -46,8 +46,8 @@
 - 命令：npm run test:rules
 - 结果：passed
 - 退出码：0
-- 提交：64b26df763840edf9e1776b21253d45f0f909b5e
-- 代码树摘要：17ae065fd86eba16f95008a7a86e3e0eb205944979891da1d263357ea15e17a8
+- 提交：291a176e48ad706eecbba6c8df7a1c36b83ff5b5
+- 代码树摘要：e1a6da5bf424ca09158a2b00beccee2bdf66eb2e867f0809e35fe254cb6d6837
 - 来源：executed
 - 时间：2026-10-22T00:02:59.454Z
 
@@ -57,8 +57,8 @@
 - 命令：npm run test:e2e && npm run test:package
 - 结果：passed
 - 退出码：0
-- 提交：64b26df763840edf9e1776b21253d45f0f909b5e
-- 代码树摘要：17ae065fd86eba16f95008a7a86e3e0eb205944979891da1d263357ea15e17a8
+- 提交：291a176e48ad706eecbba6c8df7a1c36b83ff5b5
+- 代码树摘要：e1a6da5bf424ca09158a2b00beccee2bdf66eb2e867f0809e35fe254cb6d6837
 - 来源：executed
 - 时间：2026-10-22T00:03:06.545Z
 
@@ -68,8 +68,8 @@
 - 命令：npm run test:e2e && npm run test:package
 - 结果：passed
 - 退出码：0
-- 提交：64b26df763840edf9e1776b21253d45f0f909b5e
-- 代码树摘要：17ae065fd86eba16f95008a7a86e3e0eb205944979891da1d263357ea15e17a8
+- 提交：291a176e48ad706eecbba6c8df7a1c36b83ff5b5
+- 代码树摘要：e1a6da5bf424ca09158a2b00beccee2bdf66eb2e867f0809e35fe254cb6d6837
 - 来源：executed
 - 时间：2026-10-22T00:03:06.545Z
 
@@ -79,8 +79,8 @@
 - 命令：npm run test:integration
 - 结果：passed
 - 退出码：0
-- 提交：64b26df763840edf9e1776b21253d45f0f909b5e
-- 代码树摘要：17ae065fd86eba16f95008a7a86e3e0eb205944979891da1d263357ea15e17a8
+- 提交：291a176e48ad706eecbba6c8df7a1c36b83ff5b5
+- 代码树摘要：e1a6da5bf424ca09158a2b00beccee2bdf66eb2e867f0809e35fe254cb6d6837
 - 来源：executed
 - 时间：2026-10-22T00:03:10.676Z
 
@@ -90,8 +90,8 @@
 - 命令：npm run build && npm run lint && npm run typecheck && npm test && npm run test:package
 - 结果：passed
 - 退出码：0
-- 提交：64b26df763840edf9e1776b21253d45f0f909b5e
-- 代码树摘要：17ae065fd86eba16f95008a7a86e3e0eb205944979891da1d263357ea15e17a8
+- 提交：291a176e48ad706eecbba6c8df7a1c36b83ff5b5
+- 代码树摘要：e1a6da5bf424ca09158a2b00beccee2bdf66eb2e867f0809e35fe254cb6d6837
 - 来源：executed
 - 时间：2026-10-22T00:03:20.232Z
 
