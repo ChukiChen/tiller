@@ -1,6 +1,6 @@
 # tiller 使用指引
 
-运行 `node .tiller/run.cjs --help`；恢复用 `node .tiller/run.cjs resume`。
+入口 `node .tiller/run.cjs --help`；恢复 `run.cjs resume`。
 
 ## 默认工作流
 
@@ -15,7 +15,7 @@ node .tiller/run.cjs verify <task-id> --criterion AC-1 --test test/cli.test.mjs:
 node .tiller/run.cjs check <task-id>
 node .tiller/run.cjs accept <task-id> [--by "验收人"]
 node .tiller/run.cjs close <task-id> --reason "交付完成"
-node .tiller/run.cjs pr <task-id> [--json]
+node .tiller/run.cjs pr <task-id> [--slug <英文描述>] [--json]
 ```
 
 `start` 生成目标、范围、编号 AC；standard 另生成方案、取舍、影响与风险。确认前校验必填段。
@@ -24,7 +24,7 @@ node .tiller/run.cjs pr <task-id> [--json]
 
 阶段由事实推导：需求已确认 → 设计已确认（small 可略）→ 已验证 → 已验收 → 已关闭/放弃，失效时回退说明。已验收 `close`，未验收 `--abandon`，终态 `reopen`。
 
-`pr` 读取本地记录与 Git，输出标题、五段说明、分支或 JSON。提交 `类型(模块): 中文摘要`，PR 标题尾加 `[任务编号]`，分支用 `类型/任务编号[-描述]`；`check` 仅提示。
+`pr` 输出 PR/MR 标题、五段、分支或 JSON。提交 `类型(模块): 中文摘要`；标题为首模块加 `[任务编号]`，任务纯文本、验证全列。分支 `类型/任务编号[-描述]`，描述取参数、任务或当前分支中的 slug；`check` 仅提示。
 
 ## 规划与用例
 
@@ -49,4 +49,4 @@ node .tiller/run.cjs start <task-id> --plan batch --item P-1 --title "接入" \
 
 ## 接入与升级
 
-`init` 补骨架且不覆盖已有文件。`upgrade --plan` 预览，`--apply <plan-id>` 应用；只刷新未修改文件，冲突保留。仅兼容当前及上一资源契约；版本号只在正式发布时修改。
+`init [--platform github|gitlab|both]` 补骨架且不覆盖已有文件，按平台生成 PR/MR 模板。`upgrade --plan` 预览，`--apply <plan-id>` 应用；只刷新未修改文件并补齐当前平台模板，冲突保留。兼容当前及上一资源契约；版本号只在正式发布时修改。

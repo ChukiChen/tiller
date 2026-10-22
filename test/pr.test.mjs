@@ -3,9 +3,9 @@ import { existsSync, readFileSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import test from 'node:test';
-import { branchNameIssue, suggestedBranchName } from '../dist/branch-conventions.js';
+import { branchDescriptionForTask, branchNameIssue, normalizeBranchSlug, suggestedBranchName, suggestedBranchNameFor } from '../dist/branch-conventions.js';
 import { commitSubjectIssue } from '../dist/commit-conventions.js';
-import { initialize } from '../dist/core.js';
+import { GITLAB_TEMPLATE, initialize } from '../dist/core.js';
 import { cliPath, cli, failure, fixture, put, spawnCaptured, success } from './helpers.mjs';
 
 const read = (root, relative) => readFileSync(join(root, relative), 'utf8');
@@ -34,7 +34,7 @@ function fillDesign(root, id) {
   const relative = `.tiller/task/${id}/task.md`;
   const content = read(root, relative);
   put(root, relative, content.replace('### 方案\n\n### 取舍\n\n### 影响与风险',
-    '### 方案\n\n从 task.md 与 Git 生成 PR 草稿。\n\n### 取舍\n\n不调用 GitHub。\n\n### 影响与风险\n\nPR 标题和说明需要人工复核。'));
+    '### 方案\n\n从 task.md 与 Git 生成 PR/MR 草稿。\n\n### 取舍\n\n不调用托管平台。\n\n### 影响与风险\n\nPR/MR 标题和说明需要人工复核。'));
 }
 
 test('branch names follow type and task prefix rules', () => {
@@ -43,6 +43,9 @@ test('branch names follow type and task prefix rules', () => {
     assert.equal(branchNameIssue(branch, branch.startsWith('fix/') ? 'bug-1' : '20261022-round11'), null, branch);
   }
   for (const branch of ['main', 'master', '']) assert.equal(branchNameIssue(branch, '20261022-round11'), null, branch);
+  assert.equal(normalizeBranchSlug(' PR_Draft  2 '), 'pr-draft-2');
+  assert.equal(suggestedBranchNameFor('feat', '20261022-round11', 'PR_Draft 2'), 'feat/20261022-round11-pr-draft-2');
+  assert.equal(branchDescriptionForTask('feat/20261022-round11-pr-draft-2', '20261022-round11'), 'pr-draft-2');
   assert.match(branchNameIssue('Codex/20261022-round11', '20261022-round11') ?? '', /分支名应为/u);
   assert.match(branchNameIssue('codex/20261022-round11', '20261022-round11') ?? '', /分支名应为/u);
   assert.match(branchNameIssue('feat/other-task', '20261022-round11') ?? '', /任务编号.*不符/u);
@@ -84,17 +87,18 @@ test('pr draft derives title, five sections and current AC state', async t => {
   const draft = success(cli(root, 'pr', id));
   assert.equal(draft.title, `feat(workflow): 确认去原话化与结构化任务正文 [${id}]`);
   assert.equal(draft.module, 'workflow');
-  assert.equal(draft.branch, `feat/${id}`);
+  assert.equal(draft.branch, `feat/${id}-pr-draft`);
   assert.match(draft.body, /^## 关联任务$/mu);
   for (const heading of ['关联任务', '变更内容', '验收条件', '验证结果', '影响与风险']) {
     assert.equal(draft.body.split(`## ${heading}`).length - 1, 1, heading);
   }
   assert.doesNotMatch(draft.body, /范围外|不在范围/u);
-  assert.match(draft.body, /\[20261022-pr-draft\]\(\.tiller\/task\/20261022-pr-draft\/task\.md\)/u);
+  assert.match(draft.body, /任务 20261022-pr-draft，记录见 `\.tiller\/task\/20261022-pr-draft\/task\.md`/u);
+  assert.doesNotMatch(draft.body, /\]\(\.tiller\/task\//u);
   assert.match(draft.body, /- feat\(workflow\): 生成固定五段 PR 草稿/u);
   assert.match(draft.body, /- \[x\] AC-1: PR 草稿包含固定五段/u);
   assert.match(draft.body, /当前有效/u);
-  assert.match(draft.body, /PR 标题和说明需要人工复核/u);
+  assert.match(draft.body, /PR\/MR 标题和说明需要人工复核/u);
 
   const plain = spawnCaptured(process.execPath, [cliPath, 'pr', id], { cwd: root, encoding: 'utf8', timeout: 60_000 });
   assert.equal(plain.status, 0, plain.stderr);
@@ -140,6 +144,77 @@ test('check warns about nonconforming commit subjects and skips merge subjects',
   assert.doesNotMatch(formatWarnings[0], /merge side without convention/u);
 });
 
+test('pr title selects first declared module and omits unknown modules', async t => {
+  const root = fixture(t);
+  await initialize({ root });
+  for (const module of ['initialization', 'workflow']) {
+    put(root, `.tiller/specs/modules/${module}/requirements.md`, `# ${module}\n`);
+    put(root, `.tiller/specs/modules/${module}/design.md`, `# ${module}\n`);
+  }
+  const id = '20261022-module-title';
+  success(cli(root, 'start', id, '--title', '模块标题', '--requirement', '从范围选择首个主模块。',
+    '--criterion', 'AC-1=标题包含首个模块', '--size', 'small',
+    '--target', '.tiller/specs/modules/initialization', '--target', '.tiller/specs/modules/workflow'));
+  const draft = success(cli(root, 'pr', id));
+  assert.equal(draft.module, 'initialization');
+  assert.equal(draft.title, `feat(initialization): 模块标题 [${id}]`);
+  assert.match(draft.warnings.join('\n'), /多个模块.*首个主模块 initialization/u);
+
+  const unknown = fixture(t);
+  await initialize({ root: unknown });
+  const unknownId = '20261022-unknown-module';
+  success(cli(unknown, 'start', unknownId, '--title', '未知模块标题', '--requirement', '没有可推导模块。',
+    '--criterion', 'AC-1=标题省略模块', '--size', 'small', '--target', 'src'));
+  const fallback = success(cli(unknown, 'pr', unknownId));
+  assert.equal(fallback.module, null);
+  assert.equal(fallback.title, `feat: 未知模块标题 [${unknownId}]`);
+});
+
+test('branch slug precedence uses flag then task metadata then current branch', async t => {
+  const root = fixture(t);
+  success(cli(root, 'init'));
+  setupRepository(root);
+  const metadataTask = '20261022-slug-meta';
+  const started = success(cli(root, 'start', metadataTask, '--title', '元数据分支描述', '--requirement', '记录英文标识。',
+    '--criterion', 'AC-1=分支包含元数据描述', '--size', 'small', '--target', 'src', '--slug', 'Structured Task'));
+  assert.equal(started.slug, 'structured-task');
+  assert.equal(success(cli(root, 'pr', metadataTask)).branch, `feat/${metadataTask}-structured-task`);
+  assert.equal(success(cli(root, 'pr', metadataTask, '--slug', 'PR_Draft 2')).branch, `feat/${metadataTask}-pr-draft-2`);
+
+  const branchTask = '20261022-slug-branch';
+  success(cli(root, 'start', branchTask, '--title', '当前分支描述', '--requirement', '从当前分支读取描述。',
+    '--criterion', 'AC-1=分支包含当前分支描述', '--size', 'small', '--target', 'src'));
+  git(root, 'checkout', '--quiet', '-b', `fix/${branchTask}-from-current`);
+  assert.equal(success(cli(root, 'pr', branchTask)).branch, `feat/${branchTask}-from-current`);
+});
+
+test('pr verification section lists every recorded run in order', async t => {
+  const root = fixture(t);
+  success(cli(root, 'init'));
+  setupRepository(root);
+  const id = '20261022-all-verifications';
+  success(cli(root, 'start', id, '--title', '全部验证记录', '--requirement', '输出每条 AC 的全部验证。',
+    '--criterion', 'AC-1=保留每次验证', '--size', 'small', '--target', 'src', '--target', 'test',
+    '--target', '.tiller/specs/modules/workflow'));
+  success(cli(root, 'confirm', id, 'requirements', '--by', 'Tiller Test'));
+  const added = success(cli(root, 'case', 'add', id, '--module', 'workflow', '--kind', 'behavior',
+    '--title', '全部验证记录', '--test', 'test/workflow.test.mjs::workflow behavior', '--criterion', 'AC-1',
+    '--source', 'src/workflow.ts'));
+  const first = 'node --test test/workflow.test.mjs';
+  const second = 'node --test test/workflow.test.mjs --test-name-pattern workflow';
+  success(cli(root, 'verify', id, '--criterion', 'AC-1', '--test', 'test/workflow.test.mjs::workflow behavior',
+    '--command', first, '--run', first));
+  success(cli(root, 'verify', id, '--criterion', 'AC-1', '--test', 'test/workflow.test.mjs::workflow behavior',
+    '--command', second, '--result', 'passed'));
+
+  const draft = success(cli(root, 'pr', id));
+  assert.ok(draft.body.indexOf(`命令 \`${first}\``) >= 0, draft.body);
+  assert.ok(draft.body.indexOf(`命令 \`${second}\``) > draft.body.indexOf(`命令 \`${first}\``), draft.body);
+  assert.match(draft.body, new RegExp(`${added.id}`, 'u'));
+  assert.match(draft.body, /- 1\. passed/u);
+  assert.match(draft.body, /- 2\. passed/u);
+});
+
 test('init installs a managed pull request template and preserves an existing one', async t => {
   const root = fixture(t);
   await initialize({ root });
@@ -160,6 +235,36 @@ test('init installs a managed pull request template and preserves an existing on
   assert.match(plan.issues.join('\n'), /用户已有 \.github\/pull_request_template\.md 与分发模板不同/u);
 });
 
+test('init platform selects github gitlab or both managed templates', async t => {
+  const github = fixture(t);
+  success(cli(github, 'init'));
+  assert.ok(existsSync(join(github, '.github/pull_request_template.md')));
+  assert.ok(!existsSync(join(github, GITLAB_TEMPLATE)));
+
+  const gitlab = fixture(t);
+  success(cli(gitlab, 'init', '--platform', 'gitlab'));
+  const gitlabMetadata = JSON.parse(read(gitlab, '.tiller/project.json'));
+  assert.equal(gitlabMetadata.platform, 'gitlab');
+  assert.ok(existsSync(join(gitlab, GITLAB_TEMPLATE)));
+  assert.ok(!existsSync(join(gitlab, '.github/pull_request_template.md')));
+  assert.ok(Object.hasOwn(gitlabMetadata.managedFiles, GITLAB_TEMPLATE));
+  assert.equal(read(gitlab, GITLAB_TEMPLATE), readFileSync(new URL('../resources/merge_request_template.md', import.meta.url), 'utf8'));
+
+  const both = fixture(t);
+  success(cli(both, 'init', '--platform', 'both'));
+  const bothMetadata = JSON.parse(read(both, '.tiller/project.json'));
+  assert.equal(bothMetadata.platform, 'both');
+  assert.equal(read(both, '.github/pull_request_template.md'), read(both, GITLAB_TEMPLATE));
+  assert.ok(Object.hasOwn(bothMetadata.managedFiles, '.github/pull_request_template.md'));
+  assert.ok(Object.hasOwn(bothMetadata.managedFiles, GITLAB_TEMPLATE));
+
+  const custom = fixture(t);
+  put(custom, GITLAB_TEMPLATE, '# 团队 MR 模板\n');
+  await initialize({ root: custom, platform: 'gitlab' });
+  assert.equal(read(custom, GITLAB_TEMPLATE), '# 团队 MR 模板\n');
+  assert.ok(Object.hasOwn(JSON.parse(read(custom, '.tiller/project.json')).managedFiles, GITLAB_TEMPLATE));
+});
+
 test('upgrade adds the pull request template to a previous managed set', async t => {
   const root = fixture(t);
   await initialize({ root });
@@ -172,5 +277,39 @@ test('upgrade adds the pull request template to a previous managed set', async t
   assert.ok(preview.changes.some(change => change.path === '.github/pull_request_template.md'));
   success(cli(root, 'upgrade', '--apply', preview.planId));
   assert.ok(existsSync(join(root, '.github/pull_request_template.md')));
+  assert.ok(!existsSync(join(root, GITLAB_TEMPLATE)));
   assert.ok(Object.hasOwn(JSON.parse(read(root, '.tiller/project.json')).managedFiles, '.github/pull_request_template.md'));
+});
+
+test('upgrade adds only templates for the configured platform', async t => {
+  const root = fixture(t);
+  await initialize({ root, platform: 'gitlab' });
+  const metadata = JSON.parse(read(root, '.tiller/project.json'));
+  delete metadata.managedFiles[GITLAB_TEMPLATE];
+  put(root, '.tiller/project.json', `${JSON.stringify(metadata, null, 2)}\n`);
+  rmSync(join(root, GITLAB_TEMPLATE));
+
+  const preview = success(cli(root, 'upgrade', '--plan'));
+  assert.ok(preview.changes.some(change => change.path === GITLAB_TEMPLATE));
+  assert.ok(!preview.changes.some(change => change.path === '.github/pull_request_template.md'));
+  success(cli(root, 'upgrade', '--apply', preview.planId));
+  assert.ok(existsSync(join(root, GITLAB_TEMPLATE)));
+  assert.ok(!existsSync(join(root, '.github/pull_request_template.md')));
+});
+
+test('pr task section is plain text and PR MR neutral', async t => {
+  const root = fixture(t);
+  await initialize({ root });
+  const id = '20261022-neutral-output';
+  success(cli(root, 'start', id, '--title', '中性文案', '--requirement', '关联任务使用纯文本。',
+    '--criterion', 'AC-1=输出纯文本记录路径', '--size', 'small', '--target', 'src'));
+  const draft = success(cli(root, 'pr', id));
+  assert.match(draft.body, new RegExp(`^## 关联任务\\n\\n任务 ${id}，记录见 \`\\.tiller/task/${id}/task\\.md\`$`, 'mu'));
+  assert.doesNotMatch(draft.body, /\[[^\]]+\]\(\.tiller\/task\//u);
+  const help = success(cli(root, '--help')).help;
+  assert.match(help, /五段 PR\/MR 草稿/u);
+  const githubTemplate = readFileSync(new URL('../resources/pull_request_template.md', import.meta.url), 'utf8');
+  const gitlabTemplate = readFileSync(new URL('../resources/merge_request_template.md', import.meta.url), 'utf8');
+  assert.equal(gitlabTemplate, githubTemplate);
+  assert.match(githubTemplate, /任务 <id>，记录见 `\.tiller\/task\/<id>\/task\.md`/u);
 });

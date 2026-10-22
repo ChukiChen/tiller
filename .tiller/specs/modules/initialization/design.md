@@ -2,15 +2,15 @@
 
 ## 1. 文件骨架
 
-初始化使用固定最小清单，只创建缺失文件。骨架内容说明职责与下一步，不预生成空阶段、项目模块或审计目录。`modules/README.md` 说明模块必须同时有规格目录和同名 cases 目录；`plans/README.md` 说明按需规划与依赖阻塞；`.github/pull_request_template.md` 保持固定五段。
+初始化使用固定最小清单，只创建缺失文件。骨架内容说明职责与下一步，不预生成空阶段、项目模块或审计目录。`modules/README.md` 说明模块必须同时有规格目录和同名 cases 目录；`plans/README.md` 说明按需规划与依赖阻塞；合并请求模板保持固定五段。
 
 ## 2. 受管区段
 
-`AGENTS.md`、`.gitignore`、`.tiller/index.md` 使用成对标记维护固定区段。区段外内容原样保留；标记缺失、重复或顺序异常时报告冲突。共享规则、使用指引、`run.cjs` 和 PR 模板按文件整体管理。规范化摘要允许受控路径的 LF/CRLF 等价，但不忽略实质字节变化。
+`AGENTS.md`、`.gitignore`、`.tiller/index.md` 使用成对标记维护固定区段。区段外内容原样保留；标记缺失、重复或顺序异常时报告冲突。共享规则、使用指引、`run.cjs` 和平台模板按文件整体管理。规范化摘要允许受控路径的 LF/CRLF 等价，但不忽略实质字节变化。
 
 ## 3. 元信息
 
-`project.json` 的 `schemaVersion` 固定为 1；`resourceVersion` 只能是受支持契约。`managedFiles` 必须恰好覆盖完整受管集。校验在取得锁和写入前完成，失败不留下部分文件。
+`project.json` 的 `schemaVersion` 固定为 1；`resourceVersion` 只能是受支持契约；可选 `platform` 为 github、gitlab 或 both，缺省视为 github。`managedFiles` 必须恰好覆盖当前平台完整受管集或可补齐的兼容子集。校验在取得锁和写入前完成，失败不留下部分文件。
 
 ## 4. 升级算法
 

@@ -57,7 +57,7 @@ test('core and usage describe the only supported default-flow record path', () =
   assert.match(usage, /类型\/任务编号/u);
   const delivery = read('rules/activities/delivery.md');
   assert.match(delivery, /类型\(模块\): 中文摘要/u);
-  assert.match(delivery, /PR 标题.*\[任务编号\]/u);
+  assert.match(delivery, /PR\/MR 标题.*\[任务编号\]/u);
   assert.match(delivery, /`pr <task-id>`/u);
   assert.match(delivery, /main\/master 与 detached HEAD/u);
   const template = read('pull_request_template.md');
@@ -165,13 +165,13 @@ test('global cases use module kinds and scenarios with resolvable named tests', 
   const scenarios = readdirSync(join(directory, 'scenarios')).filter(name => name.endsWith('.json')).sort()
     .flatMap(name => JSON.parse(readFileSync(join(directory, 'scenarios', name), 'utf8')).scenarios);
   cases.push(...scenarios.map(item => ({ ...item, file: `scenarios/${item.id}` })));
-  assert.equal(cases.length, 73);
-  assert.deepEqual(cases.map(item => item.id).sort(), Array.from({ length: 73 }, (_, index) => `CASE-${String(index + 1).padStart(3, '0')}`));
+  assert.equal(cases.length, 80);
+  assert.deepEqual(cases.map(item => item.id).sort(), Array.from({ length: 80 }, (_, index) => `CASE-${String(index + 1).padStart(3, '0')}`));
   assert.deepEqual(counts, {
-    initialization: { behavior: 5, interface: 0, performance: 11, security: 0 },
-    standards: { behavior: 3, interface: 0, performance: 0, security: 0 },
+    initialization: { behavior: 7, interface: 0, performance: 11, security: 0 },
+    standards: { behavior: 4, interface: 0, performance: 0, security: 0 },
     verification: { behavior: 4, interface: 5, performance: 15, security: 0 },
-    workflow: { behavior: 15, interface: 10, performance: 0, security: 3 },
+    workflow: { behavior: 16, interface: 13, performance: 0, security: 3 },
   });
   for (const item of scenarios) {
     assert.ok(item.modules.length > 0 && item.modules.every(module => specs.includes(module)), `${item.id}: modules`);

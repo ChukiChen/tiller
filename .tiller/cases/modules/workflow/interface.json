@@ -97,7 +97,7 @@
       "id": "CASE-068",
       "title": "PR 草稿包含标题、五段说明、AC 状态与建议分支",
       "requirements": [
-        ".tiller/specs/modules/workflow/requirements.md#5-提交与-pr-草稿"
+        ".tiller/specs/modules/workflow/requirements.md#5-提交与-prmr-草稿"
       ],
       "modules": [
         "workflow"
@@ -117,7 +117,7 @@
       "id": "CASE-069",
       "title": "提交主题不合规只提示并跳过合并提交",
       "requirements": [
-        ".tiller/specs/modules/workflow/requirements.md#5-提交与-pr-草稿"
+        ".tiller/specs/modules/workflow/requirements.md#5-提交与-prmr-草稿"
       ],
       "modules": [
         "workflow"
@@ -135,7 +135,7 @@
       "id": "CASE-070",
       "title": "分支名建议与校验遵循类型和任务编号",
       "requirements": [
-        ".tiller/specs/modules/workflow/requirements.md#5-提交与-pr-草稿"
+        ".tiller/specs/modules/workflow/requirements.md#5-提交与-prmr-草稿"
       ],
       "modules": [
         "workflow"
@@ -152,7 +152,7 @@
       "id": "CASE-073",
       "title": "提交主题校验类型、模块、中文摘要与任务链接",
       "requirements": [
-        ".tiller/specs/modules/workflow/requirements.md#5-提交与-pr-草稿"
+        ".tiller/specs/modules/workflow/requirements.md#5-提交与-prmr-草稿"
       ],
       "modules": [
         "workflow"
@@ -163,6 +163,60 @@
       ],
       "criteria": [
         "20261022-round11#AC-1"
+      ]
+    },
+    {
+      "id": "CASE-075",
+      "title": "PR 标题由范围首个模块组成并支持省略",
+      "requirements": [
+        ".tiller/specs/modules/workflow/requirements.md#5-提交与-prmr-草稿"
+      ],
+      "modules": [
+        "workflow"
+      ],
+      "test_ref": "test/pr.test.mjs::pr title selects first declared module and omits unknown modules",
+      "source": [
+        "src/pr.ts"
+      ],
+      "criteria": [
+        "20261022-round12#AC-1"
+      ]
+    },
+    {
+      "id": "CASE-076",
+      "title": "建议分支描述按参数、任务元数据和当前分支优先",
+      "requirements": [
+        ".tiller/specs/modules/workflow/requirements.md#5-提交与-prmr-草稿"
+      ],
+      "modules": [
+        "workflow"
+      ],
+      "test_ref": "test/pr.test.mjs::branch slug precedence uses flag then task metadata then current branch",
+      "source": [
+        "src/branch-conventions.ts",
+        "src/pr.ts",
+        "src/flow.ts"
+      ],
+      "criteria": [
+        "20261022-round12#AC-2"
+      ]
+    },
+    {
+      "id": "CASE-080",
+      "title": "PR 关联任务为纯文本且文案兼容 PR 与 MR",
+      "requirements": [
+        ".tiller/specs/modules/workflow/requirements.md#5-提交与-prmr-草稿"
+      ],
+      "modules": [
+        "workflow"
+      ],
+      "test_ref": "test/pr.test.mjs::pr task section is plain text and PR MR neutral",
+      "source": [
+        "src/pr.ts",
+        "resources/pull_request_template.md"
+      ],
+      "criteria": [
+        "20261022-round12#AC-5"
       ]
     }
   ]

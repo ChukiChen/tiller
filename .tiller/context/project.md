@@ -14,8 +14,8 @@ Codex 是主要开发 Agent，也是一等支持对象；tiller 自身也使用�
 - `.tiller/plans/<id>.md` 支持目标、关联 specs、任务条目、粒度和依赖；依赖未验收时阻塞开工。
 - `.tiller/cases/` 是产品级回归事实源，按模块 behavior/interface/performance/security 和 scenarios 组织；需求确认后先改用例，再写测试和实现。
 - `check` 校验 AC→用例→测试→当前验证、反向 `criteria`、模块/场景结构、范围、测试弱化、密钥和本机路径。
-- 提交主题为 `类型(模块): 中文摘要`，PR 标题加 `[任务编号]` 并保持五段，分支为 `类型/任务编号[-描述]`；`pr` 只生成本地草稿，不联网。
-- `init` 生成最小 specs/context/cases/plans 骨架和 PR 模板；`upgrade` 只刷新未修改的受管文件，兼容当前和直接兼容的上一资源契约。
+- 提交主题为 `类型(模块): 中文摘要`，PR/MR 标题加 `[任务编号]` 并保持五段，主模块取范围首个，关联任务为纯文本；分支为 `类型/任务编号[-描述]`；`pr` 只生成本地草稿，不联网。
+- `init` 生成最小 specs/context/cases/plans 骨架，并按 `--platform github|gitlab|both`（缺省 github）生成模板；`upgrade` 只刷新未修改的受管文件并补齐当前平台模板，兼容当前和直接兼容的上一资源契约。
 
 旧审计、reviews 快照、全文确认快照、证据包、advanced 和旧 verification CLI 不保留。历史 `.tiller/work/` 只读；需要历史时从 Git 取回或重跑。
 
@@ -27,7 +27,7 @@ Codex 是主要开发 Agent，也是一等支持对象；tiller 自身也使用�
 
 ## 目录
 
-- `src/`：CLI、默认流程、规划、全局用例、提交/分支/PR 约定、初始化和升级实现。
+- `src/`：CLI、默认流程、规划、全局用例、提交/分支/PR/MR 约定、初始化和升级实现。
 - `resources/`：分发入口、usage、规则和启动器。
 - `test/`：规则、契约、性能、集成和端到端测试。
 - `.tiller/specs/`：当前总体/模块需求、设计和决定。

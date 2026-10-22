@@ -43,7 +43,7 @@
 
 `commitTypeForTaskType` 将任务类型映射到限定提交类型；`taskCommits` 读取 `base..HEAD` 的非合并主题。`branchNameIssue` 校验 `类型/任务编号[-描述]` 及任务编号前缀；`currentBranch` 在 main/master、detached HEAD 或无 Git 时跳过。
 
-`draftPullRequest` 复用 `inspectFlow` 的 AC 覆盖状态，从任务范围和全局用例来源推导唯一模块；多模块时省略标题模块并提示。正文生成器只接受五个固定二级标题，Markdown 在标题后单列建议分支，JSON 同时返回 `body`、`branch` 和提交列表。该模块没有网络依赖。
+`draftPullRequest` 复用 `inspectFlow` 的 AC 覆盖状态，从任务范围的模块路径、“涉及模块”声明和全局用例来源按声明顺序推导模块，标题取首个主模块，无模块时省略括号。正文生成器只接受五个固定二级标题，关联任务输出纯文本路径，验证结果按 AC 保留全部运行记录；Markdown 在标题后单列建议分支，JSON 同时返回 `body`、`branch` 和提交列表。分支描述依次读取 `pr --slug`、任务元数据 `slug`、当前分支匹配描述，并统一规范化为小写字母、数字和连字符。该模块没有网络依赖，文案对 PR/MR 中性。
 
 ## 7. 范围与恢复
 

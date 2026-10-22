@@ -1,4 +1,5 @@
 export type ProjectMode = 'project' | 'workspace';
+export type ProjectPlatform = 'github' | 'gitlab' | 'both';
 
 export interface ProjectMetadata {
   schemaVersion: 1;
@@ -8,6 +9,7 @@ export interface ProjectMetadata {
   repositoryPaths: Record<string, string>;
   managedFiles: Record<string, string>;
   createdAt: string;
+  platform?: ProjectPlatform;
 }
 
 export interface ProjectInspection {
@@ -24,6 +26,7 @@ export interface InitializeOptions {
   root: string;
   mode?: ProjectMode;
   repositories?: string[];
+  platform?: ProjectPlatform;
 }
 
 export interface FileChange {

@@ -30,11 +30,13 @@ tiller close <task-id> --reason "交付完成"
 
 任务阶段由记录事实推导：已开始 → 需求已确认 → 设计已确认（small 可跳过）→ 已验证 → 已验收 → 已关闭/已放弃。确认失效或验证过期时，`resume` 显示回退后的真实阶段和原因。`close` 只收尾已验收任务；未验收终止使用 `close --abandon`；两者都可通过 `reopen --reason` 显式恢复，之后才能继续确认、验证或验收。
 
-## 提交与 PR
+## 提交与 PR/MR
 
-提交主题使用 `类型(模块): 中文摘要`，类型限 `feat`、`fix`、`docs`、`refactor`、`test`、`chore`；模块取 `.tiller/specs/modules/` 名称，可省略括号部分。PR 标题沿用该格式并在末尾加 `[任务编号]`，说明固定为关联任务、变更内容、验收条件、验证结果、影响与风险五段。
+提交主题使用 `类型(模块): 中文摘要`，类型限 `feat`、`fix`、`docs`、`refactor`、`test`、`chore`；模块取 `.tiller/specs/modules/` 名称，可省略括号部分。PR/MR 标题沿用该格式并在末尾加 `[任务编号]`；主模块按任务范围声明顺序取首个，无法推导时省略括号。说明固定为关联任务、变更内容、验收条件、验证结果、影响与风险五段，关联任务使用纯文本路径。
 
-分支名为 `类型/任务编号`，可加 `-简短描述`，只使用小写字母、数字、连字符和一个斜杠。`tiller pr <task-id>` 从 `task.md` 与 Git 生成标题、五段说明和建议分支；`--json` 返回结构化草稿。它不调用 GitHub、不联网，提交内容和结论仍需人工复核。`init` 会安装 `.github/pull_request_template.md`，已有模板不覆盖。
+分支名为 `类型/任务编号`，可加 `-简短描述`，只使用小写字母、数字、连字符和一个斜杠。`tiller pr <task-id>` 从 `task.md` 与 Git 生成标题、五段说明和建议分支，验证结果列出每条 AC 的全部记录；`--json` 返回结构化草稿。描述依次取 `pr --slug`、`start --slug` 写入的任务元数据、当前分支中的匹配描述。它不调用 GitHub/GitLab、不联网，提交内容和结论仍需人工复核。
+
+`init` 默认安装 `.github/pull_request_template.md`；`init --platform gitlab` 安装 `.gitlab/merge_request_templates/Default.md`，`both` 同时安装。已有模板不覆盖，`upgrade` 只补齐当前平台缺失的模板。
 
 ## 规划与全局用例
 
@@ -83,7 +85,7 @@ tiller status .
 node .tiller/run.cjs --help
 ```
 
-初始化生成最小骨架：总体需求/设计/决定、`modules/README.md`、项目背景、全局用例目录、规划目录、入口规则和使用指引。已有文件不覆盖；重复执行只补缺失项。`AGENTS.md` 使用固定区段接入，区段外正文保留。
+初始化生成最小骨架：总体需求/设计/决定、`modules/README.md`、项目背景、全局用例目录、规划目录、入口规则和使用指引。可用 `--platform github|gitlab|both` 选择合并请求模板，缺省 GitHub。已有文件不覆盖；重复执行只补缺失项。`AGENTS.md` 使用固定区段接入，区段外正文保留。
 
 独立管理工程可登记已有业务仓库：
 

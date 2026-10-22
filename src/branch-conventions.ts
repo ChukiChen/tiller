@@ -10,6 +10,25 @@ export function suggestedBranchName(type: CommitType, taskId: string): string {
   return `${type}/${taskId}`;
 }
 
+export function normalizeBranchSlug(value: string): string | null {
+  const slug = value.trim().toLowerCase().replace(/[^a-z0-9]+/gu, '-').replace(/^-+|-+$/gu, '');
+  return slug && slug.length <= 64 && DESCRIPTION.test(slug) ? slug : null;
+}
+
+export function suggestedBranchNameFor(type: CommitType, taskId: string, slug?: string | null): string {
+  const normalized = slug ? normalizeBranchSlug(slug) : null;
+  return `${suggestedBranchName(type, taskId)}${normalized ? `-${normalized}` : ''}`;
+}
+
+export function branchDescriptionForTask(branch: string, taskId: string): string | null {
+  const match = BRANCH.exec(branch);
+  if (!match) return null;
+  const value = match[2]!;
+  if (!value.startsWith(`${taskId}-`)) return null;
+  const description = value.slice(taskId.length + 1);
+  return DESCRIPTION.test(description) && description.length <= 64 ? description : null;
+}
+
 export function branchNameIssue(branch: string, taskId?: string): string | null {
   if (!branch || branch === 'main' || branch === 'master') return null;
   const match = BRANCH.exec(branch);

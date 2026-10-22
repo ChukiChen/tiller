@@ -253,6 +253,23 @@
       "criteria": [
         "20261022-round9#AC-2"
       ]
+    },
+    {
+      "id": "CASE-077",
+      "title": "PR 验证结果按验收条件列出全部记录",
+      "requirements": [
+        ".tiller/specs/modules/workflow/requirements.md#5-提交与-prmr-草稿"
+      ],
+      "modules": [
+        "workflow"
+      ],
+      "test_ref": "test/pr.test.mjs::pr verification section lists every recorded run in order",
+      "source": [
+        "src/pr.ts"
+      ],
+      "criteria": [
+        "20261022-round12#AC-3"
+      ]
     }
   ]
 }

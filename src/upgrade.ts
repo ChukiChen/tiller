@@ -2,9 +2,10 @@ import { createHash } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import {
-  ENTRY_END, ENTRY_START, IGNORE_END, IGNORE_START, INDEX_END, INDEX_START, META, PR_TEMPLATE, REQUIRED_MANAGED,
-  RESOURCE_VERSION, SHARED_RESOURCES, buildIndexSection, inspectProject, managedDigest, managedSection, parseMetadata,
-  repositoryIgnorePatterns, sha256 as coreSha256, trackedContent,
+  ENTRY_END, ENTRY_START, GITHUB_TEMPLATE, GITLAB_TEMPLATE, IGNORE_END, IGNORE_START, INDEX_END, INDEX_START, META,
+  RESOURCE_VERSION, SHARED_RESOURCES, buildIndexSection, inspectProject, managedDigest, managedFilesForPlatform,
+  managedSection, normalizePlatform, parseMetadata, repositoryIgnorePatterns, sha256 as coreSha256, templatePathsForPlatform,
+  trackedContent,
 } from './core.js';
 import { applyChanges, hasPendingTransaction, readTextIfExists, withProjectLock } from './files.js';
 import type { FileChange, ProjectInspection, ProjectMetadata } from './types.js';
@@ -25,7 +26,7 @@ const LIMITATIONS = [
   '不迁移业务资料、历史任务、旧确认或旧审计资料；业务文件与项目资料保持原样。',
   '规则约束依赖宿主遵守；CLI 检查不能认证决定者身份或阻止绕过 CLI 直接写入。',
 ];
-const EOL_EQUIVALENT = new Set(['AGENTS.md', '.gitignore', '.tiller/index.md', PR_TEMPLATE,
+const EOL_EQUIVALENT = new Set(['AGENTS.md', '.gitignore', '.tiller/index.md', GITHUB_TEMPLATE, GITLAB_TEMPLATE,
   ...SHARED_RESOURCES.map(resource => `.tiller/${resource}`)]);
 
 function replaceSection(current: string, replacement: string, start: string, end: string): string {
@@ -53,7 +54,8 @@ function withCurrentEol(current: string, desired: string): string {
 }
 
 async function desiredContent(metadata: ProjectMetadata, relative: string, current: string): Promise<string> {
-  if (relative === PR_TEMPLATE) return withCurrentEol(current, await readFile(new URL('../resources/pull_request_template.md', import.meta.url), 'utf8'));
+  if (relative === GITHUB_TEMPLATE) return withCurrentEol(current, await readFile(new URL('../resources/pull_request_template.md', import.meta.url), 'utf8'));
+  if (relative === GITLAB_TEMPLATE) return withCurrentEol(current, await readFile(new URL('../resources/merge_request_template.md', import.meta.url), 'utf8'));
   if (SHARED_RESOURCES.some(resource => `.tiller/${resource}` === relative)) {
     return withCurrentEol(current, await readFile(new URL(`../resources/${relative.slice('.tiller/'.length)}`, import.meta.url), 'utf8'));
   }
@@ -84,18 +86,20 @@ export async function planUpgrade(root: string): Promise<UpgradePlan> {
   const metadataText = await readTextIfExists(absoluteRoot, META);
   if (metadataText === null) throw new Error('工程尚未初始化，不能升级。');
   const metadata = parseMetadata(metadataText);
+  const platform = normalizePlatform(metadata.platform);
+  const templates = templatePathsForPlatform(platform);
   if (await hasPendingTransaction(absoluteRoot)) throw new Error('存在未完成事务，请先执行 tiller recover。');
   const inspection = await inspectProject(absoluteRoot);
   const conflicts = inspection.issues.filter(issue => !issue.startsWith('接入文件内容已变化：') && !issue.startsWith('接入文件缺失：'));
   const changes: FileChange[] = [];
   const managedFiles: Record<string, string> = {};
   const inputs: Record<string, unknown> = { metadata: metadataText };
-  for (const relative of REQUIRED_MANAGED) {
+  for (const relative of managedFilesForPlatform(platform)) {
     const current = await readTextIfExists(absoluteRoot, relative);
     inputs[relative] = current;
     const recorded = metadata.managedFiles[relative];
     if (recorded === undefined) {
-      if (relative !== PR_TEMPLATE) {
+      if (!templates.includes(relative)) {
         conflicts.push(`受管文件依据缺少 ${relative}；升级不会写入。`);
         continue;
       }
@@ -129,7 +133,7 @@ export async function planUpgrade(root: string): Promise<UpgradePlan> {
     if (desired !== current && desired.replace(/\r\n/gu, '\n') === current.replace(/\r\n/gu, '\n')) {
       desired = current;
     }
-    if (relative === PR_TEMPLATE && desired.replace(/\r\n/gu, '\n') !== current.replace(/\r\n/gu, '\n')) {
+    if (templates.includes(relative) && desired.replace(/\r\n/gu, '\n') !== current.replace(/\r\n/gu, '\n')) {
       conflicts.push(`用户已有 ${relative} 与分发模板不同；升级不会覆盖。`);
       continue;
     }
