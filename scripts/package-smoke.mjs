@@ -70,6 +70,7 @@ assert.ok(help.includes('tiller case add'), 'case add');
 assert.ok(help.includes('tiller pr'), 'pr');
 assert.ok(help.includes('--platform'), 'platform');
 assert.ok(help.includes('--slug'), 'slug');
+assert.ok(help.includes('--summary'), 'summary');
 assert.ok(help.includes('--requirement'), 'requirement input');
 assert.ok(!help.includes('advanced'), 'advanced help must not be advertised');
 assert.ok(!/lite|lightweight/iu.test(help), 'lite naming must be gone');

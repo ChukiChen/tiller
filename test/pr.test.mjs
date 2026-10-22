@@ -85,7 +85,7 @@ test('pr draft derives title, five sections and current AC state', async t => {
   git(root, 'checkout', '--quiet', '-b', `feat/${id}-pr-draft`);
 
   const draft = success(cli(root, 'pr', id));
-  assert.equal(draft.title, `feat(workflow): 确认去原话化与结构化任务正文 [${id}]`);
+  assert.equal(draft.title, `feat(workflow): 生成固定五段 PR 草稿 [${id}]`);
   assert.equal(draft.module, 'workflow');
   assert.equal(draft.branch, `feat/${id}-pr-draft`);
   assert.match(draft.body, /^## 关联任务$/mu);
@@ -208,11 +208,91 @@ test('pr verification section lists every recorded run in order', async t => {
     '--command', second, '--result', 'passed'));
 
   const draft = success(cli(root, 'pr', id));
-  assert.ok(draft.body.indexOf(`命令 \`${first}\``) >= 0, draft.body);
-  assert.ok(draft.body.indexOf(`命令 \`${second}\``) > draft.body.indexOf(`命令 \`${first}\``), draft.body);
+  assert.ok(draft.body.indexOf(`命令：\`${first}\``) >= 0, draft.body);
+  assert.ok(draft.body.indexOf(`命令：\`${second}\``) > draft.body.indexOf(`命令：\`${first}\``), draft.body);
   assert.match(draft.body, new RegExp(`${added.id}`, 'u'));
-  assert.match(draft.body, /- 1\. passed/u);
-  assert.match(draft.body, /- 2\. passed/u);
+  assert.match(draft.body, /^  - 测试：`test\/workflow\.test\.mjs::workflow behavior`；命令：`node --test test\/workflow\.test\.mjs`；结果：passed；提交：`[a-f0-9]{40}`；用例：/mu);
+  assert.match(draft.body, /^  - 测试：`test\/workflow\.test\.mjs::workflow behavior`；命令：`node --test test\/workflow\.test\.mjs --test-name-pattern workflow`；结果：passed；提交：`[a-f0-9]{40}`；用例：/mu);
+  assert.doesNotMatch(draft.body, /^\s*- \d+\./mu);
+});
+
+test('pr summary prefers flag then metadata then earliest conventional commit then task title', async t => {
+  const root = fixture(t);
+  success(cli(root, 'init'));
+  setupRepository(root);
+
+  const metadataId = '20261022-summary-metadata';
+  const started = success(cli(root, 'start', metadataId, '--title', '英文标题 fallback',
+    '--summary', '元数据中文摘要', '--requirement', '标题摘要优先取任务元数据。',
+    '--criterion', 'AC-1=使用元数据摘要', '--size', 'small', '--target', 'src', '--target', 'test',
+    '--target', '.tiller/specs/modules/workflow'));
+  assert.equal(started.summary, '元数据中文摘要');
+  assert.equal(success(cli(root, 'pr', metadataId)).title, `feat(workflow): 元数据中文摘要 [${metadataId}]`);
+  assert.equal(success(cli(root, 'pr', metadataId, '--summary', '命令行中文摘要')).title,
+    `feat(workflow): 命令行中文摘要 [${metadataId}]`);
+
+  const commitId = '20261022-summary-commit';
+  success(cli(root, 'start', commitId, '--title', '提交摘要回退标题', '--requirement', '从提交历史取最早摘要。',
+    '--criterion', 'AC-1=使用最早提交摘要', '--size', 'small', '--target', 'src', '--target', 'test',
+    '--target', '.tiller/specs/modules/workflow'));
+  put(root, 'src/workflow.ts', 'export const value = 2;\n');
+  git(root, 'add', '.');
+  git(root, 'commit', '--quiet', '-m', 'chore: 准备提交');
+  put(root, 'src/workflow.ts', 'export const value = 3;\n');
+  git(root, 'add', '.');
+  git(root, 'commit', '--quiet', '-m', 'feat(workflow): 最早中文摘要');
+  put(root, 'src/workflow.ts', 'export const value = 4;\n');
+  git(root, 'add', '.');
+  git(root, 'commit', '--quiet', '-m', 'fix(workflow): 后续中文摘要');
+  assert.equal(success(cli(root, 'pr', commitId)).title, `feat(workflow): 最早中文摘要 [${commitId}]`);
+
+  const fallbackId = '20261022-summary-fallback';
+  success(cli(root, 'start', fallbackId, '--title', '任务标题回退', '--requirement', '没有提交摘要时使用任务标题。',
+    '--criterion', 'AC-1=使用任务标题', '--size', 'small', '--target', 'src'));
+  assert.equal(success(cli(root, 'pr', fallbackId)).title, `feat: 任务标题回退 [${fallbackId}]`);
+});
+
+test('pr change list orders commits from oldest to newest', async t => {
+  const root = fixture(t);
+  success(cli(root, 'init'));
+  setupRepository(root);
+  const id = '20261022-commit-order';
+  success(cli(root, 'start', id, '--title', '提交顺序', '--requirement', '变更内容按时间正序。',
+    '--criterion', 'AC-1=较早提交在前', '--size', 'small', '--target', 'src', '--target', 'test',
+    '--target', '.tiller/specs/modules/workflow'));
+  put(root, 'src/workflow.ts', 'export const value = 2;\n');
+  git(root, 'add', '.');
+  git(root, 'commit', '--quiet', '-m', 'feat(workflow): 较早提交');
+  put(root, 'src/workflow.ts', 'export const value = 3;\n');
+  git(root, 'add', '.');
+  git(root, 'commit', '--quiet', '-m', 'fix(workflow): 较晚提交');
+
+  const draft = success(cli(root, 'pr', id));
+  const changeSection = draft.body.split('## 变更内容\n\n')[1].split('\n\n## 验收条件')[0];
+  assert.equal(changeSection, '- feat(workflow): 较早提交\n- fix(workflow): 较晚提交');
+  assert.deepEqual(draft.commits.map(commit => commit.subject), ['feat(workflow): 较早提交', 'fix(workflow): 较晚提交']);
+});
+
+test('pr verification section uses plain nested records without numbered bullets', async t => {
+  const root = fixture(t);
+  success(cli(root, 'init'));
+  setupRepository(root);
+  const id = '20261022-verification-format';
+  success(cli(root, 'start', id, '--title', '验证格式', '--requirement', '验证记录使用普通嵌套列表。',
+    '--criterion', 'AC-1=每条记录单独一行', '--size', 'small', '--target', 'src', '--target', 'test',
+    '--target', '.tiller/specs/modules/workflow'));
+  success(cli(root, 'confirm', id, 'requirements', '--by', 'Tiller Test'));
+  const added = success(cli(root, 'case', 'add', id, '--module', 'workflow', '--kind', 'behavior',
+    '--title', '验证格式', '--test', 'test/workflow.test.mjs::workflow behavior', '--criterion', 'AC-1',
+    '--source', 'src/workflow.ts'));
+  const command = 'node --test test/workflow.test.mjs';
+  success(cli(root, 'verify', id, '--criterion', 'AC-1', '--test', 'test/workflow.test.mjs::workflow behavior',
+    '--command', command, '--run', command));
+
+  const draft = success(cli(root, 'pr', id));
+  assert.match(draft.body, /^- AC-1：每条记录单独一行（当前有效）$/mu);
+  assert.match(draft.body, new RegExp(`^  - 测试：\`test/workflow\\.test\\.mjs::workflow behavior\`；命令：\`${command}\`；结果：passed；提交：\`[a-f0-9]{40}\`；用例：${added.id}$`, 'mu'));
+  assert.doesNotMatch(draft.body, /^\s*- \d+\./mu);
 });
 
 test('init installs a managed pull request template and preserves an existing one', async t => {

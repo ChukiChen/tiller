@@ -9,7 +9,7 @@
 - `resources/rules/activities/` 与 `quality/`：需求、设计、实现、交付和文档/验证细节。
 - `resources/pull_request_template.md` 与 `resources/merge_request_template.md`：内容相同的五段 PR/MR 说明，按平台复制为受管模板。
 
-不内置重阶段模板或全量规格副本。入口和核心规则保持短句、表格和明确动词。
+不内置重阶段模板或全量规格副本。入口和核心规则保持短句、表格和明确动词；必读资料上限约 7000 字符，以清晰完整为先。
 
 ## 2. 接入与同步
 

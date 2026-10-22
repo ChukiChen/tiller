@@ -21,14 +21,14 @@ const HELP = `tiller ${CLI_VERSION} — 默认工作流
   tiller plan start <plan-id> --title <标题> --goal <目标> --spec <specs 引用> [--spec ...] --item "P-1=标题;size=small;deps=P-0;specs=<引用>;plan=<子规划>" [--item ...]
   tiller plan confirm <plan-id> [--by <确认人>] [--quote "<可选原话>"] [--commit <oid>] [--path <root>]
   tiller plan status <plan-id> [--path <root>]
-  tiller start <task-id> --title <标题> --requirement <需求正文> --criterion "AC-1=<验收条件>" [--criterion ...] [--type feature] [--size small|standard] [--target <相对路径> ...] [--slug <英文描述>] [--plan <plan-id> --item <条目>] [--path <root>]
+  tiller start <task-id> --title <标题> --requirement <需求正文> --criterion "AC-1=<验收条件>" [--criterion ...] [--type feature] [--size small|standard] [--target <相对路径> ...] [--summary <中文摘要>] [--slug <英文描述>] [--plan <plan-id> --item <条目>] [--path <root>]
   tiller resume [task-id] [--path <root>]
   tiller confirm <task-id> requirements|design|acceptance [--by <确认人>] [--quote "<可选原话>"] [--commit <oid>] [--path <root>]
   tiller case add <task-id> --module <模块> --kind behavior|interface|performance|security --title <标题> --test "<文件::测试名>" --criterion AC-1 [--criterion ...] [--spec <引用> ...] --source <源码路径> [--source ...] [--path <root>]
   tiller case add <task-id> --scenario <场景名> --module <模块> [--module ...] --title <标题> --test "<文件::测试名>" --criterion AC-1 [--spec <引用> ...] --source <源码路径> [--source ...]
   tiller verify <task-id> --criterion AC-1 [--criterion ...] --test <测试文件或用例引用> --command "<验证命令>" [--run "<同一命令>"] [--result passed|failed|skipped] [--path <root>]
   tiller check <task-id> [--path <root>]
-  tiller pr <task-id> [--slug <英文描述>] [--path <root>]
+  tiller pr <task-id> [--summary <中文摘要>] [--slug <英文描述>] [--path <root>]
   tiller accept <task-id> [--by <确认人>] [--quote "<可选原话>"] [--commit <oid>] [--path <root>]
   tiller close <task-id> --reason "<原因>" [--abandon] [--path <root>]
   tiller reopen <task-id> --reason "<原因>" [--path <root>]
@@ -80,7 +80,7 @@ export async function runCli(rawArgs = process.argv.slice(2)): Promise<void> {
         help: { type: 'boolean', short: 'h' }, version: { type: 'boolean', short: 'v' },
         json: { type: 'boolean' }, mode: { type: 'string' }, repo: { type: 'string', multiple: true },
         path: { type: 'string' }, title: { type: 'string' }, requirement: { type: 'string' }, reason: { type: 'string' },
-        slug: { type: 'string' }, platform: { type: 'string' },
+        slug: { type: 'string' }, summary: { type: 'string' }, platform: { type: 'string' },
         type: { type: 'string' }, size: { type: 'string' }, target: { type: 'string', multiple: true },
         quote: { type: 'string' }, by: { type: 'string' }, commit: { type: 'string' }, criterion: { type: 'string', multiple: true },
         test: { type: 'string' }, command: { type: 'string' }, run: { type: 'string' }, result: { type: 'string' },
@@ -107,7 +107,7 @@ export async function runCli(rawArgs = process.argv.slice(2)): Promise<void> {
       const caseCommand = command === 'case';
       const prCommand = command === 'pr';
       const allowed = flowCommand
-        ? command === 'start' ? ['path', 'title', 'requirement', 'type', 'size', 'target', 'criterion', 'plan', 'item', 'slug']
+        ? command === 'start' ? ['path', 'title', 'requirement', 'type', 'size', 'target', 'criterion', 'plan', 'item', 'slug', 'summary']
           : command === 'resume' ? ['path']
             : command === 'confirm' ? ['path', 'quote', 'by', 'commit']
               : command === 'verify' ? ['path', 'criterion', 'test', 'command', 'run', 'result']
@@ -118,7 +118,7 @@ export async function runCli(rawArgs = process.argv.slice(2)): Promise<void> {
           : second === 'confirm' ? ['path', 'quote', 'by', 'commit']
             : second === 'status' ? ['path'] : []
           : caseCommand ? second === 'add' ? ['path', 'module', 'kind', 'scenario', 'title', 'test', 'criterion', 'spec', 'source'] : []
-            : prCommand ? ['path', 'slug']
+            : prCommand ? ['path', 'slug', 'summary']
               : command === 'init' ? ['mode', 'repo', 'platform']
               : command === 'upgrade' ? ['plan', 'apply']
                 : command === 'runtime' ? ['path'] : [];
@@ -140,6 +140,7 @@ export async function runCli(rawArgs = process.argv.slice(2)): Promise<void> {
             ...(values.type === undefined ? {} : { type: values.type }), ...(values.size === undefined ? {} : { size: values.size }),
             ...(values.target === undefined ? {} : { targets: values.target }), criteria: values.criterion,
             ...(values.slug === undefined ? {} : { slug: values.slug }),
+            ...(values.summary === undefined ? {} : { summary: values.summary }),
             ...(values.plan !== undefined && values.item ? { plan: values.plan, item: values.item[0]! } : {}) });
         } else if (command === 'resume') {
           if (positionals.length > 2) usage('resume 最多接受一个任务标识。');
@@ -213,7 +214,8 @@ export async function runCli(rawArgs = process.argv.slice(2)): Promise<void> {
       } else if (prCommand) {
         if (positionals.length !== 2) usage('pr 需要一个任务标识。');
         const draft = await draftPullRequest(resolve(values.path ?? process.cwd()), second!,
-          values.slug === undefined ? {} : { slug: values.slug });
+          { ...(values.slug === undefined ? {} : { slug: values.slug }),
+            ...(values.summary === undefined ? {} : { summary: values.summary }) });
         result = draft;
         markdownOutput = draft.markdown;
       } else if (command === 'init' || command === 'status' || command === 'recover') {

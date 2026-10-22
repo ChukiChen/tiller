@@ -8,7 +8,7 @@
 
 - `init [path]` 支持当前工程与独立管理工程；仓库范围必须显式、可验证。
 - 生成缺失的 `.tiller/specs/requirements.md`、`design.md`、`decisions.md`、`modules/README.md`、`context/project.md`、`cases/index.md`、`cases/modules/`、`cases/scenarios/`、`plans/` 和当前平台合并请求模板。
-- 支持 `--platform github|gitlab|both`，缺省 github；GitHub 写 `.github/pull_request_template.md`，GitLab 写 `.gitlab/merge_request_templates/Default.md`，both 同时写两者。
+- 支持 `--platform github|gitlab|both`，缺省 github；GitHub 写 `.github/pull_request_template.md`，GitLab 写 `.gitlab/merge_request_templates/Default.md`，both 同时写两者。平台在初始化时选定，之后不提供 CLI 切换；切换需手动修改 `project.json` 并补齐对应模板。
 - 维护 `AGENTS.md` 固定区段、`.gitignore` 本机数据排除和 `.tiller/index.md` 导航；已有区段外内容和已有骨架不覆盖。
 - 重复初始化只补缺失骨架；入口冲突时拒绝并保持原件。
 - 初始化完成后输出工程状态、入口位置和本机绑定结果。
