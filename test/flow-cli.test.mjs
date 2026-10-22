@@ -224,10 +224,18 @@ test('default help names the default flow and old audit commands are gone', t =>
   const normal = success(cli(root, '--help'));
   assert.match(normal.help, /默认工作流/u);
   assert.match(normal.help, /tiller start/u);
+  assert.doesNotMatch(normal.help, /lite|lightweight/iu);
   assert.doesNotMatch(normal.help, /advanced|work plan register|workflow list/u);
   for (const args of [['advanced'], ['work', 'create'], ['workflow', 'list'], ['planning'], ['task'], ['delivery-check']]) {
     const rejected = failure(cli(root, ...args));
     assert.equal(rejected.error.code, 'INVALID_ARGUMENT', args.join(' '));
     assert.match(rejected.error.message, /未知命令/u, args.join(' '));
   }
+});
+
+test('default workflow source uses flow naming instead of lite', () => {
+  const source = readFileSync(new URL('../src/flow.ts', import.meta.url), 'utf8');
+  assert.equal(existsSync(new URL('../src/lite.ts', import.meta.url)), false);
+  assert.match(source, /export async function startFlow/u);
+  assert.doesNotMatch(source, /\bLite\b|\blite\b|tiller-lite/u);
 });
