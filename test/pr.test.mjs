@@ -79,7 +79,7 @@ test('pr draft derives title, five sections and current AC state', async t => {
     '--source', 'src/workflow.ts'));
   assert.equal(added.id, 'CASE-001');
   success(cli(root, 'verify', id, '--criterion', 'AC-1', '--test', 'test/workflow.test.mjs::workflow behavior',
-    '--command', 'node --test test/workflow.test.mjs', '--run', 'node --test test/workflow.test.mjs'));
+    '--run', 'node test/workflow.test.mjs'));
   git(root, 'add', '.');
   git(root, 'commit', '--quiet', '-m', 'feat(workflow): 生成固定五段 PR 草稿');
   git(root, 'checkout', '--quiet', '-b', `feat/${id}-pr-draft`);
@@ -127,7 +127,7 @@ test('check warns about nonconforming commit subjects and skips merge subjects',
   success(cli(root, 'case', 'add', id, '--module', 'workflow', '--kind', 'behavior', '--title', '提交信息检查',
     '--test', 'test/workflow.test.mjs::workflow behavior', '--criterion', 'AC-1', '--source', 'src/workflow.ts'));
   success(cli(root, 'verify', id, '--criterion', 'AC-1', '--test', 'test/workflow.test.mjs::workflow behavior',
-    '--command', 'node --test test/workflow.test.mjs', '--run', 'node --test test/workflow.test.mjs'));
+    '--run', 'node test/workflow.test.mjs'));
   git(root, 'add', '.');
   git(root, 'commit', '--quiet', '-m', 'update stuff');
   const branch = git(root, 'branch', '--show-current').trim();
@@ -200,19 +200,19 @@ test('pr verification section lists every recorded run in order', async t => {
   const added = success(cli(root, 'case', 'add', id, '--module', 'workflow', '--kind', 'behavior',
     '--title', '全部验证记录', '--test', 'test/workflow.test.mjs::workflow behavior', '--criterion', 'AC-1',
     '--source', 'src/workflow.ts'));
-  const first = 'node --test test/workflow.test.mjs';
-  const second = 'node --test test/workflow.test.mjs --test-name-pattern workflow';
+  const first = 'node test/workflow.test.mjs';
+  const second = 'node --test-name-pattern="workflow behavior" test/workflow.test.mjs';
   success(cli(root, 'verify', id, '--criterion', 'AC-1', '--test', 'test/workflow.test.mjs::workflow behavior',
-    '--command', first, '--run', first));
+    '--run', first));
   success(cli(root, 'verify', id, '--criterion', 'AC-1', '--test', 'test/workflow.test.mjs::workflow behavior',
-    '--command', second, '--result', 'passed'));
+    '--run', second));
 
   const draft = success(cli(root, 'pr', id));
   assert.ok(draft.body.indexOf(`命令：\`${first}\``) >= 0, draft.body);
   assert.ok(draft.body.indexOf(`命令：\`${second}\``) > draft.body.indexOf(`命令：\`${first}\``), draft.body);
   assert.match(draft.body, new RegExp(`${added.id}`, 'u'));
-  assert.match(draft.body, /^  - 测试：`test\/workflow\.test\.mjs::workflow behavior`；命令：`node --test test\/workflow\.test\.mjs`；结果：passed；提交：`[a-f0-9]{40}`；用例：/mu);
-  assert.match(draft.body, /^  - 测试：`test\/workflow\.test\.mjs::workflow behavior`；命令：`node --test test\/workflow\.test\.mjs --test-name-pattern workflow`；结果：passed；提交：`[a-f0-9]{40}`；用例：/mu);
+  assert.match(draft.body, /^  - 测试：`test\/workflow\.test\.mjs::workflow behavior`；命令：`node test\/workflow\.test\.mjs`；结果：passed；提交：`[a-f0-9]{40}`；用例：/mu);
+  assert.match(draft.body, /^  - 测试：`test\/workflow\.test\.mjs::workflow behavior`；命令：`node --test-name-pattern="workflow behavior" test\/workflow\.test\.mjs`；结果：passed；提交：`[a-f0-9]{40}`；用例：/mu);
   assert.doesNotMatch(draft.body, /^\s*- \d+\./mu);
 });
 
@@ -285,9 +285,9 @@ test('pr verification section uses plain nested records without numbered bullets
   const added = success(cli(root, 'case', 'add', id, '--module', 'workflow', '--kind', 'behavior',
     '--title', '验证格式', '--test', 'test/workflow.test.mjs::workflow behavior', '--criterion', 'AC-1',
     '--source', 'src/workflow.ts'));
-  const command = 'node --test test/workflow.test.mjs';
+  const command = 'node test/workflow.test.mjs';
   success(cli(root, 'verify', id, '--criterion', 'AC-1', '--test', 'test/workflow.test.mjs::workflow behavior',
-    '--command', command, '--run', command));
+    '--run', command));
 
   const draft = success(cli(root, 'pr', id));
   assert.match(draft.body, /^- AC-1：每条记录单独一行（当前有效）$/mu);

@@ -449,7 +449,7 @@ export async function addGlobalCase(rootInput: string, input: AddCaseInput) {
     try { testExists = (await lstat(path.join(root, test.path))).isFile(); } catch { testExists = false; }
     return {
       id, title, path: relative, kind, modules, criteria, test_ref: testRef,
-      next: testExists ? `运行测试并记录：tiller verify ${input.task} --criterion ${criteria[0]!.split('#')[1]} --test "${testRef}" --command "<命令>" --run "<同一命令>"`
+      next: testExists ? `运行测试并记录：tiller verify ${input.task} --criterion ${criteria[0]!.split('#')[1]} --test "${testRef}" --run "<命令>"`
         : `先编写测试 ${test.path}::${test.name}，再运行 verify。`,
       ...(testExists ? {} : { skeleton: `import test from 'node:test';\n\ntest('${test.name}', () => {\n  // TODO: 实现 ${criteria.join(', ')} 的断言\n});\n` }),
     };

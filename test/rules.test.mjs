@@ -94,6 +94,33 @@ test('restored guidance keeps complete commands and explicit boundaries', () => 
   assert.match(delivery, /平台在初始化时选定[，；]之后不能通过 CLI 切换/u);
 });
 
+test('verification guidance requires execution, reporting reasons and failure-first evidence', () => {
+  const usage = read('usage.md');
+  assert.match(usage, /--run "<命令>"/u);
+  assert.match(usage, /记录即执行/u);
+  assert.match(usage, /--reported --command .*--result .*--reason/u);
+  assert.match(usage, /--allow-reported/u);
+  assert.match(usage, /--expect-fail/u);
+  assert.match(usage, /基线.*工作树/u);
+  assert.match(usage, /node:test TAP.*spec/u);
+  assert.doesNotMatch(usage, /--command[^\n]*--run/u);
+
+  const core = read('rules/core.md');
+  assert.match(core, /verify.*实际执行|记录即执行/u);
+  assert.match(core, /外部报告.*理由/u);
+  assert.match(core, /失败先行/u);
+  assert.match(core, /standard 任务.*--target/u);
+
+  const delivery = read('rules/activities/delivery.md');
+  assert.match(delivery, /--reported/u);
+  assert.match(delivery, /--allow-reported/u);
+
+  const readme = readFileSync(join(repository, 'README.md'), 'utf8');
+  assert.match(readme, /--run/u);
+  assert.match(readme, /--reported/u);
+  assert.match(readme, /失败先行/u);
+});
+
 test('initialization preserves the guidance reading chain and valid links', t => {
   const root = fixture(t);
   success(cli(root, 'init'));
@@ -184,13 +211,13 @@ test('global cases use module kinds and scenarios with resolvable named tests', 
   const scenarios = readdirSync(join(directory, 'scenarios')).filter(name => name.endsWith('.json')).sort()
     .flatMap(name => JSON.parse(readFileSync(join(directory, 'scenarios', name), 'utf8')).scenarios);
   cases.push(...scenarios.map(item => ({ ...item, file: `scenarios/${item.id}` })));
-  assert.equal(cases.length, 85);
-  assert.deepEqual(cases.map(item => item.id).sort(), Array.from({ length: 85 }, (_, index) => `CASE-${String(index + 1).padStart(3, '0')}`));
+  assert.equal(cases.length, 91);
+  assert.deepEqual(cases.map(item => item.id).sort(), Array.from({ length: 91 }, (_, index) => `CASE-${String(index + 1).padStart(3, '0')}`));
   assert.deepEqual(counts, {
     initialization: { behavior: 7, interface: 0, performance: 11, security: 0 },
-    standards: { behavior: 6, interface: 0, performance: 0, security: 0 },
+    standards: { behavior: 7, interface: 0, performance: 0, security: 0 },
     verification: { behavior: 4, interface: 5, performance: 15, security: 0 },
-    workflow: { behavior: 18, interface: 14, performance: 0, security: 3 },
+    workflow: { behavior: 19, interface: 16, performance: 0, security: 5 },
   });
   for (const item of scenarios) {
     assert.ok(item.modules.length > 0 && item.modules.every(module => specs.includes(module)), `${item.id}: modules`);

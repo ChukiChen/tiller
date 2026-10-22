@@ -105,7 +105,11 @@ function bodyMarkdown(task: FlowTask, commits: TaskCommit[], covered: Map<string
       heading,
       ...runs.map(run => {
         const cases = run.cases.length ? `；用例：${run.cases.join(', ')}` : '';
-        return `  - 测试：\`${run.test}\`；命令：\`${run.command}\`；结果：${run.result}；提交：\`${run.commit}\`${cases}`;
+        const evidence = run.source === 'reported'
+          ? `；未执行（外部报告）${run.reason ? `：${run.reason}` : ''}`
+          : run.legacyEvidence || run.evidence === 'verified' ? '' : '；未核实';
+        const expectation = run.expectFail ? `；预期：失败先行（基线 \`${run.baseline ?? '未记录'}\`）` : '';
+        return `  - 测试：\`${run.test}\`；命令：\`${run.command}\`；结果：${run.result}${expectation}${evidence}；提交：\`${run.commit}\`${cases}`;
       }),
     ].join('\n');
   }));

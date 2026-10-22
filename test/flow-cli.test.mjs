@@ -75,7 +75,7 @@ test('small flow produces one task file and records verified acceptance without 
   put(root, 'src/value.txt', 'two\n');
   put(root, 'test/baseline.test.mjs', "import assert from 'node:assert/strict';\nimport test from 'node:test';\ntest('baseline', () => assert.equal(2, 2));\n");
   const verified = success(cli(root, 'verify', id, '--criterion', 'AC-1', '--test', 'test/baseline.test.mjs::baseline',
-    '--command', 'node -e "console.log(1)"', '--run', 'node -e "console.log(1)"'));
+    '--run', 'node test/baseline.test.mjs'));
   assert.equal(verified.result, 'passed');
   assert.equal(verified.entries[0].source, 'executed');
   assert.deepEqual(verified.entries[0].cases, ['CASE-BASELINE']);
@@ -152,7 +152,7 @@ test('standard flow blocks before design confirmation and accepts design after r
     '--criterion', 'AC-1=Behavior is observable', '--type', 'feature', '--size', 'standard', '--target', 'src', '--target', 'test'));
   success(cli(root, 'confirm', id, 'requirements', '--quote', '需求确认'));
   put(root, 'src/value.txt', 'standard\n');
-  success(cli(root, 'verify', id, '--criterion', 'AC-1', '--test', 'test/baseline.test.mjs::baseline', '--command', 'node --test test/baseline.test.mjs', '--result', 'passed'));
+  success(cli(root, 'verify', id, '--criterion', 'AC-1', '--test', 'test/baseline.test.mjs::baseline', '--run', 'node test/baseline.test.mjs'));
   git(root, 'add', 'src/value.txt');
   git(root, 'commit', '--quiet', '-m', 'standard implementation');
   const blocked = failure(cli(root, 'check', id));
@@ -302,7 +302,7 @@ test('verification becomes stale after an in-scope change', async t => {
   success(cli(root, 'start', id, '--title', 'Stale verification', '--requirement', 'Detect a stale proof.',
     '--criterion', 'AC-1=Current tree is tested', '--size', 'small', '--target', 'src', '--target', 'test'));
   success(cli(root, 'confirm', id, 'requirements', '--quote', '确认'));
-  success(cli(root, 'verify', id, '--criterion', 'AC-1', '--test', 'test/baseline.test.mjs::baseline', '--command', 'node --test test/baseline.test.mjs', '--result', 'passed'));
+  success(cli(root, 'verify', id, '--criterion', 'AC-1', '--test', 'test/baseline.test.mjs::baseline', '--run', 'node test/baseline.test.mjs'));
   put(root, 'src/value.txt', 'changed after verification\n');
   git(root, 'add', 'src/value.txt');
   git(root, 'commit', '--quiet', '-m', 'change after verification');
@@ -328,7 +328,7 @@ test('scope checks report committed and uncommitted out-of-scope changes', async
     '--criterion', 'AC-1=src is verified', '--size', 'small', '--target', 'src'));
   success(cli(root, 'confirm', id, 'requirements', '--quote', '确认'));
   put(root, 'src/value.txt', 'scoped\n');
-  success(cli(root, 'verify', id, '--criterion', 'AC-1', '--test', 'test/baseline.test.mjs::baseline', '--command', 'node --test test/baseline.test.mjs', '--result', 'passed'));
+  success(cli(root, 'verify', id, '--criterion', 'AC-1', '--test', 'test/baseline.test.mjs::baseline', '--run', 'node test/baseline.test.mjs'));
   git(root, 'add', 'src/value.txt');
   git(root, 'commit', '--quiet', '-m', 'scoped change');
   put(root, 'docs/outside.md', 'outside\n');
@@ -351,7 +351,7 @@ test('pre-existing changes are excluded from scope findings only while unchanged
     '--criterion', 'AC-1=src is verified', '--size', 'small', '--target', 'src'));
   success(cli(root, 'confirm', id, 'requirements', '--quote', '确认'));
   put(root, 'src/value.txt', 'implemented\n');
-  success(cli(root, 'verify', id, '--criterion', 'AC-1', '--test', 'test/baseline.test.mjs::baseline', '--command', 'node --test test/baseline.test.mjs', '--result', 'passed'));
+  success(cli(root, 'verify', id, '--criterion', 'AC-1', '--test', 'test/baseline.test.mjs::baseline', '--run', 'node test/baseline.test.mjs'));
   git(root, 'add', 'src/value.txt');
   git(root, 'commit', '--quiet', '-m', 'implement scoped change');
   const checked = success(cli(root, 'check', id));
@@ -369,7 +369,7 @@ test('test weakening and skipped tests block the delivery self-check', async t =
     '--criterion', 'AC-1=Assertion remains active', '--size', 'small', '--target', 'test'));
   success(cli(root, 'confirm', id, 'requirements', '--quote', '确认'));
   put(root, 'test/baseline.test.mjs', "import test from 'node:test';\ntest('baseline', () => {});\ntest.skip('skipped baseline', () => {});\n");
-  success(cli(root, 'verify', id, '--criterion', 'AC-1', '--test', 'test/baseline.test.mjs::baseline', '--command', 'node --test test/baseline.test.mjs', '--result', 'passed'));
+  success(cli(root, 'verify', id, '--criterion', 'AC-1', '--test', 'test/baseline.test.mjs::baseline', '--run', 'node test/baseline.test.mjs'));
   git(root, 'add', 'test/baseline.test.mjs');
   git(root, 'commit', '--quiet', '-m', 'weaken test');
   const checked = failure(cli(root, 'check', id));
@@ -387,7 +387,7 @@ test('removing a test with its retired feature is reported without masking retai
     '--criterion', 'AC-1=The retained test proves behavior', '--size', 'small', '--target', 'test'));
   success(cli(root, 'confirm', id, 'requirements', '--quote', '确认'));
   unlinkSync(join(root, 'test/legacy.test.mjs'));
-  success(cli(root, 'verify', id, '--criterion', 'AC-1', '--test', 'test/baseline.test.mjs::baseline', '--command', 'node --test test/baseline.test.mjs', '--result', 'passed'));
+  success(cli(root, 'verify', id, '--criterion', 'AC-1', '--test', 'test/baseline.test.mjs::baseline', '--run', 'node test/baseline.test.mjs'));
   git(root, 'add', '-A');
   git(root, 'commit', '--quiet', '-m', 'remove old feature test');
   const removed = success(cli(root, 'check', id));
@@ -438,7 +438,7 @@ test('check blocks a criterion whose verification test has no global case', asyn
   success(cli(root, 'confirm', id, 'requirements', '--quote', '确认'));
   put(root, 'src/value.txt', 'mapped\n');
   const verified = success(cli(root, 'verify', id, '--criterion', 'AC-1', '--test', 'test/other.test.mjs::other',
-    '--command', 'node --test test/baseline.test.mjs', '--result', 'passed'));
+    '--run', 'node test/other.test.mjs'));
   assert.deepEqual(verified.cases, []);
   git(root, 'add', 'src/value.txt');
   git(root, 'commit', '--quiet', '-m', 'mapped change');
@@ -455,7 +455,7 @@ test('file-level verification references do not bind every test in the file', as
   success(cli(root, 'confirm', id, 'requirements', '--quote', '确认'));
   put(root, 'src/value.txt', 'file-level\n');
   const verified = success(cli(root, 'verify', id, '--criterion', 'AC-1', '--test', 'test/baseline.test.mjs',
-    '--command', 'node --test test/baseline.test.mjs', '--result', 'passed'));
+    '--run', 'node test/baseline.test.mjs'));
   assert.deepEqual(verified.cases, []);
   git(root, 'add', 'src/value.txt');
   git(root, 'commit', '--quiet', '-m', 'file-level verification');
@@ -481,7 +481,7 @@ test('module cases and scenarios report counts and regression hints', async t =>
   success(cli(root, 'confirm', id, 'requirements', '--quote', '确认'));
   put(root, 'src/value.txt', 'summary\n');
   success(cli(root, 'verify', id, '--criterion', 'AC-1', '--test', 'test/baseline.test.mjs::baseline',
-    '--command', 'node --test test/baseline.test.mjs', '--result', 'passed'));
+    '--run', 'node test/baseline.test.mjs'));
   git(root, 'add', 'src/value.txt');
   git(root, 'commit', '--quiet', '-m', 'case summary change');
   const checked = success(cli(root, 'check', id));
@@ -513,7 +513,7 @@ test('check rejects a case whose test_ref differs from the recorded verification
   success(cli(root, 'confirm', id, 'requirements', '--quote', '确认'));
   put(root, 'src/value.txt', 'mismatch\n');
   success(cli(root, 'verify', id, '--criterion', 'AC-1', '--test', 'test/baseline.test.mjs::baseline',
-    '--command', 'node --test test/baseline.test.mjs', '--result', 'passed'));
+    '--run', 'node test/baseline.test.mjs'));
   editTask(root, id, content => content.replace('- 用例：CASE-BASELINE', '- 用例：CASE-OTHER'));
   git(root, 'add', 'src/value.txt');
   git(root, 'commit', '--quiet', '-m', 'mismatch change');
@@ -551,7 +551,7 @@ test('global cases block legacy layout, unknown kinds, missing modules and broke
   success(cli(root, 'confirm', id, 'requirements', '--quote', '确认'));
   put(root, 'src/value.txt', 'broken cases\n');
   success(cli(root, 'verify', id, '--criterion', 'AC-1', '--test', 'test/baseline.test.mjs::baseline',
-    '--command', 'node --test test/baseline.test.mjs', '--result', 'passed'));
+    '--run', 'node test/baseline.test.mjs'));
   git(root, 'add', 'src/value.txt');
   git(root, 'commit', '--quiet', '-m', 'checked change');
   const checked = failure(cli(root, 'check', id));

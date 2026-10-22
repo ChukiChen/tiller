@@ -112,6 +112,25 @@
       "criteria": [
         "20261022-round13#AC-5"
       ]
+    },
+    {
+      "id": "CASE-091",
+      "title": "验证与必读预算文档同步",
+      "requirements": [
+        ".tiller/specs/modules/standards/requirements.md#2-必读与按需读取"
+      ],
+      "modules": [
+        "standards"
+      ],
+      "test_ref": "test/rules.test.mjs::verification guidance requires execution, reporting reasons and failure-first evidence",
+      "source": [
+        "resources/usage.md",
+        "resources/rules/core.md",
+        ".tiller/specs/modules/workflow/requirements.md"
+      ],
+      "criteria": [
+        "20261022-round14#AC-6"
+      ]
     }
   ]
 }
