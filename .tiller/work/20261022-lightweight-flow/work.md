@@ -11,7 +11,7 @@
 - AC-1: AI 开工必读的 AGENTS、核心规则、使用指引和规则索引不超过约 5000 字且链接有效
 - AC-2: 小改动只生成 `work.md`，标准任务受设计确认约束，`check` 覆盖验收条件、范围、测试删除或弱化、未提交改动和记录安全
 - AC-3: `reviews/*.json`、全文确认快照、证据包、`.tiller/verification/`、旧多文件工作与 workflow 审计命令、资源、源码和测试均已删除，`work.md` 与 Git 是唯一记录来源
-- AC-4: `package.json`、`CLI_VERSION`、`RESOURCE_VERSION` 与自举工程 `.tiller/project.json` 的 `resourceVersion` 保持当前契约 0.5.0；升级只核对当前契约，不提供历史迁移，也不把本轮功能改动绑定为资源版本升级
+- AC-4: `package.json`、`CLI_VERSION`、`RESOURCE_VERSION` 保持当前契约 0.5.0；自举工程 `.tiller/project.json` 的 `resourceVersion` 保持基线 0.4.0，只刷新受管摘要；升级只核对当前契约，不提供历史迁移，也不把本轮功能改动绑定为资源版本升级
 - AC-5: `build`、`lint`、`typecheck`、完整 `npm test` 和本地包冒烟全部通过
 - AC-6: README、使用指引、规则和帮助不再引导 `advanced` 或旧审计路径
 
@@ -21,7 +21,7 @@
 
 旧确认、交付、规划、任务、验证和 workflow 业务模块以及全部旧测试、workflow 资源、模板和旧包门禁脚本已删除；CLI 不再暴露 `advanced`，安装包只包含轻量运行所需模块。受管资源更新后只重算当前资源版本下的文件摘要，不改变资源版本。
 
-版本策略恢复为当前契约安全检查：`upgrade` 不产生文件变更，也不提供 0.4.0 → 0.5.0 迁移故事。`package.json`、`CLI_VERSION`、`RESOURCE_VERSION` 与自举工程元信息保持当前契约 0.5.0，只刷新同版本受管摘要。版本号只在最终发布正式包时修改。
+版本策略恢复为当前契约安全检查：`upgrade` 不产生文件变更，也不提供 0.4.0 → 0.5.0 迁移故事。`package.json`、`CLI_VERSION`、`RESOURCE_VERSION` 保持当前契约 0.5.0；自举工程元信息保持原有 `resourceVersion` 0.4.0，只刷新受管摘要。版本号只在最终发布正式包时修改。
 
 ## 确认
 
