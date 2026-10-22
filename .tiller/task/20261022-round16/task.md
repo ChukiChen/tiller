@@ -65,6 +65,14 @@
 - 对象摘要：6629fdb0d7766a6193b7db2f7c04ac7870713ee175931fa3541273fc521b56bb
 - 时间：2026-10-22T13:47:06.036Z
 
+### acceptance
+- 确认部分：交付验收
+- 对象：当前交付（需求、设计、验证与提交）
+- 确认人：ChukiChen
+- 提交：460717b9db703571aebd314b3b634b4f6890a8dd
+- 对象摘要：581679b911361b73639c4a1bfaac84b9a4581d73d087113aba8e221c3ca99724
+- 时间：2026-10-22T23:41:26.040Z
+
 ## 验证
 
 ### run-1
@@ -151,6 +159,107 @@
 - 代码树摘要：da8e2e70b5673fb98ccf7d9c32cb297b679d4994538c056c21ace5ccee32c8ba
 - 时间：2026-10-22T23:40:57.583Z
 
+### run-7
+- 条件：AC-1
+- 测试：test/case-redesign.test.mjs::CASE-098 case add registers a complete test design before any test exists
+- 用例：CASE-098
+- 命令：node '--test-name-pattern=^CASE-098 case add registers a complete test design before any test exists$' --test-reporter=./.tiller/local/verify-QkQmtL/reporter.mjs --test-reporter-destination=.tiller/local/verify-QkQmtL/report.jsonl test/case-redesign.test.mjs
+- 结果：passed
+- 退出码：0
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/logs/20261022-round16/run-7.log
+- 提交：460717b9db703571aebd314b3b634b4f6890a8dd
+- 代码树摘要：da8e2e70b5673fb98ccf7d9c32cb297b679d4994538c056c21ace5ccee32c8ba
+- 时间：2026-10-22T23:41:14.228Z
+
+### run-8
+- 条件：AC-2
+- 测试：test/case-redesign.test.mjs::CASE-099 test scan derives case to test links without stored test refs
+- 用例：CASE-099
+- 命令：node '--test-name-pattern=^CASE-099 test scan derives case to test links without stored test refs$' --test-reporter=./.tiller/local/verify-tLeNV4/reporter.mjs --test-reporter-destination=.tiller/local/verify-tLeNV4/report.jsonl test/case-redesign.test.mjs
+- 结果：passed
+- 退出码：0
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/logs/20261022-round16/run-8.log
+- 提交：460717b9db703571aebd314b3b634b4f6890a8dd
+- 代码树摘要：da8e2e70b5673fb98ccf7d9c32cb297b679d4994538c056c21ace5ccee32c8ba
+- 时间：2026-10-22T23:41:15.230Z
+
+### run-9
+- 条件：AC-3
+- 测试：test/case-redesign.test.mjs::CASE-100 pending cases unknown ids and many-to-many coverage are explicit
+- 用例：CASE-100
+- 命令：node '--test-name-pattern=^CASE-100 pending cases unknown ids and many-to-many coverage are explicit$' --test-reporter=./.tiller/local/verify-AjOKlp/reporter.mjs --test-reporter-destination=.tiller/local/verify-AjOKlp/report.jsonl test/case-redesign.test.mjs
+- 结果：passed
+- 退出码：0
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/logs/20261022-round16/run-9.log
+- 提交：460717b9db703571aebd314b3b634b4f6890a8dd
+- 代码树摘要：da8e2e70b5673fb98ccf7d9c32cb297b679d4994538c056c21ace5ccee32c8ba
+- 时间：2026-10-22T23:41:16.053Z
+
+### run-10
+- 条件：AC-4
+- 测试：test/case-redesign.test.mjs::CASE-101 verify case executes every covering test
+- 用例：CASE-101
+- 命令：node '--test-name-pattern=^CASE-101 verify case executes every covering test$' --test-reporter=./.tiller/local/verify-6lCave/reporter.mjs --test-reporter-destination=.tiller/local/verify-6lCave/report.jsonl test/case-redesign.test.mjs
+- 结果：passed
+- 退出码：0
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/logs/20261022-round16/run-10.log
+- 提交：460717b9db703571aebd314b3b634b4f6890a8dd
+- 代码树摘要：da8e2e70b5673fb98ccf7d9c32cb297b679d4994538c056c21ace5ccee32c8ba
+- 时间：2026-10-22T23:41:16.802Z
+
+### run-11
+- 条件：AC-5
+- 测试：test/case-redesign.test.mjs::CASE-102 check enforces cases after design and tests after verification
+- 用例：CASE-102
+- 命令：node '--test-name-pattern=^CASE-102 check enforces cases after design and tests after verification$' --test-reporter=./.tiller/local/verify-z2msT5/reporter.mjs --test-reporter-destination=.tiller/local/verify-z2msT5/report.jsonl test/case-redesign.test.mjs
+- 结果：passed
+- 退出码：0
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/logs/20261022-round16/run-11.log
+- 提交：460717b9db703571aebd314b3b634b4f6890a8dd
+- 代码树摘要：da8e2e70b5673fb98ccf7d9c32cb297b679d4994538c056c21ace5ccee32c8ba
+- 时间：2026-10-22T23:41:17.949Z
+
+### run-12
+- 条件：AC-6
+- 测试：test/case-redesign.test.mjs::CASE-103 repository history and docs use the new case model
+- 用例：CASE-103
+- 命令：node '--test-name-pattern=^CASE-103 repository history and docs use the new case model$' --test-reporter=./.tiller/local/verify-xLAVrU/reporter.mjs --test-reporter-destination=.tiller/local/verify-xLAVrU/report.jsonl test/case-redesign.test.mjs
+- 结果：passed
+- 退出码：0
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/logs/20261022-round16/run-12.log
+- 提交：460717b9db703571aebd314b3b634b4f6890a8dd
+- 代码树摘要：da8e2e70b5673fb98ccf7d9c32cb297b679d4994538c056c21ace5ccee32c8ba
+- 时间：2026-10-22T23:41:19.495Z
+
 ## 自检
 
-交付前运行 check；验收后运行 accept。
+- [x] 需求确认有效
+- [x] 设计确认有效
+- [x] 验收条件均有当前通过且绑定全局用例的测试引用
+- [x] 每条验收条件均映射到本次验证引用的全局用例
+- [x] 验收条件与用例来源 criteria 相互指向或由本任务新增/修改
+- [x] 验证命令已执行且测试输出已核实
+- [x] 全局用例结构与引用有效
+- [x] 改动未超出范围
+- [x] 未弱化仍存在的测试
+- [x] 记录不含密钥或本机绝对路径
+
+提示：
+- 49 条历史用例未绑定来源 AC；新用例请用 case add 写入 criteria。
+- 本次改动涉及模块 initialization：建议回归该模块 19 条用例及经过它的场景 CASE-055, CASE-001。
+- 本次改动涉及模块 standards：建议回归该模块 9 条用例及经过它的场景 CASE-055。
+- 本次改动涉及模块 verification：建议回归该模块 26 条用例及经过它的场景 CASE-055, CASE-001。
+- 本次改动涉及模块 workflow：建议回归该模块 47 条用例及经过它的场景 CASE-055, CASE-001。
+- 修改的测试文件移除了 91 个测试用例（请确认对应功能已删除；详情见 Git diff）。
