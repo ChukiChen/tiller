@@ -548,7 +548,7 @@ release 逐项给出 pass/fail/na 并以未通过项决定退出状态；check �
 - 类型：interface
 - 优先级：medium
 - 模块：workflow
-- 关联 AC：20261023-case-backfill#AC-1
+- 关联 AC：无
 - 需求：`.tiller/specs/modules/workflow/requirements.md`
 - 源码：`src/flow.ts`, `test/flow-cli.test.mjs`
 

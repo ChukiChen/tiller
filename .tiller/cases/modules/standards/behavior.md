@@ -289,7 +289,7 @@
 - 类型：behavior
 - 优先级：medium
 - 模块：standards
-- 关联 AC：20261023-case-backfill#AC-1
+- 关联 AC：无
 - 需求：`.tiller/specs/modules/standards/requirements.md`
 - 源码：`resources/rules/activities/requirements.md`, `resources/rules/activities/design.md`, `resources/rules/activities/implementation.md`, `resources/rules/activities/delivery.md`, `test/rules.test.mjs`
 

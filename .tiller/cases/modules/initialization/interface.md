@@ -5,7 +5,7 @@
 - 类型：interface
 - 优先级：medium
 - 模块：initialization
-- 关联 AC：20261023-case-backfill#AC-1
+- 关联 AC：无
 - 需求：`.tiller/specs/modules/initialization/requirements.md`
 - 源码：`src/runtime.ts`, `test/runtime.test.mjs`
 
@@ -30,7 +30,7 @@
 - 类型：interface
 - 优先级：medium
 - 模块：initialization
-- 关联 AC：20261023-case-backfill#AC-1
+- 关联 AC：无
 - 需求：`.tiller/specs/modules/initialization/requirements.md`
 - 源码：`src/runtime.ts`, `test/runtime.test.mjs`
 
@@ -56,7 +56,7 @@
 - 类型：interface
 - 优先级：medium
 - 模块：initialization
-- 关联 AC：20261023-case-backfill#AC-1
+- 关联 AC：无
 - 需求：`.tiller/specs/modules/initialization/requirements.md`
 - 源码：`src/runtime.ts`, `test/runtime.test.mjs`
 
@@ -81,7 +81,7 @@
 - 类型：interface
 - 优先级：medium
 - 模块：initialization
-- 关联 AC：20261023-case-backfill#AC-1
+- 关联 AC：无
 - 需求：`.tiller/specs/modules/initialization/requirements.md`
 - 源码：`src/runtime.ts`, `test/runtime.test.mjs`
 
@@ -107,7 +107,7 @@
 - 类型：interface
 - 优先级：medium
 - 模块：initialization
-- 关联 AC：20261023-case-backfill#AC-1
+- 关联 AC：无
 - 需求：`.tiller/specs/modules/initialization/requirements.md`
 - 源码：`src/runtime.ts`, `test/runtime.test.mjs`
 
@@ -132,7 +132,7 @@
 - 类型：interface
 - 优先级：medium
 - 模块：initialization
-- 关联 AC：20261023-case-backfill#AC-1
+- 关联 AC：无
 - 需求：`.tiller/specs/modules/initialization/requirements.md`
 - 源码：`src/repository-paths.ts`, `test/repository-paths.test.mjs`
 

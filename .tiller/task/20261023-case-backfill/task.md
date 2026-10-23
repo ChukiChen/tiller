@@ -119,6 +119,62 @@
 - 代码树摘要：803a912233a74abb19e1f2b14543658eb3bd4a409ed5c907b2a399e4c2077cfa
 - 时间：2026-10-23T06:41:54.242Z
 
+### run-5
+- 条件：AC-1
+- 测试：test/flow-cli.test.mjs::CASE-154 file-level verification references do not bind every test in the file
+- 用例：CASE-154
+- 命令：node '--test-name-pattern=^CASE-154 file-level verification references do not bind every test in the file$' --test-reporter=./.tiller/local/verify-WdLIc2/reporter.mjs --test-reporter-destination=.tiller/local/verify-WdLIc2/report.jsonl test/flow-cli.test.mjs
+- 结果：passed
+- 退出码：0
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/logs/20261023-case-backfill/run-5.log
+- 提交：08ad3add69ad82661dd873a04697c1f516202a5c
+- 代码树摘要：803a912233a74abb19e1f2b14543658eb3bd4a409ed5c907b2a399e4c2077cfa
+- 时间：2026-10-23T06:42:17.585Z
+
+### run-6
+- 条件：AC-2
+- 测试：test/case-redesign.test.mjs::CASE-103 CASE-156 repository history and docs use the new case model
+- 用例：CASE-156
+- 命令：node '--test-name-pattern=^CASE-103 CASE-156 repository history and docs use the new case model$' --test-reporter=./.tiller/local/verify-cOYWKz/reporter.mjs --test-reporter-destination=.tiller/local/verify-cOYWKz/report.jsonl test/case-redesign.test.mjs
+- 结果：passed
+- 退出码：0
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/logs/20261023-case-backfill/run-6.log
+- 提交：08ad3add69ad82661dd873a04697c1f516202a5c
+- 代码树摘要：803a912233a74abb19e1f2b14543658eb3bd4a409ed5c907b2a399e4c2077cfa
+- 时间：2026-10-23T06:42:18.551Z
+
+### run-7
+- 条件：AC-3
+- 测试：test/work-migration.test.mjs::CASE-113 CASE-157 migration preserves the 0.5.0 release contract and full verification entry
+- 用例：CASE-157
+- 命令：node '--test-name-pattern=^CASE-113 CASE-157 migration preserves the 0\.5\.0 release contract and full verification entry$' --test-reporter=./.tiller/local/verify-KVNKTu/reporter.mjs --test-reporter-destination=.tiller/local/verify-KVNKTu/report.jsonl test/work-migration.test.mjs
+- 结果：passed
+- 退出码：0
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/logs/20261023-case-backfill/run-7.log
+- 提交：08ad3add69ad82661dd873a04697c1f516202a5c
+- 代码树摘要：803a912233a74abb19e1f2b14543658eb3bd4a409ed5c907b2a399e4c2077cfa
+- 时间：2026-10-23T06:42:19.039Z
+
+### run-8
+- 条件：AC-4
+- 测试：test/case-redesign.test.mjs::CASE-158 case-backfill task.md retains mapping table for historical test names
+- 用例：CASE-158
+- 命令：node '--test-name-pattern=^CASE-158 case-backfill task\.md retains mapping table for historical test names$' --test-reporter=./.tiller/local/verify-Qx178O/reporter.mjs --test-reporter-destination=.tiller/local/verify-Qx178O/report.jsonl test/case-redesign.test.mjs
+- 结果：passed
+- 退出码：0
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/logs/20261023-case-backfill/run-8.log
+- 提交：08ad3add69ad82661dd873a04697c1f516202a5c
+- 代码树摘要：803a912233a74abb19e1f2b14543658eb3bd4a409ed5c907b2a399e4c2077cfa
+- 时间：2026-10-23T06:42:19.486Z
+
 ## 自检
 
 - [x] 需求确认有效
@@ -134,23 +190,98 @@
 - [x] 记录不含密钥或本机绝对路径
 
 阻塞项：
-- AC-1 尚无验证。
-- AC-2 未绑定全局用例；先用 case add 把验收条件转为用例，并在测试名中引用用例编号。
-- AC-2 尚无验证。
-- AC-3 未绑定全局用例；先用 case add 把验收条件转为用例，并在测试名中引用用例编号。
-- AC-3 尚无验证。
-- AC-4 未绑定全局用例；先用 case add 把验收条件转为用例，并在测试名中引用用例编号。
-- AC-4 尚无验证。
-- 交付范围存在未提交改动：.tiller/cases/modules/initialization/behavior.md、.tiller/cases/modules/initialization/interface.md、.tiller/cases/modules/initialization/security.md、.tiller/cases/modules/standards/behavior.md、.tiller/cases/modules/verification/interface.md、.tiller/cases/modules/verification/security.md、.tiller/cases/modules/workflow/interface.md、test/case-redesign.test.mjs、test/core.test.mjs、test/flow-cli.test.mjs、test/repository-paths.test.mjs、test/review-release.test.mjs、test/rules.test.mjs、test/runtime.test.mjs、test/upgrade.test.mjs、test/usage-resources.test.mjs、test/verification-integrity.test.mjs
+- AC-1 的用例 CASE-114 尚无当前通过且已核实的测试。
+- AC-1 的用例 CASE-115 尚无当前通过且已核实的测试。
+- AC-1 的用例 CASE-116 尚无当前通过且已核实的测试。
+- AC-1 的用例 CASE-117 尚无当前通过且已核实的测试。
+- AC-1 的用例 CASE-120 尚无当前通过且已核实的测试。
+- AC-1 的用例 CASE-121 尚无当前通过且已核实的测试。
+- AC-1 的用例 CASE-124 尚无当前通过且已核实的测试。
+- AC-1 的用例 CASE-136 尚无当前通过且已核实的测试。
+- AC-1 的用例 CASE-140 尚无当前通过且已核实的测试。
+- AC-1 的用例 CASE-142 尚无当前通过且已核实的测试。
+- AC-1 的用例 CASE-143 尚无当前通过且已核实的测试。
+- AC-1 的用例 CASE-144 尚无当前通过且已核实的测试。
+- AC-1 的用例 CASE-145 尚无当前通过且已核实的测试。
+- AC-1 的用例 CASE-146 尚无当前通过且已核实的测试。
+- AC-1 的用例 CASE-149 尚无当前通过且已核实的测试。
+- AC-1 的用例 CASE-127 尚无当前通过且已核实的测试。
+- AC-1 的用例 CASE-129 尚无当前通过且已核实的测试。
+- AC-1 的用例 CASE-130 尚无当前通过且已核实的测试。
+- AC-1 的用例 CASE-134 尚无当前通过且已核实的测试。
+- AC-1 的用例 CASE-137 尚无当前通过且已核实的测试。
+- AC-1 的用例 CASE-152 尚无当前通过且已核实的测试。
+- AC-1 的用例 CASE-118 尚无当前通过且已核实的测试。
+- AC-1 的用例 CASE-119 尚无当前通过且已核实的测试。
+- AC-1 的用例 CASE-122 尚无当前通过且已核实的测试。
+- AC-1 的用例 CASE-123 尚无当前通过且已核实的测试。
+- AC-1 的用例 CASE-128 尚无当前通过且已核实的测试。
+- AC-1 的用例 CASE-131 尚无当前通过且已核实的测试。
+- AC-1 的用例 CASE-132 尚无当前通过且已核实的测试。
+- AC-1 的用例 CASE-133 尚无当前通过且已核实的测试。
+- AC-1 的用例 CASE-135 尚无当前通过且已核实的测试。
+- AC-1 的用例 CASE-138 尚无当前通过且已核实的测试。
+- AC-1 的用例 CASE-139 尚无当前通过且已核实的测试。
+- AC-1 的用例 CASE-141 尚无当前通过且已核实的测试。
+- AC-1 的用例 CASE-147 尚无当前通过且已核实的测试。
+- AC-1 的用例 CASE-148 尚无当前通过且已核实的测试。
+- AC-1 的用例 CASE-150 尚无当前通过且已核实的测试。
+- AC-1 的用例 CASE-153 尚无当前通过且已核实的测试。
+- AC-1 的用例 CASE-151 尚无当前通过且已核实的测试。
+- AC-1 的用例 CASE-125 尚无当前通过且已核实的测试。
+- AC-1 的用例 CASE-126 尚无当前通过且已核实的测试。
+- AC-1 的用例 CASE-155 尚无当前通过且已核实的测试。
+- AC-1 的验证测试 test/flow-cli.test.mjs::CASE-154 file-level verification references do not bind every test in the file 与全局用例 CASE-114 的测试引用不一致。
+- AC-1 的验证测试 test/flow-cli.test.mjs::CASE-154 file-level verification references do not bind every test in the file 与全局用例 CASE-115 的测试引用不一致。
+- AC-1 的验证测试 test/flow-cli.test.mjs::CASE-154 file-level verification references do not bind every test in the file 与全局用例 CASE-116 的测试引用不一致。
+- AC-1 的验证测试 test/flow-cli.test.mjs::CASE-154 file-level verification references do not bind every test in the file 与全局用例 CASE-117 的测试引用不一致。
+- AC-1 的验证测试 test/flow-cli.test.mjs::CASE-154 file-level verification references do not bind every test in the file 与全局用例 CASE-120 的测试引用不一致。
+- AC-1 的验证测试 test/flow-cli.test.mjs::CASE-154 file-level verification references do not bind every test in the file 与全局用例 CASE-121 的测试引用不一致。
+- AC-1 的验证测试 test/flow-cli.test.mjs::CASE-154 file-level verification references do not bind every test in the file 与全局用例 CASE-124 的测试引用不一致。
+- AC-1 的验证测试 test/flow-cli.test.mjs::CASE-154 file-level verification references do not bind every test in the file 与全局用例 CASE-136 的测试引用不一致。
+- AC-1 的验证测试 test/flow-cli.test.mjs::CASE-154 file-level verification references do not bind every test in the file 与全局用例 CASE-140 的测试引用不一致。
+- AC-1 的验证测试 test/flow-cli.test.mjs::CASE-154 file-level verification references do not bind every test in the file 与全局用例 CASE-142 的测试引用不一致。
+- AC-1 的验证测试 test/flow-cli.test.mjs::CASE-154 file-level verification references do not bind every test in the file 与全局用例 CASE-143 的测试引用不一致。
+- AC-1 的验证测试 test/flow-cli.test.mjs::CASE-154 file-level verification references do not bind every test in the file 与全局用例 CASE-144 的测试引用不一致。
+- AC-1 的验证测试 test/flow-cli.test.mjs::CASE-154 file-level verification references do not bind every test in the file 与全局用例 CASE-145 的测试引用不一致。
+- AC-1 的验证测试 test/flow-cli.test.mjs::CASE-154 file-level verification references do not bind every test in the file 与全局用例 CASE-146 的测试引用不一致。
+- AC-1 的验证测试 test/flow-cli.test.mjs::CASE-154 file-level verification references do not bind every test in the file 与全局用例 CASE-149 的测试引用不一致。
+- AC-1 的验证测试 test/flow-cli.test.mjs::CASE-154 file-level verification references do not bind every test in the file 与全局用例 CASE-127 的测试引用不一致。
+- AC-1 的验证测试 test/flow-cli.test.mjs::CASE-154 file-level verification references do not bind every test in the file 与全局用例 CASE-129 的测试引用不一致。
+- AC-1 的验证测试 test/flow-cli.test.mjs::CASE-154 file-level verification references do not bind every test in the file 与全局用例 CASE-130 的测试引用不一致。
+- AC-1 的验证测试 test/flow-cli.test.mjs::CASE-154 file-level verification references do not bind every test in the file 与全局用例 CASE-134 的测试引用不一致。
+- AC-1 的验证测试 test/flow-cli.test.mjs::CASE-154 file-level verification references do not bind every test in the file 与全局用例 CASE-137 的测试引用不一致。
+- AC-1 的验证测试 test/flow-cli.test.mjs::CASE-154 file-level verification references do not bind every test in the file 与全局用例 CASE-152 的测试引用不一致。
+- AC-1 的验证测试 test/flow-cli.test.mjs::CASE-154 file-level verification references do not bind every test in the file 与全局用例 CASE-118 的测试引用不一致。
+- AC-1 的验证测试 test/flow-cli.test.mjs::CASE-154 file-level verification references do not bind every test in the file 与全局用例 CASE-119 的测试引用不一致。
+- AC-1 的验证测试 test/flow-cli.test.mjs::CASE-154 file-level verification references do not bind every test in the file 与全局用例 CASE-122 的测试引用不一致。
+- AC-1 的验证测试 test/flow-cli.test.mjs::CASE-154 file-level verification references do not bind every test in the file 与全局用例 CASE-123 的测试引用不一致。
+- AC-1 的验证测试 test/flow-cli.test.mjs::CASE-154 file-level verification references do not bind every test in the file 与全局用例 CASE-128 的测试引用不一致。
+- AC-1 的验证测试 test/flow-cli.test.mjs::CASE-154 file-level verification references do not bind every test in the file 与全局用例 CASE-131 的测试引用不一致。
+- AC-1 的验证测试 test/flow-cli.test.mjs::CASE-154 file-level verification references do not bind every test in the file 与全局用例 CASE-132 的测试引用不一致。
+- AC-1 的验证测试 test/flow-cli.test.mjs::CASE-154 file-level verification references do not bind every test in the file 与全局用例 CASE-133 的测试引用不一致。
+- AC-1 的验证测试 test/flow-cli.test.mjs::CASE-154 file-level verification references do not bind every test in the file 与全局用例 CASE-135 的测试引用不一致。
+- AC-1 的验证测试 test/flow-cli.test.mjs::CASE-154 file-level verification references do not bind every test in the file 与全局用例 CASE-138 的测试引用不一致。
+- AC-1 的验证测试 test/flow-cli.test.mjs::CASE-154 file-level verification references do not bind every test in the file 与全局用例 CASE-139 的测试引用不一致。
+- AC-1 的验证测试 test/flow-cli.test.mjs::CASE-154 file-level verification references do not bind every test in the file 与全局用例 CASE-141 的测试引用不一致。
+- AC-1 的验证测试 test/flow-cli.test.mjs::CASE-154 file-level verification references do not bind every test in the file 与全局用例 CASE-147 的测试引用不一致。
+- AC-1 的验证测试 test/flow-cli.test.mjs::CASE-154 file-level verification references do not bind every test in the file 与全局用例 CASE-148 的测试引用不一致。
+- AC-1 的验证测试 test/flow-cli.test.mjs::CASE-154 file-level verification references do not bind every test in the file 与全局用例 CASE-150 的测试引用不一致。
+- AC-1 的验证测试 test/flow-cli.test.mjs::CASE-154 file-level verification references do not bind every test in the file 与全局用例 CASE-153 的测试引用不一致。
+- AC-1 的验证测试 test/flow-cli.test.mjs::CASE-154 file-level verification references do not bind every test in the file 与全局用例 CASE-151 的测试引用不一致。
+- AC-1 的验证测试 test/flow-cli.test.mjs::CASE-154 file-level verification references do not bind every test in the file 与全局用例 CASE-125 的测试引用不一致。
+- AC-1 的验证测试 test/flow-cli.test.mjs::CASE-154 file-level verification references do not bind every test in the file 与全局用例 CASE-126 的测试引用不一致。
+- AC-1 的验证测试 test/flow-cli.test.mjs::CASE-154 file-level verification references do not bind every test in the file 与全局用例 CASE-155 的测试引用不一致。
 
 提示：
 - 49 条历史用例未绑定来源 AC；新用例请用 case add 写入 criteria。
+- 提交 08ad3ad 不符合提交信息规范：test(cases): 历史测试回填 CASE 关联（模块 cases 不在 specs/modules 中）。
 - 本次改动涉及模块 initialization：建议回归该模块 56 条用例及经过它的场景 CASE-055, CASE-001。
-- 本次改动涉及模块 standards：建议回归该模块 12 条用例及经过它的场景 CASE-055。
-- 本次改动涉及模块 verification：建议回归该模块 31 条用例及经过它的场景 CASE-055, CASE-001。
-- 本次改动涉及模块 workflow：建议回归该模块 54 条用例及经过它的场景 CASE-055, CASE-001。
+- 本次改动涉及模块 standards：建议回归该模块 13 条用例及经过它的场景 CASE-055。
+- 本次改动涉及模块 verification：建议回归该模块 32 条用例及经过它的场景 CASE-055, CASE-001。
+- 本次改动涉及模块 workflow：建议回归该模块 55 条用例及经过它的场景 CASE-055, CASE-001。
 - 未检测到任务基线后的 `.tiller/specs/` 或 `.tiller/context/` 回写；如本次形成长期有效结论，请同步；纯过程性变更可忽略。
-- 修改的测试文件移除了 65 个测试用例（请确认对应功能已删除；详情见 Git diff）。
+- 修改的测试文件移除了 67 个测试用例（请确认对应功能已删除；详情见 Git diff）。
 
 ## 映射
 

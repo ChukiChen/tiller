@@ -213,7 +213,7 @@
 - 类型：behavior
 - 优先级：medium
 - 模块：initialization
-- 关联 AC：20261023-case-backfill#AC-1
+- 关联 AC：无
 - 需求：`.tiller/specs/modules/initialization/requirements.md`
 - 源码：`src/core.ts`, `test/core.test.mjs`
 
@@ -239,7 +239,7 @@
 - 类型：behavior
 - 优先级：medium
 - 模块：initialization
-- 关联 AC：20261023-case-backfill#AC-1
+- 关联 AC：无
 - 需求：`.tiller/specs/modules/initialization/requirements.md`
 - 源码：`src/core.ts`, `test/core.test.mjs`
 
@@ -265,7 +265,7 @@
 - 类型：behavior
 - 优先级：medium
 - 模块：initialization
-- 关联 AC：20261023-case-backfill#AC-1
+- 关联 AC：无
 - 需求：`.tiller/specs/modules/initialization/requirements.md`
 - 源码：`src/core.ts`, `src/repository-paths.ts`, `test/core.test.mjs`
 
@@ -290,7 +290,7 @@
 - 类型：behavior
 - 优先级：medium
 - 模块：initialization
-- 关联 AC：20261023-case-backfill#AC-1
+- 关联 AC：无
 - 需求：`.tiller/specs/modules/initialization/requirements.md`
 - 源码：`src/core.ts`, `test/core.test.mjs`
 
@@ -315,7 +315,7 @@
 - 类型：behavior
 - 优先级：medium
 - 模块：initialization
-- 关联 AC：20261023-case-backfill#AC-1
+- 关联 AC：无
 - 需求：`.tiller/specs/modules/initialization/requirements.md`
 - 源码：`src/core.ts`, `src/files.ts`, `test/core.test.mjs`
 
@@ -341,7 +341,7 @@
 - 类型：behavior
 - 优先级：medium
 - 模块：initialization
-- 关联 AC：20261023-case-backfill#AC-1
+- 关联 AC：无
 - 需求：`.tiller/specs/modules/initialization/requirements.md`
 - 源码：`src/files.ts`, `test/core.test.mjs`
 
@@ -368,7 +368,7 @@
 - 类型：behavior
 - 优先级：medium
 - 模块：initialization
-- 关联 AC：20261023-case-backfill#AC-1
+- 关联 AC：无
 - 需求：`.tiller/specs/modules/initialization/requirements.md`
 - 源码：`src/core.ts`, `test/core.test.mjs`
 
@@ -394,7 +394,7 @@
 - 类型：behavior
 - 优先级：medium
 - 模块：initialization
-- 关联 AC：20261023-case-backfill#AC-1
+- 关联 AC：无
 - 需求：`.tiller/specs/modules/initialization/requirements.md`
 - 源码：`src/runtime.ts`, `test/runtime.test.mjs`
 
@@ -420,7 +420,7 @@
 - 类型：behavior
 - 优先级：medium
 - 模块：initialization
-- 关联 AC：20261023-case-backfill#AC-1
+- 关联 AC：无
 - 需求：`.tiller/specs/modules/initialization/requirements.md`
 - 源码：`src/upgrade.ts`, `src/core.ts`, `test/usage-resources.test.mjs`
 
@@ -445,7 +445,7 @@
 - 类型：behavior
 - 优先级：medium
 - 模块：initialization
-- 关联 AC：20261023-case-backfill#AC-1
+- 关联 AC：无
 - 需求：`.tiller/specs/modules/initialization/requirements.md`
 - 源码：`src/upgrade.ts`, `test/usage-resources.test.mjs`
 
@@ -471,7 +471,7 @@
 - 类型：behavior
 - 优先级：medium
 - 模块：initialization
-- 关联 AC：20261023-case-backfill#AC-1
+- 关联 AC：无
 - 需求：`.tiller/specs/modules/initialization/requirements.md`
 - 源码：`src/core.ts`, `test/usage-resources.test.mjs`
 
@@ -496,7 +496,7 @@
 - 类型：behavior
 - 优先级：medium
 - 模块：initialization
-- 关联 AC：20261023-case-backfill#AC-1
+- 关联 AC：无
 - 需求：`.tiller/specs/modules/initialization/requirements.md`
 - 源码：`src/core.ts`, `test/usage-resources.test.mjs`
 
@@ -521,7 +521,7 @@
 - 类型：behavior
 - 优先级：medium
 - 模块：initialization
-- 关联 AC：20261023-case-backfill#AC-1
+- 关联 AC：无
 - 需求：`.tiller/specs/modules/initialization/requirements.md`
 - 源码：`src/core.ts`, `src/upgrade.ts`, `test/usage-resources.test.mjs`
 
@@ -547,7 +547,7 @@
 - 类型：behavior
 - 优先级：medium
 - 模块：initialization
-- 关联 AC：20261023-case-backfill#AC-1
+- 关联 AC：无
 - 需求：`.tiller/specs/modules/initialization/requirements.md`
 - 源码：`src/upgrade.ts`, `src/core.ts`, `test/upgrade.test.mjs`
 
@@ -572,7 +572,7 @@
 - 类型：behavior
 - 优先级：medium
 - 模块：initialization
-- 关联 AC：20261023-case-backfill#AC-1
+- 关联 AC：无
 - 需求：`.tiller/specs/modules/initialization/requirements.md`
 - 源码：`src/core.ts`, `src/upgrade.ts`, `test/upgrade.test.mjs`
 

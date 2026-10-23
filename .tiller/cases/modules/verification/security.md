@@ -31,7 +31,7 @@
 - 类型：security
 - 优先级：medium
 - 模块：verification
-- 关联 AC：20261023-case-backfill#AC-1
+- 关联 AC：无
 - 需求：`.tiller/specs/modules/verification/requirements.md`
 - 源码：`src/shared-paths.ts`, `test/core.test.mjs`
 
@@ -57,7 +57,7 @@
 - 类型：security
 - 优先级：medium
 - 模块：verification
-- 关联 AC：20261023-case-backfill#AC-1
+- 关联 AC：无
 - 需求：`.tiller/specs/modules/verification/requirements.md`
 - 源码：`src/shared-paths.ts`, `test/core.test.mjs`
 
