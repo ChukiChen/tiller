@@ -215,13 +215,13 @@ test('CASE-048 global cases use module kinds and scenarios with resolvable named
   const kinds = ['behavior', 'interface', 'performance', 'security'];
   const library = await readCaseLibrary(repository);
   assert.deepEqual(library.issues, []);
-  assert.equal(library.cases.length, 158);
+  assert.equal(library.cases.length, 162);
   assert.deepEqual(library.cases.map(item => item.id).sort(),
-    Array.from({ length: 158 }, (_, index) => `CASE-${String(index + 1).padStart(3, '0')}`));
+    Array.from({ length: 162 }, (_, index) => `CASE-${String(index + 1).padStart(3, '0')}`));
   assert.deepEqual(library.modules.map(item => ({ module: item.module, behavior: item.behavior, interface: item.interface,
     performance: item.performance, security: item.security })), [
     { module: 'initialization', behavior: 23, interface: 6, performance: 11, security: 16 },
-    { module: 'standards', behavior: 13, interface: 0, performance: 0, security: 0 },
+    { module: 'standards', behavior: 17, interface: 0, performance: 0, security: 0 },
     { module: 'verification', behavior: 7, interface: 7, performance: 15, security: 3 },
     { module: 'workflow', behavior: 27, interface: 22, performance: 0, security: 6 },
   ]);
@@ -283,4 +283,91 @@ test('CASE-065 structured confirmation guidance is synchronized across help and 
   const requirements = readFileSync(join(repository, '.tiller/specs/requirements.md'), 'utf8');
   assert.match(requirements, /原话可选/u);
   assert.match(requirements, /结构化/u);
+});
+
+test('CASE-159 repository spec requirements stay business-observable and exclude technical contracts', () => {
+  const requirements = [
+    '.tiller/specs/requirements.md',
+    '.tiller/specs/modules/workflow/requirements.md',
+    '.tiller/specs/modules/verification/requirements.md',
+    '.tiller/specs/modules/initialization/requirements.md',
+    '.tiller/specs/modules/standards/requirements.md',
+  ];
+  const forbidden = [
+    ['CLI switch', /(?:^|[\s`])--[a-z][\w-]*/mu],
+    ['repository implementation path', /(?:^|[\s`(])(?:\.tiller\/|src\/|test\/|resources\/|scripts\/)/mu],
+    ['test execution internal', /node:test|TestRunner|verify\.(?:runner|prepare)|stdout|stderr|私有报告|适配器/u],
+    ['source module name', /\b[\w-]+\.(?:ts|mjs|cjs)\b/u],
+    ['case identifier literal', /CASE-\d{3}/u],
+    ['delivery naming format', /类型\(模块\)|\[任务编号\]|类型\/任务编号/u],
+    ['task record file name', /task\.md/u],
+    ['scope-only section', /^#{1,6}\s*(?:范围内|范围外)\s*$/mu],
+  ];
+  for (const relative of requirements) {
+    const content = readFileSync(join(repository, relative), 'utf8');
+    assert.match(content, /^## \d+\. 验收方向$/mu, `${relative}: missing acceptance direction`);
+    for (const [label, pattern] of forbidden) assert.doesNotMatch(content, pattern, `${relative}: ${label}`);
+  }
+});
+
+test('CASE-160 migrated technical contracts remain locatable in module and overall designs', () => {
+  const required = new Map([
+    ['.tiller/specs/design.md', ['src/flow.ts', 'src/test-output.ts', 'node:test', 'stdout/stderr',
+      '--requirement-file', '--allow-reported', '类型(模块)', '类型/任务编号', '.tiller/task/<id>/task.md']],
+    ['.tiller/specs/modules/workflow/design.md', ['.tiller/task/<id>/task.md', '--requirement-file', '--target',
+      '--case', '--test', '--reported', '--expect-fail', '--abandon', 'REV-NNN', '类型(模块)', '类型/任务编号']],
+    ['.tiller/specs/modules/verification/design.md', ['.tiller/cases/modules/', 'test/**/*.test.*', 'CASE-NNN',
+      'src/test-output.ts', 'src/test-reporter.ts', 'verify.runner', 'verify.prepare', '--allow-reported', 'criteria']],
+    ['.tiller/specs/modules/initialization/design.md', ['.tiller/specs/requirements.md', '.tiller/index.md',
+      '--platform github|gitlab|both', '.github/pull_request_template.md', '.gitlab/merge_request_templates/Default.md',
+      'project.json', 'resourceVersion', '0.5.0', '0.4.0', 'recover']],
+    ['.tiller/specs/modules/standards/design.md', ['AGENTS.md', '.tiller/usage.md', '7000', '--requirement-file',
+      '--target', '--allow-reported', '类型(模块)', '[任务编号]', '类型/任务编号', 'CASE-NNN', 'src/test-output.ts',
+      '--expect-fail']],
+  ]);
+  for (const [relative, fragments] of required) {
+    const content = readFileSync(join(repository, relative), 'utf8');
+    for (const fragment of fragments) assert.ok(content.includes(fragment), `${relative}: missing ${fragment}`);
+  }
+});
+
+test('CASE-161 guidance and case references remain consistent with purified requirements', async () => {
+  const requirementsRule = readFileSync(join(repository, '.tiller/rules/activities/requirements.md'), 'utf8');
+  assert.match(requirementsRule, /验收条件.*可观察.*可验证/u);
+  assert.match(requirementsRule, /行为|边界/u);
+  assert.doesNotMatch(requirementsRule, /node:test|--test|类型\(模块\)/u);
+  const designRule = readFileSync(join(repository, '.tiller/rules/activities/design.md'), 'utf8');
+  assert.match(designRule, /接口|数据流/u);
+  for (const relative of ['README.md', 'AGENTS.md', '.tiller/index.md', '.tiller/usage.md', '.tiller/cases/index.md']) {
+    const content = readFileSync(join(repository, relative), 'utf8');
+    assert.doesNotMatch(content, /requirements\.md[^\n]*(?:--[a-z]|node:test|src\/)/u, relative);
+  }
+  const library = await readCaseLibrary(repository);
+  assert.deepEqual(library.issues, []);
+  for (const [id, criterion] of [['CASE-159', 'AC-1'], ['CASE-160', 'AC-2'], ['CASE-161', 'AC-3'], ['CASE-162', 'AC-4']]) {
+    const item = library.cases.find(entry => entry.id === id);
+    assert.ok(item, `missing ${id}`);
+    assert.ok(item.criteria.includes(`20261023-specs-pure-req#${criterion}`), `${id}: criteria`);
+    assert.ok(item.tests.length > 0, `${id}: test reference`);
+  }
+});
+
+test('CASE-162 repository keeps the 0.5.0 release contract and five full verification entries', () => {
+  const packageJson = JSON.parse(readFileSync(join(repository, 'package.json'), 'utf8'));
+  assert.equal(packageJson.version, '0.5.0');
+  assert.deepEqual(packageJson.scripts, {
+    build: 'node scripts/build.mjs',
+    typecheck: 'tsc --noEmit',
+    lint: 'node scripts/lint.mjs',
+    test: 'node scripts/test-suites.mjs all',
+    'test:rules': 'node scripts/test-suites.mjs rules',
+    'test:contracts': 'node scripts/test-suites.mjs contracts',
+    'test:integration': 'node scripts/test-suites.mjs integration',
+    'test:e2e': 'node scripts/test-suites.mjs e2e',
+    check: 'npm run lint && npm run typecheck && npm test',
+    'test:package': 'node scripts/package-smoke.mjs',
+    prepack: 'npm run build',
+  });
+  const metadata = JSON.parse(readFileSync(join(repository, '.tiller/project.json'), 'utf8'));
+  assert.equal(metadata.resourceVersion, '0.5.0');
 });

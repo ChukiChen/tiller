@@ -333,3 +333,103 @@
 ### 预期结果
 
 package.json、CLI 与资源版本仍为 0.5.0；test 与 test:package 脚本入口仍可用
+
+## CASE-159 规格需求只保留业务能力与验收方向
+
+- 类型：behavior
+- 优先级：high
+- 模块：standards
+- 关联 AC：20261023-specs-pure-req#AC-1
+- 需求：`.tiller/specs/requirements.md`
+- 源码：`test/rules.test.mjs`
+
+### 前置条件
+
+- 总体与四个模块的规格需求可读取
+
+### 步骤
+
+1. 读取五份 requirements.md 并检查是否混入技术契约
+
+### 输入
+
+- 当前规格需求正文
+
+### 预期结果
+
+不出现 CLI 开关、仓库实现路径、测试框架或报告内部细节、源码模块名、提交或分支字符串格式，也没有范围内或范围外专节
+
+## CASE-160 迁出的技术契约由对应设计承接
+
+- 类型：behavior
+- 优先级：high
+- 模块：standards
+- 关联 AC：20261023-specs-pure-req#AC-2
+- 需求：`.tiller/specs/requirements.md`
+- 源码：`test/rules.test.mjs`
+
+### 前置条件
+
+- 需求与设计文件均可读取
+
+### 步骤
+
+1. 对照需求迁出项检查总体与四个模块的设计
+
+### 输入
+
+- 当前 design.md 正文
+
+### 预期结果
+
+CLI 参数、实现路径、测试执行细节、源码模块、提交与分支格式，以及原有产品行为约束均可在对应设计中定位
+
+## CASE-161 规则文档与用例引用仍符合纯化需求
+
+- 类型：behavior
+- 优先级：medium
+- 模块：standards
+- 关联 AC：20261023-specs-pure-req#AC-3
+- 需求：`.tiller/specs/modules/standards/requirements.md`
+- 源码：`.tiller/cases/index.md`, `test/rules.test.mjs`
+
+### 前置条件
+
+- 规则、使用指引、README、工程索引与全局用例可读取
+
+### 步骤
+
+1. 检查文档是否仍把技术细节当作规格需求，并解析用例引用
+
+### 输入
+
+- 当前文档与用例库
+
+### 预期结果
+
+不矛盾的文档保持原文，引用继续有效；纯化口径与规则和用例判定一致
+
+## CASE-162 0.5.0 全量验证入口保持可用
+
+- 类型：behavior
+- 优先级：high
+- 模块：standards
+- 关联 AC：20261023-specs-pure-req#AC-4
+- 需求：`.tiller/specs/modules/standards/requirements.md`
+- 源码：`package.json`, `test/rules.test.mjs`
+
+### 前置条件
+
+- 包元信息与测试脚本可读取
+
+### 步骤
+
+1. 核对版本以及 build、lint、typecheck、test 和包冒烟入口
+
+### 输入
+
+- 当前 package.json 与项目配置
+
+### 预期结果
+
+版本仍为 0.5.0，五个全量验证入口存在并可执行
