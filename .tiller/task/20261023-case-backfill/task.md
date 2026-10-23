@@ -61,6 +61,14 @@
 - 对象摘要：b815ad89321463d7fa74a7ca5f7d060ec29066294735cb117687f3b4e5c8446d
 - 时间：2026-10-23T04:47:02.852Z
 
+### acceptance
+- 确认部分：交付验收
+- 对象：当前交付（需求、设计、验证与提交）
+- 确认人：boon yu
+- 提交：2b1ff9f2c526ed0399a0a539a7fe0a70dc295363
+- 对象摘要：f9ffb9b97acb1d9c36ba4c5952f12e314648fdb5c20ee27ba07c71d511a92f62
+- 时间：2026-10-23T06:43:33.232Z
+
 ## 验证
 
 ### run-1
@@ -230,6 +238,62 @@
 - 提交：3abe1298dbdaa5b761380e93c562d9013a28e68a
 - 代码树摘要：94744fbf0ff8a36b80bd045e81fd2a05570dc88c945b9f2fb36a5c74379dc9e4
 - 时间：2026-10-23T06:43:15.869Z
+
+### run-13
+- 条件：AC-1
+- 测试：test/flow-cli.test.mjs::CASE-154 file-level verification references do not bind every test in the file
+- 用例：CASE-154
+- 命令：node '--test-name-pattern=^CASE-154 file-level verification references do not bind every test in the file$' --test-reporter=./.tiller/local/verify-nXutdp/reporter.mjs --test-reporter-destination=.tiller/local/verify-nXutdp/report.jsonl test/flow-cli.test.mjs
+- 结果：passed
+- 退出码：0
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/logs/20261023-case-backfill/run-13.log
+- 提交：2b1ff9f2c526ed0399a0a539a7fe0a70dc295363
+- 代码树摘要：94744fbf0ff8a36b80bd045e81fd2a05570dc88c945b9f2fb36a5c74379dc9e4
+- 时间：2026-10-23T06:43:30.276Z
+
+### run-14
+- 条件：AC-2
+- 测试：test/case-redesign.test.mjs::CASE-103 CASE-156 repository history and docs use the new case model
+- 用例：CASE-156
+- 命令：node '--test-name-pattern=^CASE-103 CASE-156 repository history and docs use the new case model$' --test-reporter=./.tiller/local/verify-f39lGH/reporter.mjs --test-reporter-destination=.tiller/local/verify-f39lGH/report.jsonl test/case-redesign.test.mjs
+- 结果：passed
+- 退出码：0
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/logs/20261023-case-backfill/run-14.log
+- 提交：2b1ff9f2c526ed0399a0a539a7fe0a70dc295363
+- 代码树摘要：94744fbf0ff8a36b80bd045e81fd2a05570dc88c945b9f2fb36a5c74379dc9e4
+- 时间：2026-10-23T06:43:31.264Z
+
+### run-15
+- 条件：AC-3
+- 测试：test/work-migration.test.mjs::CASE-113 CASE-157 migration preserves the 0.5.0 release contract and full verification entry
+- 用例：CASE-157
+- 命令：node '--test-name-pattern=^CASE-113 CASE-157 migration preserves the 0\.5\.0 release contract and full verification entry$' --test-reporter=./.tiller/local/verify-XXL2SX/reporter.mjs --test-reporter-destination=.tiller/local/verify-XXL2SX/report.jsonl test/work-migration.test.mjs
+- 结果：passed
+- 退出码：0
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/logs/20261023-case-backfill/run-15.log
+- 提交：2b1ff9f2c526ed0399a0a539a7fe0a70dc295363
+- 代码树摘要：94744fbf0ff8a36b80bd045e81fd2a05570dc88c945b9f2fb36a5c74379dc9e4
+- 时间：2026-10-23T06:43:31.783Z
+
+### run-16
+- 条件：AC-4
+- 测试：test/case-redesign.test.mjs::CASE-158 case-backfill task.md retains mapping table for historical test names
+- 用例：CASE-158
+- 命令：node '--test-name-pattern=^CASE-158 case-backfill task\.md retains mapping table for historical test names$' --test-reporter=./.tiller/local/verify-mBiUWx/reporter.mjs --test-reporter-destination=.tiller/local/verify-mBiUWx/report.jsonl test/case-redesign.test.mjs
+- 结果：passed
+- 退出码：0
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/logs/20261023-case-backfill/run-16.log
+- 提交：2b1ff9f2c526ed0399a0a539a7fe0a70dc295363
+- 代码树摘要：94744fbf0ff8a36b80bd045e81fd2a05570dc88c945b9f2fb36a5c74379dc9e4
+- 时间：2026-10-23T06:43:32.279Z
 
 ## 自检
 
