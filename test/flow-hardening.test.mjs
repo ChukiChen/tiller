@@ -121,12 +121,7 @@ test('CASE-175 confirmations expose uncommitted business changes but ignore till
   assert.equal(accepted.error.code, 'NOT_READY');
 });
 
-for (const [buildFile, runner, marker] of [
-  ['pom.xml', 'junit-maven', 'org.junit.jupiter.api.Test'],
-  ['build.gradle', 'junit-gradle', 'org.junit.jupiter.api.Test'],
-  ['build.gradle.kts', 'junit-gradle', 'org.junit.jupiter.api.Test'],
-  [null, 'node-test', "import test from 'node:test';"],
-]) test(`CASE-176 ${runner} is detected for init and case skeletons`, async t => {
+async function assertRunnerCase(t, buildFile, runner, marker) {
   const root = fixture(t);
   if (buildFile) put(root, buildFile, 'fixture build file\n');
   const initialized = success(cli(root, 'init'));
@@ -147,6 +142,22 @@ for (const [buildFile, runner, marker] of [
   assert.equal(added.runner, runner);
   assert.match(added.skeleton, new RegExp(marker.replace(/[.*+?^${}()|[\]\\]/gu, '\\$&'), 'u'));
   assert.equal(added.skeleton.includes('node:test'), runner === 'node-test');
+}
+
+test('CASE-176 pom detects junit-maven for init and case skeletons', async t => {
+  await assertRunnerCase(t, 'pom.xml', 'junit-maven', 'org.junit.jupiter.api.Test');
+});
+
+test('CASE-176 gradle detects junit-gradle for init and case skeletons', async t => {
+  await assertRunnerCase(t, 'build.gradle', 'junit-gradle', 'org.junit.jupiter.api.Test');
+});
+
+test('CASE-176 gradle-kts detects junit-gradle for init and case skeletons', async t => {
+  await assertRunnerCase(t, 'build.gradle.kts', 'junit-gradle', 'org.junit.jupiter.api.Test');
+});
+
+test('CASE-176 node detects node-test for init and case skeletons', async t => {
+  await assertRunnerCase(t, null, 'node-test', "import test from 'node:test';");
 });
 
 test('CASE-177 untracked managed entries are visible in check and block release', async t => {
