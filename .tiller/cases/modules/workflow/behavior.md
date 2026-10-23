@@ -748,3 +748,78 @@ task.md 含「映射」节，列出文件::旧测试名到 CASE 的复用或新�
 ### 预期结果
 
 陈旧分支不再存在，main 与当前任务分支保留，远端分支未被删除
+
+## CASE-174 缺少日期前缀的任务编号得到明确警告
+
+- 类型：behavior
+- 优先级：high
+- 模块：workflow
+- 关联 AC：20261023-flow-hardening-wave1#AC-1
+- 需求：`.tiller/specs/modules/workflow/requirements.md`
+- 源码：`src/task-id.ts`, `src/flow.ts`, `resources/usage.md`
+
+### 前置条件
+
+- 工程已初始化且任务编号合法但无日期前缀
+
+### 步骤
+
+1. 以无日期前缀编号执行 start
+
+### 输入
+
+- 任务编号 legacy-task
+
+### 预期结果
+
+start 返回 YYYYMMDD- 前缀警告，保留原任务编号不改写，公开示例均带日期前缀
+
+## CASE-175 设计确认前验证与确认后未提交业务改动可见
+
+- 类型：behavior
+- 优先级：high
+- 模块：workflow
+- 关联 AC：20261023-flow-hardening-wave1#AC-2
+- 需求：`.tiller/specs/modules/workflow/requirements.md`
+- 源码：`src/flow.ts`
+
+### 前置条件
+
+- standard 任务需求和设计均可确认，Git 工作区可用
+
+### 步骤
+
+1. 设计确认前执行 verify，并在确认提交后修改业务文件
+
+### 输入
+
+- 验证早于设计确认；src 文件未提交
+
+### 预期结果
+
+verify 仍可执行；check 汇总过程卫生 issue 并阻断默认 accept
+
+## CASE-178 日期前缀过程卫生与运行器引导共享回归入口
+
+- 类型：behavior
+- 优先级：medium
+- 模块：workflow
+- 关联 AC：20261023-flow-hardening-wave1#AC-5
+- 需求：`.tiller/specs/modules/workflow/requirements.md`
+- 源码：`test/flow-hardening.test.mjs`, `package.json`
+
+### 前置条件
+
+- 实现已完成且构建产物可用
+
+### 步骤
+
+1. 运行新增具名测试与全量 npm 验证脚本
+
+### 输入
+
+- 全量构建、lint、类型检查、测试和包冒烟
+
+### 预期结果
+
+新增行为均有具名测试并通过全量验证

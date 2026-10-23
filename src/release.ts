@@ -1,8 +1,10 @@
 import { execFile } from 'node:child_process';
+import { lstat } from 'node:fs/promises';
 import path from 'node:path';
 import { promisify } from 'node:util';
-import { inspectProject } from './core.js';
+import { inspectProject, META } from './core.js';
 import { readTextIfExists } from './files.js';
+import { templatePathsForPlatform } from './project-metadata.js';
 import { planUpgrade } from './upgrade.js';
 
 const execFileAsync = promisify(execFile);
@@ -80,8 +82,10 @@ export async function releaseChecklist(rootInput: string, input: ReleaseChecklis
       exists.ok ? `验收提交 ${commit} 可读取。` : `验收提交 ${commit} 不可读取。`);
   }
 
+  let metadata: Awaited<ReturnType<typeof inspectProject>>['metadata'] = null;
   try {
     const inspection = await inspectProject(root);
+    metadata = inspection.metadata;
     add('project-metadata', '项目元数据有效', inspection.ready ? 'pass' : 'fail',
       inspection.ready ? '.tiller/project.json 与受管结构可读取。' : inspection.issues.join('；') || '项目元数据未就绪。');
   } catch (error) {
@@ -94,6 +98,30 @@ export async function releaseChecklist(rootInput: string, input: ReleaseChecklis
       upgrade.ready ? '受管文件摘要一致，无待解决冲突。' : upgrade.conflicts.join('；') || '受管资源预览未通过。');
   } catch (error) {
     add('managed-resources', '受管资源无冲突', 'fail', (error as Error).message);
+  }
+
+  const managedPaths = [...new Set([META, 'AGENTS.md', ...templatePathsForPlatform(metadata?.platform),
+    ...Object.keys(metadata?.managedFiles ?? {})])].sort();
+  const existingManaged: string[] = [];
+  for (const relative of managedPaths) {
+    try { if ((await lstat(path.join(root, relative))).isFile()) existingManaged.push(relative); }
+    catch (error) { if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error; }
+  }
+  const repository = await git(root, ['rev-parse', '--is-inside-work-tree']);
+  if (!repository.ok) {
+    add('managed-entry-tracking', '受管入口已纳入 Git', 'na', '未检测到 Git 工作树；跳过受管入口跟踪检查。');
+  } else {
+    const listed = existingManaged.length ? await git(root, ['ls-files', '-z', '--', ...existingManaged]) : null;
+    if (listed === null) {
+      add('managed-entry-tracking', '受管入口已纳入 Git', 'pass', '没有需要检查的受管入口文件。');
+    } else if (!listed.ok) {
+      add('managed-entry-tracking', '受管入口已纳入 Git', 'fail', '无法读取受管入口的 Git 跟踪状态。');
+    } else {
+      const tracked = new Set(listed.stdout.split('\0').filter(Boolean));
+      const untracked = existingManaged.filter(relative => !tracked.has(relative));
+      add('managed-entry-tracking', '受管入口已纳入 Git', untracked.length ? 'fail' : 'pass',
+        untracked.length ? `受管入口未纳入 Git 跟踪：${untracked.join('、')}；先执行 git add 再提交。` : '磁盘上的受管入口均已纳入 Git。');
+    }
   }
 
   const readme = await readTextIfExists(root, 'README.md');

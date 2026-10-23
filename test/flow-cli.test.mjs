@@ -225,16 +225,16 @@ test('CASE-002 CASE-067 standard flow blocks before design confirmation and acce
   success(cli(root, 'start', id, '--title', 'Standard flow', '--requirement', 'Add a visible behavior.',
     '--criterion', 'AC-1=Behavior is observable', '--type', 'feature', '--size', 'standard', '--target', 'src', '--target', 'test'));
   success(cli(root, 'confirm', id, 'requirements', '--quote', '需求确认'));
-  put(root, 'src/value.txt', 'standard\n');
-  success(cli(root, 'verify', id, '--criterion', 'AC-1', '--test', 'test/baseline.test.mjs::CASE-001 baseline'));
-  git(root, 'add', 'src/value.txt');
-  git(root, 'commit', '--quiet', '-m', 'standard implementation');
   const blocked = failure(cli(root, 'check', id));
   assert.ok(blocked.issues.some(issue => issue.includes('设计')));
   failure(cli(root, 'confirm', id, 'design', '--quote', '设计确认'));
   editTask(root, id, content => content.replace('### 方案\n\n### 取舍\n\n### 影响与风险',
     '### 方案\n\nUse the existing command boundary.\n\n### 取舍\n\nKeep the current interface.\n\n### 影响与风险\n\nCLI exit behavior only.'));
   success(cli(root, 'confirm', id, 'design', '--quote', '设计确认'));
+  put(root, 'src/value.txt', 'standard\n');
+  success(cli(root, 'verify', id, '--criterion', 'AC-1', '--test', 'test/baseline.test.mjs::CASE-001 baseline'));
+  git(root, 'add', 'src/value.txt');
+  git(root, 'commit', '--quiet', '-m', 'standard implementation');
   const checked = success(cli(root, 'check', id));
   assert.equal(checked.ready, true, checked.issues.join('\n'));
 });

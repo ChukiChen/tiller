@@ -6,7 +6,7 @@ import { promisify } from 'node:util';
 import { readProjectMetadata } from './core.js';
 import { resolveConfirmer } from './confirmer.js';
 import { applyChanges, readTextIfExists, validateRelativePath, withProjectLock } from './files.js';
-import { validateTaskId } from './task-id.js';
+import { taskIdWarnings, validateTaskId } from './task-id.js';
 import type { FlowStage } from './flow.js';
 
 const execFileAsync = promisify(execFile);
@@ -307,6 +307,7 @@ async function readPlan(root: string, id: string): Promise<ProjectPlan> {
 
 export async function startPlan(rootInput: string, id: string, input: PlanStartInput) {
   const root = path.resolve(rootInput); validateTaskId(id);
+  const warnings = taskIdWarnings(id);
   const title = line(input.title, '规划标题', 200);
   const goal = line(input.goal, '规划目标', 5000);
   const requirements = references(input.requirements, '规划关联需求');
@@ -331,7 +332,7 @@ export async function startPlan(rootInput: string, id: string, input: PlanStartI
     if (await readTextIfExists(root, relative) !== null) fail('PLAN_EXISTS', `规划 ${id} 已存在，不能覆盖。`);
     const meta: PlanMeta = { version: 1, id, created: new Date().toISOString(), title, goal, requirements, items, confirmations: [] };
     await applyChanges(root, [{ path: relative, before: null, after: renderPlan(meta) }]);
-    return { id, path: relative, items: items.map(item => item.id), confirmed: false,
+    return { id, path: relative, items: items.map(item => item.id), confirmed: false, warnings,
       next: `核对规划正文后确认：tiller plan confirm ${id} [--by "<确认人>"]` };
   });
 }
