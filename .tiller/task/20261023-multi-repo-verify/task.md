@@ -253,22 +253,15 @@
 
 - [x] 需求确认有效
 - [x] 设计确认有效
-- [ ] 验收条件均有当前通过且绑定全局用例的测试引用
-- [ ] 每条验收条件均映射到本次验证引用的全局用例
+- [x] 验收条件均有当前通过且绑定全局用例的测试引用
+- [x] 每条验收条件均映射到本次验证引用的全局用例
 - [x] 验收条件与用例来源 criteria 相互指向或由本任务新增/修改
-- [ ] 验证命令已执行且测试输出已核实
+- [x] 验证命令已执行且测试输出已核实
 - [x] 全局用例结构与引用有效
 - [x] 改动未超出范围
-- [ ] 未弱化仍存在的测试
+- [x] 未弱化仍存在的测试
 - [x] 评审无未清除阻塞项
 - [x] 记录不含密钥或本机绝对路径
-
-阻塞项：
-- AC-2 的验证测试 test/java-runners.test.mjs::CASE-172 verify fails closed for an unknown runner or a path that is not uniquely owned 与全局用例 CASE-168 的测试引用不一致。
-- AC-3 的验证测试 test/java-runners.test.mjs::CASE-170 junit-gradle builds a precise selector and counts only the declared result 与全局用例 CASE-169 的测试引用不一致。
-- AC-4 的验证测试 test/java-runners.test.mjs::CASE-173 decisions and usage name the Java runners and keep version 0.5.0 与全局用例 CASE-168 的测试引用不一致。
-- 弱化测试断言：test/core.test.mjs::CASE-116 workspace groups repositories while keeping stable ids, navigation and ignore rules
-- 交付范围存在未提交改动：.tiller/cases/modules/initialization/behavior.md、.tiller/cases/modules/initialization/interface.md、.tiller/cases/modules/initialization/security.md、.tiller/cases/modules/standards/behavior.md、.tiller/cases/modules/verification/behavior.md、.tiller/cases/modules/verification/interface.md、.tiller/cases/modules/verification/security.md、.tiller/context/project.md、.tiller/index.md、.tiller/project.json、.tiller/rules/quality/verification.md、.tiller/specs/decisions.md、.tiller/specs/design.md、.tiller/specs/modules/initialization/design.md、.tiller/specs/modules/initialization/requirements.md、.tiller/specs/modules/standards/design.md、.tiller/specs/modules/verification/design.md、.tiller/specs/modules/verification/requirements.md、.tiller/specs/modules/workflow/design.md、.tiller/specs/modules/workflow/requirements.md、.tiller/specs/requirements.md、.tiller/usage.md、README.md、resources/rules/quality/verification.md、resources/usage.md、src/core.ts、src/flow.ts、src/project-metadata.ts、src/repository-paths.ts、src/test-output.ts、src/types.ts、test/case-redesign.test.mjs、test/core.test.mjs、test/java-runners.test.mjs、test/repository-paths.test.mjs、test/review-release.test.mjs、test/rules.test.mjs、test/suites.json、test/usage-resources.test.mjs
 
 提示：
 - 90 条历史用例未绑定来源 AC；新用例请用 case add 写入 criteria。
