@@ -13,7 +13,7 @@
   "managedFiles": {
     "AGENTS.md": "d5e3921d74c5a65f95001adb33ae31c9794055b353394ec9f0cff4e27bb6c7f1",
     ".gitignore": "be3b4c440af6f29b4dd5418e67a251ea1afb32edb5d7b81aaa9957998de7eba9",
-    ".tiller/index.md": "da958d852ae56063c1fb21785e1f2b4ea6530b7ceb4eec8ef13c237f1665c07c",
+    ".tiller/index.md": "603f873b0373fda7ed583732745e6e512c5b97cd5018d0b7caa3e37aac15f104",
     ".tiller/rules/index.md": "d22dca8e8f3456905d69b60de3a6a7bed62c226f33799ddfad22bc4f3eefe0c5",
     ".tiller/rules/core.md": "fddd4f09f9910c946abed2f6155af8032a07993ed3c68251f08ea55a724f5d20",
     ".tiller/rules/activities/requirements.md": "5858fb20ceef85a9138d3ea0b34711d5e2974267951a1014f42bd98047f8679a",
@@ -22,7 +22,7 @@
     ".tiller/rules/activities/delivery.md": "fa171d22717e63cbb7b6f9da33fd3d881f5b6690bb88bcee196d63a7723a31f4",
     ".tiller/rules/quality/documents.md": "988ee1d853e22fb69f6a4e4daf722899c4231692bbf7775114ead49821e79fda",
     ".tiller/rules/quality/verification.md": "95cef625f0b482a754a06cf6b57eb64429c5308291b277fa34d5fde19a7e0fc3",
-    ".tiller/usage.md": "438bf2af85e3fe9f0f9d5b0a0fad173d7e8f6f77f43d6944e7fc52dce82814b4",
+    ".tiller/usage.md": "f1fdc69911e98e3163f3c4e3182fec249edd84248d5b7cfca47a9c1f51aa4f0a",
     ".tiller/run.cjs": "b760046bf12723a7f040877ad19bd26de5d94e02a918df832196e64361cac24a",
     ".github/pull_request_template.md": "76169f57652bd136127ac9cec64c29293bd5b6d92039948a01963c4e043aafd4"
   },

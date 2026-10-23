@@ -206,7 +206,7 @@ test('CASE-014 an empty requirement cannot be confirmed by a user quote alone', 
   assert.match(rejected.error.message, /目标/u);
 });
 
-test('CASE-015 legacy work records stay read-only and are not listed as current tasks', async t => {
+test('CASE-015 CASE-112 legacy work records stay read-only and are not listed as current tasks', async t => {
   const root = await project(t);
   put(root, '.tiller/work/legacy/work.md', '# Legacy task\n\nHistorical record only.\n');
   assert.deepEqual(success(cli(root, 'resume')).tasks, []);
@@ -216,6 +216,7 @@ test('CASE-015 legacy work records stay read-only and are not listed as current 
   const resumed = success(cli(root, 'resume'));
   assert.deepEqual(resumed.tasks.map(item => item.id), [id]);
   assert.equal(read(root, '.tiller/work/legacy/work.md'), '# Legacy task\n\nHistorical record only.\n');
+  assert.equal(existsSync(join(root, '.tiller/work/legacy/task.md')), false);
 });
 
 test('CASE-002 CASE-067 standard flow blocks before design confirmation and accepts design after requirements', async t => {

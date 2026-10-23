@@ -19,7 +19,7 @@ Codex 是主要开发 Agent，也是一等支持对象；tiller 自身也使用�
 - 提交主题为 `类型(模块): 中文摘要`，PR/MR 标题加 `[任务编号]` 并保持五段，标题摘要按显式、任务元数据、最早规范提交、任务标题回退，主模块取范围首个，关联任务为纯文本；分支为 `类型/任务编号[-描述]`；`pr` 只生成本地草稿，不联网。
 - `init` 生成最小 specs/context/cases/plans 骨架，并按 `--platform github|gitlab|both`（缺省 github）生成模板；平台初始化后不能通过 CLI 切换。`upgrade` 只刷新未修改的受管文件并补齐当前平台模板，兼容当前和直接兼容的上一资源契约。
 
-旧审计、reviews 快照、全文确认快照、证据包、advanced 和旧 verification CLI 不保留。历史 `.tiller/work/` 只读；需要历史时从 Git 取回或重跑。
+旧审计、reviews 快照、全文确认快照、证据包、advanced 和旧 verification CLI 不保留。本仓库历史记录已迁入 `.tiller/task/`；外部旧仓 `.tiller/work/` 仅作只读遗留兼容，需要更早内容时从 Git 取回或重跑。
 
 ## 本轮状态
 
@@ -50,4 +50,4 @@ Codex 是主要开发 Agent，也是一等支持对象；tiller 自身也使用�
 - [确认去原话化与结构化任务正文](../task/20261022-round9/task.md)
 - [任务阶段、关闭与规格清理](../task/20261022-round8/task.md)
 - [第一批功能补齐任务](../task/20261022-first-batch/task.md)
-- 历史实现记录：[实现进度](../work/20261016-implementation-progress/work.md)、[轻量流程](../work/20261022-lightweight-flow/work.md)、[flow 命名](../work/20261022-flow-naming/work.md)
+- 历史实现记录：[实现进度](../task/20261016-implementation-progress/task.md)、[轻量流程](../task/20261022-lightweight-flow/task.md)、[flow 命名](../task/20261022-flow-naming/task.md)

@@ -258,3 +258,28 @@
 ### 预期结果
 
 文档与用例同步，必读不超过预算，版本保持 0.5.0，历史任务无新的规则型阻断。
+
+## CASE-113 迁移不改变 0.5.0 发布契约
+
+- 类型：behavior
+- 优先级：medium
+- 模块：standards
+- 关联 AC：20261023-migrate-work#AC-4
+- 需求：`.tiller/specs/modules/standards/requirements.md#2-必读与按需读取`
+- 源码：`test/work-migration.test.mjs`
+
+### 前置条件
+
+- 包版本、CLI 常量与资源版本均为 0.5.0
+
+### 步骤
+
+1. 读取 package.json、构建产物常量和项目元信息
+
+### 输入
+
+- 当前迁移分支
+
+### 预期结果
+
+三处版本均为 0.5.0，全量验证入口保持可用

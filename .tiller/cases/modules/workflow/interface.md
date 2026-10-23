@@ -517,3 +517,28 @@ release 逐项给出 pass/fail/na 并以未通过项决定退出状态；check �
 ### 预期结果
 
 合法文件内容进入结构化需求并记录来源；非法路径或空文件明确报错。
+
+## CASE-112 外部旧仓 work 仅作只读遗留读取
+
+- 类型：interface
+- 优先级：medium
+- 模块：workflow
+- 关联 AC：20261023-migrate-work#AC-3
+- 需求：`.tiller/specs/modules/workflow/requirements.md#2-开始与接续`
+- 源码：`src/flow.ts`
+
+### 前置条件
+
+- 测试工程保留 .tiller/work/<id>/work.md，但没有同 id task
+
+### 步骤
+
+1. 运行 resume 并启动当前 task，随后检查旧文件字节
+
+### 输入
+
+- 旧 work 记录与当前 task 并存
+
+### 预期结果
+
+旧 work 不出现在当前任务列表，内容保持只读，当前 task 正常发现
