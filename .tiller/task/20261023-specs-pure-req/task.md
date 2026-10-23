@@ -64,6 +64,14 @@
 - 对象摘要：0e2c6e4dbf0ee3e629789c290d3bf777c3707b2ea3b32e2916082a7027ac473f
 - 时间：2026-10-23T07:19:48.399Z
 
+### acceptance
+- 确认部分：交付验收
+- 对象：当前交付（需求、设计、验证与提交）
+- 确认人：boon yu
+- 提交：7582c08ebbef58c3da6c7419b6dc10539f01bf14
+- 对象摘要：e3963beb93626560c4eddd1b11fabd0527eb9115868f4a07a2d2b2c6e9f9b259
+- 时间：2026-10-23T07:20:08.604Z
+
 ## 验证
 
 ### run-1
@@ -122,6 +130,62 @@
 - 代码树摘要：0e00618e69be3f5d1609338c7a5dea6976de3c26e45a0744c253c558c2115cc8
 - 时间：2026-10-23T07:19:17.349Z
 
+### run-5
+- 条件：AC-1
+- 测试：test/rules.test.mjs::CASE-159 repository spec requirements stay business-observable and exclude technical contracts
+- 用例：CASE-159
+- 命令：node '--test-name-pattern=^CASE-159 repository spec requirements stay business-observable and exclude technical contracts$' --test-reporter=./.tiller/local/verify-sgNAeo/reporter.mjs --test-reporter-destination=.tiller/local/verify-sgNAeo/report.jsonl test/rules.test.mjs
+- 结果：passed
+- 退出码：0
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/logs/20261023-specs-pure-req/run-5.log
+- 提交：7582c08ebbef58c3da6c7419b6dc10539f01bf14
+- 代码树摘要：741541997243290b552dc1ba4ff46b734308296c7946e71a8379dea3b6d496c9
+- 时间：2026-10-23T07:19:58.967Z
+
+### run-6
+- 条件：AC-2
+- 测试：test/rules.test.mjs::CASE-160 migrated technical contracts remain locatable in module and overall designs
+- 用例：CASE-160
+- 命令：node '--test-name-pattern=^CASE-160 migrated technical contracts remain locatable in module and overall designs$' --test-reporter=./.tiller/local/verify-QD3X0z/reporter.mjs --test-reporter-destination=.tiller/local/verify-QD3X0z/report.jsonl test/rules.test.mjs
+- 结果：passed
+- 退出码：0
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/logs/20261023-specs-pure-req/run-6.log
+- 提交：7582c08ebbef58c3da6c7419b6dc10539f01bf14
+- 代码树摘要：741541997243290b552dc1ba4ff46b734308296c7946e71a8379dea3b6d496c9
+- 时间：2026-10-23T07:19:59.480Z
+
+### run-7
+- 条件：AC-3
+- 测试：test/rules.test.mjs::CASE-161 guidance and case references remain consistent with purified requirements
+- 用例：CASE-161
+- 命令：node '--test-name-pattern=^CASE-161 guidance and case references remain consistent with purified requirements$' --test-reporter=./.tiller/local/verify-oi5frS/reporter.mjs --test-reporter-destination=.tiller/local/verify-oi5frS/report.jsonl test/rules.test.mjs
+- 结果：passed
+- 退出码：0
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/logs/20261023-specs-pure-req/run-7.log
+- 提交：7582c08ebbef58c3da6c7419b6dc10539f01bf14
+- 代码树摘要：741541997243290b552dc1ba4ff46b734308296c7946e71a8379dea3b6d496c9
+- 时间：2026-10-23T07:19:59.983Z
+
+### run-8
+- 条件：AC-4
+- 测试：test/rules.test.mjs::CASE-162 repository keeps the 0.5.0 release contract and five full verification entries
+- 用例：CASE-162
+- 命令：node '--test-name-pattern=^CASE-162 repository keeps the 0\.5\.0 release contract and five full verification entries$' --test-reporter=./.tiller/local/verify-X3yNCe/reporter.mjs --test-reporter-destination=.tiller/local/verify-X3yNCe/report.jsonl test/rules.test.mjs
+- 结果：passed
+- 退出码：0
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/logs/20261023-specs-pure-req/run-8.log
+- 提交：7582c08ebbef58c3da6c7419b6dc10539f01bf14
+- 代码树摘要：741541997243290b552dc1ba4ff46b734308296c7946e71a8379dea3b6d496c9
+- 时间：2026-10-23T07:20:00.514Z
+
 ## 自检
 
 - [x] 需求确认有效
@@ -131,17 +195,14 @@
 - [x] 验收条件与用例来源 criteria 相互指向或由本任务新增/修改
 - [x] 验证命令已执行且测试输出已核实
 - [x] 全局用例结构与引用有效
-- [ ] 改动未超出范围
+- [x] 改动未超出范围
 - [x] 未弱化仍存在的测试
 - [x] 评审无未清除阻塞项
 - [x] 记录不含密钥或本机绝对路径
 
-阻塞项：
-- 改动超出范围：test/case-redesign.test.mjs、test/review-release.test.mjs、test/rules.test.mjs
-- 交付范围存在未提交改动：.tiller/cases/modules/standards/behavior.md、.tiller/cases/modules/verification/interface.md、.tiller/cases/modules/workflow/security.md、.tiller/specs/design.md、.tiller/specs/modules/initialization/design.md、.tiller/specs/modules/initialization/requirements.md、.tiller/specs/modules/standards/design.md、.tiller/specs/modules/standards/requirements.md、.tiller/specs/modules/verification/design.md、.tiller/specs/modules/verification/requirements.md、.tiller/specs/modules/workflow/design.md、.tiller/specs/modules/workflow/requirements.md、.tiller/specs/requirements.md
-
 提示：
 - 90 条历史用例未绑定来源 AC；新用例请用 case add 写入 criteria。
+- 提交 7582c08 不符合提交信息规范：docs(specs): 需求去技术化并下沉设计（模块 specs 不在 specs/modules 中）。
 - 本次改动涉及模块 initialization：建议回归该模块 56 条用例及经过它的场景 CASE-055, CASE-001。
 - 本次改动涉及模块 standards：建议回归该模块 17 条用例及经过它的场景 CASE-055。
 - 本次改动涉及模块 verification：建议回归该模块 32 条用例及经过它的场景 CASE-055, CASE-001。
