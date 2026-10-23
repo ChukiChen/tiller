@@ -6,7 +6,7 @@
 - 优先级：high
 - 模块：workflow
 - 关联 AC：无
-- 需求：`.tiller/specs/modules/workflow/requirements.md#flow-04-在授权范围内持续推进`
+- 需求：`.tiller/specs/modules/workflow/requirements.md#flow-04-在授权边界内持续推进`
 - 源码：`src/flow.ts`
 
 ### 前置条件
@@ -32,7 +32,7 @@
 - 优先级：high
 - 模块：workflow
 - 关联 AC：无
-- 需求：`.tiller/specs/modules/workflow/requirements.md#flow-04-在授权范围内持续推进`
+- 需求：`.tiller/specs/modules/workflow/requirements.md#flow-04-在授权边界内持续推进`
 - 源码：`src/flow.ts`
 
 ### 前置条件

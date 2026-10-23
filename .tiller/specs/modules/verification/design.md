@@ -2,7 +2,7 @@
 
 ## 1. 用例文件
 
-模块用例使用 Markdown，例如：
+模块用例位于 `.tiller/cases/modules/<模块>/{behavior,interface,performance,security}.md`，跨模块流程位于 `.tiller/cases/scenarios/<场景>.md`，均使用 Markdown。例如：
 
 ```md
 ## CASE-050 用例标题
@@ -39,7 +39,7 @@
 1. 需求/设计确认后，每条 AC 必须映射至少一个带完整设计字段的用例；
 2. 有验证记录后，每个用例必须有至少一个测试名或紧邻注释引用它；
 3. 校验最新验证覆盖对应测试、结果为 passed、代码树等于当前树且测试文件仍存在；
-4. 校验执行证据已核实；外部报告理由存在且显式允许；bugfix 的失败先行测试与当前通过测试一致；
+4. 校验执行证据已核实；外部报告有理由且仅在 `--allow-reported` 时放行；bugfix 的 `--expect-fail` 失败先行测试与当前通过测试一致；
 5. 校验用例 `criteria` 包含 `<task>#<AC>`，除非用例相对任务基线新增或修改；
 6. 把覆盖状态写入结果和 task 自检。
 
@@ -47,8 +47,10 @@
 
 结构错误、缺失用例、待实现测试、缺失测试和错配是阻塞项；历史空 criteria、无 Git、未覆盖场景、提交或分支格式不合规是提示。
 
+测试运行由 `project.json` 的 `verify.runner` 选择已注册适配器，缺省为 node-test；`verify.prepare` 在测试前执行，参数数组为空或准备失败即验证失败。
+
 基线后没有 `.tiller/specs/` 或 `.tiller/context/` 变化时增加回写提示，不并入阻塞项。
 
 ## 5. 边界
 
-该模块不提交原始输出、自举工程、安装包和全文文件快照。`verify` 子进程输出只写 `.tiller/local/logs/`，默认不显示，`--verbose` 时同时转发；判定只读私有临时报告。`src/test-output.ts` 暴露 `TestRunner` 的构造命令与报告解析接口并注册适配器，`src/test-reporter.ts` 生成仅含测试事件和总结的 JSONL 报告。需要复查时查看 task.md 的实际命令和日志路径，并从 Git 或重跑取得事实。
+该模块不提交原始输出、自举工程、安装包和全文文件快照。`verify` 只接受 `--test` 或 `--case`；子进程输出只写 `.tiller/local/logs/`，默认不显示，`--verbose` 时同时转发；判定只读私有临时报告。`src/test-output.ts` 暴露 `TestRunner` 的构造命令与报告解析接口并注册适配器，`src/test-reporter.ts` 生成仅含测试事件和总结的 JSONL 报告。无法本机执行时使用 `verify --reported --command ... --result ... --reason`，`--allow-reported` 才放行；缺陷修复使用 `--expect-fail --test`。需要复查时查看 `task.md` 的实际命令和日志路径，并从 Git 或重跑取得事实。

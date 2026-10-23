@@ -2,7 +2,7 @@
 
 ## 1. 任务模型
 
-任务文件包含标题、一行 `tiller-task:v1` 元信息和可读区段。元信息保存 id、类型、规模、创建时间、Git 基线、范围、开工前摘要、可选规划归属、分支描述、标题摘要、需求文件来源和结构化格式标记。需求、AC、设计、确认、验证、评审、自检从 Markdown 区段读取；元信息与区段都受格式校验。
+唯一任务文件为 `.tiller/task/<id>/task.md`，包含标题、一行 `tiller-task:v1` 元信息和可读区段。元信息保存 id、类型、规模、创建时间、Git 基线、范围、开工前摘要、可选规划归属、分支描述、标题摘要、需求文件来源和结构化格式标记。需求、AC、设计、确认、验证、评审、自检从 Markdown 区段读取；元信息与区段都受格式校验。
 
 ## 2. 状态与确认
 
@@ -20,7 +20,7 @@
 
 ## 3. 验证
 
-`verify` 接受 `--test` 或 `--case`；`--case` 先扫描覆盖该用例的全部测试，再逐个通过 `src/test-output.ts` 的适配器构造精确匹配的 node:test 命令，并将自带报告器写入私有临时目录。退出码与私有报告共同决定 passed/failed，stdout/stderr 只进日志。报告按文件与完整名称路径精确匹配恰好一个测试，且结果为通过、无失败事件才标记 verified；仅引用文件时要求全部通过。报告缺失/损坏、0/多个匹配、失败或跳过均为 unverified，由 `check` 阻断。`verify.prepare` 先于测试执行，失败即验证失败；`verify.runner` 选择已注册适配器。历史记录没有核实字段时保持旧解析路径，不施加新证据检查。
+`start <task-id>` 必须带 `--title`、目标正文和至少一个 `--criterion "AC-N=<验收条件>"`；需求正文来自 `--requirement` 或工程内相对路径 `--requirement-file`。standard 任务必须至少声明一个 `--target`，small 缺省范围为 `.`。`confirm` 的确认人优先取 `--by`，原话 `--quote` 可选。`verify` 接受 `--test` 或 `--case`；`--case` 先扫描覆盖该用例的全部测试，再逐个通过 `src/test-output.ts` 的适配器构造精确匹配的 node:test 命令，并将自带报告器写入私有临时目录。退出码与私有报告共同决定 passed/failed，stdout/stderr 只进日志。报告按文件与完整名称路径精确匹配恰好一个测试，且结果为通过、无失败事件才标记 verified；仅引用文件时要求全部通过。报告缺失/损坏、0/多个匹配、失败或跳过均为 unverified，由 `check` 阻断。`verify.prepare` 先于测试执行，失败即验证失败；`verify.runner` 选择已注册适配器。历史记录没有核实字段时保持旧解析路径，不施加新证据检查。
 
 外部报告使用 `--reported --command --result --reason`，理由必填并标记 `not-run`；`check`/`accept` 默认阻断，只有 `--allow-reported` 放行，`pr` 在验证结果中标明未执行及理由。bugfix 的 `--expect-fail` 在任务基线提交的临时 Git 工作树运行当前测试文件，要求具名测试失败并记录基线提交；`check` 还要求当前代码存在同一测试的已核实通过记录。工作树在成功或异常时都清理。
 
@@ -40,11 +40,13 @@
 
 ## 5. 关闭与恢复
 
-`close` 只接受当前阶段为已验收的任务；未验收任务必须显式 `--abandon`。关闭事件写入 `task.md` 的“关闭”区段，保存状态、原因和时间。`reopen` 追加恢复事件；验收、确认和验证仍按原摘要判断，阶段从最后一次恢复之后的事实重新计算。终态任务上的 `confirm`、`verify`、`accept` 直接阻塞。
+`close --reason` 只接受当前阶段为已验收的任务；未验收任务必须显式 `close --reason ... --abandon`。关闭事件写入 `task.md` 的“关闭”区段，保存状态、原因和时间。`reopen --reason` 追加恢复事件；验收、确认和验证仍按原摘要判断，阶段从最后一次恢复之后的事实重新计算。终态任务上的 `confirm`、`verify`、`accept` 直接阻塞。
 
 ## 6. 交付草稿
 
 `commitTypeForTaskType` 将任务类型映射到限定提交类型；`taskCommits` 读取 `base..HEAD` 的非合并主题。`branchNameIssue` 校验 `类型/任务编号[-描述]` 及任务编号前缀；`currentBranch` 在 main/master、detached HEAD 或无 Git 时跳过。
+
+提交主题固定为 `类型(模块): 中文摘要`，类型限 `feat/fix/docs/refactor/test/chore`，模块取规格模块名；PR/MR 标题沿用该格式并在末尾加 `[任务编号]`。格式问题只提示，不阻断技术自检。
 
 `draftPullRequest` 复用 `inspectFlow` 的 AC 覆盖状态，从任务范围的模块路径、“涉及模块”声明和全局用例来源按声明顺序推导模块，标题取首个主模块，无模块时省略括号。标题摘要依次取 `pr --summary`、任务元数据 `summary`、任务基线后最早的规范 feat/fix 提交摘要和任务标题。提交读取保持正序，正文生成器只接受五个固定二级标题；关联任务输出纯文本路径，验证结果以每条 AC 的摘要行加普通嵌套记录呈现，不使用编号圆点。Markdown 在标题后单列建议分支，JSON 同时返回 `body`、`branch` 和提交列表。分支描述依次读取 `pr --slug`、任务元数据 `slug`、当前分支匹配描述，并统一规范化为小写字母、数字和连字符。该模块没有网络依赖，文案对 PR/MR 中性。
 

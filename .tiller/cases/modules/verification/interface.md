@@ -58,7 +58,7 @@
 - 优先级：medium
 - 模块：verification
 - 关联 AC：无
-- 需求：`.tiller/specs/modules/verification/requirements.md#5-当前轻量实现约束2026-10-22`
+- 需求：`.tiller/specs/modules/verification/requirements.md#5-当前轻量验证边界2026-10-22`
 - 源码：`src/cases.ts`
 
 ### 前置条件
@@ -84,7 +84,7 @@
 - 优先级：medium
 - 模块：verification
 - 关联 AC：无
-- 需求：`.tiller/cases/index.md`, `.tiller/specs/modules/verification/requirements.md#5-当前轻量实现约束2026-10-22`
+- 需求：`.tiller/cases/index.md`, `.tiller/specs/modules/verification/requirements.md#5-当前轻量验证边界2026-10-22`
 - 源码：`.tiller/cases/index.md`, `src/cases.ts`
 
 ### 前置条件

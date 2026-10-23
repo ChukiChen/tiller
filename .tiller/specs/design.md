@@ -24,7 +24,7 @@
 
 ## 3. 默认工作流
 
-`start` 写入结构化需求（目标、范围、编号 AC），可用 `--requirement-file` 读取工程内非空文件；standard 必须声明 `--target` 并另写方案、取舍、影响与风险，同时记录类型、规模、范围、基线和开工前已有改动；small 缺省范围为 `.`。`confirm` 先校验必填段，再保存确认部分、确认人、时间、对象摘要和提交；原话可选。需求与设计分别摘要，因此改设计不会使需求确认失效。`verify` 只声明测试，由适配器构造精确匹配的 node:test 命令，在私有临时目录生成报告并读取；stdout/stderr 只写日志，不参与判定。记录实际命令、结果、证据、当前代码树和日志路径；报告缺失/损坏或匹配不唯一均为未核实。外部报告以 `--reported --command --result --reason` 登记，理由必填。`check` 汇总确认、AC 映射、执行/报告证据、范围、测试弱化、安全和未提交改动；`accept` 与此一致，外部报告仅在 `--allow-reported` 时放行。bugfix 的 `--expect-fail` 在基线临时工作树复用同一适配器和报告路径，要求具名测试失败，并要求当前代码有同一测试的已核实通过记录。`close` 只收尾已验收任务，未验收终止必须 `--abandon`；关闭或放弃记录原因和时间，`reopen` 追加恢复事实后重新推导阶段。
+唯一任务记录是 `.tiller/task/<id>/task.md`，元信息与 `## 需求`、`## 设计`、`## 确认`、`## 验证`、`## 自检` 等区段共同构成事实源。`start` 写入结构化需求（目标、范围、编号 AC），可用 `--requirement-file` 读取工程内非空文件，用重复 `--criterion` 声明验收条件；standard 必须声明 `--target` 并另写方案、取舍、影响与风险，同时记录类型、规模、范围、基线和开工前已有改动；small 缺省范围为 `.`。`confirm` 先校验必填段，再保存确认部分、确认人、时间、对象摘要和提交；确认人优先取 `--by`，原话可选。需求与设计分别摘要，因此改设计不会使需求确认失效。`verify` 只声明 `--test` 或 `--case`，由适配器构造精确匹配的 node:test 命令，在私有临时目录生成报告并读取；stdout/stderr 只写日志，不参与判定。记录实际命令、结果、证据、当前代码树和日志路径；报告缺失/损坏或匹配不唯一均为未核实。外部报告以 `--reported --command --result --reason` 登记，理由必填。`check` 汇总确认、AC 映射、执行/报告证据、范围、测试弱化、安全和未提交改动；`accept` 与此一致，外部报告仅在 `--allow-reported` 时放行。bugfix 的 `--expect-fail` 在基线临时工作树复用同一适配器和报告路径，要求具名测试失败，并要求当前代码有同一测试的已核实通过记录。`close` 只收尾已验收任务，未验收终止必须 `--abandon`；关闭或放弃记录原因和时间，`reopen` 追加恢复事实后重新推导阶段。
 
 已验收任务由 `evaluationContext` 固定到 acceptance 确认中的提交：树摘要、测试存在性、范围 diff 和测试弱化检查都读取该提交；未验收或验收对象已失效的任务仍读取工作区/HEAD。已验收任务若当时的核实状态、外部报告理由或测试引用不完整，仍按原记录失败。任务基线后没有 specs/context 回写时，`check` 只增加提示。
 
@@ -72,9 +72,9 @@
 
 ## 8. 初始化与升级
 
-`init` 只补缺失骨架，维护 `AGENTS.md` 区段、`.gitignore` 本机排除、`.tiller/index.md` 导航和平台对应的合并请求模板；已存在且冲突的入口拒绝覆盖。`project.json` 保存模式、可选平台、仓库映射和各受管文件的规范化摘要。
+`init` 只补缺失骨架，维护 `AGENTS.md` 区段、`.gitignore` 本机排除、`.tiller/index.md` 导航和平台对应的合并请求模板；已存在且冲突的入口拒绝覆盖。空工程骨架至少包含 `.tiller/specs/requirements.md`、`design.md`、`decisions.md`、`modules/README.md`、`.tiller/context/project.md`、`.tiller/cases/index.md`、`cases/modules/`、`cases/scenarios/`、`plans/` 和入口规则。`--platform github|gitlab|both` 选择模板，缺省 github；GitHub 使用 `.github/pull_request_template.md`，GitLab 使用 `.gitlab/merge_request_templates/Default.md`，both 同时生成。`project.json` 保存模式、可选平台、仓库映射和各受管文件的规范化摘要；平台切换需手动修改元信息并补齐模板。
 
-`upgrade` 读取当前或兼容上一资源契约，按记录摘要判断受管文件是否被用户修改。未修改文件按分发资源或固定区段重建；修改、缺失和异常区段只报告冲突。预览摘要绑定输入、期望结果和元信息；应用时在锁内重新预览并原子写入，成功后更新摘要与 `resourceVersion`。
+`upgrade --plan` 只读预览，`upgrade --apply <plan-id>` 应用；读取当前或兼容上一资源契约，按记录摘要判断受管文件是否被用户修改。未修改文件按分发资源或固定区段重建；修改、缺失和异常区段只报告冲突，并给出首个差异位置。预览摘要绑定输入、期望结果和元信息；应用时在锁内重新预览并原子写入，成功后更新摘要与 `resourceVersion`，保留 `verify` 等用户配置。事务失败保留恢复依据，可由 `recover` 恢复。
 
 ## 9. 错误与恢复
 
