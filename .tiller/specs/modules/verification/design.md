@@ -45,7 +45,7 @@
 
 已验收任务的“当前树”取对象摘要仍有效的 acceptance 确认中的提交：`git ls-tree` 列出范围，`git show` 读取文件摘要；测试存在性、范围 diff 和测试弱化也以该提交为端点。提交不可读时回退工作区并告警。未验收或验收失效的任务不固定端点，继续核对工作区/HEAD 和未提交改动。钉住提交不跳过执行证据、外部报告理由或 bugfix 证据检查。
 
-结构错误、缺失用例、待实现测试、缺失测试和错配是阻塞项；历史空 criteria、无 Git、未覆盖场景、提交或分支格式不合规是提示。
+结构错误、缺失用例、待实现测试、缺失测试和错配是阻塞项；历史空 criteria、无 Git、未覆盖场景、提交或分支格式不合规是提示。验证树变化时，检查结果与恢复阶段说明都明确标为“验证已过期”。
 
 测试运行由 `project.json` 的 `verify.runner` 选择已注册适配器，缺省为 node-test；`verify.prepare` 在测试前执行，参数数组为空或准备失败即验证失败。已注册名称还有 `junit-maven` 和 `junit-gradle`。选择顺序是：测试文件路径 → 唯一拥有该路径的已登记仓库 → 该仓库的 runner，缺项回退到根级 `verify`。工作区没有匹配或匹配长度相同的多个仓库时失败关闭；`mode: project` 且仓库为空时使用根配置。准备命令的 cwd 是选中的业务仓库根，私有报告仍在管理工程的 `.tiller/local/`。`--reported` 继续服务尚未适配的框架。
 
@@ -61,4 +61,4 @@ Maven 在业务仓库根执行 `mvn -Dsurefire.reportsDirectory=<相对私有目
 
 ## 5. 边界
 
-该模块不提交原始输出、自举工程、安装包和全文文件快照。`verify` 只接受 `--test` 或 `--case`；子进程输出只写 `.tiller/local/logs/`，默认不显示，`--verbose` 时同时转发；判定只读私有临时报告。`src/test-output.ts` 暴露 `TestRunner` 的构造命令与报告解析接口并注册适配器，`src/test-reporter.ts` 生成仅含测试事件和总结的 JSONL 报告。无法本机执行时使用 `verify --reported --command ... --result ... --reason`，`--allow-reported` 才放行；缺陷修复使用 `--expect-fail --test`。需要复查时查看 `task.md` 的实际命令和日志路径，并从 Git 或重跑取得事实。
+该模块不提交原始输出、自举工程、安装包和全文文件快照。`verify` 只接受 `--test` 或 `--case`；子进程输出只写 `.tiller/local/logs/`，默认不显示，`--verbose` 时同时转发；日志至少记录显示命令、开始与结束时间和退出码，判定只读私有临时报告。`src/test-output.ts` 暴露 `TestRunner` 的构造命令与报告解析接口并注册适配器，`src/test-reporter.ts` 生成仅含测试事件和总结的 JSONL 报告。无法本机执行时使用 `verify --reported --command ... --result ... --reason`，`--allow-reported` 才放行；缺陷修复使用 `--expect-fail --test`。需要复查时查看 `task.md` 的实际命令和日志路径，并从 Git 或重跑取得事实。

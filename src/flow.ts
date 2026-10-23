@@ -530,6 +530,64 @@ function renderStructuredRequirement(goal: string, scope: string[], criteria: Fl
 function emptyDesignTemplate(): string {
   return ['### 方案', '', '### 取舍', '', '### 影响与风险'].join('\n');
 }
+const PLACEHOLDER_LINE = /^(?:todo|tbd|tba|n\/a|na|待补充|待完善|待填写|待定|占位|暂无|无|\.{3}|…)$/iu;
+function markdownMeaningfulLines(value: string): string[] {
+  return value.split(/\r?\n/u).flatMap(raw => {
+    const line = raw.trim();
+    if (!line || line.startsWith('#') || /^<!--.*-->$/u.test(line) || /^(?:---+|\*\*\*+|___+)$/u.test(line)) return [];
+    const normalized = line
+      .replace(/^(?:[-*+]|\d+[.)])\s+/u, '')
+      .replace(/^\[[ xX]\]\s*/u, '')
+      .replace(/^>\s*/u, '')
+      .replace(/[*_`~]/gu, '')
+      .replace(/\s+/gu, ' ')
+      .replace(/[。.!！?？]+$/u, '')
+      .trim();
+    if (!normalized || PLACEHOLDER_LINE.test(normalized) || /^<[^<>]+>$/u.test(normalized)) return [];
+    return [normalized];
+  });
+}
+function taskDesignThinWarnings(task: FlowTask): string[] {
+  const structured = task.meta.format === 'structured' || /^###\s+(?:方案|取舍|影响与风险)\s*$/mu.test(task.design);
+  if (task.meta.size !== 'standard' || !structured) return [];
+  return (['方案', '取舍', '影响与风险'] as const)
+    .filter(field => markdownMeaningfulLines(subSectionBody(task.design, field)).length === 0)
+    .map(field => `任务设计“${field}”仅空白或占位：\`${task.path}\`。`);
+}
+async function decisionsThinWarning(root: string): Promise<string | null> {
+  const relative = '.tiller/specs/decisions.md';
+  const content = await readTextIfExists(root, relative);
+  if (content === null) return null;
+  const hasDecision = content.split(/^##\s+/mu).slice(1).some(chunk => {
+    const lineBreak = chunk.indexOf('\n');
+    return markdownMeaningfulLines(lineBreak < 0 ? '' : chunk.slice(lineBreak + 1)).length > 0;
+  });
+  return hasDecision ? null : `长期决定缺少有效决定条目：\`${relative}\` 仅包含标题或引导；请补充仍约束当前实现的取舍。`;
+}
+function changedModuleNames(changed: string[], library: CaseLibrary): string[] {
+  const modules = new Set<string>();
+  for (const relative of changed) {
+    const match = /^\.tiller\/(?:specs|cases)\/modules\/([^/]+)\//u.exec(relative);
+    if (match) modules.add(match[1]!);
+  }
+  for (const entry of library.cases) {
+    const references = [...entry.source, ...entry.tests.map(reference => reference.path)];
+    if (!references.some(reference => changed.some(relative => relative === reference || relative.startsWith(`${reference}/`)))) continue;
+    for (const module of entry.modules) modules.add(module);
+  }
+  return [...modules].sort();
+}
+async function moduleDesignThinWarnings(root: string, changed: string[], library: CaseLibrary): Promise<string[]> {
+  const warnings: string[] = [];
+  for (const module of changedModuleNames(changed, library)) {
+    const relative = `.tiller/specs/modules/${module}/design.md`;
+    const content = await readTextIfExists(root, relative);
+    if (content !== null && markdownMeaningfulLines(content).length === 0) {
+      warnings.push(`模块 design.md 仅有标题或占位，没有可执行设计：\`${relative}\`。`);
+    }
+  }
+  return warnings;
+}
 function requirementsSubject(task: Pick<FlowTask, 'meta' | 'requirement' | 'criteria'>): string {
   return sha(JSON.stringify({
     type: task.meta.type, size: task.meta.size, scope: task.meta.scope,
@@ -1032,7 +1090,7 @@ async function verificationProblem(
   contentCommit?: string,
 ): Promise<string | null> {
   if (run.result !== 'passed') return `${criterion} 最新验证结果为 ${run.result}。`;
-  if (run.tree !== currentTree) return `${criterion} 的验证已过期：范围内代码已变化。`;
+  if (run.tree !== currentTree) return `${criterion} 的验证已过期：记录时的代码树与当前工作树不同（范围内代码已变化）。`;
   if (!(await testExists(root, run.test, contentCommit))) return `${criterion} 的测试引用不存在：${run.test}`;
   if (run.legacyEvidence) return null;
   const missingReportReason = run.source === 'reported' && !run.reason;
@@ -1130,7 +1188,9 @@ async function evaluateCriterion(
       runValid = false;
       issues.push(`${criterion.id} 引用的全局用例不存在：${caseId}`);
     }
-    for (const entry of linked.values()) {
+    for (const caseId of latest.cases) {
+      const entry = linked.get(caseId) ?? library.cases.find(item => item.id === caseId);
+      if (!entry) continue;
       const testPath = fallbackTestReference(latest.test)?.path;
       const testChangedAfterAcceptance = historicalAccepted && contentCommit !== undefined && testPath !== undefined
         && await fileChangedSinceCommit(root, contentCommit, testPath);
@@ -1305,6 +1365,10 @@ async function evaluateFlow(root: string, id: string, task: FlowTask, options: F
     if (!inScope(relative, task.meta.scope)) changedOutsideScope.push(relative);
   }
   warnings.push(...regressionWarnings(library, changed ?? []));
+  warnings.push(...taskDesignThinWarnings(task));
+  const decisionsWarning = await decisionsThinWarning(root);
+  if (decisionsWarning) warnings.push(decisionsWarning);
+  warnings.push(...await moduleDesignThinWarnings(root, changed ?? task.meta.scope, library));
   if (changed !== null && !changed.some(relative => relative.startsWith('.tiller/specs/') || relative.startsWith('.tiller/context/'))) {
     warnings.push('未检测到任务基线后的 `.tiller/specs/` 或 `.tiller/context/` 回写；如本次形成长期有效结论，请同步；纯过程性变更可忽略。');
   }
@@ -1376,7 +1440,7 @@ function displayCommand(executable: string, args: string[]): string {
 async function runProcess(cwd: string, executable: string, args: string[], label: string, log: string[], verbose: boolean): Promise<ProcessRun> {
   const environment: NodeJS.ProcessEnv = { ...process.env, LC_ALL: 'C', FORCE_COLOR: '0' };
   delete environment.NODE_TEST_CONTEXT;
-  log.push(`\n$ ${label}\n`);
+  log.push(`\n[tiller] command: ${label}\n[tiller] started: ${new Date().toISOString()}\n`);
   return await new Promise<ProcessRun>((resolve, reject) => {
     let timedOut = false;
     const child = spawn(executable, args, { cwd, stdio: ['inherit', 'pipe', 'pipe'], env: environment });
@@ -1388,8 +1452,16 @@ async function runProcess(cwd: string, executable: string, args: string[], label
     child.stdout?.on('data', forward);
     child.stderr?.on('data', forward);
     const timer = setTimeout(() => { timedOut = true; child.kill('SIGTERM'); }, 30 * 60 * 1000);
-    child.once('error', error => { clearTimeout(timer); reject(error); });
-    child.once('close', code => { clearTimeout(timer); resolve({ exitCode: code, timedOut }); });
+    child.once('error', error => {
+      clearTimeout(timer);
+      log.push(`\n[tiller] error: ${error.message}\n[tiller] finished: ${new Date().toISOString()}\n`);
+      reject(error);
+    });
+    child.once('close', code => {
+      clearTimeout(timer);
+      log.push(`\n[tiller] exit: ${code === null ? 'none' : code}${timedOut ? ' (timeout)' : ''}\n[tiller] finished: ${new Date().toISOString()}\n`);
+      resolve({ exitCode: code, timedOut });
+    });
   });
 }
 

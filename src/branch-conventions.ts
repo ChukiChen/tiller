@@ -32,9 +32,14 @@ export function branchDescriptionForTask(branch: string, taskId: string): string
 export function branchNameIssue(branch: string, taskId?: string): string | null {
   if (!branch || branch === 'main' || branch === 'master') return null;
   const match = BRANCH.exec(branch);
-  if (!match) return `分支名应为“类型/任务编号[-简短描述]”，类型限 ${COMMIT_TYPES.join('/')}，仅用小写字母、数字和连字符`;
+  if (!match) {
+    const expected = `分支名应为“类型/任务编号[-简短描述]”，类型限 ${COMMIT_TYPES.join('/')}，仅用小写字母、数字和连字符`;
+    if (!taskId) return expected;
+    if (!branch.includes(taskId)) return `分支 ${branch} 未包含当前任务编号 ${taskId}；${expected}，当前任务建议“类型/${taskId}[-简短描述]”`;
+    return `${expected}，且应包含当前任务编号 ${taskId}（类型/${taskId}[-简短描述]）`;
+  }
   if (taskId && match[2] !== taskId && !(match[2]!.startsWith(`${taskId}-`) && DESCRIPTION.test(match[2]!.slice(taskId.length + 1)))) {
-    return `分支 ${branch} 中的任务编号与当前任务 ${taskId} 不符`;
+    return `分支 ${branch} 中的任务编号与当前任务 ${taskId} 不符，未包含当前任务编号 ${taskId}；应为“类型/${taskId}[-简短描述]”（格式：类型/任务编号[-简短描述]）`;
   }
   return null;
 }

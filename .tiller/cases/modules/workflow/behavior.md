@@ -823,3 +823,78 @@ verify 仍可执行；check 汇总过程卫生 issue 并阻断默认 accept
 ### 预期结果
 
 新增行为均有具名测试并通过全量验证
+
+## CASE-179 标准任务设计的空白或占位字段产生可定位提示
+
+- 类型：behavior
+- 优先级：medium
+- 模块：workflow
+- 关联 AC：20261023-flow-hardening-wave2#AC-1
+- 需求：`.tiller/specs/modules/workflow/requirements.md`
+- 源码：`src/flow.ts`, `test/flow-hardening.test.mjs`
+
+### 前置条件
+
+- 存在已确认的 standard 任务
+
+### 步骤
+
+1. 将设计字段改为空白或占位后运行 check
+
+### 输入
+
+- 空白设计与 TODO 占位设计
+
+### 预期结果
+
+check 对空白或占位的方案、取舍、影响与风险逐字段给出指向 task.md 的 warning，且不单独阻断
+
+## CASE-180 decisions 与模块设计空壳在 check 中可定位预警
+
+- 类型：behavior
+- 优先级：medium
+- 模块：workflow
+- 关联 AC：20261023-flow-hardening-wave2#AC-1
+- 需求：`.tiller/specs/modules/workflow/requirements.md`
+- 源码：`src/flow.ts`, `test/flow-hardening.test.mjs`
+
+### 前置条件
+
+- 工程包含 specs/decisions.md 和本任务涉及模块
+
+### 步骤
+
+1. 写入空壳 decisions 与模块 design 后运行 check
+
+### 输入
+
+- 仅标题和引导文字的两类规格文件
+
+### 预期结果
+
+decisions.md 无有效决定条目、任务涉及模块的 design.md 仅有标题时，check 分别给出带路径的 warning
+
+## CASE-185 流程硬化第二波用例与版本保持一致
+
+- 类型：behavior
+- 优先级：medium
+- 模块：workflow
+- 关联 AC：20261023-flow-hardening-wave2#AC-4
+- 需求：`.tiller/specs/modules/workflow/requirements.md`
+- 源码：`test/flow-hardening.test.mjs`, `package.json`, `.tiller/project.json`
+
+### 前置条件
+
+- 第二波实现和测试已完成
+
+### 步骤
+
+1. 扫描测试引用与版本字段
+
+### 输入
+
+- 测试目录、package.json 和 project.json
+
+### 预期结果
+
+CASE-179 至 CASE-185 均有具名测试引用，包与资源版本保持 0.5.0

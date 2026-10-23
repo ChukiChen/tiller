@@ -205,3 +205,52 @@ check 给出 specs 回写告警，但不新增阻断。
 
 每个测试使用所属仓库的运行器；准备步骤的工作目录是该仓库根；未登记路径拒绝执行；尚未适配的框架仍可提交带理由的外部结论
 
+## CASE-181 verify 日志记录命令、起止时间与退出码
+
+- 类型：behavior
+- 优先级：medium
+- 模块：verification
+- 关联 AC：20261023-flow-hardening-wave2#AC-2
+- 需求：`.tiller/specs/modules/verification/requirements.md`
+- 源码：`src/flow.ts`, `test/verification-integrity.test.mjs`
+
+### 前置条件
+
+- 已确认任务和可用 node-test 测试
+
+### 步骤
+
+1. 执行 verify 后读取记录的本机日志
+
+### 输入
+
+- 无 stdout/stderr 的成功测试
+
+### 预期结果
+
+日志不是单行命令，包含显示命令、开始与结束时间以及退出码
+
+## CASE-182 check 与 resume 明确报告验证已过期
+
+- 类型：behavior
+- 优先级：medium
+- 模块：verification
+- 关联 AC：20261023-flow-hardening-wave2#AC-2
+- 需求：`.tiller/specs/modules/verification/requirements.md`
+- 源码：`src/flow.ts`, `test/flow-hardening.test.mjs`
+
+### 前置条件
+
+- 任务已有通过的当前树验证
+
+### 步骤
+
+1. 修改范围内代码并分别运行 check 与 resume
+
+### 输入
+
+- 验证后发生变化的 src 文件
+
+### 预期结果
+
+范围内代码变化后，check issue 和 resume stageReason 均使用验证已过期类文案

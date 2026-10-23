@@ -567,3 +567,53 @@ release 逐项给出 pass/fail/na 并以未通过项决定退出状态；check �
 ### 预期结果
 
 startFlow 导出存在，旧 lite 模块不存在且源码不含 lite 标识
+
+## CASE-183 分支名缺少任务编号时 check 明确提示
+
+- 类型：interface
+- 优先级：medium
+- 模块：workflow
+- 关联 AC：20261023-flow-hardening-wave2#AC-3
+- 需求：`.tiller/specs/modules/workflow/requirements.md`
+- 源码：`src/branch-conventions.ts`, `test/flow-hardening.test.mjs`
+
+### 前置条件
+
+- 任务已在执行且当前分支不是 main/master
+
+### 步骤
+
+1. 切到不含任务编号的分支后运行 check
+
+### 输入
+
+- feat/flow-hardening 分支
+
+### 预期结果
+
+check warning 指出当前分支未包含当前任务编号，并给出类型/任务编号格式
+
+## CASE-184 usage、help 与 AGENTS 覆盖本波约定
+
+- 类型：interface
+- 优先级：medium
+- 模块：workflow
+- 关联 AC：20261023-flow-hardening-wave2#AC-3
+- 需求：`.tiller/specs/modules/workflow/requirements.md`
+- 源码：`src/cli.ts`, `resources/usage.md`, `AGENTS.md`
+
+### 前置条件
+
+- 分发资源与受管入口已同步
+
+### 步骤
+
+1. 读取 help、usage 与 AGENTS 入口区段
+
+### 输入
+
+- 当前 0.5.0 资源
+
+### 预期结果
+
+公开入口简述过薄检查、日志可读内容和分支命名约定
