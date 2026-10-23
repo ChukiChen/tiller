@@ -271,6 +271,24 @@
       "criteria": [
         "20261022-round14#AC-5"
       ]
+    },
+    {
+      "id": "CASE-092",
+      "title": "自主执行并记录实际测试命令",
+      "requirements": [
+        ".tiller/specs/modules/workflow/requirements.md"
+      ],
+      "modules": [
+        "workflow"
+      ],
+      "test_ref": "test/verification-integrity.test.mjs::verify constructs and executes node:test without a user command",
+      "source": [
+        "src/flow.ts",
+        "src/test-output.ts"
+      ],
+      "criteria": [
+        "20261022-round15#AC-1"
+      ]
     }
   ]
 }

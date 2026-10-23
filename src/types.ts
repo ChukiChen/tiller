@@ -1,6 +1,11 @@
 export type ProjectMode = 'project' | 'workspace';
 export type ProjectPlatform = 'github' | 'gitlab' | 'both';
 
+export interface VerifyConfig {
+  runner?: string;
+  prepare?: string[];
+}
+
 export interface ProjectMetadata {
   schemaVersion: 1;
   resourceVersion: string;
@@ -10,6 +15,7 @@ export interface ProjectMetadata {
   managedFiles: Record<string, string>;
   createdAt: string;
   platform?: ProjectPlatform;
+  verify?: VerifyConfig;
 }
 
 export interface ProjectInspection {

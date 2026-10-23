@@ -123,6 +123,24 @@
       "criteria": [
         "20261022-round12#AC-4"
       ]
+    },
+    {
+      "id": "CASE-095",
+      "title": "验证运行器与准备步骤配置",
+      "requirements": [
+        ".tiller/specs/modules/initialization/requirements.md"
+      ],
+      "modules": [
+        "initialization"
+      ],
+      "test_ref": "test/verification-integrity.test.mjs::verify runner configuration and prepare are enforced",
+      "source": [
+        "src/project-metadata.ts",
+        "src/flow.ts"
+      ],
+      "criteria": [
+        "20261022-round15#AC-4"
+      ]
     }
   ]
 }

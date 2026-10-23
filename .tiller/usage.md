@@ -10,8 +10,7 @@ node .tiller/run.cjs start <task-id> --title "修复退出码" --summary "失败
 node .tiller/run.cjs confirm <task-id> requirements [--by "确认人"]
 node .tiller/run.cjs case add <task-id> --module cli --kind interface --title "失败退出码" \
   --test test/cli.test.mjs::失败退出 --criterion AC-1 --source src/cli.ts
-node .tiller/run.cjs verify <task-id> --criterion AC-1 --test test/cli.test.mjs::失败退出 \
-  --run "node test/cli.test.mjs"
+node .tiller/run.cjs verify <task-id> --criterion AC-1 --test test/cli.test.mjs::失败退出
 node .tiller/run.cjs check <task-id>
 node .tiller/run.cjs accept <task-id> [--by "验收人"]
 node .tiller/run.cjs close <task-id> --reason "交付完成"
@@ -26,13 +25,13 @@ node .tiller/run.cjs pr <task-id> [--summary <中文摘要>] [--slug <英文描�
 
 ## 验证
 
-`verify` 只接受 `--run "<命令>"`，记录即执行；输出会转发并解析 node:test TAP/spec，确认 `文件::测试名` 出现且通过，仅写文件时要求测试存在且失败数为 0。无法核实会写入记录并由 `check` 阻断；其它框架可在 `src/test-output.ts` 的解析器注册表中扩展。
+`verify` 只声明测试，由 tiller 构造并执行精确匹配的 node:test 命令。结果只从 tiller 新建的私有临时报告读取，stdout/stderr 不参与判定；报告缺失或损坏、匹配 0 个或多个测试、失败或跳过都不能核实为通过。`--test` 也可只引用文件，此时运行整个文件并要求全部通过。旧 `--run` 已删除，使用时会提示新写法。
 
-引用具名测试时，命令输出必须包含 `ok N - <测试名>` 或 `✔ <测试名>`。可直接运行 `node test/<文件>.mjs`，或使用 `node --test-name-pattern=<名称> test/<文件>.mjs`；部分 Node 版本下 `node --test <文件>` 只输出文件级结果，不能证明具体具名测试已通过。
+默认只输出摘要；完整输出写入 `.tiller/local/logs/<任务编号>/run-<序号>.log`，`--verbose` 时同时显示。测试前准备由 `.tiller/project.json` 的 `verify.prepare` 参数数组配置，例如 `["npm","run","build"]`；准备失败即验证失败。`verify.runner` 当前支持 `node-test`；新增适配器需在 `src/test-output.ts` 实现 `TestRunner` 的构造与报告解析接口并注册。
 
 无法本机执行时使用 `--reported --command ... --result ... --reason "<理由>"`，理由必填。`check`/`accept` 默认阻断外部报告，确认事实后仅在 `--allow-reported` 时放行；`pr` 标明“未执行（外部报告）”。
 
-bugfix 任务先用 `verify --expect-fail --run "<命令>"` 在任务基线的临时 Git 工作树运行失败，再记录当前通过；缺少任一侧证据时 `check` 阻断。
+bugfix 任务先用 `verify --expect-fail --test "<文件::测试名>"` 在任务基线的临时 Git 工作树运行同一适配器并记录该测试失败，再记录当前通过；缺少任一侧证据时 `check` 阻断。
 
 `start --size standard` 必须至少提供一个 `--target`；small 缺省为 `.`。
 
@@ -54,11 +53,11 @@ node .tiller/run.cjs start <task-id> --plan batch --item P-1 --title "接入" \
 
 ## 规则
 
-- `verify` 记录用例、测试、命令、结果、核实状态、提交和代码树摘要；命令只从 `--run` 获取并实际执行。
+- `verify` 记录用例、测试、tiller 实际执行的命令、结果、核实状态、提交、代码树摘要和本机日志路径；原始输出只写 `.tiller/local/logs/`，不进版本库。
 - 外部报告必须写明理由并由 `--allow-reported` 显式放行；失败、未执行和未核实不能写成通过。
 - `check` 检查 AC→用例→测试→当前验证、范围、测试弱化、密钥和本机路径。
 - `accept` 只在 `check` 通过后保存；超大设计先用 plan 拆任务。
-- 单任务只有 `.tiller/task/<id>/task.md`；历史 `.tiller/work/` 只读。不保存全文快照和日志。
+- 单任务只有 `.tiller/task/<id>/task.md`；历史 `.tiller/work/` 只读。不提交全文快照或日志；详细输出仅在 `.tiller/local/logs/`。
 
 ## 接入与升级
 

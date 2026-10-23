@@ -78,7 +78,26 @@
         "src/flow.ts"
       ],
       "criteria": [
-        "20261022-round14#AC-4"
+        "20261022-round14#AC-4",
+        "20261022-round15#AC-3"
+      ]
+    },
+    {
+      "id": "CASE-093",
+      "title": "私有报告防止伪造通过",
+      "requirements": [
+        ".tiller/specs/modules/workflow/requirements.md"
+      ],
+      "modules": [
+        "workflow"
+      ],
+      "test_ref": "test/verification-integrity.test.mjs::verify ignores forged stdout and rejects missing, duplicate, failed and corrupt private reports",
+      "source": [
+        "src/flow.ts",
+        "src/test-output.ts"
+      ],
+      "criteria": [
+        "20261022-round15#AC-2"
       ]
     }
   ]

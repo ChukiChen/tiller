@@ -131,6 +131,24 @@
       "criteria": [
         "20261022-round14#AC-6"
       ]
+    },
+    {
+      "id": "CASE-097",
+      "title": "验证规则与新流程同步",
+      "requirements": [
+        ".tiller/specs/modules/standards/requirements.md"
+      ],
+      "modules": [
+        "standards"
+      ],
+      "test_ref": "test/rules.test.mjs::verification guidance requires self-run tests and private reports",
+      "source": [
+        "resources/rules/core.md",
+        "resources/usage.md"
+      ],
+      "criteria": [
+        "20261022-round15#AC-6"
+      ]
     }
   ]
 }

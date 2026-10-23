@@ -1,4 +1,4 @@
-import type { ProjectMetadata, ProjectPlatform } from './types.js';
+import type { ProjectMetadata, ProjectPlatform, VerifyConfig } from './types.js';
 import { validateRepositoryMappings } from './repository-paths.js';
 
 export const SCHEMA_VERSION = 1;
@@ -37,6 +37,27 @@ export function managedFilesForPlatform(platform: ProjectPlatform = 'github'): s
   return [...PREVIOUS_MANAGED, ...templatePathsForPlatform(platform)];
 }
 
+function normalizeVerify(value: unknown): VerifyConfig | undefined {
+  if (value === undefined) return undefined;
+  if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('工程 verify 配置必须是对象。');
+  const data = value as Record<string, unknown>;
+  const unknown = Object.keys(data).filter(key => key !== 'runner' && key !== 'prepare');
+  if (unknown.length) throw new Error(`工程 verify 配置含未知字段：${unknown.join('、')}。`);
+  if (data.runner !== undefined && data.runner !== 'node-test') {
+    throw new Error('工程 verify.runner 当前仅支持 node-test。');
+  }
+  if (data.prepare !== undefined) {
+    if (!Array.isArray(data.prepare) || !data.prepare.length
+      || data.prepare.some(item => typeof item !== 'string' || !item.trim() || item.length > 1000 || /[\x00-\x1f]/u.test(item))) {
+      throw new Error('工程 verify.prepare 必须是非空字符串参数数组。');
+    }
+  }
+  return {
+    ...(data.runner === undefined ? {} : { runner: 'node-test' as const }),
+    ...(data.prepare === undefined ? {} : { prepare: [...data.prepare as string[]] }),
+  };
+}
+
 export function parseMetadata(text: string): ProjectMetadata {
   let value: unknown;
   try { value = JSON.parse(text); } catch { throw new Error('工程元信息不是有效 JSON。'); }
@@ -50,6 +71,7 @@ export function parseMetadata(text: string): ProjectMetadata {
   if (!Array.isArray(data.repositories) || !data.repositories.every(item => typeof item === 'string')) {
     throw new Error('工程仓库清单格式无效。');
   }
+  normalizeVerify(data.verify);
   validateRepositoryMappings(data as unknown as ProjectMetadata);
   if (typeof data.createdAt !== 'string' || !Number.isFinite(Date.parse(data.createdAt))) throw new Error('工程创建时间无效。');
   if (!data.managedFiles || typeof data.managedFiles !== 'object' || Array.isArray(data.managedFiles)) {

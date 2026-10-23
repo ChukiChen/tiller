@@ -18,7 +18,7 @@ test('entry keeps the small and standard flows explicit and bounded', () => {
   assert.match(entry, /只修改本次范围内的文件/u);
   assert.match(entry, /同一问题两次修复失败即停止/u);
   assert.match(entry, /验收条件必须编号，先转为全局用例，再映射具体测试引用/u);
-  assert.match(entry, /不保存原始日志、全文快照、自举工程或安装包/u);
+  assert.match(entry, /不提交日志、全文快照、自举工程或安装包/u);
   assert.match(entry, /不得出现密钥、token、凭据或本机绝对路径/u);
   assert.match(entry, /变化时同步 `\.tiller\/context\/`/u);
   assert.doesNotMatch(entry, /advanced/u);
@@ -32,7 +32,7 @@ test('core and usage describe the only supported default-flow record path', () =
   assert.match(core, /轻量任务只维护 `\.tiller\/task\/<id>\/task\.md`/u);
   assert.match(core, /确认绑定 `task\.md` 的结构化正文/u);
   assert.match(core, /原话可选/u);
-  assert.match(core, /不保存全文快照.*自举工程或安装包/u);
+  assert.match(core, /不提交全文快照.*自举工程或安装包/u);
   assert.match(core, /同一问题连续两次失败即停止/u);
   assert.match(core, /变化需同步 `\.tiller\/context\/`/u);
   assert.match(core, /交付前逐条核对 AC、diff 边界、测试弱化和记录安全/u);
@@ -49,7 +49,7 @@ test('core and usage describe the only supported default-flow record path', () =
   assert.match(usage, /`--quote` 可选/u);
   assert.match(usage, /`--by` 默认取 `git config user\.name`/u);
   assert.match(usage, /--abandon/u);
-  assert.match(usage, /不保存全文快照和日志/u);
+  assert.match(usage, /不提交全文快照或日志/u);
   assert.match(usage, /当前及上一资源契约/u);
   assert.doesNotMatch(usage, /advanced|上一版本到当前版本/u);
   assert.match(usage, /类型\(模块\): 中文摘要/u);
@@ -96,17 +96,17 @@ test('restored guidance keeps complete commands and explicit boundaries', () => 
 
 test('verification guidance requires execution, reporting reasons and failure-first evidence', () => {
   const usage = read('usage.md');
-  assert.match(usage, /--run "<命令>"/u);
-  assert.match(usage, /记录即执行/u);
+  assert.match(usage, /只声明测试/u);
+  assert.match(usage, /私有临时报告/u);
+  assert.match(usage, /--verbose/u);
   assert.match(usage, /--reported --command .*--result .*--reason/u);
   assert.match(usage, /--allow-reported/u);
   assert.match(usage, /--expect-fail/u);
   assert.match(usage, /基线.*工作树/u);
-  assert.match(usage, /node:test TAP.*spec/u);
-  assert.doesNotMatch(usage, /--command[^\n]*--run/u);
+  assert.match(usage, /--run.*已删除/u);
 
   const core = read('rules/core.md');
-  assert.match(core, /verify.*实际执行|记录即执行/u);
+  assert.match(core, /verify.*自主执行|tiller 自主执行/u);
   assert.match(core, /外部报告.*理由/u);
   assert.match(core, /失败先行/u);
   assert.match(core, /standard 任务.*--target/u);
@@ -116,9 +116,28 @@ test('verification guidance requires execution, reporting reasons and failure-fi
   assert.match(delivery, /--allow-reported/u);
 
   const readme = readFileSync(join(repository, 'README.md'), 'utf8');
-  assert.match(readme, /--run/u);
+  assert.match(readme, /私有.*报告/u);
   assert.match(readme, /--reported/u);
   assert.match(readme, /失败先行/u);
+});
+
+test('verification guidance requires self-run tests and private reports', () => {
+  const usage = read('usage.md');
+  assert.match(usage, /只声明测试.*tiller 构造并执行/u);
+  assert.match(usage, /stdout\/stderr 不参与判定/u);
+  assert.match(usage, /verify\.prepare/u);
+  assert.match(usage, /verify\.runner/u);
+  assert.match(usage, /\.tiller\/local\/logs\//u);
+  assert.match(usage, /报告缺失或损坏、匹配 0 个或多个测试、失败或跳过/u);
+
+  const verification = read('rules/quality/verification.md');
+  assert.match(verification, /完整名称.*精确匹配.*仅命中一个通过事件/u);
+  assert.match(verification, /TestRunner/u);
+  assert.match(verification, /verify\.prepare/u);
+
+  const core = read('rules/core.md');
+  assert.match(core, /私有报告/u);
+  assert.match(core, /stdout\/stderr 不参与判定/u);
 });
 
 test('initialization preserves the guidance reading chain and valid links', t => {
@@ -150,7 +169,7 @@ test('task records use Git and one task.md rather than snapshots or evidence pac
   const core = read('rules/core.md');
   assert.match(core, /确认前校验必填段/u);
   assert.match(core, /需求和设计独立摘要/u);
-  assert.match(core, /验证记录用例、命令、结果、提交和代码树摘要/u);
+  assert.match(core, /验证记录用例、tiller 实际执行的命令、结果、提交、代码树摘要和本机日志路径/u);
   assert.match(core, /从 Git 取回或重跑/u);
   assert.doesNotMatch(core, /`work\.md`/u);
   assert.doesNotMatch(core, /record\.json.*必须|reviews\/|证据包/u);
@@ -211,13 +230,13 @@ test('global cases use module kinds and scenarios with resolvable named tests', 
   const scenarios = readdirSync(join(directory, 'scenarios')).filter(name => name.endsWith('.json')).sort()
     .flatMap(name => JSON.parse(readFileSync(join(directory, 'scenarios', name), 'utf8')).scenarios);
   cases.push(...scenarios.map(item => ({ ...item, file: `scenarios/${item.id}` })));
-  assert.equal(cases.length, 91);
-  assert.deepEqual(cases.map(item => item.id).sort(), Array.from({ length: 91 }, (_, index) => `CASE-${String(index + 1).padStart(3, '0')}`));
+  assert.equal(cases.length, 97);
+  assert.deepEqual(cases.map(item => item.id).sort(), Array.from({ length: 97 }, (_, index) => `CASE-${String(index + 1).padStart(3, '0')}`));
   assert.deepEqual(counts, {
-    initialization: { behavior: 7, interface: 0, performance: 11, security: 0 },
-    standards: { behavior: 7, interface: 0, performance: 0, security: 0 },
+    initialization: { behavior: 8, interface: 0, performance: 11, security: 0 },
+    standards: { behavior: 8, interface: 0, performance: 0, security: 0 },
     verification: { behavior: 4, interface: 5, performance: 15, security: 0 },
-    workflow: { behavior: 19, interface: 16, performance: 0, security: 5 },
+    workflow: { behavior: 21, interface: 17, performance: 0, security: 6 },
   });
   for (const item of scenarios) {
     assert.ok(item.modules.length > 0 && item.modules.every(module => specs.includes(module)), `${item.id}: modules`);

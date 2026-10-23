@@ -78,8 +78,7 @@ test('pr draft derives title, five sections and current AC state', async t => {
     '--title', 'PR 草稿结构', '--test', 'test/workflow.test.mjs::workflow behavior', '--criterion', 'AC-1',
     '--source', 'src/workflow.ts'));
   assert.equal(added.id, 'CASE-001');
-  success(cli(root, 'verify', id, '--criterion', 'AC-1', '--test', 'test/workflow.test.mjs::workflow behavior',
-    '--run', 'node test/workflow.test.mjs'));
+  success(cli(root, 'verify', id, '--criterion', 'AC-1', '--test', 'test/workflow.test.mjs::workflow behavior'));
   git(root, 'add', '.');
   git(root, 'commit', '--quiet', '-m', 'feat(workflow): 生成固定五段 PR 草稿');
   git(root, 'checkout', '--quiet', '-b', `feat/${id}-pr-draft`);
@@ -126,8 +125,7 @@ test('check warns about nonconforming commit subjects and skips merge subjects',
   success(cli(root, 'confirm', id, 'requirements', '--by', 'Tiller Test'));
   success(cli(root, 'case', 'add', id, '--module', 'workflow', '--kind', 'behavior', '--title', '提交信息检查',
     '--test', 'test/workflow.test.mjs::workflow behavior', '--criterion', 'AC-1', '--source', 'src/workflow.ts'));
-  success(cli(root, 'verify', id, '--criterion', 'AC-1', '--test', 'test/workflow.test.mjs::workflow behavior',
-    '--run', 'node test/workflow.test.mjs'));
+  success(cli(root, 'verify', id, '--criterion', 'AC-1', '--test', 'test/workflow.test.mjs::workflow behavior'));
   git(root, 'add', '.');
   git(root, 'commit', '--quiet', '-m', 'update stuff');
   const branch = git(root, 'branch', '--show-current').trim();
@@ -200,19 +198,17 @@ test('pr verification section lists every recorded run in order', async t => {
   const added = success(cli(root, 'case', 'add', id, '--module', 'workflow', '--kind', 'behavior',
     '--title', '全部验证记录', '--test', 'test/workflow.test.mjs::workflow behavior', '--criterion', 'AC-1',
     '--source', 'src/workflow.ts'));
-  const first = 'node test/workflow.test.mjs';
-  const second = 'node --test-name-pattern="workflow behavior" test/workflow.test.mjs';
-  success(cli(root, 'verify', id, '--criterion', 'AC-1', '--test', 'test/workflow.test.mjs::workflow behavior',
-    '--run', first));
-  success(cli(root, 'verify', id, '--criterion', 'AC-1', '--test', 'test/workflow.test.mjs::workflow behavior',
-    '--run', second));
+  const firstRun = success(cli(root, 'verify', id, '--criterion', 'AC-1', '--test', 'test/workflow.test.mjs::workflow behavior'));
+  const secondRun = success(cli(root, 'verify', id, '--criterion', 'AC-1', '--test', 'test/workflow.test.mjs::workflow behavior'));
+  const first = firstRun.entries[0].command;
+  const second = secondRun.entries[0].command;
 
   const draft = success(cli(root, 'pr', id));
   assert.ok(draft.body.indexOf(`命令：\`${first}\``) >= 0, draft.body);
   assert.ok(draft.body.indexOf(`命令：\`${second}\``) > draft.body.indexOf(`命令：\`${first}\``), draft.body);
   assert.match(draft.body, new RegExp(`${added.id}`, 'u'));
-  assert.match(draft.body, /^  - 测试：`test\/workflow\.test\.mjs::workflow behavior`；命令：`node test\/workflow\.test\.mjs`；结果：passed；提交：`[a-f0-9]{40}`；用例：/mu);
-  assert.match(draft.body, /^  - 测试：`test\/workflow\.test\.mjs::workflow behavior`；命令：`node --test-name-pattern="workflow behavior" test\/workflow\.test\.mjs`；结果：passed；提交：`[a-f0-9]{40}`；用例：/mu);
+  assert.ok(draft.body.includes(`  - 测试：\`test/workflow.test.mjs::workflow behavior\`；命令：\`${first}\`；结果：passed；提交：\`${firstRun.entries[0].commit}\`；用例：${added.id}`), draft.body);
+  assert.ok(draft.body.includes(`  - 测试：\`test/workflow.test.mjs::workflow behavior\`；命令：\`${second}\`；结果：passed；提交：\`${secondRun.entries[0].commit}\`；用例：${added.id}`), draft.body);
   assert.doesNotMatch(draft.body, /^\s*- \d+\./mu);
 });
 
@@ -285,13 +281,12 @@ test('pr verification section uses plain nested records without numbered bullets
   const added = success(cli(root, 'case', 'add', id, '--module', 'workflow', '--kind', 'behavior',
     '--title', '验证格式', '--test', 'test/workflow.test.mjs::workflow behavior', '--criterion', 'AC-1',
     '--source', 'src/workflow.ts'));
-  const command = 'node test/workflow.test.mjs';
-  success(cli(root, 'verify', id, '--criterion', 'AC-1', '--test', 'test/workflow.test.mjs::workflow behavior',
-    '--run', command));
+  const verified = success(cli(root, 'verify', id, '--criterion', 'AC-1', '--test', 'test/workflow.test.mjs::workflow behavior'));
+  const command = verified.entries[0].command;
 
   const draft = success(cli(root, 'pr', id));
   assert.match(draft.body, /^- AC-1：每条记录单独一行（当前有效）$/mu);
-  assert.match(draft.body, new RegExp(`^  - 测试：\`test/workflow\\.test\\.mjs::workflow behavior\`；命令：\`${command}\`；结果：passed；提交：\`[a-f0-9]{40}\`；用例：${added.id}$`, 'mu'));
+  assert.ok(draft.body.includes(`  - 测试：\`test/workflow.test.mjs::workflow behavior\`；命令：\`${command}\`；结果：passed；提交：\`${verified.entries[0].commit}\`；用例：${added.id}`), draft.body);
   assert.doesNotMatch(draft.body, /^\s*- \d+\./mu);
 });
 

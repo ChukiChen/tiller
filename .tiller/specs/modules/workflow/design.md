@@ -20,7 +20,7 @@
 
 ## 3. 验证
 
-`verify` 只接受 AC、测试引用和 `--run "<命令>"`；记录的命令就是实际执行的命令，退出码决定 passed/failed，测试输出决定证据是否已核实。node:test TAP/spec 解析器由 `src/test-output.ts` 注册，按 `文件::测试名` 核实具名测试出现并通过；仅引用文件时要求测试存在且失败数为 0。无法解析或未命中的执行记录标记 `unverified`，由 `check` 阻断。历史记录没有核实字段时保持旧解析路径，不施加新证据检查。
+`verify` 只接受 AC 与测试引用；tiller 通过 `src/test-output.ts` 的适配器构造精确匹配的 node:test 命令，并将自带报告器写入私有临时目录。退出码与私有报告共同决定 passed/failed，stdout/stderr 只进日志。报告按文件与完整名称路径精确匹配恰好一个测试，且结果为通过、无失败事件才标记 verified；仅引用文件时要求全部通过。报告缺失/损坏、0/多个匹配、失败或跳过均为 unverified，由 `check` 阻断。`verify.prepare` 先于测试执行，失败即验证失败；`verify.runner` 选择已注册适配器。历史记录没有核实字段时保持旧解析路径，不施加新证据检查。
 
 外部报告使用 `--reported --command --result --reason`，理由必填并标记 `not-run`；`check`/`accept` 默认阻断，只有 `--allow-reported` 放行，`pr` 在验证结果中标明未执行及理由。bugfix 的 `--expect-fail` 在任务基线提交的临时 Git 工作树运行当前测试文件，要求具名测试失败并记录基线提交；`check` 还要求当前代码存在同一测试的已核实通过记录。工作树在成功或异常时都清理。
 
