@@ -69,10 +69,290 @@
 - 对象摘要：e57bbe0119cf11e1289c4afa1ba3aaf757b3223e7686a823d43c4bfbe007b038
 - 时间：2026-10-23T12:02:45.107Z
 
+### acceptance
+- 确认部分：交付验收
+- 对象：当前交付（需求、设计、验证与提交）
+- 确认人：boon yu
+- 用户原话：继续
+- 原话用途：可选附注，不替代已写明的正文
+- 提交：1bcfe9a1856dd91b202d4de4f103b2e4ce7339ce
+- 对象摘要：fcd00f27a79d6e63a7b5b99a20f6946edfed88ec9ab1c2157dc71308db18d210
+- 时间：2026-10-23T13:48:09.809Z
+
 ## 验证
 
-尚无验证。
+### run-1
+- 条件：AC-1
+- 测试：test/flow-hardening.test.mjs::CASE-174 start warns on a missing task date prefix without rewriting it
+- 用例：CASE-174
+- 命令：node '--test-name-pattern=^CASE-174 start warns on a missing task date prefix without rewriting it$' --test-reporter=./.tiller/local/verify-7Yg2wV/reporter.mjs --test-reporter-destination=.tiller/local/verify-7Yg2wV/report.jsonl test/flow-hardening.test.mjs
+- 结果：passed
+- 退出码：0
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/logs/20261023-flow-hardening-wave1/run-1.log
+- 提交：89d58d9a32bcf054542057196bf7408dfca41699
+- 代码树摘要：c60662784675c640992617f3016272af81eaea218820f569c064b7c1ce71a37a
+- 时间：2026-10-23T13:46:56.879Z
+
+### run-2
+- 条件：AC-2
+- 测试：test/flow-hardening.test.mjs::CASE-175 standard check flags verification recorded before design confirmation
+- 用例：CASE-175
+- 命令：node '--test-name-pattern=^CASE-175 standard check flags verification recorded before design confirmation$' --test-reporter=./.tiller/local/verify-jLzZ8z/reporter.mjs --test-reporter-destination=.tiller/local/verify-jLzZ8z/report.jsonl test/flow-hardening.test.mjs
+- 结果：passed
+- 退出码：0
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/logs/20261023-flow-hardening-wave1/run-2.log
+- 提交：89d58d9a32bcf054542057196bf7408dfca41699
+- 代码树摘要：c60662784675c640992617f3016272af81eaea218820f569c064b7c1ce71a37a
+- 时间：2026-10-23T13:46:57.744Z
+
+### run-3
+- 条件：AC-2
+- 测试：test/flow-hardening.test.mjs::CASE-175 confirmations expose uncommitted business changes but ignore tiller metadata
+- 用例：CASE-175
+- 命令：node '--test-name-pattern=^CASE-175 confirmations expose uncommitted business changes but ignore tiller metadata$' --test-reporter=./.tiller/local/verify-8DmZr6/reporter.mjs --test-reporter-destination=.tiller/local/verify-8DmZr6/report.jsonl test/flow-hardening.test.mjs
+- 结果：passed
+- 退出码：0
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/logs/20261023-flow-hardening-wave1/run-3.log
+- 提交：89d58d9a32bcf054542057196bf7408dfca41699
+- 代码树摘要：c60662784675c640992617f3016272af81eaea218820f569c064b7c1ce71a37a
+- 时间：2026-10-23T13:46:57.744Z
+
+### run-4
+- 条件：AC-3
+- 测试：test/flow-hardening.test.mjs::CASE-176 ${runner} is detected for init and case skeletons
+- 用例：CASE-176
+- 命令：node '--test-name-pattern=^CASE-176 \$\{runner\} is detected for init and case skeletons$' --test-reporter=./.tiller/local/verify-gbGM4K/reporter.mjs --test-reporter-destination=.tiller/local/verify-gbGM4K/report.jsonl test/flow-hardening.test.mjs
+- 结果：passed
+- 退出码：0
+- 来源：executed
+- 核实：未核实
+- 日志：.tiller/local/logs/20261023-flow-hardening-wave1/run-4.log
+- 提交：89d58d9a32bcf054542057196bf7408dfca41699
+- 代码树摘要：c60662784675c640992617f3016272af81eaea218820f569c064b7c1ce71a37a
+- 时间：2026-10-23T13:47:00.380Z
+
+### run-5
+- 条件：AC-4
+- 测试：test/flow-hardening.test.mjs::CASE-177 untracked managed entries are visible in check and block release
+- 用例：CASE-177
+- 命令：node '--test-name-pattern=^CASE-177 untracked managed entries are visible in check and block release$' --test-reporter=./.tiller/local/verify-tSPGRQ/reporter.mjs --test-reporter-destination=.tiller/local/verify-tSPGRQ/report.jsonl test/flow-hardening.test.mjs
+- 结果：passed
+- 退出码：0
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/logs/20261023-flow-hardening-wave1/run-5.log
+- 提交：89d58d9a32bcf054542057196bf7408dfca41699
+- 代码树摘要：c60662784675c640992617f3016272af81eaea218820f569c064b7c1ce71a37a
+- 时间：2026-10-23T13:47:00.824Z
+
+### run-6
+- 条件：AC-5
+- 测试：test/flow-hardening.test.mjs::CASE-178 hardening regression names and version stay linked at 0.5.0
+- 用例：CASE-178
+- 命令：node '--test-name-pattern=^CASE-178 hardening regression names and version stay linked at 0\.5\.0$' --test-reporter=./.tiller/local/verify-JGUDoh/reporter.mjs --test-reporter-destination=.tiller/local/verify-JGUDoh/report.jsonl test/flow-hardening.test.mjs
+- 结果：passed
+- 退出码：0
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/logs/20261023-flow-hardening-wave1/run-6.log
+- 提交：89d58d9a32bcf054542057196bf7408dfca41699
+- 代码树摘要：c60662784675c640992617f3016272af81eaea218820f569c064b7c1ce71a37a
+- 时间：2026-10-23T13:47:02.049Z
+
+### run-7
+- 条件：AC-3
+- 测试：test/flow-hardening.test.mjs::CASE-176 junit-maven is detected for init and case skeletons
+- 用例：无
+- 命令：node '--test-name-pattern=^CASE-176 junit-maven is detected for init and case skeletons$' --test-reporter=./.tiller/local/verify-XLPq06/reporter.mjs --test-reporter-destination=.tiller/local/verify-XLPq06/report.jsonl test/flow-hardening.test.mjs
+- 结果：passed
+- 退出码：0
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/logs/20261023-flow-hardening-wave1/run-7.log
+- 提交：89d58d9a32bcf054542057196bf7408dfca41699
+- 代码树摘要：c60662784675c640992617f3016272af81eaea218820f569c064b7c1ce71a37a
+- 时间：2026-10-23T13:47:16.425Z
+
+### run-8
+- 条件：AC-3
+- 测试：test/flow-hardening.test.mjs::CASE-176 junit-gradle is detected for init and case skeletons
+- 用例：无
+- 命令：node '--test-name-pattern=^CASE-176 junit-gradle is detected for init and case skeletons$' --test-reporter=./.tiller/local/verify-68B73K/reporter.mjs --test-reporter-destination=.tiller/local/verify-68B73K/report.jsonl test/flow-hardening.test.mjs
+- 结果：passed
+- 退出码：0
+- 来源：executed
+- 核实：未核实
+- 日志：.tiller/local/logs/20261023-flow-hardening-wave1/run-8.log
+- 提交：89d58d9a32bcf054542057196bf7408dfca41699
+- 代码树摘要：c60662784675c640992617f3016272af81eaea218820f569c064b7c1ce71a37a
+- 时间：2026-10-23T13:47:17.492Z
+
+### run-9
+- 条件：AC-3
+- 测试：test/flow-hardening.test.mjs::CASE-176 node-test is detected for init and case skeletons
+- 用例：无
+- 命令：node '--test-name-pattern=^CASE-176 node-test is detected for init and case skeletons$' --test-reporter=./.tiller/local/verify-7vieWC/reporter.mjs --test-reporter-destination=.tiller/local/verify-7vieWC/report.jsonl test/flow-hardening.test.mjs
+- 结果：passed
+- 退出码：0
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/logs/20261023-flow-hardening-wave1/run-9.log
+- 提交：89d58d9a32bcf054542057196bf7408dfca41699
+- 代码树摘要：c60662784675c640992617f3016272af81eaea218820f569c064b7c1ce71a37a
+- 时间：2026-10-23T13:47:19.096Z
+
+### run-10
+- 条件：AC-1
+- 测试：test/flow-hardening.test.mjs::CASE-174 start warns on a missing task date prefix without rewriting it
+- 用例：CASE-174
+- 命令：node '--test-name-pattern=^CASE-174 start warns on a missing task date prefix without rewriting it$' --test-reporter=./.tiller/local/verify-ejGx02/reporter.mjs --test-reporter-destination=.tiller/local/verify-ejGx02/report.jsonl test/flow-hardening.test.mjs
+- 结果：passed
+- 退出码：0
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/logs/20261023-flow-hardening-wave1/run-10.log
+- 提交：1bcfe9a1856dd91b202d4de4f103b2e4ce7339ce
+- 代码树摘要：84dc9b221d90d6e5e2250abf45e0a9e8ad6df632e69d235b6b8caec6087aeeb0
+- 时间：2026-10-23T13:47:55.504Z
+
+### run-11
+- 条件：AC-2
+- 测试：test/flow-hardening.test.mjs::CASE-175 standard check flags verification recorded before design confirmation
+- 用例：CASE-175
+- 命令：node '--test-name-pattern=^CASE-175 standard check flags verification recorded before design confirmation$' --test-reporter=./.tiller/local/verify-1kAznS/reporter.mjs --test-reporter-destination=.tiller/local/verify-1kAznS/report.jsonl test/flow-hardening.test.mjs
+- 结果：passed
+- 退出码：0
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/logs/20261023-flow-hardening-wave1/run-11.log
+- 提交：1bcfe9a1856dd91b202d4de4f103b2e4ce7339ce
+- 代码树摘要：84dc9b221d90d6e5e2250abf45e0a9e8ad6df632e69d235b6b8caec6087aeeb0
+- 时间：2026-10-23T13:47:56.378Z
+
+### run-12
+- 条件：AC-2
+- 测试：test/flow-hardening.test.mjs::CASE-175 confirmations expose uncommitted business changes but ignore tiller metadata
+- 用例：CASE-175
+- 命令：node '--test-name-pattern=^CASE-175 confirmations expose uncommitted business changes but ignore tiller metadata$' --test-reporter=./.tiller/local/verify-NlPiVs/reporter.mjs --test-reporter-destination=.tiller/local/verify-NlPiVs/report.jsonl test/flow-hardening.test.mjs
+- 结果：passed
+- 退出码：0
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/logs/20261023-flow-hardening-wave1/run-12.log
+- 提交：1bcfe9a1856dd91b202d4de4f103b2e4ce7339ce
+- 代码树摘要：84dc9b221d90d6e5e2250abf45e0a9e8ad6df632e69d235b6b8caec6087aeeb0
+- 时间：2026-10-23T13:47:56.378Z
+
+### run-13
+- 条件：AC-3
+- 测试：test/flow-hardening.test.mjs::CASE-176 pom detects junit-maven for init and case skeletons
+- 用例：CASE-176
+- 命令：node '--test-name-pattern=^CASE-176 pom detects junit-maven for init and case skeletons$' --test-reporter=./.tiller/local/verify-mdPBON/reporter.mjs --test-reporter-destination=.tiller/local/verify-mdPBON/report.jsonl test/flow-hardening.test.mjs
+- 结果：passed
+- 退出码：0
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/logs/20261023-flow-hardening-wave1/run-13.log
+- 提交：1bcfe9a1856dd91b202d4de4f103b2e4ce7339ce
+- 代码树摘要：84dc9b221d90d6e5e2250abf45e0a9e8ad6df632e69d235b6b8caec6087aeeb0
+- 时间：2026-10-23T13:47:59.046Z
+
+### run-14
+- 条件：AC-3
+- 测试：test/flow-hardening.test.mjs::CASE-176 gradle detects junit-gradle for init and case skeletons
+- 用例：CASE-176
+- 命令：node '--test-name-pattern=^CASE-176 gradle detects junit-gradle for init and case skeletons$' --test-reporter=./.tiller/local/verify-4hS6o6/reporter.mjs --test-reporter-destination=.tiller/local/verify-4hS6o6/report.jsonl test/flow-hardening.test.mjs
+- 结果：passed
+- 退出码：0
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/logs/20261023-flow-hardening-wave1/run-14.log
+- 提交：1bcfe9a1856dd91b202d4de4f103b2e4ce7339ce
+- 代码树摘要：84dc9b221d90d6e5e2250abf45e0a9e8ad6df632e69d235b6b8caec6087aeeb0
+- 时间：2026-10-23T13:47:59.046Z
+
+### run-15
+- 条件：AC-3
+- 测试：test/flow-hardening.test.mjs::CASE-176 gradle-kts detects junit-gradle for init and case skeletons
+- 用例：CASE-176
+- 命令：node '--test-name-pattern=^CASE-176 gradle-kts detects junit-gradle for init and case skeletons$' --test-reporter=./.tiller/local/verify-tUankY/reporter.mjs --test-reporter-destination=.tiller/local/verify-tUankY/report.jsonl test/flow-hardening.test.mjs
+- 结果：passed
+- 退出码：0
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/logs/20261023-flow-hardening-wave1/run-15.log
+- 提交：1bcfe9a1856dd91b202d4de4f103b2e4ce7339ce
+- 代码树摘要：84dc9b221d90d6e5e2250abf45e0a9e8ad6df632e69d235b6b8caec6087aeeb0
+- 时间：2026-10-23T13:47:59.046Z
+
+### run-16
+- 条件：AC-3
+- 测试：test/flow-hardening.test.mjs::CASE-176 node detects node-test for init and case skeletons
+- 用例：CASE-176
+- 命令：node '--test-name-pattern=^CASE-176 node detects node-test for init and case skeletons$' --test-reporter=./.tiller/local/verify-RYts2i/reporter.mjs --test-reporter-destination=.tiller/local/verify-RYts2i/report.jsonl test/flow-hardening.test.mjs
+- 结果：passed
+- 退出码：0
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/logs/20261023-flow-hardening-wave1/run-16.log
+- 提交：1bcfe9a1856dd91b202d4de4f103b2e4ce7339ce
+- 代码树摘要：84dc9b221d90d6e5e2250abf45e0a9e8ad6df632e69d235b6b8caec6087aeeb0
+- 时间：2026-10-23T13:47:59.046Z
+
+### run-17
+- 条件：AC-4
+- 测试：test/flow-hardening.test.mjs::CASE-177 untracked managed entries are visible in check and block release
+- 用例：CASE-177
+- 命令：node '--test-name-pattern=^CASE-177 untracked managed entries are visible in check and block release$' --test-reporter=./.tiller/local/verify-OPOVCe/reporter.mjs --test-reporter-destination=.tiller/local/verify-OPOVCe/report.jsonl test/flow-hardening.test.mjs
+- 结果：passed
+- 退出码：0
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/logs/20261023-flow-hardening-wave1/run-17.log
+- 提交：1bcfe9a1856dd91b202d4de4f103b2e4ce7339ce
+- 代码树摘要：84dc9b221d90d6e5e2250abf45e0a9e8ad6df632e69d235b6b8caec6087aeeb0
+- 时间：2026-10-23T13:48:03.286Z
+
+### run-18
+- 条件：AC-5
+- 测试：test/flow-hardening.test.mjs::CASE-178 hardening regression names and version stay linked at 0.5.0
+- 用例：CASE-178
+- 命令：node '--test-name-pattern=^CASE-178 hardening regression names and version stay linked at 0\.5\.0$' --test-reporter=./.tiller/local/verify-yznniq/reporter.mjs --test-reporter-destination=.tiller/local/verify-yznniq/report.jsonl test/flow-hardening.test.mjs
+- 结果：passed
+- 退出码：0
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/logs/20261023-flow-hardening-wave1/run-18.log
+- 提交：1bcfe9a1856dd91b202d4de4f103b2e4ce7339ce
+- 代码树摘要：84dc9b221d90d6e5e2250abf45e0a9e8ad6df632e69d235b6b8caec6087aeeb0
+- 时间：2026-10-23T13:48:04.738Z
 
 ## 自检
 
-交付前运行 check；验收后运行 accept。
+- [x] 需求确认有效
+- [x] 设计确认有效
+- [x] 验收条件均有当前通过且绑定全局用例的测试引用
+- [x] 每条验收条件均映射到本次验证引用的全局用例
+- [x] 验收条件与用例来源 criteria 相互指向或由本任务新增/修改
+- [x] 验证命令已执行且测试输出已核实
+- [x] 全局用例结构与引用有效
+- [x] 改动未超出范围
+- [x] 未弱化仍存在的测试
+- [x] 评审无未清除阻塞项
+- [x] 记录不含密钥或本机绝对路径
+
+提示：
+- 90 条历史用例未绑定来源 AC；新用例请用 case add 写入 criteria。
+- 提交 1bcfe9a 不符合提交信息规范：fix(test): CASE-176 使用可核实的静态测试名（模块 test 不在 specs/modules 中）。
+- 分支 feat/20261023-flow-hardening 中的任务编号与当前任务 20261023-flow-hardening-wave1 不符。
+- 本次改动涉及模块 initialization：建议回归该模块 58 条用例及经过它的场景 CASE-055, CASE-001。
+- 本次改动涉及模块 standards：建议回归该模块 22 条用例及经过它的场景 CASE-055。
+- 本次改动涉及模块 verification：建议回归该模块 36 条用例及经过它的场景 CASE-055, CASE-001。
+- 本次改动涉及模块 workflow：建议回归该模块 60 条用例及经过它的场景 CASE-055, CASE-001。
+- 未检测到任务基线后的 `.tiller/specs/` 或 `.tiller/context/` 回写；如本次形成长期有效结论，请同步；纯过程性变更可忽略。
