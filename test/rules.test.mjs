@@ -437,8 +437,12 @@ test('CASE-167 README keeps capabilities and removes implementation detail', () 
   assert.match(readme, /失败先行/u);
   assert.match(readme, /review/u);
   assert.match(readme, /release/u);
-  assert.match(readme, /--requirement-file/u);
   assert.match(readme, /验收提交/u);
+  assert.match(readme, /可用工程内需求文件接入/u);
+  assert.match(readme, /给模型怎么用|AGENTS\.md/u);
   assert.doesNotMatch(readme, /verify\.prepare|verify\.runner|src\/test-output|test\/suites\.json|文件级并发|stdout\/stderr|advanced/u);
+  assert.doesNotMatch(readme, /npm pack|tiller-0\.5\.0\.tgz|--requirement-file/u);
+  assert.doesNotMatch(readme, /start <task-id>|--criterion "AC-1=/u);
+  assert.doesNotMatch(readme, /卫生收尾规划/u);
   assert.ok(readme.length < 6000, `README is ${readme.length} characters`);
 });
