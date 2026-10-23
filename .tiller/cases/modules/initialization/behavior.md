@@ -591,3 +591,28 @@
 ### 预期结果
 
 检查就绪，升级无变化并保持所有节外字节与换行方向
+
+## CASE-176 构建文件引导运行器且骨架匹配配置
+
+- 类型：behavior
+- 优先级：high
+- 模块：initialization
+- 关联 AC：20261023-flow-hardening-wave1#AC-3
+- 需求：`.tiller/specs/modules/initialization/requirements.md`
+- 源码：`src/core.ts`, `src/cases.ts`
+
+### 前置条件
+
+- 工程根存在 pom.xml、build.gradle 或 build.gradle.kts
+
+### 步骤
+
+1. 运行 init 并登记 case
+
+### 输入
+
+- Java 构建文件与任务用例参数
+
+### 预期结果
+
+Maven/Gradle 工程 init 写入对应 junit runner，case add 输出匹配运行器的骨架

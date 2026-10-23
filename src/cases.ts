@@ -405,6 +405,15 @@ function requiredText(value: unknown, label: string, maximum: number): string {
   return value.trim();
 }
 
+function caseSkeleton(runner: string, id: string, title: string, expected: string): string {
+  if (runner === 'junit-maven' || runner === 'junit-gradle') {
+    const number = id.replace(/[^0-9]/gu, '');
+    const comment = (value: string): string => value.replaceAll('*/', '* /');
+    return `import org.junit.jupiter.api.Test;\nimport static org.junit.jupiter.api.Assertions.assertTrue;\n\nclass TillerCase${number}Test {\n  @Test\n  void case${number}() {\n    // ${id} ${comment(title)}\n    // TODO: ${comment(expected)}\n    assertTrue(true);\n  }\n}\n`;
+  }
+  return `import test from 'node:test';\nimport assert from 'node:assert/strict';\n\ntest('${id} ${title.replaceAll("'", "\\'")}', () => {\n  // TODO: ${expected.replaceAll("'", "\\'")}\n  assert.ok(true);\n});\n`;
+}
+
 function sectionBody(content: string, title: string): string {
   const match = new RegExp(`^## ${title}\\s*$`, 'mu').exec(content);
   if (!match) return '';
@@ -552,7 +561,8 @@ export async function addGlobalCase(rootInput: string, input: AddCaseInput) {
   const steps = outputList(input.steps, ['执行覆盖本用例的测试。', '核对实际结果与预期结果一致。']);
   const inputs = outputList(input.inputs, ['按用例描述准备正常输入及必要的边界输入。']);
   return withProjectLock(root, async () => {
-    await readProjectMetadata(root);
+    const metadata = await readProjectMetadata(root);
+    const runner = metadata.verify?.runner ?? 'node-test';
     const id = await allocateCaseId(root);
     const relative = scenario ? `${CASE_ROOT}/scenarios/${scenario}.md` : `${CASE_ROOT}/modules/${modules[0]}/${kind}.md`;
     const before = await readTextIfExists(root, relative);
@@ -561,9 +571,9 @@ export async function addGlobalCase(rootInput: string, input: AddCaseInput) {
       source, preconditions, steps, inputs, expected })}`;
     await applyChanges(root, [{ path: relative, before, after }]);
     return {
-      id, title, path: relative, kind, priority, modules, criteria, status: 'pending',
+      id, title, path: relative, kind, priority, modules, criteria, status: 'pending', runner,
       next: `编写测试并在测试名中引用 ${id}，然后运行：tiller verify ${input.task} --criterion ${criteria[0]!.split('#')[1]} --case ${id}`,
-      skeleton: `import test from 'node:test';\nimport assert from 'node:assert/strict';\n\ntest('${id} ${title.replaceAll("'", "\\'")}', () => {\n  // TODO: ${expected.replaceAll("'", "\\'")}\n  assert.ok(true);\n});\n`,
+      skeleton: caseSkeleton(runner, id, title, expected),
     };
   });
 }

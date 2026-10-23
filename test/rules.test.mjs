@@ -216,15 +216,15 @@ test('CASE-048 global cases use module kinds and scenarios with resolvable named
   const kinds = ['behavior', 'interface', 'performance', 'security'];
   const library = await readCaseLibrary(repository);
   assert.deepEqual(library.issues, []);
-  assert.equal(library.cases.length, 173);
+  assert.equal(library.cases.length, 178);
   assert.deepEqual(library.cases.map(item => item.id).sort(),
-    Array.from({ length: 173 }, (_, index) => `CASE-${String(index + 1).padStart(3, '0')}`));
+    Array.from({ length: 178 }, (_, index) => `CASE-${String(index + 1).padStart(3, '0')}`));
   assert.deepEqual(library.modules.map(item => ({ module: item.module, behavior: item.behavior, interface: item.interface,
     performance: item.performance, security: item.security })), [
-    { module: 'initialization', behavior: 23, interface: 7, performance: 11, security: 16 },
-    { module: 'standards', behavior: 21, interface: 0, performance: 0, security: 0 },
+    { module: 'initialization', behavior: 24, interface: 7, performance: 11, security: 16 },
+    { module: 'standards', behavior: 22, interface: 0, performance: 0, security: 0 },
     { module: 'verification', behavior: 8, interface: 9, performance: 15, security: 4 },
-    { module: 'workflow', behavior: 29, interface: 22, performance: 0, security: 6 },
+    { module: 'workflow', behavior: 32, interface: 22, performance: 0, security: 6 },
   ]);
   assert.equal(library.scenarios.length, 2);
   for (const item of library.scenarios) assert.ok(item.modules.length > 0 && item.modules.every(module => specs.includes(module)));

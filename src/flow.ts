@@ -17,7 +17,7 @@ import { readProjectMetadata } from './core.js';
 import { applyChanges, inspectSafePaths, readTextIfExists, validateRelativePath, withProjectLock, type ResolvedInputPath } from './files.js';
 import { readPlanItem } from './plans.js';
 import { releaseChecklist, type ReleaseChecklist } from './release.js';
-import { validateTaskId } from './task-id.js';
+import { taskIdWarnings, validateTaskId } from './task-id.js';
 import { namePattern, resolveVerifyTarget, runnerFor, type TestEvidence, type TestReference } from './test-output.js';
 import type { ProjectMetadata } from './types.js';
 
@@ -559,6 +559,7 @@ function expectedSubject(task: FlowTask, gate: FlowGate, commit: string): string
 
 export async function startFlow(rootInput: string, idInput: string, input: FlowStartInput) {
   const root = path.resolve(rootInput); validateTaskId(idInput);
+  const warnings = taskIdWarnings(idInput);
   const title = safeInput(text(input.title, '标题', 200), '标题');
   if ((input.requirement === undefined) === (input.requirementFile === undefined)) {
     fail('INVALID_FLOW_INPUT', 'start 需要 --requirement 或 --requirement-file，两者只能选一个。');
@@ -621,7 +622,7 @@ export async function startFlow(rootInput: string, idInput: string, input: FlowS
     const content = renderTask(task);
     await mkdir(path.dirname(path.join(root, relative)), { recursive: true });
     await applyChanges(root, [{ path: relative, before: null, after: content }]);
-    return { id: idInput, path: relative, type, size, base, scope, criteria, ...(plan && item ? { plan, item } : {}),
+    return { id: idInput, path: relative, type, size, base, scope, criteria, warnings, ...(plan && item ? { plan, item } : {}),
       ...(slug ? { slug } : {}), ...(summary ? { summary } : {}),
       ...(requirementFile ? { requirementFile } : {}),
       next: `核对结构化需求正文后确认：tiller confirm ${idInput} requirements [--by "<确认人>"]` };
@@ -824,13 +825,62 @@ async function changedFiles(root: string, base: string, endpoint?: string): Prom
   return [...new Set([...tracked.stdout.split('\0'), ...untracked.stdout.split('\0')].filter(Boolean))];
 }
 async function scopedWorkingChanges(root: string, scope: string[], id: string): Promise<string[] | null> {
+  return workingChangesSince(root, 'HEAD', scope, id);
+}
+
+async function workingChangesSince(root: string, commit: string, scope: string[], id: string): Promise<string[] | null> {
   const repository = await git(root, ['rev-parse', '--is-inside-work-tree']);
   if (!repository.ok) return null;
-  const tracked = await git(root, ['diff', '--name-only', '-z', 'HEAD', '--']);
+  const tracked = await git(root, ['diff', '--name-only', '-z', commit, '--']);
   const untracked = await git(root, ['ls-files', '-z', '--others', '--exclude-standard', '--', ...scope]);
   if (!tracked.ok || !untracked.ok) return null;
   return [...new Set([...tracked.stdout.split('\0'), ...untracked.stdout.split('\0')].filter(Boolean))]
     .filter(relative => !excludedPath(relative, id) && !taskRecordPath(relative) && inScope(relative, scope)).sort();
+}
+
+function businessChange(relative: string): boolean {
+  return !relative.startsWith('.tiller/') && !relative.startsWith('.git/')
+    && relative !== 'AGENTS.md' && relative !== 'README.md' && !relative.startsWith('docs/');
+}
+
+async function unchangedPreExisting(root: string, task: FlowTask, relative: string): Promise<boolean> {
+  const expected = task.meta.preExisting[relative];
+  if (expected === undefined) return false;
+  try { return sha(await readFile(path.join(root, relative), 'utf8')) === expected; }
+  catch { return false; }
+}
+
+async function processHygieneIssues(
+  root: string,
+  id: string,
+  task: FlowTask,
+  historicalAccepted: boolean,
+): Promise<string[]> {
+  const issues: string[] = [];
+  if (requiresDesign(task)) {
+    const design = [...task.confirmations].reverse().find(item => item.gate === 'design' && item.subject === designSubject(task));
+    if (design) {
+      const early = task.verifications.filter(run => Date.parse(run.at) < Date.parse(design.at));
+      if (early.length) {
+        const tests = [...new Set(early.map(run => run.test))].slice(0, 3).join('、');
+        issues.push(`过程卫生：standard 任务在有效设计确认前已有 verify（${tests}${early.length > 3 ? ' 等' : ''}）；请先完成设计确认，再记录实现侧验证。`);
+      }
+    }
+  }
+  if (historicalAccepted) return issues;
+  const latest = [...task.confirmations].reverse().find(item => item.commit !== 'no-git');
+  if (!latest) return issues;
+  const changed = await scopedWorkingChanges(root, task.meta.scope, id);
+  if (changed === null) return issues;
+  const business: string[] = [];
+  for (const relative of changed) {
+    if (businessChange(relative) && !await unchangedPreExisting(root, task, relative)) business.push(relative);
+  }
+  if (!business.length) return issues;
+  const labels = [...new Set(task.confirmations.filter(item => item.commit === latest.commit).map(item => CONFIRMATION_LABELS[item.gate]))].join('、');
+  const shown = business.slice(0, 8).join('、');
+  issues.push(`过程卫生：${labels}确认提交 ${latest.commit.slice(0, 12)} 后，工作区仍有未提交业务改动：${shown}${business.length > 8 ? ` 等 ${business.length} 项` : ''}。请先提交或移出本任务。`);
+  return issues;
 }
 interface TestFindings { issues: string[]; warnings: string[] }
 
@@ -1186,6 +1236,7 @@ async function evaluateFlow(root: string, id: string, task: FlowTask, options: F
     if (!design) issues.push('缺少设计确认。');
     else if (design.subject !== designSubject(task)) issues.push('设计确认后需求或设计已变化，需要重新确认。');
   }
+  issues.push(...await processHygieneIssues(root, id, task, historicalAccepted));
   const library = await readCaseLibrary(root);
   issues.push(...library.issues);
   warnings.push(...library.warnings);
@@ -1272,6 +1323,8 @@ async function evaluateFlow(root: string, id: string, task: FlowTask, options: F
   if (acceptance && !acceptanceConfirmed) warnings.push('交付验收后任务对象已变化，需要重新验收。');
   const release = await releaseChecklist(root, { id, accepted: acceptanceConfirmed,
     ...(acceptance?.commit ? { acceptanceCommit: acceptance.commit } : {}), scope: task.meta.scope });
+  const tracking = release.items.find(item => item.id === 'managed-entry-tracking');
+  if (tracking?.status === 'fail') warnings.push(`${tracking.detail}（release 将阻断）`);
   const uniqueIssues = [...new Set(issues)];
   const selfCheck = [
     `- ${uniqueIssues.includes('缺少需求确认。') || uniqueIssues.some(item => item.startsWith('需求确认后')) ? '[ ]' : '[x]'} 需求确认有效`,

@@ -23,6 +23,12 @@ export {
 
 export type { InitializeOptions, ProjectInspection, ProjectMetadata, ProjectMode, ProjectPlatform } from './types.js';
 
+export interface InitializeResult extends ProjectInspection {
+  changed: boolean;
+  warnings: string[];
+  firstCommit: { message: string; paths: string[] };
+}
+
 export const ENTRY_START = '<!-- tiller:entry:start -->';
 export const ENTRY_END = '<!-- tiller:entry:end -->';
 export const INDEX_START = '<!-- tiller:index:start -->';
@@ -31,6 +37,26 @@ export const IGNORE_START = '# tiller:local:start';
 export const IGNORE_END = '# tiller:local:end';
 const EOL_EQUIVALENT_MANAGED = new Set([...REQUIRED_MANAGED, GITLAB_TEMPLATE]);
 const execFileAsync = promisify(execFile);
+
+type DetectedRunner = 'junit-maven' | 'junit-gradle';
+
+async function detectVerifyRunner(root: string): Promise<{ runner: DetectedRunner; file: string } | null> {
+  for (const [file, runner] of [['pom.xml', 'junit-maven'], ['build.gradle', 'junit-gradle'], ['build.gradle.kts', 'junit-gradle']] as const) {
+    try {
+      if ((await lstat(path.join(root, file))).isFile()) return { runner, file };
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
+    }
+  }
+  return null;
+}
+
+function firstCommitSuggestion(metadata: ProjectMetadata): InitializeResult['firstCommit'] {
+  return {
+    message: '建议先提交受管入口，再开始业务改动。',
+    paths: [META, ...Object.keys(metadata.managedFiles)],
+  };
+}
 
 function gitEnvironment(): NodeJS.ProcessEnv {
   const environment = { ...process.env };
@@ -402,7 +428,7 @@ export async function readRepositoryMetadata(root: string, inputs?: TextReadInpu
   return text === null ? null : parseMetadata(text);
 }
 
-export async function initialize(options: InitializeOptions): Promise<ProjectInspection & { changed: boolean }> {
+export async function initialize(options: InitializeOptions): Promise<InitializeResult> {
   const root = path.resolve(options.root);
   const mode = options.mode ?? 'project';
   if (mode !== 'project' && mode !== 'workspace') throw new Error('初始化方式必须为 project 或 workspace。');
@@ -410,6 +436,7 @@ export async function initialize(options: InitializeOptions): Promise<ProjectIns
   const existingText = await readTextIfExists(root, META);
   // Unknown versions must not acquire a lock or leave other changes in that project.
   const existing = existingText === null ? null : parseMetadata(existingText);
+  const detected = await detectVerifyRunner(root);
   const existingPlatform = existing ? normalizePlatform(existing.platform) : undefined;
   const platform = options.platform === undefined ? existingPlatform ?? 'github' : normalizePlatform(options.platform);
   if (existing && options.platform !== undefined && options.platform !== existingPlatform) {
@@ -432,10 +459,13 @@ export async function initialize(options: InitializeOptions): Promise<ProjectIns
       let metadataChange: FileChange | null = null;
       const needsPlatform = options.platform !== undefined && existing.platform !== platform;
       const needsTemplate = Object.entries(templates.digests).some(([relative, digest]) => existing.managedFiles[relative] !== digest);
-      if (needsPlatform || needsTemplate) {
+      const needsRunner = detected !== null && existing.verify?.runner === undefined;
+      const nextVerify = needsRunner ? { ...(existing.verify ?? {}), runner: detected.runner } : existing.verify;
+      if (needsPlatform || needsTemplate || needsRunner) {
         const metadata: ProjectMetadata = {
           ...existing,
           ...(needsPlatform ? { platform } : {}),
+          ...(nextVerify === undefined ? {} : { verify: nextVerify }),
           managedFiles: orderedManagedFiles({ ...existing.managedFiles, ...templates.digests }, platform),
         };
         const after = `${JSON.stringify(metadata, null, 2)}\n`;
@@ -443,11 +473,18 @@ export async function initialize(options: InitializeOptions): Promise<ProjectIns
         changes.push(metadataChange);
       }
       const effective = changes.filter(change => change.before !== change.after);
-      if (!effective.length) return { ...inspection, changed: false };
+      const warnings: string[] = [];
+      if (detected) {
+        warnings.push(existing.verify?.runner === undefined || existing.verify?.runner === detected.runner
+          ? `检测到 ${detected.file}，verify.runner 为 ${detected.runner}。`
+          : `检测到 ${detected.file}，但当前 verify.runner 为 ${existing.verify.runner}；请确认是否需要切换为 ${detected.runner}。`);
+      }
+      if (!effective.length) return { ...inspection, changed: false, warnings,
+        firstCommit: firstCommitSuggestion(inspection.metadata!) };
       await applyChanges(root, effective);
       const completed = await inspectProject(root);
       if (!completed.ready) throw new Error(`补齐项目骨架后检查未通过：${completed.issues.join('\n')}`);
-      return { ...completed, changed: true };
+      return { ...completed, changed: true, warnings, firstCommit: firstCommitSuggestion(completed.metadata!) };
     }
     if (await hasPendingTransaction(root)) throw new Error('存在未完成事务，请先执行 tiller recover。');
     const changes: FileChange[] = await skeletonChanges(root);
@@ -483,13 +520,15 @@ export async function initialize(options: InitializeOptions): Promise<ProjectIns
     const metadata: ProjectMetadata = {
       schemaVersion: SCHEMA_VERSION, resourceVersion: RESOURCE_VERSION, mode, repositories,
       ...(options.platform === undefined && platform === 'github' ? {} : { platform }),
+      ...(detected === null ? {} : { verify: { runner: detected.runner } }),
       managedFiles: orderedManagedFiles(managedFiles, platform), createdAt: new Date().toISOString(),
     };
     changes.push({ path: META, before: null, after: `${JSON.stringify(metadata, null, 2)}\n` });
     await applyChanges(root, changes);
     const inspection = await inspectProject(root);
     if (!inspection.ready) throw new Error(`文件接入后检查未通过：${inspection.issues.join('\n')}`);
-    return { ...inspection, changed: true };
+    const warnings = detected ? [`检测到 ${detected.file}，已写入 verify.runner=${detected.runner}。`] : [];
+    return { ...inspection, changed: true, warnings, firstCommit: firstCommitSuggestion(inspection.metadata!) };
   });
 }
 

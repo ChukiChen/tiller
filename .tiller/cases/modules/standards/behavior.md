@@ -534,3 +534,27 @@ CLI 参数、实现路径、测试执行细节、源码模块、提交与分支�
 
 Maven 与 Gradle 运行器已写入决定和设计；使用说明点名这两种运行器；版本仍为 0.5.0
 
+## CASE-177 未跟踪受管入口可定位且 init 提示首次提交
+
+- 类型：behavior
+- 优先级：high
+- 模块：standards
+- 关联 AC：20261023-flow-hardening-wave1#AC-4
+- 需求：`.tiller/specs/modules/standards/requirements.md`
+- 源码：`src/release.ts`, `src/core.ts`
+
+### 前置条件
+
+- 工程已初始化且受管入口存在于磁盘
+
+### 步骤
+
+1. 在未 git add 的仓库运行 init、check 和 release
+
+### 输入
+
+- 未跟踪 AGENTS.md 与平台模板
+
+### 预期结果
+
+check 警告、release 失败并列出未跟踪受管路径，init 输出首次提交建议路径
