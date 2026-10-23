@@ -72,6 +72,14 @@
 - 对象摘要：b1c30d656f957d43cb93dcd7674dc4651e2ac3091dc0a4e30369c87eb32444c3
 - 时间：2026-10-23T07:27:58.864Z
 
+### acceptance
+- 确认部分：交付验收
+- 对象：当前交付（需求、设计、验证与提交）
+- 确认人：boon yu
+- 提交：1b51ec6fe75c5d95685c92c60c315d808e1107b2
+- 对象摘要：a962e35ff3dffa12ccb1f07b570082efd3975f6df25c34cfd0f61298d23309ac
+- 时间：2026-10-23T07:42:08.598Z
+
 ## 验证
 
 ### run-1
@@ -157,9 +165,6 @@
 - [x] 未弱化仍存在的测试
 - [x] 评审无未清除阻塞项
 - [x] 记录不含密钥或本机绝对路径
-
-阻塞项：
-- 交付范围存在未提交改动：.tiller/cases/modules/standards/behavior.md、.tiller/cases/modules/workflow/behavior.md、.tiller/context/project.md、.tiller/plans/20261023-hygiene.md、.tiller/rules/project.md、.tiller/specs/decisions.md、README.md、test/case-redesign.test.mjs、test/review-release.test.mjs、test/rules.test.mjs
 
 提示：
 - 90 条历史用例未绑定来源 AC；新用例请用 case add 写入 criteria。
