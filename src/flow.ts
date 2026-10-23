@@ -1188,7 +1188,9 @@ async function evaluateCriterion(
       runValid = false;
       issues.push(`${criterion.id} 引用的全局用例不存在：${caseId}`);
     }
-    for (const entry of linked.values()) {
+    for (const caseId of latest.cases) {
+      const entry = linked.get(caseId) ?? library.cases.find(item => item.id === caseId);
+      if (!entry) continue;
       const testPath = fallbackTestReference(latest.test)?.path;
       const testChangedAfterAcceptance = historicalAccepted && contentCommit !== undefined && testPath !== undefined
         && await fileChangedSinceCommit(root, contentCommit, testPath);
