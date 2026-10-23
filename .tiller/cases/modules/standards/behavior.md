@@ -508,3 +508,29 @@ CLI 参数、实现路径、测试执行细节、源码模块、提交与分支�
 ### 预期结果
 
 保留能力、默认工作流、简短安装、使用入口、验证与升级说明；用法指向 CLI 帮助与 AGENTS.md/rules，不堆长 start 参数表；无内部实现路径与卫生收尾事务链接；版本仍为 0.5.0
+
+## CASE-173 决定与使用说明登记 Java 运行器且版本保持不变
+
+- 类型：behavior
+- 优先级：high
+- 模块：standards
+- 关联 AC：20261023-multi-repo-verify#AC-4
+- 需求：`.tiller/specs/decisions.md#2026-10-23-多仓库验证与-java-运行器`
+- 源码：`.tiller/specs/decisions.md`, `.tiller/specs/modules/verification/design.md`, `resources/usage.md`, `test/java-runners.test.mjs`
+
+### 前置条件
+
+- 规格、决定和使用说明已写入多仓库验证
+
+### 步骤
+
+1. 读取决定、验证设计和使用说明中的运行器名称与版本
+
+### 输入
+
+- decisions、verification design、usage 和 package.json
+
+### 预期结果
+
+Maven 与 Gradle 运行器已写入决定和设计；使用说明点名这两种运行器；版本仍为 0.5.0
+

@@ -61,6 +61,7 @@
 - [历史 work 迁入 task](task/20261023-migrate-work/task.md)
 - [关键节点人工确认](task/human-confirmation/task.md)
 - [首个可用交付](task/initial-delivery/task.md)
+- [多仓库验证与 Java 运行器](task/20261023-multi-repo-verify/task.md)
 
 ## 历史任务资料精简
 

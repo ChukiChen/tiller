@@ -47,7 +47,15 @@
 
 结构错误、缺失用例、待实现测试、缺失测试和错配是阻塞项；历史空 criteria、无 Git、未覆盖场景、提交或分支格式不合规是提示。
 
-测试运行由 `project.json` 的 `verify.runner` 选择已注册适配器，缺省为 node-test；`verify.prepare` 在测试前执行，参数数组为空或准备失败即验证失败。
+测试运行由 `project.json` 的 `verify.runner` 选择已注册适配器，缺省为 node-test；`verify.prepare` 在测试前执行，参数数组为空或准备失败即验证失败。已注册名称还有 `junit-maven` 和 `junit-gradle`。选择顺序是：测试文件路径 → 唯一拥有该路径的已登记仓库 → 该仓库的 runner，缺项回退到根级 `verify`。工作区没有匹配或匹配长度相同的多个仓库时失败关闭；`mode: project` 且仓库为空时使用根配置。准备命令的 cwd 是选中的业务仓库根，私有报告仍在管理工程的 `.tiller/local/`。`--reported` 继续服务尚未适配的框架。
+
+## 6. Java 运行器
+
+`junit-maven` 与 `junit-gradle` 都由 tiller 拉起子进程，不嵌入 JVM。测试引用仍是 `路径::名称`。名称用 `com.example.BillingTest#addsInvoice` 或整个类名；没有 `#` 且不含点时，仅当路径位于 `src/test/java/` 下才从路径得到类名并把名称当作方法。扩展名本身不参与选择运行器。
+
+Maven 在业务仓库根执行 `mvn -Dsurefire.reportsDirectory=<相对私有目录> -Dtest=<类[#方法]> test`。Gradle 在同一目录执行 `gradle -Dtiller.junit.reports=<相对私有目录> --init-script <相对私有目录>/junit-gradle.init.gradle test --tests <类[.方法]>`，初始化脚本把 JUnit XML 写到该私有目录。多模块工程若按各自模块目录解析相对报告路径，应把实际出测试结果的模块登记为仓库根，或继续使用 `--reported`。
+
+报告只承认声明的类（以及声明的方法）。缺失、损坏、0 个或多个匹配、跳过、同类额外失败都不能核实为通过；其它类的用例不计入本次声明，和 node-test 忽略其它文件一样。真实命令不依赖本仓库安装 JDK：单模块 Maven 工程在仓库根执行上面的 `mvn -Dtest=... test`，Gradle 工程执行上面的 `gradle test --tests ...`。
 
 基线后没有 `.tiller/specs/` 或 `.tiller/context/` 变化时增加回写提示，不并入阻塞项。
 

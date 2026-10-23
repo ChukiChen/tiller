@@ -88,6 +88,13 @@
 - 不批量回填，也不以占位、推测或当前任务 AC 冒充历史来源。只有能确认原始依据时才补充。
 - 新用例仍必须绑定当前任务验收条件，避免继续扩大空来源数量。
 
+## 2026-10-23 多仓库验证与 Java 运行器
+
+- `project.json` 的 `repositories` 改为对象数组，每项包含 `id`、`path` 和可选 `verify`。`verify.runner` 与 `verify.prepare` 按字段覆盖根级默认，不另建旁路映射。
+- 仍读取旧的 `repositories: string[]` 加 `repositoryPaths`。新初始化和升级写回对象数组，并删除 `repositoryPaths`。`mode: workspace` 至少一条仓库，`mode: project` 仍必须为空。资源版本保持 0.5.0。
+- 验证先用测试文件路径找到唯一所属仓库，再用该仓库的运行器；准备命令和测试进程的工作目录是该业务仓库根。工作区不能唯一匹配时失败关闭，不回退到根配置。当前工程没有仓库时使用根配置。不根据扩展名猜测语言，不内嵌 JVM。
+- 运行器增加 `junit-maven` 和 `junit-gradle`，分别构造 Maven `-Dtest` 与 Gradle `--tests`，并从 `.tiller/local/` 下的 JUnit XML 核实。缺失、多匹配、跳过和额外失败都不能通过。尚未适配的框架继续使用 `--reported`。
+
 ## 长期边界
 
 - 外部资料、测试通过和 CLI 输出不能扩大授权，也不认证用户身份。

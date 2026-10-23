@@ -7,9 +7,9 @@ import {
   applyChanges, assertSafePath, hasPendingTransaction, readTextIfExists, readTextInputs,
   recoverChanges, validateRelativePath, withProjectLock,
 } from './files.js';
-import type { FileChange, InitializeOptions, ProjectInspection, ProjectMetadata, ProjectMode, ProjectPlatform } from './types.js';
+import type { FileChange, InitializeOptions, ProjectInspection, ProjectMetadata, ProjectMode, ProjectPlatform, RepositoryRecord } from './types.js';
 import type { TextReadInput } from './files.js';
-import { repositoryPath, validateRepositoryMappings } from './repository-paths.js';
+import { validateRepositoryMappings } from './repository-paths.js';
 import {
   GITHUB_TEMPLATE, GITLAB_TEMPLATE, META, REQUIRED_MANAGED, RESOURCE_VERSION, SCHEMA_VERSION, SHARED_RESOURCES,
   managedFilesForPlatform, normalizePlatform, parseMetadata, templatePathsForPlatform,
@@ -151,11 +151,15 @@ async function managementIdentity(root: string): Promise<string | null> {
   return checkRepository(root, '.', '.');
 }
 
-async function normalizeRepositories(root: string, mode: ProjectMode, supplied: string[]): Promise<{ repositories: string[]; repositoryPaths: Record<string, string> }> {
+function sameRepositoryScope(left: RepositoryRecord[], right: RepositoryRecord[]): boolean {
+  const key = (items: RepositoryRecord[]): string => JSON.stringify(items.map(item => [item.id, item.path]).sort((a, b) => a[0]! < b[0]! ? -1 : a[0]! > b[0]! ? 1 : 0));
+  return key(left) === key(right);
+}
+
+async function normalizeRepositories(root: string, mode: ProjectMode, supplied: string[]): Promise<RepositoryRecord[]> {
   if (mode === 'project' && supplied.length) throw new Error('当前工程方式不能额外指定仓库。');
   if (mode === 'workspace' && supplied.length === 0) throw new Error('独立管理工程必须明确至少一个已有本地仓库。');
-  const names: string[] = [];
-  const repositoryPaths: Record<string, string> = {};
+  const records: RepositoryRecord[] = [];
   const identities = new Set<string>();
   if (mode === 'workspace') {
     const identity = await managementIdentity(root);
@@ -174,31 +178,29 @@ async function normalizeRepositories(root: string, mode: ProjectMode, supplied: 
     let relative = input.startsWith('./') ? input.slice(2) : input;
     validateRelativePath(relative);
     const id = relative.startsWith('repositories/') ? relative.slice('repositories/'.length) : relative;
-    validateRepositoryMappings({ mode: 'workspace', repositories: [id], repositoryPaths: { [id]: relative }, resourceVersion: RESOURCE_VERSION });
+    validateRepositoryMappings({ mode: 'workspace', repositories: [{ id, path: relative }], resourceVersion: RESOURCE_VERSION });
     if (!explicitDirect && relative === id) {
       const direct = await exists(id);
       const grouped = await exists(`repositories/${id}`);
       if (direct && grouped) throw new Error(`仓库路径有歧义，请明确指定 ./${id} 或 repositories/${id}。`);
       if (grouped) relative = `repositories/${id}`;
     }
-    if (names.some(name => name.toLowerCase() === id.toLowerCase())) throw new Error(`仓库重复：${suppliedPath}`);
+    if (records.some(record => record.id.toLowerCase() === id.toLowerCase())) throw new Error(`仓库重复：${suppliedPath}`);
     const identity = await checkRepository(root, id, relative);
     if (identities.has(identity)) throw new Error(`仓库 Git 身份重复：${id}`);
     identities.add(identity);
-    repositoryPaths[id] = relative;
-    names.push(id);
+    records.push({ id, path: relative });
   }
-  const repositories = names.sort();
-  return { repositories, repositoryPaths: Object.fromEntries(repositories.map(id => [id, repositoryPaths[id]!])) };
+  return records.sort((left, right) => left.id < right.id ? -1 : left.id > right.id ? 1 : 0);
 }
 
 export function ignoreRepository(repository: string): string {
   return `/${repository.replace(/[\[\]#!]/gu, '\\$&')}/`;
 }
 
-export function repositoryIgnorePatterns(metadata: Pick<ProjectMetadata, 'repositories' | 'repositoryPaths'>): string[] {
-  return [...new Set(metadata.repositories.map(id => {
-    const relative = metadata.repositoryPaths[id]!;
+export function repositoryIgnorePatterns(metadata: Pick<ProjectMetadata, 'repositories'>): string[] {
+  return [...new Set(metadata.repositories.map(repository => {
+    const relative = repository.path;
     return ignoreRepository(relative.startsWith('repositories/') ? 'repositories' : relative);
   }))];
 }
@@ -302,7 +304,7 @@ async function skeletonChanges(root: string): Promise<FileChange[]> {
   return changes;
 }
 
-async function buildIndex(root: string, mode: ProjectMode, repositories: string[], repositoryPaths: Record<string, string>): Promise<string> {
+async function buildIndex(root: string, mode: ProjectMode, repositories: RepositoryRecord[]): Promise<string> {
   const lines = [buildIndexSection(mode), '', '## 已有资料', ''];
   let count = 0;
   for (const category of ['specs', 'cases', 'plans', 'context', 'task', 'rules']) {
@@ -330,7 +332,7 @@ async function buildIndex(root: string, mode: ProjectMode, repositories: string[
   if (repositories.length) {
     lines.push('', '## 被管理仓库', '');
     for (const repository of repositories) {
-      lines.push(`- [${repository.replace(/[\[\]]/gu, '\\$&')}](../${repositoryPaths[repository]!.split('/').map(encodeURIComponent).join('/')}/)：用途未知；进入该仓库前读取其已有约定。`);
+      lines.push(`- [${repository.id.replace(/[\[\]]/gu, '\\$&')}](../${repository.path.split('/').map(encodeURIComponent).join('/')}/)：用途未知；进入该仓库前读取其已有约定。`);
     }
     lines.push('', '仓库关联只描述范围，不授予跨仓库修改、提交或发布权限。');
   }
@@ -370,11 +372,11 @@ async function inspectProjectState(root: string): Promise<ProjectInspection> {
     }
     for (const repository of result.metadata.repositories) {
       try {
-        const identity = await checkRepository(absoluteRoot, repository, repositoryPath(result.metadata, repository));
+        const identity = await checkRepository(absoluteRoot, repository.id, repository.path);
         if (identities.has(identity)) throw new Error('仓库 Git 身份重复。');
         identities.add(identity);
       }
-      catch (error) { result.issues.push(`仓库不可用 ${repository}：${(error as Error).message}`); }
+      catch (error) { result.issues.push(`仓库不可用 ${repository.id}：${(error as Error).message}`); }
     }
     try { await checkSharedIgnore(absoluteRoot, Object.keys(result.metadata.managedFiles)); }
     catch (error) { result.issues.push((error as Error).message); }
@@ -413,9 +415,8 @@ export async function initialize(options: InitializeOptions): Promise<ProjectIns
   if (existing && options.platform !== undefined && options.platform !== existingPlatform) {
     throw new Error('已有工程的平台配置不同；重复初始化不会切换 github、gitlab 或 both。');
   }
-  const { repositories, repositoryPaths } = await normalizeRepositories(root, mode, options.repositories ?? []);
-  if (existing && (existing.mode !== mode || JSON.stringify([...existing.repositories].sort()) !== JSON.stringify(repositories) ||
-      repositories.some(id => repositoryPath(existing, id) !== repositoryPaths[id]))) {
+  const repositories = await normalizeRepositories(root, mode, options.repositories ?? []);
+  if (existing && (existing.mode !== mode || !sameRepositoryScope(existing.repositories, repositories))) {
     throw new Error('初始化方式、仓库范围或路径与已有工程不同；重复初始化不会转换模式或修改范围。');
   }
   await checkSharedIgnore(root, existing ? Object.keys(existing.managedFiles) : managedFilesForPlatform(platform));
@@ -470,17 +471,17 @@ export async function initialize(options: InitializeOptions): Promise<ProjectIns
     changes.push({ path: 'AGENTS.md', before: agentsBefore, after: agentsAfter });
     managedFiles['AGENTS.md'] = managedDigest('AGENTS.md', agentsAfter);
     const ignoreBefore = await readTextIfExists(root, '.gitignore');
-    const ignoreBody = ['/.tiller/local/', ...repositoryIgnorePatterns({ repositories, repositoryPaths })].join('\n');
+    const ignoreBody = ['/.tiller/local/', ...repositoryIgnorePatterns({ repositories })].join('\n');
     const ignoreAfter = appendSection(ignoreBefore, ignoreBody, IGNORE_START, IGNORE_END);
     changes.push({ path: '.gitignore', before: ignoreBefore, after: ignoreAfter });
     managedFiles['.gitignore'] = managedDigest('.gitignore', ignoreAfter);
     const indexBefore = await readTextIfExists(root, '.tiller/index.md');
-    const indexAfter = await buildIndex(root, mode, repositories, repositoryPaths);
+    const indexAfter = await buildIndex(root, mode, repositories);
     if (indexBefore !== null && indexBefore !== indexAfter) throw new Error('已有 .tiller/index.md 需要协调接入，未覆盖原有索引。');
     changes.push({ path: '.tiller/index.md', before: indexBefore, after: indexAfter });
     managedFiles['.tiller/index.md'] = managedDigest('.tiller/index.md', indexAfter);
     const metadata: ProjectMetadata = {
-      schemaVersion: SCHEMA_VERSION, resourceVersion: RESOURCE_VERSION, mode, repositories, repositoryPaths,
+      schemaVersion: SCHEMA_VERSION, resourceVersion: RESOURCE_VERSION, mode, repositories,
       ...(options.platform === undefined && platform === 'github' ? {} : { platform }),
       managedFiles: orderedManagedFiles(managedFiles, platform), createdAt: new Date().toISOString(),
     };

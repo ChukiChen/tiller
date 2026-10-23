@@ -77,3 +77,30 @@
 ### 预期结果
 
 损坏配置和无法判定忽略状态时失败，明确排除本机路径时允许非 Git 回退
+
+## CASE-172 仓库归属不明或运行器未知时拒绝执行
+
+- 类型：security
+- 优先级：high
+- 模块：verification
+- 关联 AC：20261023-multi-repo-verify#AC-6
+- 需求：`.tiller/specs/modules/verification/requirements.md#3-用例先行`
+- 源码：`src/test-output.ts`, `src/repository-paths.ts`, `test/java-runners.test.mjs`
+
+### 前置条件
+
+- 工作区可以同时登记多个仓库，当前工程可以没有仓库
+
+### 步骤
+
+1. 解析未知运行器、重叠路径、越界路径和未登记路径
+2. 用 Java 路径请求 Node 仓库，并用脚本路径请求 Java 仓库
+
+### 输入
+
+- 未知运行器名称、相同长度的重叠路径、越界路径和不同扩展名
+
+### 预期结果
+
+归属不能唯一确定时失败关闭；不根据扩展名选择运行器；当前工程没有仓库时使用工程默认
+

@@ -138,7 +138,7 @@
 
 ### 前置条件
 
-- 元信息含显式 repositoryPaths
+- 元信息用对象登记直接目录与分组目录
 
 ### 步骤
 
@@ -152,3 +152,30 @@
 ### 预期结果
 
 直接与分组映射原样返回，根路径为点，未知仓库明确报错
+
+## CASE-171 仓库清单使用对象并仍可读旧的标识列表
+
+- 类型：interface
+- 优先级：high
+- 模块：initialization
+- 关联 AC：20261023-multi-repo-verify#AC-1
+- 需求：`.tiller/specs/modules/initialization/requirements.md#3-受管资源`
+- 源码：`src/repository-paths.ts`, `src/project-metadata.ts`, `src/upgrade.ts`, `test/java-runners.test.mjs`
+
+### 前置条件
+
+- 新工程按对象登记仓库；历史元信息可能仍是标识列表加路径映射
+
+### 步骤
+
+1. 初始化当前工程和工作区
+2. 读取带验证配置的对象，并把旧清单升级为对象
+
+### 输入
+
+- 空的当前工程、带验证配置的仓库对象，以及标识列表加路径映射
+
+### 预期结果
+
+新元信息只保留标识、路径和可选验证配置；旧清单仍可读取并在升级时写成对象；当前工程不登记仓库
+

@@ -8,7 +8,7 @@
 - 设计确认后每项条件至少映射一个带完整测试设计的用例；验证或验收时，每个用例必须有至少一个在测试名或紧邻注释中引用它的测试，且本次验证覆盖、已核实、未过期。测试引用不存在的 CASE 编号是错误。
 - `verify` 只声明 `--test "<文件::测试名>"`，由 tiller 构造并执行精确匹配的 node:test 命令；记录用例编号、实际命令、结果、退出码、核实状态、提交、代码树摘要和本机日志路径。
 - 结果只从 tiller 私有临时报告读取，stdout/stderr 不参与判定。文件、完整名称（嵌套按名称路径）必须精确匹配且仅命中一个通过事件，且无失败；仅引用文件时要求全部通过。报告缺失/损坏、0/多个匹配、失败或跳过都不能核实。
-- `verify.prepare` 可在 `project.json` 配置测试前准备命令（参数数组），失败即验证失败；`verify.runner` 缺省 `node-test`。新增框架在 `src/test-output.ts` 实现 `TestRunner` 的构造命令与报告解析并注册。
+- `verify.prepare` 可在 `project.json` 配置测试前准备命令（参数数组），失败即验证失败；`verify.runner` 缺省 `node-test`，也可为 `junit-maven` 或 `junit-gradle`。工作区每条仓库记录可用 `verify` 覆盖 runner 与 prepare，准备和测试的工作目录是该业务仓库根。测试路径不能唯一归属已登记仓库时拒绝执行，不按扩展名猜测语言。新增框架在 `src/test-output.ts` 实现 `TestRunner` 的构造命令与报告解析并注册。
 - 外部报告使用 `--reported --command --result --reason`，理由必填；默认阻断，只有 `--allow-reported` 显式放行并在 PR/MR 草稿标明未执行。
 - bugfix 任务使用 `--expect-fail --test` 在基线临时工作树走同一适配器和报告路径证明失败，并保留当前同一测试的已核实通过记录。
 - 失败、跳过、未运行和环境限制不能写成通过。套件正常退出不自动等于每个用例通过。
