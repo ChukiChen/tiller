@@ -67,10 +67,232 @@
 - 对象摘要：b69cb24432f16195b3bb283c128ba9109453a5a423545dd67c6e3dfcbbb028bf
 - 时间：2026-10-23T14:01:21.153Z
 
+### acceptance
+- 确认部分：交付验收
+- 对象：当前交付（需求、设计、验证与提交）
+- 确认人：boon yu
+- 用户原话：合并，开始下一轮
+- 原话用途：可选附注，不替代已写明的正文
+- 提交：890b269277ebc53d42ea11079147bc119cf2bf9e
+- 对象摘要：4938937eec33971c0c364c7538d2dc8673b48a49e3a680083f490fac66c47672
+- 时间：2026-10-23T14:50:42.799Z
+
 ## 验证
 
-尚无验证。
+### run-1
+- 条件：AC-1
+- 测试：test/flow-hardening.test.mjs::CASE-179 standard design fields that are blank or placeholders get located warnings
+- 用例：CASE-179
+- 命令：node '--test-name-pattern=^CASE-179 standard design fields that are blank or placeholders get located warnings$' --test-reporter=./.tiller/local/verify-90k8ec/reporter.mjs --test-reporter-destination=.tiller/local/verify-90k8ec/report.jsonl test/flow-hardening.test.mjs
+- 结果：passed
+- 退出码：0
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/logs/20261023-flow-hardening-wave2/run-1.log
+- 提交：6f1a8eb530b6d3a453cd259b376722e40b059b64
+- 代码树摘要：fb4346dfc82ace86644cafbc8f9d415e01a3f1efeca467a261d95d0cc2819b86
+- 时间：2026-10-23T14:49:27.315Z
+
+### run-2
+- 条件：AC-1
+- 测试：test/flow-hardening.test.mjs::CASE-180 empty decisions and touched module design are located in check warnings
+- 用例：CASE-180
+- 命令：node '--test-name-pattern=^CASE-180 empty decisions and touched module design are located in check warnings$' --test-reporter=./.tiller/local/verify-aOL6GN/reporter.mjs --test-reporter-destination=.tiller/local/verify-aOL6GN/report.jsonl test/flow-hardening.test.mjs
+- 结果：passed
+- 退出码：0
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/logs/20261023-flow-hardening-wave2/run-2.log
+- 提交：6f1a8eb530b6d3a453cd259b376722e40b059b64
+- 代码树摘要：fb4346dfc82ace86644cafbc8f9d415e01a3f1efeca467a261d95d0cc2819b86
+- 时间：2026-10-23T14:49:28.688Z
+
+### run-3
+- 条件：AC-2
+- 测试：test/verification-integrity.test.mjs::CASE-096 CASE-181 verify writes a readable command summary and verbose log
+- 用例：CASE-181
+- 命令：node '--test-name-pattern=^CASE-096 CASE-181 verify writes a readable command summary and verbose log$' --test-reporter=./.tiller/local/verify-1ifnOr/reporter.mjs --test-reporter-destination=.tiller/local/verify-1ifnOr/report.jsonl test/verification-integrity.test.mjs
+- 结果：passed
+- 退出码：0
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/logs/20261023-flow-hardening-wave2/run-3.log
+- 提交：6f1a8eb530b6d3a453cd259b376722e40b059b64
+- 代码树摘要：fb4346dfc82ace86644cafbc8f9d415e01a3f1efeca467a261d95d0cc2819b86
+- 时间：2026-10-23T14:49:30.029Z
+
+### run-4
+- 条件：AC-2
+- 测试：test/flow-hardening.test.mjs::CASE-182 check and resume explicitly report an expired verification
+- 用例：CASE-182
+- 命令：node '--test-name-pattern=^CASE-182 check and resume explicitly report an expired verification$' --test-reporter=./.tiller/local/verify-Q0Ree1/reporter.mjs --test-reporter-destination=.tiller/local/verify-Q0Ree1/report.jsonl test/flow-hardening.test.mjs
+- 结果：passed
+- 退出码：0
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/logs/20261023-flow-hardening-wave2/run-4.log
+- 提交：6f1a8eb530b6d3a453cd259b376722e40b059b64
+- 代码树摘要：fb4346dfc82ace86644cafbc8f9d415e01a3f1efeca467a261d95d0cc2819b86
+- 时间：2026-10-23T14:49:31.213Z
+
+### run-5
+- 条件：AC-3
+- 测试：test/flow-hardening.test.mjs::CASE-183 check explains a branch name missing the task id
+- 用例：CASE-183
+- 命令：node '--test-name-pattern=^CASE-183 check explains a branch name missing the task id$' --test-reporter=./.tiller/local/verify-t7JnaP/reporter.mjs --test-reporter-destination=.tiller/local/verify-t7JnaP/report.jsonl test/flow-hardening.test.mjs
+- 结果：passed
+- 退出码：0
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/logs/20261023-flow-hardening-wave2/run-5.log
+- 提交：6f1a8eb530b6d3a453cd259b376722e40b059b64
+- 代码树摘要：fb4346dfc82ace86644cafbc8f9d415e01a3f1efeca467a261d95d0cc2819b86
+- 时间：2026-10-23T14:49:32.801Z
+
+### run-6
+- 条件：AC-3
+- 测试：test/flow-hardening.test.mjs::CASE-184 help, usage and AGENTS explain thin checks, readable logs and branch naming
+- 用例：CASE-184
+- 命令：node '--test-name-pattern=^CASE-184 help, usage and AGENTS explain thin checks, readable logs and branch naming$' --test-reporter=./.tiller/local/verify-07NFbB/reporter.mjs --test-reporter-destination=.tiller/local/verify-07NFbB/report.jsonl test/flow-hardening.test.mjs
+- 结果：passed
+- 退出码：0
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/logs/20261023-flow-hardening-wave2/run-6.log
+- 提交：6f1a8eb530b6d3a453cd259b376722e40b059b64
+- 代码树摘要：fb4346dfc82ace86644cafbc8f9d415e01a3f1efeca467a261d95d0cc2819b86
+- 时间：2026-10-23T14:49:34.307Z
+
+### run-7
+- 条件：AC-4
+- 测试：test/flow-hardening.test.mjs::CASE-185 wave-two cases are referenced by named tests at version 0.5.0
+- 用例：CASE-185
+- 命令：node '--test-name-pattern=^CASE-185 wave-two cases are referenced by named tests at version 0\.5\.0$' --test-reporter=./.tiller/local/verify-l57kfd/reporter.mjs --test-reporter-destination=.tiller/local/verify-l57kfd/report.jsonl test/flow-hardening.test.mjs
+- 结果：passed
+- 退出码：0
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/logs/20261023-flow-hardening-wave2/run-7.log
+- 提交：6f1a8eb530b6d3a453cd259b376722e40b059b64
+- 代码树摘要：fb4346dfc82ace86644cafbc8f9d415e01a3f1efeca467a261d95d0cc2819b86
+- 时间：2026-10-23T14:49:35.009Z
+
+### run-8
+- 条件：AC-1
+- 测试：test/flow-hardening.test.mjs::CASE-179 standard design fields that are blank or placeholders get located warnings
+- 用例：CASE-179
+- 命令：node '--test-name-pattern=^CASE-179 standard design fields that are blank or placeholders get located warnings$' --test-reporter=./.tiller/local/verify-CJpvkG/reporter.mjs --test-reporter-destination=.tiller/local/verify-CJpvkG/report.jsonl test/flow-hardening.test.mjs
+- 结果：passed
+- 退出码：0
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/logs/20261023-flow-hardening-wave2/run-8.log
+- 提交：890b269277ebc53d42ea11079147bc119cf2bf9e
+- 代码树摘要：9e6c7557f88853e35e7e0fc01bac6205e37cbcd1a248f45d9643bbd8711bbd43
+- 时间：2026-10-23T14:50:29.781Z
+
+### run-9
+- 条件：AC-1
+- 测试：test/flow-hardening.test.mjs::CASE-180 empty decisions and touched module design are located in check warnings
+- 用例：CASE-180
+- 命令：node '--test-name-pattern=^CASE-180 empty decisions and touched module design are located in check warnings$' --test-reporter=./.tiller/local/verify-kTv116/reporter.mjs --test-reporter-destination=.tiller/local/verify-kTv116/report.jsonl test/flow-hardening.test.mjs
+- 结果：passed
+- 退出码：0
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/logs/20261023-flow-hardening-wave2/run-9.log
+- 提交：890b269277ebc53d42ea11079147bc119cf2bf9e
+- 代码树摘要：9e6c7557f88853e35e7e0fc01bac6205e37cbcd1a248f45d9643bbd8711bbd43
+- 时间：2026-10-23T14:50:31.177Z
+
+### run-10
+- 条件：AC-2
+- 测试：test/verification-integrity.test.mjs::CASE-096 CASE-181 verify writes a readable command summary and verbose log
+- 用例：CASE-181
+- 命令：node '--test-name-pattern=^CASE-096 CASE-181 verify writes a readable command summary and verbose log$' --test-reporter=./.tiller/local/verify-DC4YO3/reporter.mjs --test-reporter-destination=.tiller/local/verify-DC4YO3/report.jsonl test/verification-integrity.test.mjs
+- 结果：passed
+- 退出码：0
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/logs/20261023-flow-hardening-wave2/run-10.log
+- 提交：890b269277ebc53d42ea11079147bc119cf2bf9e
+- 代码树摘要：9e6c7557f88853e35e7e0fc01bac6205e37cbcd1a248f45d9643bbd8711bbd43
+- 时间：2026-10-23T14:50:32.545Z
+
+### run-11
+- 条件：AC-2
+- 测试：test/flow-hardening.test.mjs::CASE-182 check and resume explicitly report an expired verification
+- 用例：CASE-182
+- 命令：node '--test-name-pattern=^CASE-182 check and resume explicitly report an expired verification$' --test-reporter=./.tiller/local/verify-2NxOQw/reporter.mjs --test-reporter-destination=.tiller/local/verify-2NxOQw/report.jsonl test/flow-hardening.test.mjs
+- 结果：passed
+- 退出码：0
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/logs/20261023-flow-hardening-wave2/run-11.log
+- 提交：890b269277ebc53d42ea11079147bc119cf2bf9e
+- 代码树摘要：9e6c7557f88853e35e7e0fc01bac6205e37cbcd1a248f45d9643bbd8711bbd43
+- 时间：2026-10-23T14:50:33.789Z
+
+### run-12
+- 条件：AC-3
+- 测试：test/flow-hardening.test.mjs::CASE-183 check explains a branch name missing the task id
+- 用例：CASE-183
+- 命令：node '--test-name-pattern=^CASE-183 check explains a branch name missing the task id$' --test-reporter=./.tiller/local/verify-kEMvUy/reporter.mjs --test-reporter-destination=.tiller/local/verify-kEMvUy/report.jsonl test/flow-hardening.test.mjs
+- 结果：passed
+- 退出码：0
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/logs/20261023-flow-hardening-wave2/run-12.log
+- 提交：890b269277ebc53d42ea11079147bc119cf2bf9e
+- 代码树摘要：9e6c7557f88853e35e7e0fc01bac6205e37cbcd1a248f45d9643bbd8711bbd43
+- 时间：2026-10-23T14:50:35.508Z
+
+### run-13
+- 条件：AC-3
+- 测试：test/flow-hardening.test.mjs::CASE-184 help, usage and AGENTS explain thin checks, readable logs and branch naming
+- 用例：CASE-184
+- 命令：node '--test-name-pattern=^CASE-184 help, usage and AGENTS explain thin checks, readable logs and branch naming$' --test-reporter=./.tiller/local/verify-f2pWIX/reporter.mjs --test-reporter-destination=.tiller/local/verify-f2pWIX/report.jsonl test/flow-hardening.test.mjs
+- 结果：passed
+- 退出码：0
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/logs/20261023-flow-hardening-wave2/run-13.log
+- 提交：890b269277ebc53d42ea11079147bc119cf2bf9e
+- 代码树摘要：9e6c7557f88853e35e7e0fc01bac6205e37cbcd1a248f45d9643bbd8711bbd43
+- 时间：2026-10-23T14:50:36.860Z
+
+### run-14
+- 条件：AC-4
+- 测试：test/flow-hardening.test.mjs::CASE-185 wave-two cases are referenced by named tests at version 0.5.0
+- 用例：CASE-185
+- 命令：node '--test-name-pattern=^CASE-185 wave-two cases are referenced by named tests at version 0\.5\.0$' --test-reporter=./.tiller/local/verify-SJKQMu/reporter.mjs --test-reporter-destination=.tiller/local/verify-SJKQMu/report.jsonl test/flow-hardening.test.mjs
+- 结果：passed
+- 退出码：0
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/logs/20261023-flow-hardening-wave2/run-14.log
+- 提交：890b269277ebc53d42ea11079147bc119cf2bf9e
+- 代码树摘要：9e6c7557f88853e35e7e0fc01bac6205e37cbcd1a248f45d9643bbd8711bbd43
+- 时间：2026-10-23T14:50:37.468Z
 
 ## 自检
 
-交付前运行 check；验收后运行 accept。
+- [x] 需求确认有效
+- [x] 设计确认有效
+- [x] 验收条件均有当前通过且绑定全局用例的测试引用
+- [x] 每条验收条件均映射到本次验证引用的全局用例
+- [x] 验收条件与用例来源 criteria 相互指向或由本任务新增/修改
+- [x] 验证命令已执行且测试输出已核实
+- [x] 全局用例结构与引用有效
+- [x] 改动未超出范围
+- [x] 未弱化仍存在的测试
+- [x] 评审无未清除阻塞项
+- [x] 记录不含密钥或本机绝对路径
+
+提示：
+- 90 条历史用例未绑定来源 AC；新用例请用 case add 写入 criteria。
+- 本次改动涉及模块 initialization：建议回归该模块 58 条用例及经过它的场景 CASE-055, CASE-001。
+- 本次改动涉及模块 standards：建议回归该模块 22 条用例及经过它的场景 CASE-055。
+- 本次改动涉及模块 verification：建议回归该模块 38 条用例及经过它的场景 CASE-055, CASE-001。
+- 本次改动涉及模块 workflow：建议回归该模块 65 条用例及经过它的场景 CASE-055, CASE-001。
+- 修改的测试文件移除了 1 个测试用例（请确认对应功能已删除；详情见 Git diff）。
