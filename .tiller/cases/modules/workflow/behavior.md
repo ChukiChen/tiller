@@ -622,3 +622,54 @@
 ### 预期结果
 
 发现写入 task.md；未解决阻塞存在时 accept 失败，清除后可验收。
+
+## CASE-110 历史 work 记录迁入结构化 task
+
+- 类型：behavior
+- 优先级：medium
+- 模块：workflow
+- 关联 AC：20261023-migrate-work#AC-1
+- 需求：`.tiller/specs/modules/workflow/requirements.md#4-任务记录`
+- 源码：`test/work-migration.test.mjs`
+
+### 前置条件
+
+- 仓库基于 aed8a9b，迁移前存在 .tiller/work 历史目录
+
+### 步骤
+
+1. 读取迁移映射与每个 .tiller/task/<id>/task.md
+2. 核对原 work.md 标题、历史正文与附属文件引用
+
+### 输入
+
+- 迁移前 17 个 work 目录的标识清单
+
+### 预期结果
+
+17 个同 id task.md 均存在，保留原历史内容且不伪造确认、验证或验收
+
+## CASE-111 现行文档与初始化只使用 task 目录
+
+- 类型：behavior
+- 优先级：medium
+- 模块：workflow
+- 关联 AC：20261023-migrate-work#AC-2
+- 需求：`.tiller/specs/modules/workflow/requirements.md#4-任务记录`, `.tiller/specs/modules/standards/requirements.md#2-必读与按需读取`
+- 源码：`test/work-migration.test.mjs`
+
+### 前置条件
+
+- 空工程可由 initialize 建立骨架
+
+### 步骤
+
+1. 检查 README、usage、rules、context、specs、index 与 generated skeleton
+
+### 输入
+
+- 当前仓库和全新初始化工程
+
+### 预期结果
+
+文档不再把 work 表述为现行模型，初始化不创建 work 目录或列出 work 分类

@@ -14,7 +14,6 @@
 - `rules/`：通用规则及已有项目约定。
 - `context/`：项目背景、现状与资料索引。
 - `task/`：当前任务记录，按任务标识读取结构化需求、设计、确认与验证。
-- `work/`：仅保留的历史任务记录，只读追溯；新任务写入 `task/`。
 - `local/`：本机锁与恢复信息，不作为共享事实来源。
 
 任务创建或资料变化后，以实际文件和任务记录为准；确认绑定结构化正文，原话可选且不替代正文。
@@ -23,59 +22,46 @@
 
 ## 已有资料
 
-- [第一批功能补齐任务](task/20261022-first-batch/task.md)
-- [确认去原话化与结构化任务正文](task/20261022-round9/task.md)
-- [任务阶段、关闭与规格清理](task/20261022-round8/task.md)
-- [全局用例说明](cases/index.md)
+### 规格、规则与用例
+
 - [总体需求](specs/requirements.md)、[总体设计](specs/design.md)、[决策记录](specs/decisions.md)
 - [初始化规格](specs/modules/initialization/requirements.md)、[工作流规格](specs/modules/workflow/requirements.md)、[验证规格](specs/modules/verification/requirements.md)、[规范规格](specs/modules/standards/requirements.md)
+- [规则索引](rules/index.md)、[项目规则](rules/project.md)、[项目背景](context/project.md)
+- [全局用例](cases/index.md)
+
+### 任务记录
+
+- [隔离开发与评审合入](task/20261015-isolated-delivery/task.md)
+- [统一通用工作入口](task/20261015-unify-entry/task.md)
+- [工作记录约定与阶段产物](task/20261015-work-artifacts/task.md)
+- [功能分块与项目骨架推进](task/20261016-functional-planning/task.md)
+- [tiller 实现进度记录](task/20261016-implementation-progress/task.md)
+- [项目接手与开发规范建立](task/20261016-project-onboarding/task.md)
+- [独立管理仓库分组布局](task/20261016-repository-layout/task.md)
+- [使用入口与命令定位](task/20261016-usage-entry/task.md)
+- [实施规划与任务拆分流程完善](task/20261017-implementation-planning/task.md)
+- [任务推进与交付门禁](task/20261019-task-delivery-gates/task.md)
+- [测试用例与验证证据管理](task/20261019-testing-verification/task.md)
+- [按任务类型选择与组合工作流程](task/20261020-typed-workflows/task.md)
 - [模块用例、场景与用例先行](task/20261022-case-first/task.md)
-
-- [cases/index.md](cases/index.md)
-
-- [确认语义与 work → task 重命名](task/20261022-confirm-task/task.md)
-
-- [默认工作流模块命名：lite → flow](work/20261022-flow-naming/work.md)
-
-- [轻量标准流程、旧审计清理与版本策略：任务记录](work/20261022-lightweight-flow/work.md)
-
-- [按任务类型选择与组合工作流程：改动收尾，核心资料与验证边界](work/20261020-typed-workflows/work.md)
-
-- [任务推进与交付门禁：技术验证完成、待验收](work/20261019-task-delivery-gates/work.md)
-- [测试用例与验证证据管理（历史；长期验证目录已删除）](work/20261019-testing-verification/work.md)
-- [实施规划与任务拆分流程完善](work/20261017-implementation-planning/work.md)
-- [已有项目接手与项目开发规范建立](work/20261016-project-onboarding/work.md)
-- [实现进度记录：需求对应、验证边界与下一步](work/20261016-implementation-progress/work.md)
-- [功能分块与项目骨架推进](work/20261016-functional-planning/work.md)
-- [specs/decisions.md](specs/decisions.md)
-- [specs/design.md](specs/design.md)
-- [specs/modules/initialization/design.md](specs/modules/initialization/design.md)
-- [specs/modules/initialization/requirements.md](specs/modules/initialization/requirements.md)
-- [specs/modules/standards/design.md](specs/modules/standards/design.md)
-- [specs/modules/standards/requirements.md](specs/modules/standards/requirements.md)
-- [specs/modules/workflow/design.md](specs/modules/workflow/design.md)
-- [specs/modules/workflow/requirements.md](specs/modules/workflow/requirements.md)
-- [specs/requirements.md](specs/requirements.md)
-- [context/project.md](context/project.md)
-- [work/initial-delivery/design.md](work/initial-delivery/design.md)
-- [work/initial-delivery/plan.md](work/initial-delivery/plan.md)
-- [work/initial-delivery/work.md](work/initial-delivery/work.md)
-- [rules/project.md](rules/project.md)
-- [首个交付验证](work/initial-delivery/verification.md)
-- [宿主文档接续验证](work/initial-delivery/verification.md#宿主接续验证)
-- [关键节点人工确认工作](work/human-confirmation/work.md)
-- [人工确认实现与接口](work/human-confirmation/implementation.md)
-- [人工确认验证记录](work/human-confirmation/verification.md)
-- [统一通用入口](work/20261015-unify-entry/work.md)
-- [工作记录约定与阶段产物设计](work/20261015-work-artifacts/work.md)
-- [隔离开发与评审合入工作](work/20261015-isolated-delivery/work.md)
-- [隔离开发与评审合入实施](work/20261015-isolated-delivery/implementation.md)
-- [隔离开发与评审合入验证](work/20261015-isolated-delivery/verification.md#实现验证记录)
-- [隔离开发与评审合入设计](specs/modules/workflow/design.md#11-隔离开发与评审合入)
-- [独立管理仓库分组布局](work/20261016-repository-layout/work.md)
-
-- [使用入口与本机命令定位](work/20261016-usage-entry/work.md)
+- [确认绑定结构化正文并将 work 重命名为 task](task/20261022-confirm-task/task.md)
+- [第一批功能补齐：规划、接入、用例绑定与受管升级](task/20261022-first-batch/task.md)
+- [将默认工作流模块从 lite 重命名为 flow](task/20261022-flow-naming/task.md)
+- [恢复轻量全局用例事实库](task/20261022-global-cases/task.md)
+- [精简 tiller 为轻量标准流程并删除旧审计](task/20261022-lightweight-flow/task.md)
+- [提交信息、分支名与 PR 规范及 PR 草稿生成](task/20261022-round11/task.md)
+- [tiller pr 草稿完善与 GitLab MR 支持](task/20261022-round12/task.md)
+- [tiller pr 草稿细节修正与文档表述恢复](task/20261022-round13/task.md)
+- [验证防伪与任务范围约束](task/20261022-round14/task.md)
+- [由 tiller 自主运行测试并核实结果](task/20261022-round15/task.md)
+- [用例改为测试设计资产，测试名引用用例 ID](task/20261022-round16/task.md)
+- [评审与发布环节，已验收任务按验收提交检查](task/20261022-round17/task.md)
+- [任务阶段、关闭与规格清理](task/20261022-round8/task.md)
+- [第9轮：确认去原话化与结构化任务正文](task/20261022-round9/task.md)
+- [历史 work 迁入 task](task/20261023-migrate-work/task.md)
+- [关键节点人工确认](task/human-confirmation/task.md)
+- [首个可用交付](task/initial-delivery/task.md)
 
 ## 历史任务资料精简
 
-按用户要求，已提交的历史工作目录仅保留核心依据与结果摘要，原机器回执、过程日志和审阅快照直接删除且不备份。目录用于查阅历史，不作为当前 CLI 可恢复工作或未完成操作队列；当前候选的验证边界见任务类型流程工作。
+按用户要求，历史 work 记录已迁入 `task/` 并仅保留核心依据与结果摘要；原机器回执、过程日志、审阅快照及 work 目录不再保留且不备份。迁移记录用于查阅历史，不作为后续执行队列；其“已开始”阶段不表示任务重新开工或通过验收。

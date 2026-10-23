@@ -14,6 +14,7 @@
     "repository-paths.test.mjs",
     "runtime.test.mjs",
     "upgrade.test.mjs",
+    "work-migration.test.mjs",
     "usage-resources.test.mjs"
   ],
   "e2e": [

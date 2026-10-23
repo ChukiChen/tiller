@@ -59,7 +59,7 @@ node .tiller/run.cjs start <task-id> --plan batch --item P-1 --title "接入" \
 
 - `verify` 记录用例、测试、命令、结果、核实状态、提交、代码树摘要和日志路径；原始输出只写 `.tiller/local/logs/`，不提交全文快照或日志。
 - 外部报告须写明理由并 `--allow-reported`；`check` 核对 AC→用例→测试→当前验证、范围、测试弱化和记录安全；`accept` 只在其通过后保存。
-- 单任务只有 `.tiller/task/<id>/task.md`；历史 `.tiller/work/` 只读。超大设计先用 plan 拆任务。
+- 单任务只有 `.tiller/task/<id>/task.md`；外部仓 `.tiller/work/` 只读遗留。超大设计用 plan 拆任务。
 
 ## 接入与升级
 

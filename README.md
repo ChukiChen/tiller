@@ -120,7 +120,7 @@ tiller init ./management-project --mode workspace \
 src/          TypeScript CLI
 resources/    随工程安装的入口、规则、使用指引和启动器
 test/         规则、契约、集成和端到端测试
-.tiller/      specs、context、cases、plans、task 与历史 work
+.tiller/      specs、context、cases、plans 与 task
 ```
 
 项目背景和长期决定分别维护在 `.tiller/context/` 与 `.tiller/specs/`。目录、关键模块职责、构建/启动/测试入口、主要接口或数据流、外部依赖变化时更新背景；普通实现细节不重复记录。
