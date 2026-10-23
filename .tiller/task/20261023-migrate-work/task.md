@@ -57,6 +57,14 @@
 - 对象摘要：5e5f2056d65b18171cedc6e81cf52a31ce9b9e7b304449e8a68d9b5dd7c9a13b
 - 时间：2026-10-23T02:59:41.729Z
 
+### acceptance
+- 确认部分：交付验收
+- 对象：当前交付（需求、设计、验证与提交）
+- 确认人：boon yu
+- 提交：3a23b14727368ed2c215056effd07cfc26b92193
+- 对象摘要：7004cdad9552f344331f94d9e45b9dacb25cfb424e6dafeeede4f0f5e1f0f10f
+- 时间：2026-10-23T03:43:04.327Z
+
 ## 验证
 
 ### run-1
@@ -128,9 +136,6 @@
 - [x] 未弱化仍存在的测试
 - [x] 评审无未清除阻塞项
 - [x] 记录不含密钥或本机绝对路径
-
-阻塞项：
-- 交付范围存在未提交改动：.tiller/cases/modules/standards/behavior.md、.tiller/cases/modules/workflow/behavior.md、.tiller/cases/modules/workflow/interface.md、.tiller/context/project.md、.tiller/index.md、.tiller/project.json、.tiller/rules/project.md、.tiller/specs/decisions.md、.tiller/specs/modules/workflow/requirements.md、.tiller/specs/requirements.md、.tiller/usage.md、README.md、resources/usage.md、src/core.ts、test/case-redesign.test.mjs、test/flow-cli.test.mjs、test/review-release.test.mjs、test/rules.test.mjs、test/suites.json、test/work-migration.test.mjs
 
 提示：
 - 49 条历史用例未绑定来源 AC；新用例请用 case add 写入 criteria。
