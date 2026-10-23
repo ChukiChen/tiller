@@ -6,7 +6,7 @@ Codex 是主要开发 Agent，也是一等支持对象；tiller 自身也使用�
 
 ## 当前状态
 
-当前包与分发资源为 0.5.0，默认流程是 `start`、`resume`、`confirm`、`verify`、`check`、`accept`、`close`、`reopen`，交付草稿用 `pr`。小改动走“需求确认 → 实现 → 验证”，standard 代码任务增加设计确认；默认人工节点只有需求、设计和交付验收，规划/合入/发布按需确认。
+当前包与分发资源为 0.5.0，默认流程是 `start`、`resume`、`confirm`、`verify`、`check`、`accept`、`close`、`reopen`，评审、发布和交付草稿分别用 `review`、`release`、`pr`。小改动走“需求确认 → 实现 → 验证”，standard 代码任务增加设计确认；默认人工节点只有需求、设计和交付验收，规划/评审/合入/发布按需确认。
 
 - 单次任务记录在 `.tiller/task/<id>/task.md`；start 生成结构化需求与设计模板，确认前校验必填段。
 - 确认自动记录部分、确认人、时间、提交和摘要；`--by` 缺省取 Git `user.name`，原话可选。需求与设计独立失效，旧格式保持兼容。
@@ -14,7 +14,8 @@ Codex 是主要开发 Agent，也是一等支持对象；tiller 自身也使用�
 - `.tiller/plans/<id>.md` 支持目标、关联 specs、任务条目、粒度和依赖；依赖未验收时阻塞开工。
 - `.tiller/cases/` 是产品级测试设计事实源，按模块 behavior/interface/performance/security 和 scenarios 组织为 Markdown；需求确认后先写前置条件、步骤、输入、预期结果和来源 AC，再让测试名或紧邻注释引用 `CASE-NNN`。
 - `verify` 只声明 `--test` 或 `--case`，由 tiller 构造并执行精确匹配的 node:test 命令，结果只从私有临时报告核实；`--case` 执行覆盖该用例的全部测试；stdout/stderr 不参与判定，完整输出写入 `.tiller/local/logs/`。`verify.prepare` 与 `verify.runner` 从 `project.json` 读取；外部报告须写理由且经 `--allow-reported`，bugfix 须有基线失败先行与当前通过。standard 任务必须声明 `--target`。
-- `check` 分阶段校验 AC→测试设计用例→引用测试→当前验证、执行证据、反向 `criteria`、模块/场景结构、范围、测试弱化、密钥和本机路径；确认后缺用例、验证后待实现均阻塞。
+- `check` 分阶段校验 AC→测试设计用例→引用测试→当前验证、执行证据、反向 `criteria`、模块/场景结构、范围、测试弱化、密钥和本机路径；确认后缺用例、验证后待实现、评审阻塞未清除均阻塞，specs/context 未回写只提示。
+- `review` 把发现写入 task.md，`release` 只读检查发布准备；已验收任务按 acceptance 提交读取代码树和测试，后续代码漂移不误报验证过期，未验收任务仍查工作区/HEAD。
 - 提交主题为 `类型(模块): 中文摘要`，PR/MR 标题加 `[任务编号]` 并保持五段，标题摘要按显式、任务元数据、最早规范提交、任务标题回退，主模块取范围首个，关联任务为纯文本；分支为 `类型/任务编号[-描述]`；`pr` 只生成本地草稿，不联网。
 - `init` 生成最小 specs/context/cases/plans 骨架，并按 `--platform github|gitlab|both`（缺省 github）生成模板；平台初始化后不能通过 CLI 切换。`upgrade` 只刷新未修改的受管文件并补齐当前平台模板，兼容当前和直接兼容的上一资源契约。
 
@@ -24,7 +25,7 @@ Codex 是主要开发 Agent，也是一等支持对象；tiller 自身也使用�
 
 当前 specs 已按轻量方案收敛，被替代内容只从 Git 历史追溯。自举工程 `project.json` 的 `resourceVersion` 与包版本、CLI 版本和资源常量保持 0.5.0；本轮功能开发不升版。
 
-本轮见[用例改为测试设计资产](../task/20261022-round16/task.md)。需求与设计已由负责人确认；实现和验证完成后再由负责人验收，技术验证不能替代用户验收或发布。
+本轮见[评审与发布环节](../task/20261022-round17/task.md)。需求与设计已由负责人确认；实现和验证完成后再由负责人验收，技术验证不能替代用户验收或发布。
 
 ## 目录
 

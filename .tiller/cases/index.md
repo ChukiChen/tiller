@@ -64,7 +64,7 @@ tiller case add <task-id> --module workflow --kind behavior --title "流程行�
 - 一个测试可引用多个 `CASE-NNN`，一个用例也可被多个测试覆盖。
 - 没有任何测试引用的用例显示「待实现」；测试引用不存在的编号会明确报错。
 - `verify <task-id> --case CASE-NNN` 执行覆盖该用例的全部测试，并走 tiller 私有报告核实路径；`--test` 和 `--criterion` 继续可单独使用。
-- 设计确认后，`check` 要求每条 AC 有带完整测试设计的用例；验证或验收时，要求每个用例至少有一个当前通过、已核实且未过期的引用测试。
+- 设计确认后，`check` 要求每条 AC 有带完整测试设计的用例；验证或验收时，要求每个用例至少有一个当前通过、已核实且未过期的引用测试。已验收任务按 acceptance 提交复查，未验收任务按工作区/HEAD。
 
 `task.md` 的验证段按 AC 记录用例编号、测试、命令、结果、提交和日志路径。`verify` 只从私有报告核实结果；stdout/stderr 只写 `.tiller/local/logs/`。报告缺失/损坏、匹配不唯一、失败或跳过均不能通过。外部报告用 `--reported --command --result --reason`，理由必填并在默认检查中阻断，只有 `--allow-reported` 放行。
 
@@ -73,3 +73,4 @@ tiller case add <task-id> --module workflow --kind behavior --title "流程行�
 - `.tiller/plans/<id>.md` 保存大功能拆分、条目依赖和覆盖需求；规划确认是可选门禁。
 - `.tiller/task/<id>/task.md` 保存当前任务的完整需求、设计、确认、验证与自检。
 - `.tiller/cases/` 保存跨任务可回归的测试设计；它不复制任务过程，也不保存测试引用字段或执行输出。
+- 独立评审发现和未清除阻塞项写入 `task.md`，由 `check`/`accept` 阻断；发布准备由只读 `release` 检查，不写入用例目录。

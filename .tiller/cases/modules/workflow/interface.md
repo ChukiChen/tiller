@@ -467,3 +467,53 @@
 ### 预期结果
 
 tiller 依次自主执行两个测试，写入全部条目并经私有报告核实为通过；--case 与 --test、--criterion 语义兼容。
+
+## CASE-105 发布清单可执行并纳入检查
+
+- 类型：interface
+- 优先级：medium
+- 模块：workflow
+- 关联 AC：20261022-round17#AC-2
+- 需求：`.tiller/specs/modules/workflow/requirements.md`
+- 源码：`src/release.ts`, `src/flow.ts`, `src/cli.ts`
+
+### 前置条件
+
+- 任务已验收，项目具备 README、包元数据或非 npm 项目说明。
+
+### 步骤
+
+1. 运行 release 门禁，并查看 check 返回的发布清单。
+
+### 输入
+
+- 干净且满足发布准备的项目；以及缺失 README 或存在未提交范围改动的项目。
+
+### 预期结果
+
+release 逐项给出 pass/fail/na 并以未通过项决定退出状态；check 同时展示发布清单。
+
+## CASE-107 从需求文件开始任务
+
+- 类型：interface
+- 优先级：medium
+- 模块：workflow
+- 关联 AC：20261022-round17#AC-4
+- 需求：`.tiller/specs/modules/workflow/requirements.md`
+- 源码：`src/flow.ts`, `src/cli.ts`
+
+### 前置条件
+
+- 工程内存在非空需求 Markdown，任务尚未创建。
+
+### 步骤
+
+1. 使用 start --requirement-file 读取需求文件。
+
+### 输入
+
+- 合法相对路径、越界路径、绝对路径和空文件。
+
+### 预期结果
+
+合法文件内容进入结构化需求并记录来源；非法路径或空文件明确报错。

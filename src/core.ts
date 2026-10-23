@@ -224,7 +224,7 @@ export function buildIndexSection(mode: ProjectMode): string {
     '- `work/`：仅保留的历史任务记录，只读追溯；新任务写入 `task/`。',
     '- `local/`：本机锁与恢复信息，不作为共享事实来源。', '',
     '任务创建或资料变化后，以实际文件和任务记录为准；确认绑定结构化正文，原话可选且不替代正文。',
-    '验证由 tiller 执行声明的测试并从私有报告核实；完整输出只写 `local/logs/`，外部报告须写明理由并显式放行。',
+    '验证由 tiller 执行声明的测试并从私有报告核实；完整输出只写 `local/logs/`，外部报告须写明理由并显式放行。评审发现写入 task.md，未清除阻塞项阻断验收；已验收任务按验收提交复查，specs 未回写只提示；发布用只读 release 清单。',
     INDEX_END,
   ].join('\n');
 }

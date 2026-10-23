@@ -14,8 +14,9 @@ import { resolveConfirmer } from './confirmer.js';
 import { branchNameWarning, normalizeBranchSlug } from './branch-conventions.js';
 import { commitMessageWarnings } from './commit-conventions.js';
 import { readProjectMetadata } from './core.js';
-import { applyChanges, readTextIfExists, validateRelativePath, withProjectLock } from './files.js';
+import { applyChanges, inspectSafePaths, readTextIfExists, validateRelativePath, withProjectLock, type ResolvedInputPath } from './files.js';
 import { readPlanItem } from './plans.js';
+import { releaseChecklist, type ReleaseChecklist } from './release.js';
 import { validateTaskId } from './task-id.js';
 import { namePattern, runnerFor, type TestEvidence, type TestReference } from './test-output.js';
 import type { ProjectMetadata } from './types.js';
@@ -60,7 +61,7 @@ export type FlowCloseStatus = 'closed' | 'abandoned';
 export interface FlowMeta {
   version: 1; id: string; type: FlowType; size: FlowSize; created: string; base: string; scope: string[]; preExisting: Record<string, string>;
   format?: 'structured';
-  plan?: string; item?: string; slug?: string; summary?: string;
+  plan?: string; item?: string; slug?: string; summary?: string; requirementFile?: string;
 }
 export interface FlowCriterion { id: string; text: string }
 export interface FlowConfirmation {
@@ -76,14 +77,20 @@ export interface FlowVerification {
 export interface FlowClosure {
   action: 'close' | 'reopen'; status?: FlowCloseStatus; reason: string; at: string;
 }
+export interface FlowReviewFinding {
+  id: string; text: string; blocking: boolean; resolved: boolean; by: string; at: string;
+  resolvedBy?: string; resolvedAt?: string;
+}
+export interface FlowReview { by: string; at: string; findings: FlowReviewFinding[] }
 export interface FlowTask {
   meta: FlowMeta; title: string; requirement: string; design: string; criteria: FlowCriterion[];
-  confirmations: FlowConfirmation[]; verifications: FlowVerification[]; closures: FlowClosure[]; content: string; path: string;
+  confirmations: FlowConfirmation[]; verifications: FlowVerification[]; closures: FlowClosure[];
+  review: FlowReview | null; content: string; path: string;
 }
 export interface TaskStage { stage: FlowStage; reason: string }
 
 export interface FlowStartInput {
-  title: string; requirement: string; type?: string; size?: string; targets?: string[];
+  title: string; requirement?: string; requirementFile?: string; type?: string; size?: string; targets?: string[];
   criteria: string[]; plan?: string; item?: string; slug?: string; summary?: string;
 }
 export interface FlowVerifyInput {
@@ -92,6 +99,7 @@ export interface FlowVerifyInput {
 }
 export interface FlowConfirmInput { quote?: string; commit?: string; by?: string; allowReported?: boolean }
 export interface FlowCheckOptions { allowReported?: boolean }
+export interface FlowReviewInput { findings?: string[]; blocking?: string[]; resolve?: string[]; by?: string }
 
 function fail(code: string, message: string): never {
   throw Object.assign(new Error(message), { code });
@@ -208,11 +216,18 @@ function parseMeta(marker: string, id: string): FlowMeta {
   }
   let summary: string | undefined;
   if (value.summary !== undefined) summary = text(value.summary, '任务摘要', 200);
+  let requirementFile: string | undefined;
+  if (value.requirementFile !== undefined) {
+    if (typeof value.requirementFile !== 'string') fail('INVALID_FLOW_TASK', '需求文件路径无效。');
+    validateRelativePath(value.requirementFile);
+    requirementFile = value.requirementFile;
+  }
   return { version: 1, id, type, size, created, base, scope: scopeValues(value.scope as string[]), preExisting,
     ...(format ? { format } : {}),
     ...(plan && item ? { plan, item } : {}),
     ...(slug ? { slug } : {}),
-    ...(summary ? { summary } : {}) };
+    ...(summary ? { summary } : {}),
+    ...(requirementFile ? { requirementFile } : {}) };
 }
 function sectionBody(content: string, title: string): string {
   const match = new RegExp(`^## ${title}\\s*$`, 'mu').exec(content);
@@ -332,6 +347,39 @@ function parseClosures(content: string): FlowClosure[] {
   }
   return result;
 }
+function parseReview(content: string): FlowReview | null {
+  const body = sectionBody(content, '评审');
+  if (!body) return null;
+  let by = '';
+  let at = '';
+  const findings: FlowReviewFinding[] = [];
+  for (const chunk of body.split(/^###\s+/mu).slice(1)) {
+    const lines = chunk.split(/\r?\n/u);
+    const heading = lines.shift()?.trim() ?? '';
+    const field = (name: string): string => {
+      const prefix = `- ${name}：`;
+      return lines.find(line => line.startsWith(prefix))?.slice(prefix.length).trim() ?? '';
+    };
+    if (heading === 'checklist') {
+      const reviewer = field('评审人');
+      const recordedAt = field('时间');
+      if (reviewer && Number.isFinite(Date.parse(recordedAt))) { by = reviewer; at = recordedAt; }
+      continue;
+    }
+    if (!/^REV-\d+$/u.test(heading)) continue;
+    const textValue = field('发现');
+    const blocking = field('阻塞') === '是';
+    const resolved = field('状态') === '已解决';
+    const findingBy = field('记录人');
+    const findingAt = field('时间');
+    if (!textValue || !findingBy || !Number.isFinite(Date.parse(findingAt))) continue;
+    const resolvedBy = field('解决人');
+    const resolvedAt = field('解决时间');
+    findings.push({ id: heading, text: textValue, blocking, resolved, by: findingBy, at: findingAt,
+      ...(resolvedBy && Number.isFinite(Date.parse(resolvedAt)) ? { resolvedBy, resolvedAt } : {}) });
+  }
+  return by && at ? { by, at, findings } : findings.length ? { by: '未记录', at: findings[0]!.at, findings } : null;
+}
 function parseTask(content: string, id: string, relative: string): FlowTask {
   const marker = new RegExp(`${MARKER_PREFIX.replace(/[.*+?^${}()|[\]\\]/gu, '\\$&')}(\\{.*\\})${MARKER_SUFFIX.replace(/[.*+?^${}()|[\]\\]/gu, '\\$&')}`, 'u').exec(content);
   if (!marker) fail('FLOW_TASK_NOT_FOUND', `任务 ${id} 不是当前轻量记录。`);
@@ -343,7 +391,7 @@ function parseTask(content: string, id: string, relative: string): FlowTask {
   return {
     meta, title, requirement, design: sectionBody(content, '设计'),
     criteria: parseCriteria(content, requirement), confirmations: parseConfirmations(content),
-    verifications: parseVerifications(content), closures: parseClosures(content), content, path: relative,
+    verifications: parseVerifications(content), closures: parseClosures(content), review: parseReview(content), content, path: relative,
   };
 }
 export async function readTask(root: string, id: string): Promise<FlowTask> {
@@ -417,6 +465,27 @@ function renderClosures(values: FlowClosure[]): string {
     `- 时间：${value.at}`,
   ].join('\n')).join('\n\n');
 }
+function renderReview(review: FlowReview): string {
+  const openBlockers = review.findings.filter(item => item.blocking && !item.resolved).length;
+  const chunks = [
+    ['### checklist', `- 评审人：${normalizeLine(review.by)}`, `- 时间：${review.at}`,
+      '- 检查清单：目标与范围；需求与设计；AC、用例与验证；改动范围与测试完整性；specs 回写；发布准备',
+      `- 结论：${openBlockers ? `${openBlockers} 项阻塞未解决` : '无未解决阻塞项'}`].join('\n'),
+  ];
+  for (const finding of review.findings) {
+    chunks.push([
+      `### ${finding.id}`,
+      `- 状态：${finding.resolved ? '已解决' : '未解决'}`,
+      `- 阻塞：${finding.blocking ? '是' : '否'}`,
+      `- 发现：${normalizeLine(finding.text)}`,
+      `- 记录人：${normalizeLine(finding.by)}`,
+      `- 时间：${finding.at}`,
+      ...(finding.resolvedBy && finding.resolvedAt
+        ? [`- 解决人：${normalizeLine(finding.resolvedBy)}`, `- 解决时间：${finding.resolvedAt}`] : []),
+    ].join('\n'));
+  }
+  return chunks.join('\n\n');
+}
 function renderTask(task: Omit<FlowTask, 'content' | 'path'>, selfCheck = ''): string {
   const parts = [`# ${task.title}`, `${MARKER_PREFIX}${JSON.stringify(task.meta)}${MARKER_SUFFIX}`, '## 需求', task.requirement];
   if (task.meta.format !== 'structured' || (task.criteria.length && !subSectionBody(task.requirement, '验收条件'))) {
@@ -426,6 +495,7 @@ function renderTask(task: Omit<FlowTask, 'content' | 'path'>, selfCheck = ''): s
   if (task.design.trim()) parts.push('## 设计', task.design.trim());
   parts.push('## 确认', renderConfirmations(task.confirmations) || '尚无确认。');
   parts.push('## 验证', renderVerifications(task.verifications) || '尚无验证。');
+  if (task.review) parts.push('## 评审', renderReview(task.review));
   if (task.closures.length) parts.push('## 关闭', renderClosures(task.closures));
   parts.push('## 自检', selfCheck.trim() || '交付前运行 check；验收后运行 accept。');
   return `${parts.join('\n\n').trimEnd()}\n`;
@@ -448,11 +518,11 @@ function criteriaList(values: string[]): FlowCriterion[] {
   }
   return result.sort((left, right) => Number(left.id.slice(3)) - Number(right.id.slice(3)));
 }
-function renderStructuredRequirement(goal: string, scope: string[], criteria: FlowCriterion[]): string {
+function renderStructuredRequirement(goal: string, scope: string[], criteria: FlowCriterion[], requirementFile?: string): string {
   const paths = scope.map(value => `\`${value}\``).join('、');
   const outside = scope.includes('.') ? '仓库内未被本任务授权的文件' : `${paths} 以外的文件`;
   return [
-    '### 目标', '', goal, '',
+    '### 目标', '', ...(requirementFile ? [`需求来源：\`${requirementFile}\``, ''] : []), goal, '',
     '### 范围', '', `- 做：${paths}`, `- 不做：${outside}`, `- 涉及模块或文件：${paths}`, '',
     '### 验收条件', '', criteria.map(item => `- ${item.id}: ${normalizeLine(item.text)}`).join('\n'),
   ].join('\n').trim();
@@ -490,7 +560,9 @@ function expectedSubject(task: FlowTask, gate: FlowGate, commit: string): string
 export async function startFlow(rootInput: string, idInput: string, input: FlowStartInput) {
   const root = path.resolve(rootInput); validateTaskId(idInput);
   const title = safeInput(text(input.title, '标题', 200), '标题');
-  const requirement = safeInput(text(input.requirement, '需求正文'), '需求正文');
+  if ((input.requirement === undefined) === (input.requirementFile === undefined)) {
+    fail('INVALID_FLOW_INPUT', 'start 需要 --requirement 或 --requirement-file，两者只能选一个。');
+  }
   const type = flowType(input.type);
   const criteria = criteriaList(input.criteria).map(item => ({ ...item, text: safeInput(item.text, `${item.id} 验收条件`) }));
   const slug = input.slug === undefined ? undefined : normalizeBranchSlug(input.slug);
@@ -501,6 +573,24 @@ export async function startFlow(rootInput: string, idInput: string, input: FlowS
   return withProjectLock(root, async () => {
     await readProjectMetadata(root);
     if (await readTextIfExists(root, relative) !== null) fail('TASK_EXISTS', `任务 ${idInput} 已存在，不能覆盖。`);
+    let requirementFile: string | undefined;
+    let requirement: string;
+    if (input.requirementFile !== undefined) {
+      try { validateRelativePath(input.requirementFile); }
+      catch { fail('INVALID_REQUIREMENT_FILE', `需求文件必须是工程内相对路径：${input.requirementFile}`); }
+      requirementFile = input.requirementFile;
+      let resolved: ResolvedInputPath;
+      try { resolved = (await inspectSafePaths(root, [requirementFile]))[0]!; }
+      catch { fail('INVALID_REQUIREMENT_FILE', `需求文件路径无效或不安全：${requirementFile}`); }
+      if (resolved.stat === null) fail('REQUIREMENT_FILE_NOT_FOUND', `需求文件不存在：${requirementFile}`);
+      if (!resolved.stat.isFile()) fail('INVALID_REQUIREMENT_FILE', `需求文件不是普通文件：${requirementFile}`);
+      const raw = await readFile(resolved.target, 'utf8');
+      if (!raw.trim()) fail('EMPTY_REQUIREMENT_FILE', `需求文件为空：${requirementFile}`);
+      if (raw.length > 50_000) fail('REQUIREMENT_FILE_TOO_LARGE', `需求文件不能超过 50000 字符：${requirementFile}`);
+      requirement = safeInput(normalizeLine(raw), '需求文件内容');
+    } else {
+      requirement = safeInput(text(input.requirement, '需求正文'), '需求正文');
+    }
     let plan: string | undefined;
     let item: string | undefined;
     let size = flowSize(input.size);
@@ -520,18 +610,20 @@ export async function startFlow(rootInput: string, idInput: string, input: FlowS
       catch { /* Deleted pre-existing paths cannot be compared later. */ }
     }
     const created = new Date().toISOString();
-    const structuredRequirement = renderStructuredRequirement(requirement, scope, criteria);
+    const structuredRequirement = renderStructuredRequirement(requirement, scope, criteria, requirementFile);
     const task = { meta: { version: 1 as const, id: idInput, type, size, created, base, scope, preExisting,
       format: 'structured' as const,
-      ...(plan && item ? { plan, item } : {}), ...(slug ? { slug } : {}), ...(summary ? { summary } : {}) },
+      ...(plan && item ? { plan, item } : {}), ...(slug ? { slug } : {}), ...(summary ? { summary } : {}),
+      ...(requirementFile ? { requirementFile } : {}) },
     title, requirement: structuredRequirement,
       design: size === 'standard' ? emptyDesignTemplate() : '', criteria,
-      confirmations: [], verifications: [], closures: [] };
+      confirmations: [], verifications: [], closures: [], review: null };
     const content = renderTask(task);
     await mkdir(path.dirname(path.join(root, relative)), { recursive: true });
     await applyChanges(root, [{ path: relative, before: null, after: content }]);
     return { id: idInput, path: relative, type, size, base, scope, criteria, ...(plan && item ? { plan, item } : {}),
       ...(slug ? { slug } : {}), ...(summary ? { summary } : {}),
+      ...(requirementFile ? { requirementFile } : {}),
       next: `核对结构化需求正文后确认：tiller confirm ${idInput} requirements [--by "<确认人>"]` };
   });
 }
@@ -544,9 +636,10 @@ export async function resumeFlow(rootInput: string, id?: string) {
     return { id, title: task.title, type: task.meta.type, size: task.meta.size, scope: task.meta.scope,
       path: task.path, ...(task.meta.plan && task.meta.item ? { plan: task.meta.plan, item: task.meta.item } : {}),
       ...(task.meta.slug ? { slug: task.meta.slug } : {}), ...(task.meta.summary ? { summary: task.meta.summary } : {}),
+      ...(task.meta.requirementFile ? { requirementFile: task.meta.requirementFile } : {}),
       stage: stage.stage, stageReason: stage.reason,
       requirement: task.requirement, criteria: task.criteria, confirmations: task.confirmations, verifications: task.verifications,
-      closures: task.closures };
+      closures: task.closures, review: task.review };
   }
   const directory = path.join(root, TASK_DIRECTORY);
   let entries;
@@ -639,8 +732,12 @@ function testReference(value: string): string {
   validateRelativePath(pathPart);
   return normalized;
 }
-async function testExists(root: string, value: string): Promise<boolean> {
+async function testExists(root: string, value: string, commit?: string): Promise<boolean> {
   const relative = value.split('::')[0]!.split('#')[0]!;
+  if (commit && commit !== 'no-git') {
+    const checked = await git(root, ['cat-file', '-e', `${commit}:${relative}`]);
+    return checked.ok;
+  }
   try { const stat = await lstat(path.join(root, relative)); return stat.isFile(); }
   catch { return false; }
 }
@@ -690,6 +787,17 @@ export async function treeDigest(root: string, scope: string[], id: string): Pro
   }
   return sha(JSON.stringify(entries));
 }
+async function treeDigestAtCommit(root: string, scope: string[], id: string, commit: string): Promise<string | null> {
+  const listed = await git(root, ['ls-tree', '-r', '-z', '--name-only', commit, '--', ...scope]);
+  if (!listed.ok) return null;
+  const entries: [string, string][] = [];
+  for (const relative of listed.stdout.split('\0').filter(Boolean).sort()) {
+    if (excludedPath(relative, id) || !inScope(relative, scope)) continue;
+    const content = await git(root, ['show', `${commit}:${relative}`]);
+    if (content.ok) entries.push([relative, sha(content.stdout)]);
+  }
+  return sha(JSON.stringify(entries));
+}
 
 function recordSafety(content: string): string[] {
   const issues: string[] = [];
@@ -704,8 +812,12 @@ function recordSafety(content: string): string[] {
   return [...new Set(issues)];
 }
 
-async function changedFiles(root: string, base: string): Promise<string[] | null> {
+async function changedFiles(root: string, base: string, endpoint?: string): Promise<string[] | null> {
   if (base === 'no-git') return null;
+  if (endpoint) {
+    const tracked = await git(root, ['diff', '--name-only', '-z', base, endpoint, '--']);
+    return tracked.ok ? [...new Set(tracked.stdout.split('\0').filter(Boolean))] : null;
+  }
   const tracked = await git(root, ['diff', '--name-only', '-z', base, '--']);
   const untracked = await git(root, ['ls-files', '-z', '--others', '--exclude-standard']);
   if (!tracked.ok || !untracked.ok) return null;
@@ -722,13 +834,13 @@ async function scopedWorkingChanges(root: string, scope: string[], id: string): 
 }
 interface TestFindings { issues: string[]; warnings: string[] }
 
-async function weakensTests(root: string, base: string): Promise<TestFindings> {
+async function weakensTests(root: string, base: string, endpoint?: string): Promise<TestFindings> {
   if (base === 'no-git') return { issues: [], warnings: [] };
   const issues: string[] = [];
   const warnings: string[] = [];
   let deletedFiles = 0;
   let removedCases = 0;
-  const status = await git(root, ['diff', '--name-status', '-z', base, '--']);
+  const status = await git(root, ['diff', '--name-status', '-z', base, ...(endpoint ? [endpoint] : []), '--']);
   if (status.ok) {
     const fields = status.stdout.split('\0').filter(Boolean);
     for (let index = 0; index < fields.length; index += 2) {
@@ -738,7 +850,7 @@ async function weakensTests(root: string, base: string): Promise<TestFindings> {
     }
   }
   if (deletedFiles) warnings.push(`删除 ${deletedFiles} 个测试文件（请确认对应功能已删除；详情见 Git diff）。`);
-  const changed = await git(root, ['diff', '--name-only', '-z', base, '--']);
+  const changed = await git(root, ['diff', '--name-only', '-z', base, ...(endpoint ? [endpoint] : []), '--']);
   if (!changed.ok) return { issues, warnings };
   const count = (text: string, pattern: RegExp): number => [...text.matchAll(pattern)].length;
   const skipped = /\b(?:test|it|describe)\.(?:skip|todo|only)\s*\(/gu;
@@ -747,7 +859,13 @@ async function weakensTests(root: string, base: string): Promise<TestFindings> {
     const before = await git(root, ['show', `${base}:${relative}`]);
     if (!before.ok) continue;
     let after: string;
-    try { after = await readFile(path.join(root, relative), 'utf8'); } catch { continue; }
+    if (endpoint) {
+      const current = await git(root, ['show', `${endpoint}:${relative}`]);
+      if (!current.ok) continue;
+      after = current.stdout;
+    } else {
+      try { after = await readFile(path.join(root, relative), 'utf8'); } catch { continue; }
+    }
     const skippedBefore = count(before.stdout, skipped);
     const skippedAfter = count(after, skipped);
     const beforeBlocks = new Map(testBlocks(before.stdout).map(block => [block.name, block.assertions]));
@@ -792,10 +910,40 @@ async function caseChangedSinceBase(root: string, base: string, item: GlobalCase
   return caseSignature(old) !== caseSignature(item);
 }
 
+async function fileChangedSinceCommit(root: string, commit: string, relative: string): Promise<boolean> {
+  if (commit === 'no-git') return false;
+  const previous = await git(root, ['show', `${commit}:${relative}`]);
+  if (!previous.ok) return true;
+  try { return previous.stdout !== await readFile(path.join(root, relative), 'utf8'); }
+  catch { return true; }
+}
+
 function latestAcceptance(task: Pick<FlowTask, 'confirmations' | 'closures'>): FlowConfirmation | undefined {
   const reopenedAt = [...task.closures].reverse().find(item => item.action === 'reopen');
   return [...task.confirmations].reverse().find(item => item.gate === 'acceptance'
     && (!reopenedAt || Date.parse(item.at) > Date.parse(reopenedAt.at)));
+}
+
+function confirmedAcceptance(task: FlowTask): FlowConfirmation | undefined {
+  const acceptance = latestAcceptance(task);
+  return acceptance && acceptance.subject === expectedSubject(task, 'acceptance', acceptance.commit)
+    ? acceptance : undefined;
+}
+
+interface EvaluationContext { tree: string; commit?: string; warning?: string }
+
+async function evaluationContext(root: string, id: string, task: FlowTask): Promise<EvaluationContext> {
+  const acceptance = confirmedAcceptance(task);
+  if (acceptance && acceptance.commit !== 'no-git') {
+    const available = await git(root, ['cat-file', '-e', `${acceptance.commit}^{commit}`]);
+    if (available.ok) {
+      const tree = await treeDigestAtCommit(root, task.meta.scope, id, acceptance.commit);
+      if (tree) return { tree, commit: acceptance.commit };
+    }
+    return { tree: await treeDigest(root, task.meta.scope, id),
+      warning: `无法读取验收提交 ${acceptance.commit}，已回退到当前工作区检查。` };
+  }
+  return { tree: await treeDigest(root, task.meta.scope, id) };
 }
 
 function terminalStage(task: Pick<FlowTask, 'closures'>): TaskStage | null {
@@ -831,12 +979,12 @@ async function verificationProblem(
   run: FlowVerification,
   currentTree: string,
   options: FlowCheckOptions,
-  historicalAccepted: boolean,
+  contentCommit?: string,
 ): Promise<string | null> {
   if (run.result !== 'passed') return `${criterion} 最新验证结果为 ${run.result}。`;
   if (run.tree !== currentTree) return `${criterion} 的验证已过期：范围内代码已变化。`;
-  if (!(await testExists(root, run.test))) return `${criterion} 的测试引用不存在：${run.test}`;
-  if (historicalAccepted || run.legacyEvidence) return null;
+  if (!(await testExists(root, run.test, contentCommit))) return `${criterion} 的测试引用不存在：${run.test}`;
+  if (run.legacyEvidence) return null;
   const missingReportReason = run.source === 'reported' && !run.reason;
   if (missingReportReason) return `${criterion} 的外部报告缺少理由；请重新记录并写明 --reason。`;
   if (run.source === 'reported' && options.allowReported !== true) {
@@ -863,6 +1011,7 @@ async function evaluateCriterion(
   currentTree: string,
   historicalAccepted: boolean,
   requireTests: boolean,
+  contentCommit?: string,
 ): Promise<CriterionEvaluation> {
   const issues: string[] = [];
   const expected = `${task.meta.id}#${criterion.id}`;
@@ -901,7 +1050,7 @@ async function evaluateCriterion(
       for (const reference of entry.tests) {
         const testRun = [...runs].reverse().find(run => sameTestReference(run.test, reference));
         if (!testRun) continue;
-        const found = await verificationProblem(root, criterion.id, testRun, currentTree, options, historicalAccepted);
+        const found = await verificationProblem(root, criterion.id, testRun, currentTree, options, contentCommit);
         if (found) {
           problem = true;
           issues.push(`${criterion.id} 的用例 ${entry.id}：${found}`);
@@ -918,7 +1067,7 @@ async function evaluateCriterion(
     runValid = false;
     issues.push(`${criterion.id} 尚无验证。`);
   } else {
-    const found = await verificationProblem(root, criterion.id, latest, currentTree, options, historicalAccepted);
+    const found = await verificationProblem(root, criterion.id, latest, currentTree, options, contentCommit);
     if (found) {
       runValid = false;
       issues.push(found);
@@ -932,7 +1081,10 @@ async function evaluateCriterion(
       issues.push(`${criterion.id} 引用的全局用例不存在：${caseId}`);
     }
     for (const entry of linked.values()) {
-      if (latest.tree === currentTree && entry.tests.length
+      const testPath = fallbackTestReference(latest.test)?.path;
+      const testChangedAfterAcceptance = historicalAccepted && contentCommit !== undefined && testPath !== undefined
+        && await fileChangedSinceCommit(root, contentCommit, testPath);
+      if (latest.tree === currentTree && entry.tests.length && !testChangedAfterAcceptance
         && !entry.tests.some(reference => sameTestReference(latest.test, reference))) {
         runValid = false;
         issues.push(`${criterion.id} 的验证测试 ${latest.test} 与全局用例 ${entry.id} 的测试引用不一致。`);
@@ -948,11 +1100,11 @@ async function evaluateCriterion(
 
 async function verificationStageIssues(root: string, id: string, task: FlowTask): Promise<string[]> {
   const library = await readCaseLibrary(root);
-  const currentTree = await treeDigest(root, task.meta.scope, id);
-  const historicalAccepted = latestAcceptance(task) !== undefined;
+  const context = await evaluationContext(root, id, task);
+  const historicalAccepted = confirmedAcceptance(task) !== undefined;
   const issues: string[] = [];
   for (const criterion of task.criteria) {
-    const evaluated = await evaluateCriterion(root, task, criterion, library, {}, currentTree, historicalAccepted, true);
+    const evaluated = await evaluateCriterion(root, task, criterion, library, {}, context.tree, historicalAccepted, true, context.commit);
     issues.push(...evaluated.issues);
   }
   return [...new Set(issues)];
@@ -1001,14 +1153,20 @@ export interface FlowCheck {
   acceptance: { confirmed: boolean; quote?: string; by?: string; commit?: string };
   changedOutsideScope: string[];
   cases: { count: number; matched: number; modules: CaseLibrary['modules']; scenarios: CaseLibrary['scenarios']; uncovered: string[] };
+  review: { reviewed: boolean; openBlockers: string[] };
+  release: ReleaseChecklist;
   selfCheck: string;
 }
 
 async function evaluateFlow(root: string, id: string, task: FlowTask, options: FlowCheckOptions = {}): Promise<FlowCheck> {
   const issues: string[] = []; const warnings: string[] = [];
-  const historicalAccepted = latestAcceptance(task) !== undefined;
+  const acceptance = latestAcceptance(task);
+  const acceptanceConfirmed = acceptance !== undefined && acceptance.subject === expectedSubject(task, 'acceptance', acceptance.commit);
+  const historicalAccepted = acceptanceConfirmed;
   const requirement = [...task.confirmations].reverse().find(item => item.gate === 'requirements');
-  const currentTree = await treeDigest(root, task.meta.scope, id);
+  const context = await evaluationContext(root, id, task);
+  const currentTree = context.tree;
+  if (context.warning) warnings.push(context.warning);
   const confirmationStates: FlowCheck['confirmations'] = [];
   for (const gate of ['requirements', 'design', 'acceptance'] as FlowGate[]) {
     const item = gate === 'acceptance'
@@ -1044,7 +1202,7 @@ async function evaluateFlow(root: string, id: string, task: FlowTask, options: F
   const criteria: FlowCheck['criteria'] = [];
   for (const item of task.criteria) {
     const evaluated = await evaluateCriterion(root, task, item, library, options, currentTree,
-      historicalAccepted, task.verifications.length > 0);
+      historicalAccepted, task.verifications.length > 0, context.commit);
     issues.push(...evaluated.issues);
     if (!evaluated.bindingValid) criteriaBindingValid = false;
     if (evaluated.covered) matched++;
@@ -1080,30 +1238,40 @@ async function evaluateFlow(root: string, id: string, task: FlowTask, options: F
       }
     }
   }
-  const changed = await changedFiles(root, task.meta.base);
+  const changed = await changedFiles(root, task.meta.base, context.commit);
   const changedOutsideScope: string[] = [];
   if (changed === null) warnings.push('未检测到可用 Git 基线，范围检查已跳过。');
   else for (const relative of changed) {
     if (excludedPath(relative, id) || taskRecordPath(relative)) continue;
     if (task.meta.preExisting[relative] !== undefined) {
       try {
-        if (sha(await readFile(path.join(root, relative), 'utf8')) === task.meta.preExisting[relative]) continue;
+        const content = context.commit
+          ? (await git(root, ['show', `${context.commit}:${relative}`])).stdout
+          : await readFile(path.join(root, relative), 'utf8');
+        if (sha(content) === task.meta.preExisting[relative]) continue;
       } catch { /* Missing pre-existing files are reported as changes. */ }
     }
     if (!inScope(relative, task.meta.scope)) changedOutsideScope.push(relative);
   }
   warnings.push(...regressionWarnings(library, changed ?? []));
+  if (changed !== null && !changed.some(relative => relative.startsWith('.tiller/specs/') || relative.startsWith('.tiller/context/'))) {
+    warnings.push('未检测到任务基线后的 `.tiller/specs/` 或 `.tiller/context/` 回写；如本次形成长期有效结论，请同步；纯过程性变更可忽略。');
+  }
   if (changedOutsideScope.length) issues.push(`改动超出范围：${changedOutsideScope.join('、')}`);
-  const weakened = await weakensTests(root, task.meta.base);
+  const weakened = await weakensTests(root, task.meta.base, context.commit);
   issues.push(...weakened.issues);
   warnings.push(...weakened.warnings);
-  const uncommitted = await scopedWorkingChanges(root, task.meta.scope, id);
-  if (uncommitted === null) warnings.push('未检测到可用 Git 提交，未提交改动检查已跳过。');
-  else if (uncommitted.length) issues.push(`交付范围存在未提交改动：${uncommitted.join('、')}`);
+  if (!historicalAccepted) {
+    const uncommitted = await scopedWorkingChanges(root, task.meta.scope, id);
+    if (uncommitted === null) warnings.push('未检测到可用 Git 提交，未提交改动检查已跳过。');
+    else if (uncommitted.length) issues.push(`交付范围存在未提交改动：${uncommitted.join('、')}`);
+  }
+  const openBlockers = task.review?.findings.filter(item => item.blocking && !item.resolved).map(item => item.id) ?? [];
+  if (openBlockers.length) issues.push(`评审存在未清除阻塞项：${openBlockers.join(', ')}。`);
   issues.push(...recordSafety(task.content));
-  const acceptance = latestAcceptance(task);
-  const acceptanceConfirmed = acceptance !== undefined && acceptance.subject === expectedSubject(task, 'acceptance', acceptance.commit);
   if (acceptance && !acceptanceConfirmed) warnings.push('交付验收后任务对象已变化，需要重新验收。');
+  const release = await releaseChecklist(root, { id, accepted: acceptanceConfirmed,
+    ...(acceptance?.commit ? { acceptanceCommit: acceptance.commit } : {}), scope: task.meta.scope });
   const uniqueIssues = [...new Set(issues)];
   const selfCheck = [
     `- ${uniqueIssues.includes('缺少需求确认。') || uniqueIssues.some(item => item.startsWith('需求确认后')) ? '[ ]' : '[x]'} 需求确认有效`,
@@ -1116,6 +1284,7 @@ async function evaluateFlow(root: string, id: string, task: FlowTask, options: F
     `- ${library.issues.length ? '[ ]' : '[x]'} 全局用例结构与引用有效`,
     `- ${changedOutsideScope.length ? '[ ]' : '[x]'} 改动未超出范围`,
     `- ${weakened.issues.length ? '[ ]' : '[x]'} 未弱化仍存在的测试`,
+    `- ${openBlockers.length ? '[ ]' : '[x]'} 评审无未清除阻塞项`,
     `- ${recordSafety(task.content).length ? '[ ]' : '[x]'} 记录不含密钥或本机绝对路径`,
     ...(uniqueIssues.length ? ['', '阻塞项：', ...uniqueIssues.map(item => `- ${item}`)] : []),
     ...(warnings.length ? ['', '提示：', ...warnings.map(item => `- ${item}`)] : []),
@@ -1124,7 +1293,8 @@ async function evaluateFlow(root: string, id: string, task: FlowTask, options: F
     acceptance: { confirmed: acceptanceConfirmed, ...(acceptance?.quote ? { quote: acceptance.quote } : {}),
       ...(acceptance?.by ? { by: acceptance.by } : {}), ...(acceptance ? { commit: acceptance.commit } : {}) },
     changedOutsideScope,
-    cases: { count: library.cases.length, matched, modules: library.modules, scenarios: library.scenarios, uncovered: library.uncovered }, selfCheck };
+    cases: { count: library.cases.length, matched, modules: library.modules, scenarios: library.scenarios, uncovered: library.uncovered },
+    review: { reviewed: task.review !== null, openBlockers }, release, selfCheck };
 }
 
 export async function inspectFlow(rootInput: string, id: string, options: FlowCheckOptions = {}): Promise<FlowCheck> {
@@ -1394,6 +1564,59 @@ export async function acceptFlow(rootInput: string, id: string, input: FlowConfi
   const checked = await checkFlow(rootInput, id, { allowReported: input.allowReported === true });
   if (!checked.ready) fail('NOT_READY', `技术自检未通过：${checked.issues.join('；')}`);
   return confirmFlow(rootInput, id, 'acceptance', input);
+}
+
+export async function reviewFlow(rootInput: string, id: string, input: FlowReviewInput = {}) {
+  const root = path.resolve(rootInput);
+  return withProjectLock(root, async () => {
+    const task = await readTask(root, id);
+    assertTaskOpen(task);
+    const by = safeInput(await resolveConfirmer(root, input.by), '评审人');
+    const at = new Date().toISOString();
+    const findings = (task.review?.findings ?? []).map(item => ({ ...item }));
+    const warnings: string[] = [];
+    for (const raw of input.resolve ?? []) {
+      const findingId = raw.trim();
+      if (!/^REV-\d+$/u.test(findingId)) fail('INVALID_REVIEW_FINDING', `评审发现编号格式为 REV-NNN：${raw}`);
+      const finding = findings.find(item => item.id === findingId);
+      if (!finding) fail('UNKNOWN_REVIEW_FINDING', `评审发现不存在：${findingId}`);
+      if (finding.resolved) warnings.push(`评审发现 ${findingId} 已经解决。`);
+      else Object.assign(finding, { resolved: true, resolvedBy: by, resolvedAt: at });
+    }
+    let next = findings.reduce((maximum, item) => Math.max(maximum, Number(item.id.slice(4))), 0) + 1;
+    const append = (values: string[] | undefined, blocking: boolean): void => {
+      for (const raw of values ?? []) {
+        const findingText = safeInput(text(raw, '评审发现', 4000), '评审发现');
+        const finding: FlowReviewFinding = { id: `REV-${String(next).padStart(3, '0')}`, text: findingText,
+          blocking, resolved: false, by, at };
+        findings.push(finding);
+        next += 1;
+      }
+    };
+    append(input.findings, false);
+    append(input.blocking, true);
+    const review: FlowReview = { by, at, findings };
+    const nextTask = { ...task, review };
+    const { content: _content, path: _path, ...body } = nextTask;
+    await writeTask(root, id, task.content, renderTask(body, sectionBody(task.content, '自检')));
+    const openBlockers = findings.filter(item => item.blocking && !item.resolved);
+    return { id, path: task.path, by, at, reviewed: true, ready: openBlockers.length === 0,
+      findings, openBlockers: openBlockers.map(item => item.id), warnings,
+      next: openBlockers.length ? `修复后用 --resolve 清除阻塞项，再运行 tiller check ${id}` : `运行 tiller check ${id} 后验收` };
+  });
+}
+
+export async function releaseFlow(rootInput: string, id: string) {
+  const root = path.resolve(rootInput);
+  const task = await readTask(root, id);
+  const stage = await taskStageForTask(root, id, task);
+  const acceptance = latestAcceptance(task);
+  const checklist = await releaseChecklist(root, {
+    id, accepted: stage.stage === '已验收' || stage.stage === '已关闭',
+    ...(acceptance?.commit ? { acceptanceCommit: acceptance.commit } : {}), scope: task.meta.scope,
+  });
+  return { id, path: task.path, stage: stage.stage, stageReason: stage.reason,
+    ...(acceptance?.commit ? { acceptanceCommit: acceptance.commit } : {}), ...checklist };
 }
 
 export async function closeFlow(rootInput: string, id: string, reasonInput: string, abandon = false) {
