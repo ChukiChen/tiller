@@ -21,13 +21,24 @@ tiller 是一套面向 AI 开发的标准工作流程与 CLI。它用较少的�
 
 任务阶段由记录事实推导：已开始 → 需求已确认 → 设计已确认（small 可跳过）→ 已验证 → 已验收 → 已关闭/已放弃。已验收任务使用 `close` 收尾；未验收终止使用 `close --abandon`；需要继续时用 `reopen --reason` 恢复。
 
-## 给模型怎么用
+## 安装
 
-需要 Node.js 22 或以上。包与分发资源当前为 0.5.0，尚未发布到 npm 注册表。
+需要 Node.js 22 或以上。当前版本 0.5.0，尚未发布到 npm，可从本仓库本地安装：
 
-面向模型时，先读 `AGENTS.md`、`.tiller/rules/` 以及 CLI 帮助（`tiller --help`，或工程内 `node .tiller/run.cjs --help`），按当前 `task.md` 阶段行动，不要把 README 当命令手册背参数表。
+```bash
+npm ci
+npm run build
+npm pack
+npm install -g ./tiller-0.5.0.tgz
+```
 
-工作顺序用散文记住即可：初始化工程 → 开任务并写清目标、范围与验收条件（可用工程内需求文件接入）→ 确认需求（standard 任务再确认设计）→ 实现 → 验证与验收。单个任务只保留一份 `task.md`；完成后把长期有效的结论同步到规格或决定；超大设计先拆成规划任务。
+开发 tiller 本身时，也可以直接用 `node dist/cli.js`；已初始化的工程里则常用 `node .tiller/run.cjs`。
+
+## 使用
+
+先 `tiller init .`，再用 CLI 开任务、确认与查看进度。具体参数以 `tiller --help`（或工程内 `node .tiller/run.cjs --help`）为准；协作约定写在 `AGENTS.md` 与 `.tiller/rules/`。
+
+开任务时写清目标、范围与验收条件（可用工程内需求文件接入），确认需求后再实现与验证；standard 任务中间多一步设计确认。单个任务只保留一份 `task.md`；完成后把长期有效的结论同步到规格或决定；超大设计先拆成规划任务。
 
 ## 验证与交付
 
