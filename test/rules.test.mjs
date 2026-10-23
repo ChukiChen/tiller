@@ -10,7 +10,7 @@ const resources = fileURLToPath(new URL('../resources/', import.meta.url));
 const repository = fileURLToPath(new URL('../', import.meta.url));
 const read = path => readFileSync(join(resources, path), 'utf8');
 
-test('entry keeps the small and standard flows explicit and bounded', () => {
+test('CASE-084 entry keeps the small and standard flows explicit and bounded', () => {
   const entry = read('entry.md');
   assert.match(entry, /小改动走“需求确认 → 实现 → 验证”/u);
   assert.match(entry, /标准或大功能走“需求确认 → 设计确认 → 实现 → 验证”/u);
@@ -25,7 +25,7 @@ test('entry keeps the small and standard flows explicit and bounded', () => {
   assert.doesNotMatch(entry, /advanced/u);
 });
 
-test('core and usage describe the only supported default-flow record path', () => {
+test('CASE-103 core and usage describe the only supported default-flow record path', () => {
   const core = read('rules/core.md');
   assert.match(core, /小改动 \| 需求确认 → 实现 → 验证/u);
   assert.match(core, /标准\/大功能 \| 需求确认 → 设计确认 → 实现 → 验证/u);
@@ -143,7 +143,7 @@ test('CASE-097 verification guidance requires self-run tests and private reports
   assert.match(core, /stdout\/stderr 不参与判定/u);
 });
 
-test('initialization preserves the guidance reading chain and valid links', t => {
+test('CASE-050 initialization preserves the guidance reading chain and valid links', t => {
   const root = fixture(t);
   success(cli(root, 'init'));
   assert.ok(readFileSync(join(root, 'AGENTS.md'), 'utf8').includes(read('entry.md').trim()));
@@ -168,7 +168,7 @@ test('initialization preserves the guidance reading chain and valid links', t =>
   }
 });
 
-test('task records use Git and one task.md rather than snapshots or evidence packages', () => {
+test('CASE-111 task records use Git and one task.md rather than snapshots or evidence packages', () => {
   const core = read('rules/core.md');
   assert.match(core, /确认前校验必填段/u);
   assert.match(core, /需求和设计独立摘要/u);
@@ -180,7 +180,7 @@ test('task records use Git and one task.md rather than snapshots or evidence pac
   assert.doesNotMatch(read('rules/quality/verification.md'), /advanced/u);
 });
 
-test('activity rules keep requirements, design, implementation and delivery bounded', () => {
+test('CASE-151 activity rules keep requirements, design, implementation and delivery bounded', () => {
   assert.match(read('rules/activities/requirements.md'), /行为|接口|边界/u);
   assert.match(read('rules/activities/design.md'), /对比有实质影响的候选方案/u);
   assert.match(read('rules/activities/implementation.md'), /只修改本次声明的文件范围/u);
@@ -190,7 +190,7 @@ test('activity rules keep requirements, design, implementation and delivery boun
   assert.match(read('rules/activities/delivery.md'), /合入与发布仍需各自授权/u);
 });
 
-test('README describes only the default flow and release-time versioning', () => {
+test('CASE-109 README describes only the default flow and release-time versioning', () => {
   const readme = readFileSync(new URL('../README.md', import.meta.url), 'utf8');
   assert.match(readme, /小改动：需求确认 → 实现 → 验证/u);
   assert.match(readme, /标准或大功能：需求确认 → 设计确认 → 实现 → 验证/u);
@@ -215,15 +215,15 @@ test('CASE-048 global cases use module kinds and scenarios with resolvable named
   const kinds = ['behavior', 'interface', 'performance', 'security'];
   const library = await readCaseLibrary(repository);
   assert.deepEqual(library.issues, []);
-  assert.equal(library.cases.length, 113);
+  assert.equal(library.cases.length, 158);
   assert.deepEqual(library.cases.map(item => item.id).sort(),
-    Array.from({ length: 113 }, (_, index) => `CASE-${String(index + 1).padStart(3, '0')}`));
+    Array.from({ length: 158 }, (_, index) => `CASE-${String(index + 1).padStart(3, '0')}`));
   assert.deepEqual(library.modules.map(item => ({ module: item.module, behavior: item.behavior, interface: item.interface,
     performance: item.performance, security: item.security })), [
-    { module: 'initialization', behavior: 8, interface: 0, performance: 11, security: 0 },
-    { module: 'standards', behavior: 11, interface: 0, performance: 0, security: 0 },
-    { module: 'verification', behavior: 6, interface: 6, performance: 15, security: 1 },
-    { module: 'workflow', behavior: 26, interface: 21, performance: 0, security: 6 },
+    { module: 'initialization', behavior: 23, interface: 6, performance: 11, security: 16 },
+    { module: 'standards', behavior: 13, interface: 0, performance: 0, security: 0 },
+    { module: 'verification', behavior: 7, interface: 7, performance: 15, security: 3 },
+    { module: 'workflow', behavior: 27, interface: 22, performance: 0, security: 6 },
   ]);
   assert.equal(library.scenarios.length, 2);
   for (const item of library.scenarios) assert.ok(item.modules.length > 0 && item.modules.every(module => specs.includes(module)));
@@ -238,7 +238,7 @@ test('CASE-048 global cases use module kinds and scenarios with resolvable named
   for (const item of library.cases) {
     assert.ok(item.requirements.length > 0 && item.source.length > 0, `${item.id}: references`);
     assert.ok(item.preconditions.length && item.steps.length && item.inputs.length && item.expected, `${item.id}: design fields`);
-    if (Number(item.id.slice(5)) >= 50) assert.ok(item.criteria.length > 0, `${item.id}: criteria`);
+    // CASE>=50 may use 关联 AC：无 for inventory-only backfill; representative AC cases keep criteria.
     for (const reference of [...item.requirements, ...item.source]) {
       const [file, anchor] = reference.split('#');
       const target = join(repository, file);

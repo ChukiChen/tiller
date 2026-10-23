@@ -520,7 +520,7 @@ test('CASE-012 check blocks a criterion whose verification test has no global ca
   assert.ok(checked.issues.some(item => item.includes('未绑定全局用例')));
 });
 
-test('file-level verification references do not bind every test in the file', async t => {
+test('CASE-154 file-level verification references do not bind every test in the file', async t => {
   const root = await project(t);
   const id = '20261022-file-level-test';
   success(cli(root, 'start', id, '--title', 'Exact test binding', '--requirement', 'Require named tests.',
@@ -659,7 +659,7 @@ test('CASE-011 default help names the default flow and old audit commands are go
   }
 });
 
-test('default workflow source uses flow naming instead of lite', () => {
+test('CASE-155 default workflow source uses flow naming instead of lite', () => {
   const source = readFileSync(new URL('../src/flow.ts', import.meta.url), 'utf8');
   assert.equal(existsSync(new URL('../src/lite.ts', import.meta.url)), false);
   assert.match(source, /export async function startFlow/u);

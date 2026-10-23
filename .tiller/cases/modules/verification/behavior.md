@@ -153,3 +153,28 @@ check 给出 specs 回写告警，但不新增阻断。
 ### 预期结果
 
 前者不因后续漂移误报验证过期；后者仍失败且原因指向验收时的问题。
+
+## CASE-156 仓库用例库无悬空 CASE 引用且夹具编号保留
+
+- 类型：behavior
+- 优先级：medium
+- 模块：verification
+- 关联 AC：20261023-case-backfill#AC-2
+- 需求：`.tiller/specs/modules/verification/requirements.md`
+- 源码：`test/case-redesign.test.mjs`, `src/cases.ts`
+
+### 前置条件
+
+- 已完成历史测试 CASE 回填
+
+### 步骤
+
+1. 扫描仓库用例库与测试名中的 CASE 引用
+
+### 输入
+
+- 当前分支 .tiller/cases 与 test/
+
+### 预期结果
+
+真实仓库用例扫描无悬空 CASE 引用；CASE-900/901/999 夹具保持不动；待实现旧用例可无测试

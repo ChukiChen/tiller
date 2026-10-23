@@ -217,10 +217,10 @@ ${sourceTest('staged coverage without a case id', 'undefined')}
     '过期验证只报告过期，不再叠加新的测试引用阻断');
 });
 
-test('CASE-103 repository history and docs use the new case model', async () => {
+test('CASE-103 CASE-156 repository history and docs use the new case model', async () => {
   const library = await readCaseLibrary(repository);
   assert.deepEqual(library.issues, []);
-  assert.equal(library.cases.length, 113);
+  assert.equal(library.cases.length, 158);
   assert.ok(library.cases.every(item => item.preconditions.length && item.steps.length && item.inputs.length && item.expected));
   assert.ok(library.cases.every(item => item.tests.length > 0), 'every case should be referenced by a test');
   assert.ok(library.cases.every(item => item.tests.every(reference => reference.name?.includes(item.id))));
@@ -233,3 +233,17 @@ test('CASE-103 repository history and docs use the new case model', async () => 
   assert.match(read(repository, 'resources/usage.md'), /--case CASE-NNN/u);
   assert.match(read(repository, '.tiller/cases/index.md'), /modules\/<模块>\/behavior\.md/u);
 });
+
+test('CASE-158 case-backfill task.md retains mapping table for historical test names', () => {
+  const task = read(repository, '.tiller/task/20261023-case-backfill/task.md');
+  assert.match(task, /^## 映射\s*$/mu);
+  assert.match(task, /\| 文件::旧测试名 \| CASE \| 方式 \| 理由 \|/u);
+  assert.match(task, /`test\/core\.test\.mjs::initialization digests tolerate managed line-ending conversion but reject content changes` \| CASE-114/u);
+  assert.match(task, /`test\/flow-cli\.test\.mjs::default workflow source uses flow naming instead of lite` \| CASE-155/u);
+  const mapping = task.split('## 映射')[1];
+  assert.ok((mapping.match(/\| `test\//g) || []).length >= 50, 'mapping should list inventory rows');
+  assert.match(mapping, /\| reuse \|/u);
+  assert.match(mapping, /\| new \|/u);
+  assert.match(task, /CASE-900\/901\/999/u);
+});
+
