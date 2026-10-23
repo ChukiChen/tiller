@@ -16,7 +16,7 @@ async function project(t) {
   return root;
 }
 
-test('initialization preserves content and repeated initialization is a no-op', async t => {
+test('CASE-050 initialization preserves content and repeated initialization is a no-op', async t => {
   const root = await project(t);
   await writeFile(path.join(root, 'AGENTS.md'), '# Existing\nKeep my rule.\n');
   await mkdir(path.join(root, '.tiller/rules'), { recursive: true });
@@ -34,7 +34,7 @@ test('initialization preserves content and repeated initialization is a no-op', 
   assert.equal((await initialize({ root })).ready, true);
 });
 
-test('initialization digests tolerate managed line-ending conversion but reject content changes', async t => {
+test('CASE-114 initialization digests tolerate managed line-ending conversion but reject content changes', async t => {
   const root = await project(t);
   const initial = await initialize({ root });
   const originalMetadata = await readFile(path.join(root, '.tiller/project.json'), 'utf8');
@@ -60,7 +60,7 @@ test('initialization digests tolerate managed line-ending conversion but reject 
   await assert.rejects(initialize({ root }), /内容已变化/u);
 });
 
-test('workspace limits repository scope and never changes repository content', async t => {
+test('CASE-115 workspace limits repository scope and never changes repository content', async t => {
   const root = await project(t);
   for (const name of ['甲 repo', 'beta']) await promisify(execFile)('git', ['init', '--quiet', path.join(root, name)]);
   await writeFile(path.join(root, '甲 repo', 'file.txt'), 'Do not edit');
@@ -72,7 +72,7 @@ test('workspace limits repository scope and never changes repository content', a
   await assert.rejects(initialize({ root, mode: 'workspace', repositories: ['../outside'] }), /不安全|平级/);
 });
 
-test('workspace groups repositories while keeping stable ids, navigation and ignore rules', async t => {
+test('CASE-116 workspace groups repositories while keeping stable ids, navigation and ignore rules', async t => {
   const root = await project(t);
   for (const name of ['service-a', 'service-b']) await promisify(execFile)('git', ['init', '--quiet', path.join(root, 'repositories', name)]);
   const result = await initialize({ root, mode: 'workspace', repositories: ['service-a', 'repositories/service-b'] });
@@ -85,7 +85,7 @@ test('workspace groups repositories while keeping stable ids, navigation and ign
   assert.equal((await initialize({ root, mode: 'workspace', repositories: ['repositories/service-a', 'service-b'] })).changed, false);
 });
 
-test('workspace refuses ambiguous shorthand and never silently remaps initialized ids', async t => {
+test('CASE-117 workspace refuses ambiguous shorthand and never silently remaps initialized ids', async t => {
   const root = await project(t);
   for (const name of ['service-a', 'repositories/service-a']) await promisify(execFile)('git', ['init', '--quiet', path.join(root, name)]);
   await assert.rejects(initialize({ root, mode: 'workspace', repositories: ['service-a'] }), /明确|歧义/u);
@@ -98,7 +98,7 @@ test('workspace refuses ambiguous shorthand and never silently remaps initialize
   await assert.rejects(initialize({ root, mode: 'workspace', repositories: [path.resolve(root, '../outside')] }), /不安全/u);
 });
 
-test('grouped repository parent symlinks and fabricated metadata mappings are rejected', async t => {
+test('CASE-118 grouped repository parent symlinks and fabricated metadata mappings are rejected', async t => {
   const root = await project(t);
   const outside = await project(t);
   await promisify(execFile)('git', ['init', '--quiet', path.join(outside, 'service-a')]);
@@ -112,7 +112,7 @@ test('grouped repository parent symlinks and fabricated metadata mappings are re
   assert.equal((await inspectProject(ordinary)).ready, false);
 });
 
-test('workspace cannot register a management worktree as an independent business repository', async t => {
+test('CASE-119 workspace cannot register a management worktree as an independent business repository', async t => {
   const root = await project(t);
   const git = promisify(execFile);
   await git('git', ['init', '--quiet', root]);
@@ -122,7 +122,7 @@ test('workspace cannot register a management worktree as an independent business
   assert.equal(await readTextIfExists(root, '.tiller/project.json'), null);
 });
 
-test('resource edits and unknown versions are preserved and block writes', async t => {
+test('CASE-051 CASE-028 resource edits and unknown versions are preserved and block writes', async t => {
   const root = await project(t);
   await initialize({ root });
   await writeFile(path.join(root, '.tiller/rules/core.md'), 'My customized rules');
@@ -136,7 +136,7 @@ test('resource edits and unknown versions are preserved and block writes', async
   assert.equal(await readTextIfExists(root, '.tiller/local/lock.json'), null);
 });
 
-test('recover validates every before/after before restoring and refuses later edits', async t => {
+test('CASE-120 recover validates every before/after before restoring and refuses later edits', async t => {
   const root = await project(t);
   await mkdir(path.join(root, '.tiller/local'), { recursive: true });
   const changes = [
@@ -154,7 +154,7 @@ test('recover validates every before/after before restoring and refuses later ed
   assert.equal(await readTextIfExists(root, '.tiller/b.md'), null);
 });
 
-test('file transactions reject mismatched baselines and serialize writers', async t => {
+test('CASE-121 file transactions reject mismatched baselines and serialize writers', async t => {
   const root = await project(t);
   await withProjectLock(root, async () => {
     await assert.rejects(withProjectLock(root, async () => {}), /正在运行/);
@@ -165,7 +165,7 @@ test('file transactions reject mismatched baselines and serialize writers', asyn
   assert.equal(await readTextIfExists(root, '.tiller/local/transaction.json'), null);
 });
 
-test('paths reject traversal and symbolic-link escapes', async t => {
+test('CASE-122 paths reject traversal and symbolic-link escapes', async t => {
   const root = await project(t);
   const outside = await project(t);
   await assert.rejects(assertSafePath(root, '../outside'), /不安全/);
@@ -175,7 +175,7 @@ test('paths reject traversal and symbolic-link escapes', async t => {
   assert.equal(await readTextIfExists(outside, 'project.json'), null);
 });
 
-test('git ignore conflicts are detected before shared files are written', async t => {
+test('CASE-036 git ignore conflicts are detected before shared files are written', async t => {
   const root = await project(t);
   await promisify(execFile)('git', ['init', '--quiet', root]);
   await writeFile(path.join(root, '.gitignore'), '.tiller/\n');
@@ -184,7 +184,7 @@ test('git ignore conflicts are detected before shared files are written', async 
   assert.equal(await readFile(path.join(root, '.gitignore'), 'utf8'), '.tiller/\n');
 });
 
-test('schema validation refuses missing resource baselines and malicious recovery targets', async t => {
+test('CASE-028 schema validation refuses missing resource baselines and malicious recovery targets', async t => {
   const root = await project(t);
   await initialize({ root });
   const originalMetadata = await readFile(path.join(root, '.tiller/project.json'), 'utf8');
@@ -203,7 +203,7 @@ test('schema validation refuses missing resource baselines and malicious recover
   assert.equal(await readFile(path.join(root, 'business.txt'), 'utf8'), 'keep');
 });
 
-test('transactions reject local path casing aliases and noncanonical roots before writes', async t => {
+test('CASE-123 transactions reject local path casing aliases and noncanonical roots before writes', async t => {
   const root = await project(t);
   await withProjectLock(root, async () => {
     const originalLock = await readTextIfExists(root, '.tiller/local/lock.json');
@@ -223,7 +223,7 @@ test('transactions reject local path casing aliases and noncanonical roots befor
   await assert.rejects(recoverProject(root), /本机恢复记录/);
 });
 
-test('workspace verifies actual Git repositories and accepts valid gitdir files', async t => {
+test('CASE-124 workspace verifies actual Git repositories and accepts valid gitdir files', async t => {
   const root = await project(t);
   await mkdir(path.join(root, 'fake/.git'), { recursive: true });
   await assert.rejects(initialize({ root, mode: 'workspace', repositories: ['fake'] }), /Git 工作副本/);
@@ -237,7 +237,7 @@ test('workspace verifies actual Git repositories and accepts valid gitdir files'
   assert.equal((await inspectProject(root)).ready, false);
 });
 
-test('local ignore negations cannot expose transaction originals before root ignore is installed', async t => {
+test('CASE-036 local ignore negations cannot expose transaction originals before root ignore is installed', async t => {
   const root = await project(t);
   await mkdir(path.join(root, '.tiller/local'), { recursive: true });
   const unsafeIgnore = '*\n!transaction.json\n';
@@ -253,7 +253,7 @@ test('local ignore negations cannot expose transaction originals before root ign
   assert.equal((await initialize({ root })).ready, true);
 });
 
-test('shared path checks reject ignored evidence while allowing non-Git projects', async t => {
+test('CASE-031 shared path checks reject ignored evidence while allowing non-Git projects', async t => {
   const root = await project(t);
   await assertSharedWritePaths(root, ['private/review.md']);
   await promisify(execFile)('git', ['init', '--quiet', root]);
@@ -264,7 +264,7 @@ test('shared path checks reject ignored evidence while allowing non-Git projects
 });
 
 
-test('only current resource metadata is readable and historical bytes remain untouched', async t => {
+test('CASE-028 only current resource metadata is readable and historical bytes remain untouched', async t => {
   const root = await project(t);
   const initialized = await initialize({ root });
   assert.equal(RESOURCE_VERSION, '0.5.0');
@@ -293,7 +293,7 @@ test('only current resource metadata is readable and historical bytes remain unt
   assert.equal((await readProjectMetadata(root)).resourceVersion, '0.4.0');
 });
 
-test('shared path checks honor ancestor ignores and reject bare repositories', async t => {
+test('CASE-125 shared path checks honor ancestor ignores and reject bare repositories', async t => {
   const parent = await project(t);
   await promisify(execFile)('git', ['init', '--quiet', parent]);
   const nested = path.join(parent, 'nested');
@@ -306,7 +306,7 @@ test('shared path checks honor ancestor ignores and reject bare repositories', a
   await assert.rejects(assertSharedWritePaths(bare, ['shared.md']), /work tree/u);
 });
 
-test('shared path checks preserve fatal configuration and missing Git fallback failures', async t => {
+test('CASE-126 shared path checks preserve fatal configuration and missing Git fallback failures', async t => {
   const root = repositoryFreeFixture(t);
   if (!root) return;
   const parent = await project(t);

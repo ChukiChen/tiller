@@ -283,3 +283,53 @@
 ### 预期结果
 
 三处版本均为 0.5.0，全量验证入口保持可用
+
+## CASE-151 活动规则约束需求设计实现与交付边界
+
+- 类型：behavior
+- 优先级：medium
+- 模块：standards
+- 关联 AC：20261023-case-backfill#AC-1
+- 需求：`.tiller/specs/modules/standards/requirements.md`
+- 源码：`resources/rules/activities/requirements.md`, `resources/rules/activities/design.md`, `resources/rules/activities/implementation.md`, `resources/rules/activities/delivery.md`, `test/rules.test.mjs`
+
+### 前置条件
+
+- 分发资源中的活动规则可读取
+
+### 步骤
+
+1. 读取需求、设计、实现和交付规则
+
+### 输入
+
+- 当前活动规则文件
+
+### 预期结果
+
+需求包含行为接口边界，设计比较候选方案，实现限制范围并在连续失败后停止，交付核对测试与授权
+
+## CASE-157 回填后保持 0.5.0 发布契约与全量验证入口
+
+- 类型：behavior
+- 优先级：medium
+- 模块：standards
+- 关联 AC：20261023-case-backfill#AC-3
+- 需求：`.tiller/specs/modules/standards/requirements.md`
+- 源码：`test/work-migration.test.mjs`, `package.json`
+
+### 前置条件
+
+- 回填仅改测试名与用例，未改版本号
+
+### 步骤
+
+1. 读取 package.json、CLI 常量与项目资源版本并核对脚本
+
+### 输入
+
+- 当前分支包元信息
+
+### 预期结果
+
+package.json、CLI 与资源版本仍为 0.5.0；test 与 test:package 脚本入口仍可用

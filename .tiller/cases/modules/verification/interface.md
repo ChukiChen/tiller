@@ -155,3 +155,28 @@
 ### 预期结果
 
 tiller 扫描测试源建立 case→tests 反查；用例文件不含测试引用字段，也没有 case link 命令。
+
+## CASE-154 文件级验证引用不绑定文件内全部测试
+
+- 类型：interface
+- 优先级：medium
+- 模块：verification
+- 关联 AC：20261023-case-backfill#AC-1
+- 需求：`.tiller/specs/modules/verification/requirements.md`
+- 源码：`src/flow.ts`, `src/cases.ts`, `test/flow-cli.test.mjs`
+
+### 前置条件
+
+- 任务已验证整个测试文件且该文件含多测试
+
+### 步骤
+
+1. 按文件引用执行验证后运行 check
+
+### 输入
+
+- 仅文件路径的 verify --test
+
+### 预期结果
+
+验证不建立用例绑定，check 指出 AC 未绑定全局用例

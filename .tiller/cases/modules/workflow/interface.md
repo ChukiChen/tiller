@@ -542,3 +542,28 @@ release 逐项给出 pass/fail/na 并以未通过项决定退出状态；check �
 ### 预期结果
 
 旧 work 不出现在当前任务列表，内容保持只读，当前 task 正常发现
+
+## CASE-155 默认工作流源码使用 flow 命名而非 lite
+
+- 类型：interface
+- 优先级：medium
+- 模块：workflow
+- 关联 AC：20261023-case-backfill#AC-1
+- 需求：`.tiller/specs/modules/workflow/requirements.md`
+- 源码：`src/flow.ts`, `test/flow-cli.test.mjs`
+
+### 前置条件
+
+- 默认工作流源码和旧模块文件可检查
+
+### 步骤
+
+1. 读取 flow 源码并检查 lite 文件
+
+### 输入
+
+- src/flow.ts 与 src/lite.ts
+
+### 预期结果
+
+startFlow 导出存在，旧 lite 模块不存在且源码不含 lite 标识

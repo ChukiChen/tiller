@@ -9,7 +9,7 @@ import { fixture, gitRepository, put, snapshot } from './helpers.mjs';
 const read = (root, name) => readFileSync(join(root, name), 'utf8');
 const added = ['.tiller/usage.md', '.tiller/run.cjs'];
 
-test('initialization supplies current usage and launcher with discoverable links and no machine paths', async t => {
+test('CASE-050 initialization supplies current usage and launcher with discoverable links and no machine paths', async t => {
   const root = fixture(t);
   const result = await initialize({ root });
   assert.equal(RESOURCE_VERSION, '0.5.0');
@@ -36,7 +36,7 @@ test('initialization supplies current usage and launcher with discoverable links
   assert.deepEqual(snapshot(root), before);
 });
 
-test('current entry and rules retain default-flow stage, scope, context and compatibility navigation', async t => {
+test('CASE-084 current entry and rules retain default-flow stage, scope, context and compatibility navigation', async t => {
   const root = fixture(t);
   await initialize({ root });
   const rules = read(root, '.tiller/rules/core.md');
@@ -51,7 +51,7 @@ test('current entry and rules retain default-flow stage, scope, context and comp
   assert.match(read(root, '.tiller/rules/activities/design.md'), /同步计划更新 `\.tiller\/context\/`/u);
 });
 
-for (const workspace of [false, true]) test(`current noop preserves index surroundings and explicit mappings (${workspace})`, async t => {
+for (const workspace of [false, true]) test(`CASE-140 current noop preserves index surroundings and explicit mappings (${workspace})`, async t => {
   const root = fixture(t);
   if (workspace) gitRepository(root, 'repositories/service-a');
   await initialize({ root, mode: workspace ? 'workspace' : 'project', repositories: workspace ? ['repositories/service-a'] : [] });
@@ -73,7 +73,7 @@ for (const workspace of [false, true]) test(`current noop preserves index surrou
   assert.deepEqual(snapshot(root), before);
 });
 
-for (const name of added) test(`existing customized ${name} is protected on init and current noop`, async t => {
+for (const name of added) test(`CASE-141 existing customized ${name} is protected on init and current noop`, async t => {
   const fresh = fixture(t);
   put(fresh, name, '用户原文\n');
   const before = snapshot(fresh);
@@ -89,7 +89,7 @@ for (const name of added) test(`existing customized ${name} is protected on init
   assert.deepEqual(snapshot(root), modified);
 });
 
-test('current noop binds raw shared-resource bytes even across permitted EOL conversion', async t => {
+test('CASE-142 current noop binds raw shared-resource bytes even across permitted EOL conversion', async t => {
   const root = fixture(t);
   await initialize({ root });
   const plan = await planUpgrade(root);
@@ -110,7 +110,7 @@ test('current noop binds raw shared-resource bytes even across permitted EOL con
   assert.equal((await planUpgrade(root)).ready, false);
 });
 
-test('current metadata requires the complete managed set and rejects historical versions', async t => {
+test('CASE-028 current metadata requires the complete managed set and rejects historical versions', async t => {
   const root = fixture(t);
   await initialize({ root });
   const metadata = JSON.parse(read(root, '.tiller/project.json'));
@@ -137,7 +137,7 @@ test('current metadata requires the complete managed set and rejects historical 
   assert.deepEqual(snapshot(root), before);
 });
 
-test('ignored current entry paths block inspection and noop without changing originals', async t => {
+test('CASE-036 ignored current entry paths block inspection and noop without changing originals', async t => {
   const root = fixture(t);
   gitRepository(root, '.');
   await initialize({ root });
@@ -151,7 +151,7 @@ test('ignored current entry paths block inspection and noop without changing ori
   assert.deepEqual(snapshot(root), before);
 });
 
-test('managed resource EOL equivalence is bidirectional and restricted to the distributed allowlist', () => {
+test('CASE-143 managed resource EOL equivalence is bidirectional and restricted to the distributed allowlist', () => {
   const lf = 'first line\nsecond line\n';
   const crlf = lf.replace(/\n/gu, '\r\n');
   for (const relative of ['AGENTS.md', '.gitignore', '.tiller/index.md', PR_TEMPLATE, ...SHARED_RESOURCES.map(name => `.tiller/${name}`)]) {
@@ -170,7 +170,7 @@ test('managed resource EOL equivalence is bidirectional and restricted to the di
   }
 });
 
-test('resource checkout EOL conversion keeps inspection ready and preserves bytes on repeated init', async t => {
+test('CASE-144 resource checkout EOL conversion keeps inspection ready and preserves bytes on repeated init', async t => {
   for (const eol of ['\n', '\r\n']) {
     const root = fixture(t);
     await initialize({ root });
@@ -191,7 +191,7 @@ test('resource checkout EOL conversion keeps inspection ready and preserves byte
   }
 });
 
-test('initialization and upgrade accept existing distributed resources with alternate EOL without rewriting them', async t => {
+test('CASE-145 initialization and upgrade accept existing distributed resources with alternate EOL without rewriting them', async t => {
   const files = Object.fromEntries(added.map(relative => {
     const source = readFileSync(new URL(`../resources/${relative.slice(8)}`, import.meta.url), 'utf8');
     return [relative, source.includes('\r\n') ? source.replace(/\r\n/gu, '\n') : source.replace(/\n/gu, '\r\n')];

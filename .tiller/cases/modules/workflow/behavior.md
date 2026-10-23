@@ -673,3 +673,28 @@
 ### 预期结果
 
 文档不再把 work 表述为现行模型，初始化不创建 work 目录或列出 work 分类
+
+## CASE-158 回填任务记录保留测试名到 CASE 的映射表
+
+- 类型：behavior
+- 优先级：medium
+- 模块：workflow
+- 关联 AC：20261023-case-backfill#AC-4
+- 需求：`.tiller/specs/modules/workflow/requirements.md`
+- 源码：`.tiller/task/20261023-case-backfill/task.md`, `test/case-redesign.test.mjs`
+
+### 前置条件
+
+- 任务 20261023-case-backfill 已实现回填
+
+### 步骤
+
+1. 读取 .tiller/task/20261023-case-backfill/task.md 映射节
+
+### 输入
+
+- 映射表正文
+
+### 预期结果
+
+task.md 含「映射」节，列出文件::旧测试名到 CASE 的复用或新建及理由

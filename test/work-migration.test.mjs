@@ -73,7 +73,7 @@ test('CASE-111 current documentation and initialization expose task, not the leg
   assert.match(read('.tiller/context/project.md'), /历史实现记录.*task\//u);
 });
 
-test('CASE-113 migration preserves the 0.5.0 release contract and full verification entry', () => {
+test('CASE-113 CASE-157 migration preserves the 0.5.0 release contract and full verification entry', () => {
   const packageVersion = JSON.parse(read('package.json')).version;
   const projectVersion = JSON.parse(read('.tiller/project.json')).resourceVersion;
   assert.equal(packageVersion, '0.5.0');

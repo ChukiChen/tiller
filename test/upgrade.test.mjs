@@ -29,7 +29,7 @@ const preserved = {
   'src/Student.java': 'class Student {}\n',
 };
 
-for (const workspace of [false, true]) test(`current noop preserves every original byte (${workspace})`, async t => {
+for (const workspace of [false, true]) test(`CASE-146 current noop preserves every original byte (${workspace})`, async t => {
   const root = await current(t, workspace);
   assert.equal(RESOURCE_VERSION, '0.5.0');
   for (const [relative, content] of Object.entries(preserved)) put(root, relative, content);
@@ -60,7 +60,7 @@ for (const workspace of [false, true]) test(`current noop preserves every origin
   assert.deepEqual(snapshot(root), before);
 });
 
-for (const workspace of [false, true]) test(`old and unknown versions refuse without migration (${workspace})`, async t => {
+for (const workspace of [false, true]) test(`CASE-113 CASE-028 old and unknown versions refuse without migration (${workspace})`, async t => {
   const root = await current(t, workspace);
   for (const [relative, content] of Object.entries(preserved)) put(root, relative, content);
   const metadata = JSON.parse(read(root, '.tiller/project.json'));
@@ -80,7 +80,7 @@ for (const workspace of [false, true]) test(`old and unknown versions refuse wit
   }
 });
 
-for (const relative of ['AGENTS.md', '.tiller/rules/core.md']) test(`modified current managed content is preserved: ${relative}`, async t => {
+for (const relative of ['AGENTS.md', '.tiller/rules/core.md']) test(`CASE-051 modified current managed content is preserved: ${relative}`, async t => {
   const root = await current(t);
   const text = read(root, relative);
   const changed = relative === 'AGENTS.md' ? text.replace('tiller 工作入口', '项目修改的受管入口') : text + '\n项目自定义工作约定\n';
@@ -97,7 +97,7 @@ for (const relative of ['AGENTS.md', '.tiller/rules/core.md']) test(`modified cu
   assert.deepEqual(snapshot(root), before);
 });
 
-test('compatible previous resources refresh unmodified managed files and metadata atomically', async t => {
+test('CASE-051 compatible previous resources refresh unmodified managed files and metadata atomically', async t => {
   const root = await current(t);
   const metadata = JSON.parse(read(root, '.tiller/project.json'));
   const relative = '.tiller/rules/core.md';
@@ -123,7 +123,7 @@ test('compatible previous resources refresh unmodified managed files and metadat
   assert.equal((await planUpgrade(root)).changes.length, 0);
 });
 
-test('stale plan binds section-external bytes and permissive clauses remain conflicts', async t => {
+test('CASE-147 stale plan binds section-external bytes and permissive clauses remain conflicts', async t => {
   const root = await current(t);
   const plan = await planUpgrade(root);
   put(root, 'AGENTS.md', '用户新增说明\n' + read(root, 'AGENTS.md'));
@@ -140,7 +140,7 @@ test('stale plan binds section-external bytes and permissive clauses remain conf
   assert.deepEqual(snapshot(root), conflicted);
 });
 
-test('current transaction with mixed before/after files blocks noop and recovers originals', async t => {
+test('CASE-036 current transaction with mixed before/after files blocks noop and recovers originals', async t => {
   const root = await current(t);
   const before = snapshot(root);
   const changes = ['.tiller/rules/core.md', '.tiller/usage.md'].map(path => ({
@@ -159,7 +159,7 @@ test('current transaction with mixed before/after files blocks noop and recovers
   assert.equal((await applyUpgrade(root, (await planUpgrade(root)).planId)).changed, false);
 });
 
-test('verification failure retains recovery data and later user edits are never overwritten', async t => {
+test('CASE-148 verification failure retains recovery data and later user edits are never overwritten', async t => {
   const root = await current(t);
   const before = snapshot(root);
   const changes = [{ path: '.tiller/rules/core.md', before: read(root, '.tiller/rules/core.md'), after: '# Transaction probe\n' }];
@@ -180,7 +180,7 @@ test('verification failure retains recovery data and later user edits are never 
   assert.equal(await hasPendingTransaction(root), false);
 });
 
-test('current managed sections preserve both EOL directions and all outside bytes', async t => {
+test('CASE-149 current managed sections preserve both EOL directions and all outside bytes', async t => {
   for (const eol of ['\n', '\r\n']) {
     const root = await current(t);
     const metadata = JSON.parse(read(root, '.tiller/project.json'));
@@ -200,7 +200,7 @@ test('current managed sections preserve both EOL directions and all outside byte
   }
 });
 
-test('EOL equivalence accepts distributed checkout conversion but rejects substantive edits', async t => {
+test('CASE-150 EOL equivalence accepts distributed checkout conversion but rejects substantive edits', async t => {
   const root = await current(t);
   const index = read(root, '.tiller/index.md');
   put(root, '.tiller/index.md', index.replace('rules/index.md', 'rules/other.md').replace(/\r?\n/gu, '\r\n'));
@@ -222,7 +222,7 @@ test('EOL equivalence accepts distributed checkout conversion but rejects substa
   assert.deepEqual(snapshot(root), before);
 });
 
-test('upgrade checks the current contract without a version migration story', async t => {
+test('CASE-113 upgrade checks the current contract without a version migration story', async t => {
   const root = await current(t);
   const packageVersion = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8')).version;
   const { CLI_VERSION } = await import('../dist/cli.js');

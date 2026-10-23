@@ -186,7 +186,7 @@ test('CASE-093 verify ignores forged stdout and rejects missing, duplicate, fail
   assert.equal(failedReport.outcome, 'failed');
 });
 
-test('a failed private report cannot pass when the test process exits zero', async t => {
+test('CASE-093 a failed private report cannot pass when the test process exits zero', async t => {
   const root = await project(t);
   const id = '20261022-zero-exit-failure';
   prepareTask(root, id);

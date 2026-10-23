@@ -44,7 +44,7 @@ function git(root, ...args) {
   return result.stdout.trim();
 }
 
-test('registered CLI survives cold launch and preserves argv, stdin, cwd and exit status', async t => {
+test('CASE-127 registered CLI survives cold launch and preserves argv, stdin, cwd and exit status', async t => {
   const { base, root } = await fixture(t);
   const target = await cli(path.join(base, '安装 目录'));
   const shared = await readFile(path.join(root, '.tiller/run.cjs'), 'utf8');
@@ -57,7 +57,7 @@ test('registered CLI survives cold launch and preserves argv, stdin, cwd and exi
   assert.equal(await readFile(path.join(root, '.tiller/run.cjs'), 'utf8'), shared);
 });
 
-test('runtime binding checks current launcher bytes even after a successful status query', async t => {
+test('CASE-128 runtime binding checks current launcher bytes even after a successful status query', async t => {
   const { base, root } = await fixture(t);
   const target = await cli(path.join(base, 'installation'));
   await runtimeStatus(root);
@@ -67,7 +67,7 @@ test('runtime binding checks current launcher bytes even after a successful stat
   await assert.rejects(readFile(path.join(root, '.tiller/local/runtime.json')), error => error.code === 'ENOENT');
 });
 
-test('local installations are found without binding; stale and missing installations offer recovery', async t => {
+test('CASE-129 local installations are found without binding; stale and missing installations offer recovery', async t => {
   const { root } = await fixture(t);
   assert.equal((await runtimeStatus(root)).ready, false);
   assert.match(launch(root).stderr, /runtime bind|npm install/);
@@ -79,7 +79,7 @@ test('local installations are found without binding; stale and missing installat
   assert.equal(launch(root).status, 1);
 });
 
-for (const oldVersion of ['0.3.2', '0.4.4', '9.9.9', '0.5.0-rc.1']) test(`current resources skip ${oldVersion} local installation and use the exact current bound CLI`, async t => {
+for (const oldVersion of ['0.3.2', '0.4.4', '9.9.9', '0.5.0-rc.1']) test(`CASE-130 current resources skip ${oldVersion} local installation and use the exact current bound CLI`, async t => {
   const { base, root } = await fixture(t);
   await cli(path.join(root, '.tiller/local/cli/node_modules/tiller'), oldVersion);
   const replacement = await cli(path.join(base, 'current-install'));
@@ -94,7 +94,7 @@ for (const oldVersion of ['0.3.2', '0.4.4', '9.9.9', '0.5.0-rc.1']) test(`curren
   assert.equal(await readFile(path.join(root, '.tiller/project.json'), 'utf8'), metadata);
 });
 
-for (const oldVersion of ['0.3.2', '0.4.4', '9.9.9', '0.5.0-rc.1']) test(`current resources reject ${oldVersion} CLI without changing installation or metadata`, async t => {
+for (const oldVersion of ['0.3.2', '0.4.4', '9.9.9', '0.5.0-rc.1']) test(`CASE-131 current resources reject ${oldVersion} CLI without changing installation or metadata`, async t => {
   const { root } = await fixture(t);
   const old = await cli(path.join(root, '.tiller/local/cli/node_modules/tiller'), oldVersion);
   const originalCli = await readFile(old, 'utf8');
@@ -110,7 +110,7 @@ for (const oldVersion of ['0.3.2', '0.4.4', '9.9.9', '0.5.0-rc.1']) test(`curren
 });
 
 for (const resourceVersion of ['0.3.2', '0.4.4', '9.9.9']) for (const existing of [false, true]) {
-  test(`unsupported resources ${resourceVersion} preserve ${existing ? 'existing' : 'absent'} runtime binding`, async t => {
+  test(`CASE-132 unsupported resources ${resourceVersion} preserve ${existing ? 'existing' : 'absent'} runtime binding`, async t => {
     const { base, root } = await fixture(t);
     const target = await cli(path.join(base, 'install'));
     if (existing) await bindRuntime(root, target);
@@ -131,7 +131,7 @@ for (const resourceVersion of ['0.3.2', '0.4.4', '9.9.9']) for (const existing o
   });
 }
 
-test('malformed or foreign binding and link paths are preserved and rejected', async t => {
+test('CASE-133 malformed or foreign binding and link paths are preserved and rejected', async t => {
   const { base, root } = await fixture(t);
   const target = await cli(path.join(base, 'install'));
   await mkdir(path.join(root, '.tiller/local'), { recursive: true });
@@ -153,7 +153,7 @@ test('malformed or foreign binding and link paths are preserved and rejected', a
   await assert.rejects(bindRuntime(root, path.join(linked, 'tiller/dist/cli.js')), /链接/u);
 });
 
-test('real Git worktree resolves the registered main checkout without copied local data', async t => {
+test('CASE-134 real Git worktree resolves the registered main checkout without copied local data', async t => {
   const { base, root } = await fixture(t);
   git(root, 'init', '--quiet');
   git(root, 'config', 'core.autocrlf', 'true');
@@ -192,7 +192,7 @@ test('real Git worktree resolves the registered main checkout without copied loc
   assert.equal(launch(copied).status, 1);
 });
 
-test('old resource directories cannot claim shared entry ready', async t => {
+test('CASE-135 old resource directories cannot claim shared entry ready', async t => {
   const { base, root } = await fixture(t);
   const target = await cli(path.join(base, 'install'));
   await rm(path.join(root, '.tiller/run.cjs'));
@@ -202,7 +202,7 @@ test('old resource directories cannot claim shared entry ready', async t => {
 });
 
 
-test('damaged CLI is not reported ready and rebinding restores stale installation', async t => {
+test('CASE-136 damaged CLI is not reported ready and rebinding restores stale installation', async t => {
   const { base, root } = await fixture(t);
   const target = await cli(path.join(base, 'install'));
   await bindRuntime(root, target);
@@ -214,7 +214,7 @@ test('damaged CLI is not reported ready and rebinding restores stale installatio
   assert.equal(realpathSync.native((await runtimeStatus(root)).cliPath).toLowerCase(), realpathSync.native(replacement).toLowerCase());
 });
 
-test('available project CLI does not require Git for direct use', async t => {
+test('CASE-137 available project CLI does not require Git for direct use', async t => {
   const { root } = await fixture(t);
   await cli(path.join(root, 'node_modules/tiller'));
   await writeFile(path.join(root, '.git'), 'gitdir: nonexistent');
@@ -224,7 +224,7 @@ test('available project CLI does not require Git for direct use', async t => {
 });
 
 
-test('runtime status rejects modified shared launcher using managed metadata', async t => {
+test('CASE-138 runtime status rejects modified shared launcher using managed metadata', async t => {
   const { base, root } = await fixture(t);
   const target = await cli(path.join(base, 'install'));
   assert.equal((await bindRuntime(root, target)).ready, true);
@@ -235,7 +235,7 @@ test('runtime status rejects modified shared launcher using managed metadata', a
 });
 
 
-test('binding rejects a changed launcher before replacing an existing local binding', async t => {
+test('CASE-139 binding rejects a changed launcher before replacing an existing local binding', async t => {
   const { base, root } = await fixture(t);
   const target = await cli(path.join(base, 'install'));
   await bindRuntime(root, target);
