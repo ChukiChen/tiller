@@ -21,7 +21,7 @@ function git(root, ...args) {
 
 function setupRepository(root) {
   put(root, 'src/workflow.ts', 'export const value = 1;\n');
-  put(root, 'test/workflow.test.mjs', "import test from 'node:test';\n\ntest('workflow behavior', () => {});\n");
+  put(root, 'test/workflow.test.mjs', "import test from 'node:test';\n\ntest('CASE-001 workflow behavior', () => {});\n");
   put(root, '.tiller/specs/modules/workflow/requirements.md', '# 工作流\n\n## 行为\n\n流程可验证。\n');
   put(root, '.tiller/specs/modules/workflow/design.md', '# 工作流设计\n\n使用任务记录。\n');
   git(root, 'init', '--quiet');
@@ -37,7 +37,7 @@ function fillDesign(root, id) {
     '### 方案\n\n从 task.md 与 Git 生成 PR/MR 草稿。\n\n### 取舍\n\n不调用托管平台。\n\n### 影响与风险\n\nPR/MR 标题和说明需要人工复核。'));
 }
 
-test('branch names follow type and task prefix rules', () => {
+test('CASE-070 branch names follow type and task prefix rules', () => {
   assert.equal(suggestedBranchName('feat', '20261022-round11'), 'feat/20261022-round11');
   for (const branch of ['feat/20261022-round11', 'feat/20261022-round11-pr-conventions', 'fix/bug-1']) {
     assert.equal(branchNameIssue(branch, branch.startsWith('fix/') ? 'bug-1' : '20261022-round11'), null, branch);
@@ -52,7 +52,7 @@ test('branch names follow type and task prefix rules', () => {
   assert.match(branchNameIssue('feat/20261022-round11-', '20261022-round11') ?? '', /分支名应为/u);
 });
 
-test('commit subjects enforce type, module, Chinese summary and no task links', () => {
+test('CASE-073 commit subjects enforce type, module, Chinese summary and no task links', () => {
   assert.equal(commitSubjectIssue('feat(workflow): 添加 PR 草稿', ['workflow']), null);
   assert.equal(commitSubjectIssue('chore: 更新受管资源'), null);
   assert.match(commitSubjectIssue('feature(workflow): 添加草稿', ['workflow']) ?? '', /类型/u);
@@ -62,7 +62,7 @@ test('commit subjects enforce type, module, Chinese summary and no task links', 
   assert.match(commitSubjectIssue('feat(workflow): 添加草稿 [任务](https://example.invalid)', ['workflow']) ?? '', /任务链接/u);
 });
 
-test('pr draft derives title, five sections and current AC state', async t => {
+test('CASE-068 pr draft derives title, five sections and current AC state', async t => {
   const root = fixture(t);
   success(cli(root, 'init'));
   setupRepository(root);
@@ -75,10 +75,10 @@ test('pr draft derives title, five sections and current AC state', async t => {
   success(cli(root, 'confirm', id, 'requirements', '--by', 'Tiller Test'));
   success(cli(root, 'confirm', id, 'design', '--by', 'Tiller Test'));
   const added = success(cli(root, 'case', 'add', id, '--module', 'workflow', '--kind', 'behavior',
-    '--title', 'PR 草稿结构', '--test', 'test/workflow.test.mjs::workflow behavior', '--criterion', 'AC-1',
+    '--title', 'PR 草稿结构', '--expected', 'PR 草稿包含固定五段', '--criterion', 'AC-1',
     '--source', 'src/workflow.ts'));
   assert.equal(added.id, 'CASE-001');
-  success(cli(root, 'verify', id, '--criterion', 'AC-1', '--test', 'test/workflow.test.mjs::workflow behavior'));
+  success(cli(root, 'verify', id, '--criterion', 'AC-1', '--test', 'test/workflow.test.mjs::CASE-001 workflow behavior'));
   git(root, 'add', '.');
   git(root, 'commit', '--quiet', '-m', 'feat(workflow): 生成固定五段 PR 草稿');
   git(root, 'checkout', '--quiet', '-b', `feat/${id}-pr-draft`);
@@ -114,7 +114,7 @@ test('pr draft derives title, five sections and current AC state', async t => {
   assert.match(malformed.warnings.join('\n'), /分支名应为“类型\/任务编号\[-简短描述\]”/u);
 });
 
-test('check warns about nonconforming commit subjects and skips merge subjects', async t => {
+test('CASE-069 check warns about nonconforming commit subjects and skips merge subjects', async t => {
   const root = fixture(t);
   success(cli(root, 'init'));
   setupRepository(root);
@@ -123,9 +123,8 @@ test('check warns about nonconforming commit subjects and skips merge subjects',
     '--criterion', 'AC-1=提交主题违规只产生提示', '--size', 'small', '--target', 'src', '--target', 'test', '--target', '.tiller/cases',
     '--target', '.tiller/specs/modules/workflow'));
   success(cli(root, 'confirm', id, 'requirements', '--by', 'Tiller Test'));
-  success(cli(root, 'case', 'add', id, '--module', 'workflow', '--kind', 'behavior', '--title', '提交信息检查',
-    '--test', 'test/workflow.test.mjs::workflow behavior', '--criterion', 'AC-1', '--source', 'src/workflow.ts'));
-  success(cli(root, 'verify', id, '--criterion', 'AC-1', '--test', 'test/workflow.test.mjs::workflow behavior'));
+  success(cli(root, 'case', 'add', id, '--module', 'workflow', '--kind', 'behavior', '--title', '提交信息检查', '--expected', '不合规提交只产生提示', '--criterion', 'AC-1', '--source', 'src/workflow.ts'));
+  success(cli(root, 'verify', id, '--criterion', 'AC-1', '--test', 'test/workflow.test.mjs::CASE-001 workflow behavior'));
   git(root, 'add', '.');
   git(root, 'commit', '--quiet', '-m', 'update stuff');
   const branch = git(root, 'branch', '--show-current').trim();
@@ -142,7 +141,7 @@ test('check warns about nonconforming commit subjects and skips merge subjects',
   assert.doesNotMatch(formatWarnings[0], /merge side without convention/u);
 });
 
-test('pr title selects first declared module and omits unknown modules', async t => {
+test('CASE-075 pr title selects first declared module and omits unknown modules', async t => {
   const root = fixture(t);
   await initialize({ root });
   for (const module of ['initialization', 'workflow']) {
@@ -168,7 +167,7 @@ test('pr title selects first declared module and omits unknown modules', async t
   assert.equal(fallback.title, `feat: 未知模块标题 [${unknownId}]`);
 });
 
-test('branch slug precedence uses flag then task metadata then current branch', async t => {
+test('CASE-076 branch slug precedence uses flag then task metadata then current branch', async t => {
   const root = fixture(t);
   success(cli(root, 'init'));
   setupRepository(root);
@@ -186,7 +185,7 @@ test('branch slug precedence uses flag then task metadata then current branch', 
   assert.equal(success(cli(root, 'pr', branchTask)).branch, `feat/${branchTask}-from-current`);
 });
 
-test('pr verification section lists every recorded run in order', async t => {
+test('CASE-077 pr verification section lists every recorded run in order', async t => {
   const root = fixture(t);
   success(cli(root, 'init'));
   setupRepository(root);
@@ -196,10 +195,10 @@ test('pr verification section lists every recorded run in order', async t => {
     '--target', '.tiller/specs/modules/workflow'));
   success(cli(root, 'confirm', id, 'requirements', '--by', 'Tiller Test'));
   const added = success(cli(root, 'case', 'add', id, '--module', 'workflow', '--kind', 'behavior',
-    '--title', '全部验证记录', '--test', 'test/workflow.test.mjs::workflow behavior', '--criterion', 'AC-1',
+    '--title', '全部验证记录', '--expected', '保留每次验证记录', '--criterion', 'AC-1',
     '--source', 'src/workflow.ts'));
-  const firstRun = success(cli(root, 'verify', id, '--criterion', 'AC-1', '--test', 'test/workflow.test.mjs::workflow behavior'));
-  const secondRun = success(cli(root, 'verify', id, '--criterion', 'AC-1', '--test', 'test/workflow.test.mjs::workflow behavior'));
+  const firstRun = success(cli(root, 'verify', id, '--criterion', 'AC-1', '--test', 'test/workflow.test.mjs::CASE-001 workflow behavior'));
+  const secondRun = success(cli(root, 'verify', id, '--criterion', 'AC-1', '--test', 'test/workflow.test.mjs::CASE-001 workflow behavior'));
   const first = firstRun.entries[0].command;
   const second = secondRun.entries[0].command;
 
@@ -207,12 +206,12 @@ test('pr verification section lists every recorded run in order', async t => {
   assert.ok(draft.body.indexOf(`命令：\`${first}\``) >= 0, draft.body);
   assert.ok(draft.body.indexOf(`命令：\`${second}\``) > draft.body.indexOf(`命令：\`${first}\``), draft.body);
   assert.match(draft.body, new RegExp(`${added.id}`, 'u'));
-  assert.ok(draft.body.includes(`  - 测试：\`test/workflow.test.mjs::workflow behavior\`；命令：\`${first}\`；结果：passed；提交：\`${firstRun.entries[0].commit}\`；用例：${added.id}`), draft.body);
-  assert.ok(draft.body.includes(`  - 测试：\`test/workflow.test.mjs::workflow behavior\`；命令：\`${second}\`；结果：passed；提交：\`${secondRun.entries[0].commit}\`；用例：${added.id}`), draft.body);
+  assert.ok(draft.body.includes(`  - 测试：\`test/workflow.test.mjs::CASE-001 workflow behavior\`；命令：\`${first}\`；结果：passed；提交：\`${firstRun.entries[0].commit}\`；用例：${added.id}`), draft.body);
+  assert.ok(draft.body.includes(`  - 测试：\`test/workflow.test.mjs::CASE-001 workflow behavior\`；命令：\`${second}\`；结果：passed；提交：\`${secondRun.entries[0].commit}\`；用例：${added.id}`), draft.body);
   assert.doesNotMatch(draft.body, /^\s*- \d+\./mu);
 });
 
-test('pr summary prefers flag then metadata then earliest conventional commit then task title', async t => {
+test('CASE-081 pr summary prefers flag then metadata then earliest conventional commit then task title', async t => {
   const root = fixture(t);
   success(cli(root, 'init'));
   setupRepository(root);
@@ -248,7 +247,7 @@ test('pr summary prefers flag then metadata then earliest conventional commit th
   assert.equal(success(cli(root, 'pr', fallbackId)).title, `feat: 任务标题回退 [${fallbackId}]`);
 });
 
-test('pr change list orders commits from oldest to newest', async t => {
+test('CASE-082 pr change list orders commits from oldest to newest', async t => {
   const root = fixture(t);
   success(cli(root, 'init'));
   setupRepository(root);
@@ -269,7 +268,7 @@ test('pr change list orders commits from oldest to newest', async t => {
   assert.deepEqual(draft.commits.map(commit => commit.subject), ['feat(workflow): 较早提交', 'fix(workflow): 较晚提交']);
 });
 
-test('pr verification section uses plain nested records without numbered bullets', async t => {
+test('CASE-083 pr verification section uses plain nested records without numbered bullets', async t => {
   const root = fixture(t);
   success(cli(root, 'init'));
   setupRepository(root);
@@ -279,18 +278,18 @@ test('pr verification section uses plain nested records without numbered bullets
     '--target', '.tiller/specs/modules/workflow'));
   success(cli(root, 'confirm', id, 'requirements', '--by', 'Tiller Test'));
   const added = success(cli(root, 'case', 'add', id, '--module', 'workflow', '--kind', 'behavior',
-    '--title', '验证格式', '--test', 'test/workflow.test.mjs::workflow behavior', '--criterion', 'AC-1',
+    '--title', '验证格式', '--expected', '验证记录使用普通嵌套列表', '--criterion', 'AC-1',
     '--source', 'src/workflow.ts'));
-  const verified = success(cli(root, 'verify', id, '--criterion', 'AC-1', '--test', 'test/workflow.test.mjs::workflow behavior'));
+  const verified = success(cli(root, 'verify', id, '--criterion', 'AC-1', '--test', 'test/workflow.test.mjs::CASE-001 workflow behavior'));
   const command = verified.entries[0].command;
 
   const draft = success(cli(root, 'pr', id));
   assert.match(draft.body, /^- AC-1：每条记录单独一行（当前有效）$/mu);
-  assert.ok(draft.body.includes(`  - 测试：\`test/workflow.test.mjs::workflow behavior\`；命令：\`${command}\`；结果：passed；提交：\`${verified.entries[0].commit}\`；用例：${added.id}`), draft.body);
+  assert.ok(draft.body.includes(`  - 测试：\`test/workflow.test.mjs::CASE-001 workflow behavior\`；命令：\`${command}\`；结果：passed；提交：\`${verified.entries[0].commit}\`；用例：${added.id}`), draft.body);
   assert.doesNotMatch(draft.body, /^\s*- \d+\./mu);
 });
 
-test('init installs a managed pull request template and preserves an existing one', async t => {
+test('CASE-071 init installs a managed pull request template and preserves an existing one', async t => {
   const root = fixture(t);
   await initialize({ root });
   const template = read(root, '.github/pull_request_template.md');
@@ -310,7 +309,7 @@ test('init installs a managed pull request template and preserves an existing on
   assert.match(plan.issues.join('\n'), /用户已有 \.github\/pull_request_template\.md 与分发模板不同/u);
 });
 
-test('init platform selects github gitlab or both managed templates', async t => {
+test('CASE-078 init platform selects github gitlab or both managed templates', async t => {
   const github = fixture(t);
   success(cli(github, 'init'));
   assert.ok(existsSync(join(github, '.github/pull_request_template.md')));
@@ -340,7 +339,7 @@ test('init platform selects github gitlab or both managed templates', async t =>
   assert.ok(Object.hasOwn(JSON.parse(read(custom, '.tiller/project.json')).managedFiles, GITLAB_TEMPLATE));
 });
 
-test('upgrade adds the pull request template to a previous managed set', async t => {
+test('CASE-072 upgrade adds the pull request template to a previous managed set', async t => {
   const root = fixture(t);
   await initialize({ root });
   const metadata = JSON.parse(read(root, '.tiller/project.json'));
@@ -356,7 +355,7 @@ test('upgrade adds the pull request template to a previous managed set', async t
   assert.ok(Object.hasOwn(JSON.parse(read(root, '.tiller/project.json')).managedFiles, '.github/pull_request_template.md'));
 });
 
-test('upgrade adds only templates for the configured platform', async t => {
+test('CASE-079 upgrade adds only templates for the configured platform', async t => {
   const root = fixture(t);
   await initialize({ root, platform: 'gitlab' });
   const metadata = JSON.parse(read(root, '.tiller/project.json'));
@@ -372,7 +371,7 @@ test('upgrade adds only templates for the configured platform', async t => {
   assert.ok(!existsSync(join(root, '.github/pull_request_template.md')));
 });
 
-test('pr task section is plain text and PR MR neutral', async t => {
+test('CASE-080 pr task section is plain text and PR MR neutral', async t => {
   const root = fixture(t);
   await initialize({ root });
   const id = '20261022-neutral-output';

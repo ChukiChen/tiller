@@ -23,21 +23,35 @@ async function project(t) {
   const root = fixture(t);
   await initialize({ root });
   put(root, 'src/value.txt', 'one\n');
-  put(root, 'test/baseline.test.mjs', "import assert from 'node:assert/strict';\nimport test from 'node:test';\ntest('baseline', () => assert.equal(1, 1));\n");
+  put(root, 'test/baseline.test.mjs', "import assert from 'node:assert/strict';\nimport test from 'node:test';\ntest('CASE-001 baseline', () => assert.equal(1, 1));\n");
   put(root, '.tiller/specs/modules/workflow/requirements.md', '# Workflow\n\n## Baseline behavior\n\nThe baseline test guards a task change.\n');
-  put(root, '.tiller/cases/modules/workflow/behavior.json', `${JSON.stringify({
-    schemaVersion: 1,
-    module: 'workflow',
-    kind: 'behavior',
-    cases: [{
-      id: 'CASE-BASELINE',
-      title: 'Baseline behavior is regression tested',
-      requirements: ['.tiller/specs/modules/workflow/requirements.md#baseline-behavior'],
-      modules: ['workflow'],
-      test_ref: 'test/baseline.test.mjs::baseline',
-      source: ['src/value.txt'],
-    }],
-  }, null, 2)}\n`);
+  put(root, '.tiller/cases/modules/workflow/behavior.md', `# workflow / behavior
+
+## CASE-001 Baseline behavior is regression tested
+
+- 类型：behavior
+- 优先级：medium
+- 模块：workflow
+- 关联 AC：无
+- 需求：\`.tiller/specs/modules/workflow/requirements.md#baseline-behavior\`
+- 源码：\`src/value.txt\`
+
+### 前置条件
+
+- 工作流模块和测试环境可用。
+
+### 步骤
+
+1. 执行引用 CASE-001 的具名测试。
+
+### 输入
+
+- 正常的工作流输入。
+
+### 预期结果
+
+测试通过，基线行为保持在回归范围内。
+`);
   git(root, 'init', '--quiet');
   git(root, 'config', 'user.name', 'Tiller Test');
   git(root, 'add', '.');
@@ -54,14 +68,74 @@ function editTask(root, id, change) {
 }
 
 function addCaseLibrary(root, files) {
-  for (const [name, value] of Object.entries(files)) {
-    put(root, `.tiller/cases/${name}`, `${JSON.stringify(value, null, 2)}\n`);
-  }
+  for (const [name, content] of Object.entries(files)) put(root, `.tiller/cases/${name}`, content);
   git(root, 'add', '.tiller/cases');
-  git(root, 'commit', '--quiet', '-m', 'global regression cases');
+  git(root, 'commit', '--quiet', '-m', 'test(workflow): 更新全局用例');
 }
 
-test('small flow produces one task file and records verified acceptance without raw logs', async t => {
+function caseMarkdown({ id, title, kind = 'behavior', module = 'workflow', modules = [module], criteria = [],
+  source = ['src/value.txt'], requirements = ['.tiller/specs/modules/workflow/requirements.md#baseline-behavior'] }) {
+  return `# ${module} / ${kind}
+
+## ${id} ${title}
+
+- 类型：${kind}
+- 优先级：medium
+- 模块：${modules.join(', ')}
+- 关联 AC：${criteria.length ? criteria.join(', ') : '无'}
+- 需求：${requirements.map(value => `\`${value}\``).join(', ')}
+- 源码：${source.map(value => `\`${value}\``).join(', ')}
+
+### 前置条件
+
+- 工作流模块和测试环境可用。
+
+### 步骤
+
+1. 执行引用 ${id} 的具名测试。
+
+### 输入
+
+- 正常输入与必要边界输入。
+
+### 预期结果
+
+测试通过，${title}。
+`;
+}
+
+function scenarioMarkdown({ id, title, modules, criteria = [], source = ['src/value.txt'],
+  requirements = ['.tiller/specs/modules/workflow/requirements.md#baseline-behavior'] }) {
+  return `# 场景：${id.toLowerCase()}
+
+## ${id} ${title}
+
+- 类型：scenario
+- 优先级：medium
+- 模块：${modules.join(', ')}
+- 关联 AC：${criteria.length ? criteria.join(', ') : '无'}
+- 需求：${requirements.map(value => `\`${value}\``).join(', ')}
+- 源码：${source.map(value => `\`${value}\``).join(', ')}
+
+### 前置条件
+
+- 经过模块的规格和运行环境可用。
+
+### 步骤
+
+1. 执行引用 ${id} 的端到端测试。
+
+### 输入
+
+- 跨模块正常输入。
+
+### 预期结果
+
+测试通过，${title}。
+`;
+}
+
+test('CASE-001 CASE-066 small flow produces one task file and records verified acceptance without raw logs', async t => {
   const root = await project(t);
   const id = '20261022-small-flow';
   const started = success(cli(root, 'start', id, '--title', 'Small flow', '--requirement', 'Keep the command reliable.',
@@ -73,18 +147,18 @@ test('small flow produces one task file and records verified acceptance without 
   assert.equal(confirmed.by, 'Tiller Test');
 
   put(root, 'src/value.txt', 'two\n');
-  put(root, 'test/baseline.test.mjs', "import assert from 'node:assert/strict';\nimport test from 'node:test';\ntest('baseline', () => assert.equal(2, 2));\n");
-  const verified = success(cli(root, 'verify', id, '--criterion', 'AC-1', '--test', 'test/baseline.test.mjs::baseline'));
+  put(root, 'test/baseline.test.mjs', "import assert from 'node:assert/strict';\nimport test from 'node:test';\ntest('CASE-001 baseline', () => assert.equal(2, 2));\n");
+  const verified = success(cli(root, 'verify', id, '--criterion', 'AC-1', '--test', 'test/baseline.test.mjs::CASE-001 baseline'));
   assert.equal(verified.result, 'passed');
   assert.equal(verified.entries[0].source, 'executed');
-  assert.deepEqual(verified.entries[0].cases, ['CASE-BASELINE']);
+  assert.deepEqual(verified.entries[0].cases, ['CASE-001']);
   git(root, 'add', 'src/value.txt', 'test/baseline.test.mjs');
   git(root, 'commit', '--quiet', '-m', 'implement small change');
 
   const checked = success(cli(root, 'check', id));
   assert.equal(checked.ready, true, checked.issues.join('\n'));
-  assert.deepEqual(checked.criteria, [{ id: 'AC-1', covered: true, test: 'test/baseline.test.mjs::baseline',
-    cases: ['CASE-BASELINE'], result: 'passed', commit: verified.commit }]);
+  assert.deepEqual(checked.criteria, [{ id: 'AC-1', covered: true, test: 'test/baseline.test.mjs::CASE-001 baseline',
+    cases: ['CASE-001'], result: 'passed', commit: verified.commit }]);
   assert.equal(checked.cases.matched, 1);
   assert.deepEqual(checked.cases.modules, [{ module: 'workflow', behavior: 1, interface: 0, performance: 0, security: 0, total: 1 }]);
   const accepted = success(cli(root, 'accept', id, '--by', '验收人'));
@@ -104,13 +178,13 @@ test('small flow produces one task file and records verified acceptance without 
   assert.match(content, /用户原话：确认这个范围和验收条件/u);
   assert.doesNotMatch(content, /用户原话：验收通过/u);
   assert.match(content, /代码树摘要：[a-f0-9]{64}/u);
-  assert.match(content, /^- 用例：CASE-BASELINE$/mu);
+  assert.match(content, /^- 用例：CASE-001$/mu);
   assert.deepEqual(readdirSync(join(root, '.tiller/task', id)), ['task.md']);
   assert.equal(existsSync(join(root, '.tiller/task', id, 'reviews')), false);
   assert.equal(existsSync(join(root, '.tiller/task', id, 'verification')), false);
 });
 
-test('requirements confirmation binds the written requirement rather than the quote', async t => {
+test('CASE-013 requirements confirmation binds the written requirement rather than the quote', async t => {
   const root = await project(t);
   const id = '20261022-written-requirement';
   success(cli(root, 'start', id, '--title', 'Written requirement', '--requirement', 'Return a nonzero exit code on failure.',
@@ -121,7 +195,7 @@ test('requirements confirmation binds the written requirement rather than the qu
   assert.ok(checked.issues.some(issue => issue.includes('需求确认后需求正文、范围或验收条件已变化')));
 });
 
-test('an empty requirement cannot be confirmed by a user quote alone', async t => {
+test('CASE-014 an empty requirement cannot be confirmed by a user quote alone', async t => {
   const root = await project(t);
   const id = '20261022-quote-is-not-requirement';
   success(cli(root, 'start', id, '--title', 'Quote evidence', '--requirement', 'Implement the documented behavior.',
@@ -132,7 +206,7 @@ test('an empty requirement cannot be confirmed by a user quote alone', async t =
   assert.match(rejected.error.message, /目标/u);
 });
 
-test('legacy work records stay read-only and are not listed as current tasks', async t => {
+test('CASE-015 legacy work records stay read-only and are not listed as current tasks', async t => {
   const root = await project(t);
   put(root, '.tiller/work/legacy/work.md', '# Legacy task\n\nHistorical record only.\n');
   assert.deepEqual(success(cli(root, 'resume')).tasks, []);
@@ -144,14 +218,14 @@ test('legacy work records stay read-only and are not listed as current tasks', a
   assert.equal(read(root, '.tiller/work/legacy/work.md'), '# Legacy task\n\nHistorical record only.\n');
 });
 
-test('standard flow blocks before design confirmation and accepts design after requirements', async t => {
+test('CASE-002 CASE-067 standard flow blocks before design confirmation and accepts design after requirements', async t => {
   const root = await project(t);
   const id = '20261022-standard-flow';
   success(cli(root, 'start', id, '--title', 'Standard flow', '--requirement', 'Add a visible behavior.',
     '--criterion', 'AC-1=Behavior is observable', '--type', 'feature', '--size', 'standard', '--target', 'src', '--target', 'test'));
   success(cli(root, 'confirm', id, 'requirements', '--quote', '需求确认'));
   put(root, 'src/value.txt', 'standard\n');
-  success(cli(root, 'verify', id, '--criterion', 'AC-1', '--test', 'test/baseline.test.mjs::baseline'));
+  success(cli(root, 'verify', id, '--criterion', 'AC-1', '--test', 'test/baseline.test.mjs::CASE-001 baseline'));
   git(root, 'add', 'src/value.txt');
   git(root, 'commit', '--quiet', '-m', 'standard implementation');
   const blocked = failure(cli(root, 'check', id));
@@ -164,7 +238,7 @@ test('standard flow blocks before design confirmation and accepts design after r
   assert.equal(checked.ready, true, checked.issues.join('\n'));
 });
 
-test('structured task template validates written requirements and records confirmer without a quote', async t => {
+test('CASE-060 CASE-062 structured task template validates written requirements and records confirmer without a quote', async t => {
   const root = await project(t);
   const id = '20261022-structured-confirm';
   success(cli(root, 'start', id, '--title', 'Structured confirmation', '--requirement', 'Write the structured requirement.',
@@ -198,7 +272,7 @@ test('structured task template validates written requirements and records confir
   assert.match(read(root, task(root, second)), /^- 确认人：Product Owner$/mu);
 });
 
-test('requirement and design confirmations use independent digests', async t => {
+test('CASE-063 requirement and design confirmations use independent digests', async t => {
   const root = await project(t);
   const id = '20261022-independent-confirmations';
   success(cli(root, 'start', id, '--title', 'Independent confirmations', '--requirement', 'Implement structured confirmations.',
@@ -222,7 +296,7 @@ test('requirement and design confirmations use independent digests', async t => 
   assert.equal(afterRequirements.confirmations.find(item => item.gate === 'requirements').confirmed, false);
 });
 
-test('legacy task text and quoted confirmation remain readable and valid', async t => {
+test('CASE-064 legacy task text and quoted confirmation remain readable and valid', async t => {
   const root = await project(t);
   const id = '20261022-legacy-confirmation';
   success(cli(root, 'start', id, '--title', 'Legacy record', '--requirement', 'Initial structured requirement.',
@@ -279,7 +353,7 @@ test('legacy task text and quoted confirmation remain readable and valid', async
   assert.equal(success(cli(root, 'resume', id)).stage, '需求已确认');
 });
 
-test('plan confirmation records a confirmer without a quote', async t => {
+test('CASE-061 plan confirmation records a confirmer without a quote', async t => {
   const root = await project(t);
   const result = success(cli(root, 'plan', 'start', 'round9-plan', '--title', '第9轮规划', '--goal', '验证规划确认去原话化',
     '--spec', '.tiller/specs/modules/workflow/requirements.md#2-开始与接续',
@@ -295,13 +369,13 @@ test('plan confirmation records a confirmer without a quote', async t => {
   assert.equal(success(cli(root, 'plan', 'status', 'round9-plan')).confirmed, true);
 });
 
-test('verification becomes stale after an in-scope change', async t => {
+test('CASE-006 verification becomes stale after an in-scope change', async t => {
   const root = await project(t);
   const id = '20261022-stale-verification';
   success(cli(root, 'start', id, '--title', 'Stale verification', '--requirement', 'Detect a stale proof.',
     '--criterion', 'AC-1=Current tree is tested', '--size', 'small', '--target', 'src', '--target', 'test'));
   success(cli(root, 'confirm', id, 'requirements', '--quote', '确认'));
-  success(cli(root, 'verify', id, '--criterion', 'AC-1', '--test', 'test/baseline.test.mjs::baseline'));
+  success(cli(root, 'verify', id, '--criterion', 'AC-1', '--test', 'test/baseline.test.mjs::CASE-001 baseline'));
   put(root, 'src/value.txt', 'changed after verification\n');
   git(root, 'add', 'src/value.txt');
   git(root, 'commit', '--quiet', '-m', 'change after verification');
@@ -309,7 +383,7 @@ test('verification becomes stale after an in-scope change', async t => {
   assert.ok(checked.issues.some(issue => issue.startsWith('AC-1 的验证已过期')));
 });
 
-test('requirements confirmation binds the declared scope', async t => {
+test('CASE-003 requirements confirmation binds the declared scope', async t => {
   const root = await project(t);
   const id = '20261022-scope-confirmation';
   success(cli(root, 'start', id, '--title', 'Scope binding', '--requirement', 'Keep the approved scope.',
@@ -320,14 +394,14 @@ test('requirements confirmation binds the declared scope', async t => {
   assert.ok(checked.issues.some(issue => issue.includes('需求确认后需求正文、范围或验收条件已变化')));
 });
 
-test('scope checks report committed and uncommitted out-of-scope changes', async t => {
+test('CASE-004 scope checks report committed and uncommitted out-of-scope changes', async t => {
   const root = await project(t);
   const id = '20261022-scope-check';
   success(cli(root, 'start', id, '--title', 'Scope check', '--requirement', 'Stay inside src.',
     '--criterion', 'AC-1=src is verified', '--size', 'small', '--target', 'src'));
   success(cli(root, 'confirm', id, 'requirements', '--quote', '确认'));
   put(root, 'src/value.txt', 'scoped\n');
-  success(cli(root, 'verify', id, '--criterion', 'AC-1', '--test', 'test/baseline.test.mjs::baseline'));
+  success(cli(root, 'verify', id, '--criterion', 'AC-1', '--test', 'test/baseline.test.mjs::CASE-001 baseline'));
   git(root, 'add', 'src/value.txt');
   git(root, 'commit', '--quiet', '-m', 'scoped change');
   put(root, 'docs/outside.md', 'outside\n');
@@ -342,7 +416,7 @@ test('scope checks report committed and uncommitted out-of-scope changes', async
   assert.ok(committed.issues.some(issue => issue.includes('改动超出范围：docs/outside.md')));
 });
 
-test('pre-existing changes are excluded from scope findings only while unchanged', async t => {
+test('CASE-005 pre-existing changes are excluded from scope findings only while unchanged', async t => {
   const root = await project(t);
   put(root, 'docs/outside.md', 'pre-existing edit\n');
   const id = '20261022-preexisting';
@@ -350,7 +424,7 @@ test('pre-existing changes are excluded from scope findings only while unchanged
     '--criterion', 'AC-1=src is verified', '--size', 'small', '--target', 'src'));
   success(cli(root, 'confirm', id, 'requirements', '--quote', '确认'));
   put(root, 'src/value.txt', 'implemented\n');
-  success(cli(root, 'verify', id, '--criterion', 'AC-1', '--test', 'test/baseline.test.mjs::baseline'));
+  success(cli(root, 'verify', id, '--criterion', 'AC-1', '--test', 'test/baseline.test.mjs::CASE-001 baseline'));
   git(root, 'add', 'src/value.txt');
   git(root, 'commit', '--quiet', '-m', 'implement scoped change');
   const checked = success(cli(root, 'check', id));
@@ -361,14 +435,14 @@ test('pre-existing changes are excluded from scope findings only while unchanged
   assert.ok(changed.issues.some(issue => issue.includes('改动超出范围：docs/outside.md')));
 });
 
-test('test weakening and skipped tests block the delivery self-check', async t => {
+test('CASE-007 test weakening and skipped tests block the delivery self-check', async t => {
   const root = await project(t);
   const id = '20261022-test-weakening';
   success(cli(root, 'start', id, '--title', 'Protect tests', '--requirement', 'Do not weaken coverage.',
     '--criterion', 'AC-1=Assertion remains active', '--size', 'small', '--target', 'test'));
   success(cli(root, 'confirm', id, 'requirements', '--quote', '确认'));
-  put(root, 'test/baseline.test.mjs', "import test from 'node:test';\ntest('baseline', () => {});\ntest.skip('skipped baseline', () => {});\n");
-  success(cli(root, 'verify', id, '--criterion', 'AC-1', '--test', 'test/baseline.test.mjs::baseline'));
+  put(root, 'test/baseline.test.mjs', "import test from 'node:test';\ntest('CASE-001 baseline', () => {});\ntest.skip('skipped baseline', () => {});\n");
+  success(cli(root, 'verify', id, '--criterion', 'AC-1', '--test', 'test/baseline.test.mjs::CASE-001 baseline'));
   git(root, 'add', 'test/baseline.test.mjs');
   git(root, 'commit', '--quiet', '-m', 'weaken test');
   const checked = failure(cli(root, 'check', id));
@@ -376,7 +450,7 @@ test('test weakening and skipped tests block the delivery self-check', async t =
   assert.ok(checked.issues.some(issue => issue.includes('新增跳过或独占测试')));
 });
 
-test('removing a test with its retired feature is reported without masking retained assertion loss', async t => {
+test('CASE-008 removing a test with its retired feature is reported without masking retained assertion loss', async t => {
   const root = await project(t);
   put(root, 'test/legacy.test.mjs', "import test from 'node:test';\ntest('legacy', () => {});\n");
   git(root, 'add', 'test/legacy.test.mjs');
@@ -386,19 +460,19 @@ test('removing a test with its retired feature is reported without masking retai
     '--criterion', 'AC-1=The retained test proves behavior', '--size', 'small', '--target', 'test'));
   success(cli(root, 'confirm', id, 'requirements', '--quote', '确认'));
   unlinkSync(join(root, 'test/legacy.test.mjs'));
-  success(cli(root, 'verify', id, '--criterion', 'AC-1', '--test', 'test/baseline.test.mjs::baseline'));
+  success(cli(root, 'verify', id, '--criterion', 'AC-1', '--test', 'test/baseline.test.mjs::CASE-001 baseline'));
   git(root, 'add', '-A');
   git(root, 'commit', '--quiet', '-m', 'remove old feature test');
   const removed = success(cli(root, 'check', id));
   assert.ok(removed.warnings.some(issue => issue.includes('删除 1 个测试文件')));
-  put(root, 'test/baseline.test.mjs', "import test from 'node:test';\ntest('baseline', () => {});\n");
+  put(root, 'test/baseline.test.mjs', "import test from 'node:test';\ntest('CASE-001 baseline', () => {});\n");
   git(root, 'add', 'test/baseline.test.mjs');
   git(root, 'commit', '--quiet', '-m', 'weaken retained test');
   const weakened = failure(cli(root, 'check', id));
-  assert.ok(weakened.issues.some(issue => issue.includes('弱化测试断言：test/baseline.test.mjs::baseline')));
+  assert.ok(weakened.issues.some(issue => issue.includes('弱化测试断言：test/baseline.test.mjs::CASE-001 baseline')));
 });
 
-test('unsafe paths and secrets are rejected from records before acceptance', async t => {
+test('CASE-009 unsafe paths and secrets are rejected from records before acceptance', async t => {
   const root = await project(t);
   const id = '20261022-safe-record';
   failure(cli(root, 'start', id, '--title', 'Unsafe', '--requirement', 'Read /home/person/private.txt',
@@ -416,7 +490,7 @@ test('unsafe paths and secrets are rejected from records before acceptance', asy
   assert.ok(checked.issues.some(issue => issue.includes('疑似密钥赋值')));
 });
 
-test('accept refuses an unverified task and leaves no acceptance record', async t => {
+test('CASE-010 accept refuses an unverified task and leaves no acceptance record', async t => {
   const root = await project(t);
   const id = '20261022-accept-block';
   success(cli(root, 'start', id, '--title', 'Accept gate', '--requirement', 'Require proof first.',
@@ -427,7 +501,7 @@ test('accept refuses an unverified task and leaves no acceptance record', async 
   assert.doesNotMatch(read(root, task(root, id)), /验收通过/u);
 });
 
-test('check blocks a criterion whose verification test has no global case', async t => {
+test('CASE-012 check blocks a criterion whose verification test has no global case', async t => {
   const root = await project(t);
   put(root, 'test/other.test.mjs', "import test from 'node:test';\ntest('other', () => {});\n");
   git(root, 'add', 'test/other.test.mjs');
@@ -460,105 +534,86 @@ test('file-level verification references do not bind every test in the file', as
   assert.ok(checked.issues.some(item => item.includes('AC-1 未绑定全局用例')));
 });
 
-test('module cases and scenarios report counts and regression hints', async t => {
+test('CASE-047 module cases and scenarios report counts and regression hints', async t => {
   const root = await project(t);
+  put(root, 'test/baseline.test.mjs', "import assert from 'node:assert/strict';\nimport test from 'node:test';\ntest('CASE-001 baseline', () => assert.equal(1, 1));\ntest('CASE-002 scenario baseline', () => assert.equal(1, 1));\n");
+  git(root, 'add', 'test/baseline.test.mjs');
+  git(root, 'commit', '--quiet', '-m', 'test(workflow): 增加场景测试');
   addCaseLibrary(root, {
-    'scenarios/value-round.json': {
-      schemaVersion: 1,
-      scenarios: [{
-        id: 'CASE-SCENARIO', title: 'A value change crosses the workflow',
-        requirements: ['.tiller/specs/modules/workflow/requirements.md#baseline-behavior'],
-        modules: ['workflow'], test_ref: 'test/baseline.test.mjs::baseline', source: ['src/value.txt'],
-      }],
-    },
+    'scenarios/value-round.md': scenarioMarkdown({ id: 'CASE-002', title: 'A value change crosses the workflow', modules: ['workflow'] }),
   });
+  // The scenario test name must contain its CASE id; rewrite the fixture test accordingly.
+  put(root, 'test/baseline.test.mjs', "import assert from 'node:assert/strict';\nimport test from 'node:test';\ntest('CASE-001 baseline', () => assert.equal(1, 1));\ntest('CASE-002 A value change crosses the workflow', () => assert.equal(1, 1));\n");
+  git(root, 'add', 'test/baseline.test.mjs');
+  git(root, 'commit', '--quiet', '-m', 'test(workflow): 对齐场景用例编号');
   const id = '20261022-case-summary';
   success(cli(root, 'start', id, '--title', 'Case summary', '--requirement', 'Report module coverage.',
     '--criterion', 'AC-1=The scenario is visible', '--size', 'small', '--target', 'src', '--target', 'test'));
   success(cli(root, 'confirm', id, 'requirements', '--quote', '确认'));
   put(root, 'src/value.txt', 'summary\n');
-  success(cli(root, 'verify', id, '--criterion', 'AC-1', '--test', 'test/baseline.test.mjs::baseline'));
+  success(cli(root, 'verify', id, '--criterion', 'AC-1', '--test', 'test/baseline.test.mjs::CASE-001 baseline'));
   git(root, 'add', 'src/value.txt');
-  git(root, 'commit', '--quiet', '-m', 'case summary change');
+  git(root, 'commit', '--quiet', '-m', 'feat(workflow): 汇总用例');
   const checked = success(cli(root, 'check', id));
   assert.equal(checked.cases.count, 2);
   assert.equal(checked.cases.matched, 1);
   assert.deepEqual(checked.cases.modules, [{ module: 'workflow', behavior: 1, interface: 0, performance: 0, security: 0, total: 1 }]);
-  assert.deepEqual(checked.cases.scenarios, [{ id: 'CASE-SCENARIO', title: 'A value change crosses the workflow', modules: ['workflow'] }]);
+  assert.deepEqual(checked.cases.scenarios, [{ id: 'CASE-002', title: 'A value change crosses the workflow', modules: ['workflow'] }]);
   assert.deepEqual(checked.cases.uncovered, []);
-  assert.ok(checked.warnings.some(item => item.includes('本次改动涉及模块 workflow') && item.includes('CASE-SCENARIO')));
+  assert.ok(checked.warnings.some(item => item.includes('本次改动涉及模块 workflow') && item.includes('CASE-002')));
 });
 
-test('check rejects a case whose test_ref differs from the recorded verification', async t => {
+test('CASE-045 check rejects a recorded case whose referenced test no longer matches', async t => {
   const root = await project(t);
-  put(root, 'test/other.test.mjs', "import test from 'node:test';\ntest('other', () => {});\n");
+  put(root, 'test/other.test.mjs', "import test from 'node:test';\ntest('CASE-003 other', () => {});\n");
   git(root, 'add', 'test/other.test.mjs');
   addCaseLibrary(root, {
-    'modules/workflow/interface.json': {
-      schemaVersion: 1, module: 'workflow', kind: 'interface',
-      cases: [{
-        id: 'CASE-OTHER', title: 'Other interface',
-        requirements: ['.tiller/specs/modules/workflow/requirements.md#baseline-behavior'],
-        modules: ['workflow'], test_ref: 'test/other.test.mjs::other', source: ['src/value.txt'],
-      }],
-    },
+    'modules/workflow/interface.md': caseMarkdown({ id: 'CASE-003', title: 'Other interface', kind: 'interface' }),
   });
   const id = '20261022-case-mismatch';
   success(cli(root, 'start', id, '--title', 'Case mismatch', '--requirement', 'Bind the recorded case.',
     '--criterion', 'AC-1=The recorded case is current', '--size', 'small', '--target', 'src'));
   success(cli(root, 'confirm', id, 'requirements', '--quote', '确认'));
   put(root, 'src/value.txt', 'mismatch\n');
-  success(cli(root, 'verify', id, '--criterion', 'AC-1', '--test', 'test/baseline.test.mjs::baseline'));
-  editTask(root, id, content => content.replace('- 用例：CASE-BASELINE', '- 用例：CASE-OTHER'));
+  success(cli(root, 'verify', id, '--criterion', 'AC-1', '--test', 'test/baseline.test.mjs::CASE-001 baseline'));
+  editTask(root, id, content => content.replace('- 用例：CASE-001', '- 用例：CASE-003'));
   git(root, 'add', 'src/value.txt');
-  git(root, 'commit', '--quiet', '-m', 'mismatch change');
+  git(root, 'commit', '--quiet', '-m', 'fix(workflow): 制造用例错配');
   const checked = failure(cli(root, 'check', id));
-  assert.ok(checked.issues.some(item => item.includes('与全局用例 CASE-OTHER 的 test_ref 不一致')));
+  assert.ok(checked.issues.some(item => item.includes('与全局用例 CASE-003 的测试引用不一致')), checked.issues.join('\n'));
 });
 
-test('global cases block legacy layout, unknown kinds, missing modules and broken refs', async t => {
+test('CASE-046 global cases block legacy layout, unknown kinds, missing modules and broken references', async t => {
   const root = await project(t);
+  put(root, 'test/missing-case.test.mjs', "import test from 'node:test';\ntest('CASE-999 missing case', () => {});\n");
+  git(root, 'add', 'test/missing-case.test.mjs');
   addCaseLibrary(root, {
-    'legacy.json': { schemaVersion: 1, cases: [] },
-    'modules/ghost/behavior.json': {
-      schemaVersion: 1, module: 'ghost', kind: 'behavior',
-      cases: [{ id: 'CASE-GHOST', title: 'Ghost module',
-        requirements: ['.tiller/specs/modules/workflow/requirements.md#baseline-behavior'],
-        modules: ['ghost'], test_ref: 'test/baseline.test.mjs::baseline', source: ['src/value.txt'] }],
-    },
-    'modules/workflow/custom.json': { schemaVersion: 1, module: 'workflow', kind: 'custom', cases: [] },
-    'modules/workflow/interface.json': {
-      schemaVersion: 1, module: 'workflow', kind: 'interface',
-      cases: [{ id: 'CASE-BASELINE', title: 'Broken duplicate',
-        requirements: ['missing.md'], modules: ['workflow'],
-        test_ref: 'test/baseline.test.mjs::missing', source: ['src/value.txt'] }],
-    },
-    'scenarios/missing.json': {
-      schemaVersion: 1,
-      scenarios: [{ id: 'CASE-MISSING', title: 'Missing module',
-        requirements: ['.tiller/specs/modules/workflow/requirements.md#baseline-behavior'],
-        modules: ['missing'], test_ref: 'test/baseline.test.mjs::baseline', source: ['src/value.txt'] }],
-    },
+    'legacy.json': '{}\n',
+    'modules/ghost/behavior.md': caseMarkdown({ id: 'CASE-900', title: 'Ghost module', module: 'ghost', modules: ['ghost'] }),
+    'modules/workflow/custom.md': '# workflow / custom\n',
+    'modules/workflow/interface.md': caseMarkdown({ id: 'CASE-001', title: 'Broken duplicate', kind: 'interface', requirements: ['missing.md'] }),
+    'scenarios/missing.md': scenarioMarkdown({ id: 'CASE-901', title: 'Missing module', modules: ['missing'] }),
   });
   const id = '20261022-global-cases-broken';
   success(cli(root, 'start', id, '--title', 'Broken global cases', '--requirement', 'Reject stale facts.',
     '--criterion', 'AC-1=The test exists', '--size', 'small', '--target', 'src', '--target', 'test'));
   success(cli(root, 'confirm', id, 'requirements', '--quote', '确认'));
   put(root, 'src/value.txt', 'broken cases\n');
-  success(cli(root, 'verify', id, '--criterion', 'AC-1', '--test', 'test/baseline.test.mjs::baseline'));
+  success(cli(root, 'verify', id, '--criterion', 'AC-1', '--test', 'test/baseline.test.mjs::CASE-001 baseline'));
   git(root, 'add', 'src/value.txt');
-  git(root, 'commit', '--quiet', '-m', 'checked change');
+  git(root, 'commit', '--quiet', '-m', 'fix(workflow): 检查用例结构');
   const checked = failure(cli(root, 'check', id));
   assert.ok(checked.issues.some(item => item.includes('id 重复')));
   assert.ok(checked.issues.some(item => item.includes('旧式全局用例')));
   assert.ok(checked.issues.some(item => item.includes('不在白名单')));
   assert.ok(checked.issues.some(item => item.includes('模块目录') && item.includes('ghost')));
+  assert.ok(checked.issues.some(item => item.includes('模块不存在：ghost')));
   assert.ok(checked.issues.some(item => item.includes('模块不存在：missing')));
   assert.ok(checked.issues.some(item => item.includes('文件不存在：missing.md')));
-  assert.ok(checked.issues.some(item => item.includes('test_ref 用例不存在')));
+  assert.ok(checked.issues.some(item => item.includes('引用了不存在的用例 CASE-999')));
 });
 
-test('CLI JSON version and invalid argument contracts stay stable', t => {
+test('CASE-042 CASE-043 CLI JSON version and invalid argument contracts stay stable', t => {
   const root = fixture(t);
   const version = success(cli(root, '--version'));
   assert.deepEqual(version, { ok: true, version: '0.5.0' });
@@ -569,7 +624,7 @@ test('CLI JSON version and invalid argument contracts stay stable', t => {
   assert.match(rejected.data.error.message, /未知命令/u);
 });
 
-test('start rejects missing requirement or criterion with exit code 2', t => {
+test('CASE-044 start rejects missing requirement or criterion with exit code 2', t => {
   const root = fixture(t);
   const missingRequirement = cli(root, 'start', '20261022-interface-input', '--title', 'Interface',
     '--criterion', 'AC-1=Input is checked', '--size', 'small'); failure(missingRequirement);
@@ -582,7 +637,7 @@ test('start rejects missing requirement or criterion with exit code 2', t => {
   assert.equal(existsSync(join(root, '.tiller/task/20261022-interface-input')), false);
 });
 
-test('default help names the default flow and old audit commands are gone', t => {
+test('CASE-011 default help names the default flow and old audit commands are gone', t => {
   const root = fixture(t);
   const normal = success(cli(root, '--help'));
   assert.match(normal.help, /默认工作流/u);

@@ -21,7 +21,7 @@ function git(root, ...args) {
   return result.stdout;
 }
 
-async function project(t, testSource = "import test from 'node:test';\n\ntest('value behavior', () => {});\n") {
+async function project(t, testSource = "import test from 'node:test';\n\ntest('CASE-001 value behavior', () => {});\n") {
   const root = fixture(t);
   await initialize({ root });
   put(root, 'src/value.mjs', 'export const value = 1;\n');
@@ -46,9 +46,9 @@ function prepareTask(root, id, target) {
   success(cli(root, 'confirm', id, 'requirements', '--by', 'Tiller Test'));
 }
 
-function addCase(root, id, testRef, name = 'value behavior') {
+function addCase(root, id, _testRef, name = 'value behavior') {
   return success(cli(root, 'case', 'add', id, '--module', 'workflow', '--kind', 'behavior', '--title', name,
-    '--test', testRef, '--criterion', 'AC-1', '--source', 'src/value.mjs'));
+    '--expected', `${name} 通过测试`, '--criterion', 'AC-1', '--source', 'src/value.mjs'));
 }
 
 function commitAll(root, message) {
@@ -65,30 +65,30 @@ function reportLine(values) {
   return JSON.stringify({ type: 'pass', outcome: 'passed', ...values });
 }
 
-test('verify executes the recorded command, rejects legacy inputs and reads old records', async t => {
+test('CASE-086 verify executes the recorded command, rejects legacy inputs and reads old records', async t => {
   const root = await project(t);
   const id = '20261022-verify-single-command';
   prepareTask(root, id);
-  addCase(root, id, 'test/value.test.mjs::value behavior');
+  addCase(root, id, 'test/value.test.mjs::CASE-001 value behavior');
   put(root, 'src/value.mjs', 'export const value = 2;\n');
   commitAll(root, 'feat(workflow): 实现验证示例');
 
-  const legacy = failure(cli(root, 'verify', id, '--criterion', 'AC-1', '--test', 'test/value.test.mjs::value behavior',
+  const legacy = failure(cli(root, 'verify', id, '--criterion', 'AC-1', '--test', 'test/value.test.mjs::CASE-001 value behavior',
     '--run', 'node test/value.test.mjs'));
   assert.equal(legacy.error.code, 'INVALID_ARGUMENT');
   assert.match(legacy.error.message, /--run/u);
   assert.match(legacy.error.message, /--test/u);
   const externalWithoutFlag = failure(cli(root, 'verify', id, '--criterion', 'AC-1',
-    '--test', 'test/value.test.mjs::value behavior', '--command', 'node test/value.test.mjs'));
+    '--test', 'test/value.test.mjs::CASE-001 value behavior', '--command', 'node test/value.test.mjs'));
   assert.equal(externalWithoutFlag.error.code, 'INVALID_ARGUMENT');
   assert.match(externalWithoutFlag.error.message, /--reported/u);
 
   const verified = success(cli(root, 'verify', id, '--criterion', 'AC-1',
-    '--test', 'test/value.test.mjs::value behavior'));
+    '--test', 'test/value.test.mjs::CASE-001 value behavior'));
   assert.equal(verified.entries[0].source, 'executed');
   assert.equal(verified.entries[0].evidence, 'verified');
   assert.equal(verified.entries[0].result, 'passed');
-  assert.match(verified.entries[0].command, /--test-name-pattern=\^value behavior\$/u);
+  assert.match(verified.entries[0].command, /--test-name-pattern=\^CASE-001 value behavior\$/u);
   assert.match(verified.entries[0].command, /--test-reporter=\.\/\.tiller\/local\/verify-/u);
   assert.match(verified.entries[0].command, /test\/value\.test\.mjs$/u);
   assert.match(read(root, taskFile(id)), /^- 命令：node .*--test-name-pattern=.*test\/value\.test\.mjs$/mu);
@@ -107,22 +107,22 @@ test('verify executes the recorded command, rejects legacy inputs and reads old 
   assert.ok(!legacyRecord.issues.some(issue => issue.includes('未核实')), legacyRecord.issues.join('\n'));
 });
 
-test('verify constructs and executes node:test without a user command', async t => {
+test('CASE-092 verify constructs and executes node:test without a user command', async t => {
   const root = await project(t);
   const id = '20261022-self-run-command';
   prepareTask(root, id);
-  addCase(root, id, 'test/value.test.mjs::value behavior');
+  addCase(root, id, 'test/value.test.mjs::CASE-001 value behavior');
   commitAll(root, 'test(workflow): 登记自主执行用例');
 
   const verified = success(cli(root, 'verify', id, '--criterion', 'AC-1',
-    '--test', 'test/value.test.mjs::value behavior'));
+    '--test', 'test/value.test.mjs::CASE-001 value behavior'));
   assert.equal(verified.entries[0].command, verified.entries[0].command.trim());
-  assert.match(verified.entries[0].command, /^node '--test-name-pattern=\^value behavior\$' --test-reporter=\.\/\.tiller\/local\/verify-[^/]+\/reporter\.mjs --test-reporter-destination=\.tiller\/local\/verify-[^/]+\/report\.jsonl test\/value\.test\.mjs$/u);
+  assert.match(verified.entries[0].command, /^node '--test-name-pattern=\^CASE-001 value behavior\$' --test-reporter=\.\/\.tiller\/local\/verify-[^/]+\/reporter\.mjs --test-reporter-destination=\.tiller\/local\/verify-[^/]+\/report\.jsonl test\/value\.test\.mjs$/u);
   assert.equal(verified.entries[0].source, 'executed');
   assert.equal(verified.entries[0].evidence, 'verified');
 });
 
-test('verify ignores forged stdout and rejects missing, duplicate, failed and corrupt private reports', async t => {
+test('CASE-093 verify ignores forged stdout and rejects missing, duplicate, failed and corrupt private reports', async t => {
   const source = [
     "import { writeSync } from 'node:fs';",
     "import test from 'node:test';",
@@ -190,12 +190,13 @@ test('a failed private report cannot pass when the test process exits zero', asy
   const root = await project(t);
   const id = '20261022-zero-exit-failure';
   prepareTask(root, id);
+  addCase(root, id, 'test/value.test.mjs::CASE-001 value behavior');
   const runner = TEST_RUNNERS.find(item => item.name === 'node-test');
   assert.ok(runner);
   const originalBuild = runner.build;
   runner.build = (reference, paths) => {
     const report = JSON.stringify({
-      type: 'fail', name: 'value behavior', path: 'value behavior', outcome: 'failed', file: join(root, reference.path),
+      type: 'fail', name: reference.name ?? 'value behavior', path: reference.name ?? 'value behavior', outcome: 'failed', file: join(root, reference.path),
     });
     const summary = JSON.stringify({ type: 'summary', success: false });
     const script = `const fs = require('node:fs'); fs.writeFileSync(${JSON.stringify(paths.report)}, ${JSON.stringify(`${report}\n${summary}\n`)}); process.exit(0);`;
@@ -203,7 +204,7 @@ test('a failed private report cannot pass when the test process exits zero', asy
   };
   try {
     const verified = await verifyFlow(root, id, {
-      criteria: ['AC-1'], test: 'test/value.test.mjs::value behavior',
+      criteria: ['AC-1'], test: 'test/value.test.mjs::CASE-001 value behavior',
     });
     assert.equal(verified.entries[0].exitCode, 0);
     assert.equal(verified.entries[0].result, 'failed');
@@ -214,19 +215,19 @@ test('a failed private report cannot pass when the test process exits zero', asy
   }
 });
 
-test('reported verification is blocked by default and allowed explicitly', async t => {
+test('CASE-087 reported verification is blocked by default and allowed explicitly', async t => {
   const root = await project(t);
   const id = '20261022-reported-verification';
   prepareTask(root, id);
-  addCase(root, id, 'test/value.test.mjs::value behavior');
+  addCase(root, id, 'test/value.test.mjs::CASE-001 value behavior');
   put(root, 'src/value.mjs', 'export const value = 3;\n');
   commitAll(root, 'feat(workflow): 准备外部报告');
   const reason = 'CI 已运行同一条命令并归档结果';
-  const missingReason = failure(cli(root, 'verify', id, '--criterion', 'AC-1', '--test', 'test/value.test.mjs::value behavior',
+  const missingReason = failure(cli(root, 'verify', id, '--criterion', 'AC-1', '--test', 'test/value.test.mjs::CASE-001 value behavior',
     '--reported', '--command', 'node test/value.test.mjs', '--result', 'passed'));
   assert.equal(missingReason.error.code, 'INVALID_ARGUMENT');
   assert.match(missingReason.error.message, /--reason/u);
-  const verified = success(cli(root, 'verify', id, '--criterion', 'AC-1', '--test', 'test/value.test.mjs::value behavior',
+  const verified = success(cli(root, 'verify', id, '--criterion', 'AC-1', '--test', 'test/value.test.mjs::CASE-001 value behavior',
     '--reported', '--command', 'node test/value.test.mjs', '--result', 'passed', '--reason', reason));
   assert.equal(verified.entries[0].source, 'reported');
   assert.equal(verified.entries[0].evidence, 'not-run');
@@ -242,7 +243,7 @@ test('reported verification is blocked by default and allowed explicitly', async
   assert.equal(success(cli(root, 'accept', id, '--by', 'Tiller Test', '--allow-reported')).gate, 'acceptance');
 });
 
-test('named node test output is verified for TAP, spec and nested special characters', async t => {
+test('CASE-088 named node test output is verified for TAP, spec and nested special characters', async t => {
   const nested = "import test from 'node:test';\nimport assert from 'node:assert/strict';\n\ntest('parent case', async t => {\n  await t.test('nested / escaped [x] # hash', () => assert.equal(1, 1));\n});\n";
   const root = await project(t, nested);
   const name = 'parent case > nested / escaped [x] # hash';
@@ -267,8 +268,8 @@ test('named node test output is verified for TAP, spec and nested special charac
   assert.equal(namePattern({ path: 'test/value.test.mjs' }), undefined);
 });
 
-test('bugfix verification requires baseline failure and current passing evidence', async t => {
-  const failing = "import assert from 'node:assert/strict';\nimport test from 'node:test';\nimport { add } from '../src/bug.mjs';\n\ntest('bugfix addition: [1+1] # result', () => assert.equal(add(1, 1), 2));\n";
+test('CASE-089 CASE-094 bugfix verification requires baseline failure and current passing evidence', async t => {
+  const failing = "import assert from 'node:assert/strict';\nimport test from 'node:test';\nimport { add } from '../src/bug.mjs';\n\ntest('CASE-001 bugfix addition: [1+1] # result', () => assert.equal(add(1, 1), 2));\n";
   const root = fixture(t);
   await initialize({ root });
   put(root, 'src/bug.mjs', 'export const add = (a, b) => a - b;\n');
@@ -284,14 +285,14 @@ test('bugfix verification requires baseline failure and current passing evidence
   git(root, 'commit', '--quiet', '-m', 'baseline buggy implementation');
 
   const id = '20261022-bugfix-evidence';
-  const name = 'bugfix addition: [1+1] # result';
+  const name = 'CASE-001 bugfix addition: [1+1] # result';
   const testRef = `test/bug.test.mjs::${name}`;
   success(cli(root, 'start', id, '--title', '修复加法', '--requirement', '修复加法并保留回归证据。',
     '--criterion', 'AC-1=失败先行且当前通过', '--type', 'bugfix', '--size', 'small',
     '--target', 'src', '--target', 'test', '--target', '.tiller/cases'));
   success(cli(root, 'confirm', id, 'requirements', '--by', 'Tiller Test'));
-  success(cli(root, 'case', 'add', id, '--module', 'workflow', '--kind', 'behavior', '--title', '加法回归',
-    '--test', testRef, '--criterion', 'AC-1', '--source', 'src/bug.mjs'));
+  success(cli(root, 'case', 'add', id, '--module', 'workflow', '--kind', 'behavior', '--title', '加法回归', '--expected', '基线失败且当前通过',
+    '--criterion', 'AC-1', '--source', 'src/bug.mjs'));
 
   const baseline = success(cli(root, 'verify', id, '--criterion', 'AC-1', '--test', testRef, '--expect-fail'));
   assert.equal(baseline.result, 'failed');
@@ -313,8 +314,8 @@ test('bugfix verification requires baseline failure and current passing evidence
     '--criterion', 'AC-1=证据完整', '--type', 'bugfix', '--size', 'small',
     '--target', 'src', '--target', 'test', '--target', '.tiller/cases'));
   success(cli(root, 'confirm', missingId, 'requirements', '--by', 'Tiller Test'));
-  success(cli(root, 'case', 'add', missingId, '--module', 'workflow', '--kind', 'behavior', '--title', '缺少基线',
-    '--test', testRef, '--criterion', 'AC-1', '--source', 'src/bug.mjs'));
+  const casePath = '.tiller/cases/modules/workflow/behavior.md';
+  put(root, casePath, read(root, casePath).replace('- 关联 AC：20261022-bugfix-evidence#AC-1', `- 关联 AC：20261022-bugfix-evidence#AC-1, ${missingId}#AC-1`));
   success(cli(root, 'verify', missingId, '--criterion', 'AC-1', '--test', testRef));
   commitAll(root, 'chore: 记录缺少失败先行的任务');
   const missing = failure(cli(root, 'check', missingId));
@@ -325,14 +326,13 @@ test('bugfix verification requires baseline failure and current passing evidence
     '--criterion', 'AC-1=基线必须失败', '--type', 'bugfix', '--size', 'small',
     '--target', 'src', '--target', 'test', '--target', '.tiller/cases'));
   success(cli(root, 'confirm', noFailureId, 'requirements', '--by', 'Tiller Test'));
-  success(cli(root, 'case', 'add', noFailureId, '--module', 'workflow', '--kind', 'behavior', '--title', '基线已通过',
-    '--test', testRef, '--criterion', 'AC-1', '--source', 'src/bug.mjs'));
+  put(root, casePath, read(root, casePath).replace(`${missingId}#AC-1`, `${missingId}#AC-1, ${noFailureId}#AC-1`));
   const noFailure = failure(cli(root, 'verify', noFailureId, '--criterion', 'AC-1', '--test', testRef, '--expect-fail'));
   assert.equal(noFailure.error.code, 'EXPECTED_FAILURE_NOT_OBSERVED');
   assert.equal(git(root, 'worktree', 'list', '--porcelain').trim().split(/\n(?=worktree )/u).length, 1);
 });
 
-test('verify runner configuration and prepare are enforced', async t => {
+test('CASE-095 verify runner configuration and prepare are enforced', async t => {
   const root = await project(t);
   put(root, 'prepare.mjs', "import { writeFileSync } from 'node:fs';\nwriteFileSync('prepared.txt', 'yes');\n");
   put(root, 'prepare-fail.mjs', "process.exit(3);\n");
@@ -361,7 +361,7 @@ test('verify runner configuration and prepare are enforced', async t => {
   assert.deepEqual(JSON.parse(read(root, '.tiller/project.json')).verify, { prepare: ['node', 'prepare.mjs'] });
 });
 
-test('verify writes a concise summary and verbose log', async t => {
+test('CASE-096 verify writes a concise summary and verbose log', async t => {
   const source = "import { writeSync } from 'node:fs';\nimport test from 'node:test';\nwriteSync(1, 'TILLER_LOG_MARKER\\n');\ntest('logging behavior', () => {});\n";
   const root = await project(t, source);
   const id = '20261022-verify-log';
@@ -380,7 +380,7 @@ test('verify writes a concise summary and verbose log', async t => {
   assert.ok(verboseRun.stderr.includes('TILLER_LOG_MARKER'), verboseRun.stderr);
 });
 
-test('standard starts require explicit targets while small defaults to repository root', async t => {
+test('CASE-090 standard starts require explicit targets while small defaults to repository root', async t => {
   const root = await project(t);
   const standard = failure(cli(root, 'start', '20261022-standard-no-target', '--title', '标准任务',
     '--requirement', '标准任务必须声明范围。', '--criterion', 'AC-1=范围明确', '--size', 'standard'));

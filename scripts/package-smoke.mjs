@@ -111,12 +111,12 @@ for (const args of [['advanced'], ['work', 'create'], ['workflow', 'list'], ['pl
 }
 invoke(['confirm', taskId, 'requirements', '--quote', 'Package smoke requirement confirmed']);
 const added = invoke(['case', 'add', taskId, '--module', 'package-smoke', '--kind', 'behavior', '--title', 'Packaged flow works',
-  '--test', 'test/package-smoke.test.mjs::package flow works', '--criterion', 'AC-1',
+  '--expected', 'the packaged test passes its named case', '--criterion', 'AC-1',
   '--spec', '.tiller/specs/modules/package-smoke/requirements.md', '--source', 'test/package-smoke.test.mjs']);
 assert.equal(added.id, 'CASE-001');
 mkdirSync(join(target, 'test'), { recursive: true });
-writeFileSync(join(target, 'test/package-smoke.test.mjs'), "import assert from 'node:assert/strict';\nimport test from 'node:test';\n\ntest('package flow works', () => { assert.equal(1, 1); });\n");
-const verified = invoke(['verify', taskId, '--criterion', 'AC-1', '--test', 'test/package-smoke.test.mjs::package flow works']);
+writeFileSync(join(target, 'test/package-smoke.test.mjs'), "import assert from 'node:assert/strict';\nimport test from 'node:test';\n\ntest('CASE-001 package flow works', () => { assert.equal(1, 1); });\n");
+const verified = invoke(['verify', taskId, '--criterion', 'AC-1', '--case', added.id]);
 assert.deepEqual(verified.cases, ['CASE-001']);
 const checked = invoke(['check', taskId]);
 assert.equal(checked.ready, true, checked.issues.join('\n'));

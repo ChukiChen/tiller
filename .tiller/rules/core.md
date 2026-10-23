@@ -20,11 +20,11 @@
 
 ## 测试与验证资料
 
-需求确认后把编号 AC 转为全局用例，再按 `test_ref` 写测试并实现；每项 AC 至少引用一个用例。`verify` 只声明测试，由 tiller 自主执行并从私有报告核实；stdout/stderr 不参与判定，报告缺失/损坏、匹配数不为 1、失败或跳过即阻断。
+需求确认后把编号 AC 转为全局用例：用例先写前置条件、步骤、输入、预期结果、类型、优先级和来源 AC，测试名或紧邻注释再引用 `CASE-NNN`，tiller 扫描测试建立 case→tests 反查；每项 AC 至少引用一个用例。`verify` 只声明测试（`--test` 或 `--case`），由 tiller 自主执行并从私有报告核实；stdout/stderr 不参与判定，报告缺失/损坏、匹配数不为 1、失败或跳过即阻断。`check` 在确认后要求 AC 有用例，在验证/验收时要求每个用例有当前通过且已核实的引用测试。
 
 外部报告使用 `--reported --command ... --result ... --reason "<理由>"`，理由必填；`check` 和 `accept` 默认阻断，只有显式 `--allow-reported` 才放行。bugfix 任务须用 `--expect-fail` 在任务基线工作树留下失败先行证据，并同时具备当前通过记录。standard 任务的 `start` 必须提供 `--target`；small 缺省 `.`。记录命令、结果、提交和代码树摘要；`check` 拒绝缺失、错配、未核实或过期映射，失败、跳过、未运行分别报告。
 
-长期回归写入 `.tiller/cases/modules/<模块>/{behavior,interface,performance,security}.json` 和 `scenarios/*.json`；模块名与 specs 一致。用例只存声明和 `test_ref`，不存日志。
+长期回归写入 `.tiller/cases/modules/<模块>/{behavior,interface,performance,security}.md` 和 `scenarios/*.md`；模块名与 specs 一致。用例保存测试设计、来源 AC 和源码路径，不保存测试引用字段或日志；无测试引用时显示待实现。
 
 ## 任务记录约定
 

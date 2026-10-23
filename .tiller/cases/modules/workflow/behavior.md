@@ -1,0 +1,599 @@
+# workflow / behavior
+
+## CASE-002 标准开发任务在需求确认后仍需设计确认
+
+- 类型：behavior
+- 优先级：medium
+- 模块：workflow
+- 关联 AC：无
+- 需求：`.tiller/specs/modules/workflow/requirements.md#flow-03-选择必要工作与验证安排`, `.tiller/specs/modules/workflow/requirements.md#flow-15-在关键节点取得人工确认`
+- 源码：`src/flow.ts`
+
+### 前置条件
+
+- 对应模块 workflow 的规格与运行环境可用。
+
+### 步骤
+
+1. 执行测试文件 `test/flow-cli.test.mjs` 中引用本用例的具名测试。
+2. 核对实际结果与预期结果一致，且没有失败、跳过或伪造记录。
+
+### 输入
+
+- 按“标准开发任务在需求确认后仍需设计确认”的场景准备正常输入和必要的边界输入。
+
+### 预期结果
+
+测试通过，并且标准开发任务在需求确认后仍需设计确认。
+
+## CASE-003 需求和范围变化会使命中旧确认失效
+
+- 类型：behavior
+- 优先级：medium
+- 模块：workflow
+- 关联 AC：无
+- 需求：`.tiller/specs/modules/workflow/requirements.md#flow-02-明确要求与交付边界`, `.tiller/specs/modules/workflow/requirements.md#flow-15-在关键节点取得人工确认`
+- 源码：`src/flow.ts`
+
+### 前置条件
+
+- 对应模块 workflow 的规格与运行环境可用。
+
+### 步骤
+
+1. 执行测试文件 `test/flow-cli.test.mjs` 中引用本用例的具名测试。
+2. 核对实际结果与预期结果一致，且没有失败、跳过或伪造记录。
+
+### 输入
+
+- 按“需求和范围变化会使命中旧确认失效”的场景准备正常输入和必要的边界输入。
+
+### 预期结果
+
+测试通过，并且需求和范围变化会使命中旧确认失效。
+
+## CASE-010 未通过技术自检的任务不能记录交付验收
+
+- 类型：behavior
+- 优先级：medium
+- 模块：workflow
+- 关联 AC：无
+- 需求：`.tiller/specs/modules/workflow/requirements.md#flow-09-依据验证结果判断交付`, `.tiller/specs/modules/workflow/requirements.md#flow-15-在关键节点取得人工确认`
+- 源码：`src/flow.ts`
+
+### 前置条件
+
+- 对应模块 workflow 的规格与运行环境可用。
+
+### 步骤
+
+1. 执行测试文件 `test/flow-cli.test.mjs` 中引用本用例的具名测试。
+2. 核对实际结果与预期结果一致，且没有失败、跳过或伪造记录。
+
+### 输入
+
+- 按“未通过技术自检的任务不能记录交付验收”的场景准备正常输入和必要的边界输入。
+
+### 预期结果
+
+测试通过，并且未通过技术自检的任务不能记录交付验收。
+
+## CASE-013 需求确认绑定已写明的需求正文，正文变化后确认失效
+
+- 类型：behavior
+- 优先级：medium
+- 模块：workflow
+- 关联 AC：无
+- 需求：`.tiller/rules/core.md#人工确认`, `.tiller/rules/core.md#任务记录约定`
+- 源码：`src/flow.ts`
+
+### 前置条件
+
+- 对应模块 workflow 的规格与运行环境可用。
+
+### 步骤
+
+1. 执行测试文件 `test/flow-cli.test.mjs` 中引用本用例的具名测试。
+2. 核对实际结果与预期结果一致，且没有失败、跳过或伪造记录。
+
+### 输入
+
+- 按“需求确认绑定已写明的需求正文，正文变化后确认失效”的场景准备正常输入和必要的边界输入。
+
+### 预期结果
+
+测试通过，并且需求确认绑定已写明的需求正文，正文变化后确认失效。
+
+## CASE-014 用户原话不能替代缺失的需求正文
+
+- 类型：behavior
+- 优先级：medium
+- 模块：workflow
+- 关联 AC：无
+- 需求：`.tiller/rules/core.md#人工确认`, `.tiller/rules/activities/requirements.md#确认`
+- 源码：`src/flow.ts`
+
+### 前置条件
+
+- 对应模块 workflow 的规格与运行环境可用。
+
+### 步骤
+
+1. 执行测试文件 `test/flow-cli.test.mjs` 中引用本用例的具名测试。
+2. 核对实际结果与预期结果一致，且没有失败、跳过或伪造记录。
+
+### 输入
+
+- 按“用户原话不能替代缺失的需求正文”的场景准备正常输入和必要的边界输入。
+
+### 预期结果
+
+测试通过，并且用户原话不能替代缺失的需求正文。
+
+## CASE-052 规划依赖阻塞、未覆盖需求提示与正文失效
+
+- 类型：behavior
+- 优先级：medium
+- 模块：workflow
+- 关联 AC：20261022-first-batch#AC-2
+- 需求：`.tiller/specs/modules/workflow/requirements.md#3-规划拆分`
+- 源码：`src/plans.ts`, `src/flow.ts`
+
+### 前置条件
+
+- 对应模块 workflow 的规格与运行环境可用。
+
+### 步骤
+
+1. 执行测试文件 `test/first-batch.test.mjs` 中引用本用例的具名测试。
+2. 核对实际结果与预期结果一致，且没有失败、跳过或伪造记录。
+
+### 输入
+
+- 按“规划依赖阻塞、未覆盖需求提示与正文失效”的场景准备正常输入和必要的边界输入。
+
+### 预期结果
+
+测试通过，并且规划依赖阻塞、未覆盖需求提示与正文失效。
+
+## CASE-056 任务阶段由记录事实推导并在失效时回退
+
+- 类型：behavior
+- 优先级：medium
+- 模块：workflow
+- 关联 AC：20261022-round8#AC-2
+- 需求：`.tiller/specs/modules/workflow/requirements.md#flow-25-从事实推导任务阶段`, `.tiller/specs/modules/workflow/requirements.md#flow-09-依据验证结果判断交付`
+- 源码：`src/flow.ts`, `src/plans.ts`
+
+### 前置条件
+
+- 对应模块 workflow 的规格与运行环境可用。
+
+### 步骤
+
+1. 执行测试文件 `test/first-batch.test.mjs` 中引用本用例的具名测试。
+2. 核对实际结果与预期结果一致，且没有失败、跳过或伪造记录。
+
+### 输入
+
+- 按“任务阶段由记录事实推导并在失效时回退”的场景准备正常输入和必要的边界输入。
+
+### 预期结果
+
+测试通过，并且任务阶段由记录事实推导并在失效时回退。
+
+## CASE-057 已验收任务关闭后阻塞推进并可重新打开
+
+- 类型：behavior
+- 优先级：medium
+- 模块：workflow
+- 关联 AC：20261022-round8#AC-3
+- 需求：`.tiller/specs/modules/workflow/requirements.md#flow-26-关闭放弃与恢复`, `.tiller/specs/modules/workflow/requirements.md#flow-15-在关键节点取得人工确认`
+- 源码：`src/flow.ts`
+
+### 前置条件
+
+- 对应模块 workflow 的规格与运行环境可用。
+
+### 步骤
+
+1. 执行测试文件 `test/first-batch.test.mjs` 中引用本用例的具名测试。
+2. 核对实际结果与预期结果一致，且没有失败、跳过或伪造记录。
+
+### 输入
+
+- 按“已验收任务关闭后阻塞推进并可重新打开”的场景准备正常输入和必要的边界输入。
+
+### 预期结果
+
+测试通过，并且已验收任务关闭后阻塞推进并可重新打开。
+
+## CASE-058 放弃任务不污染规划统计且可恢复
+
+- 类型：behavior
+- 优先级：medium
+- 模块：workflow
+- 关联 AC：20261022-round8#AC-4
+- 需求：`.tiller/specs/modules/workflow/requirements.md#3-规划拆分`, `.tiller/specs/modules/workflow/requirements.md#flow-26-关闭放弃与恢复`
+- 源码：`src/plans.ts`, `src/flow.ts`
+
+### 前置条件
+
+- 对应模块 workflow 的规格与运行环境可用。
+
+### 步骤
+
+1. 执行测试文件 `test/first-batch.test.mjs` 中引用本用例的具名测试。
+2. 核对实际结果与预期结果一致，且没有失败、跳过或伪造记录。
+
+### 输入
+
+- 按“放弃任务不污染规划统计且可恢复”的场景准备正常输入和必要的边界输入。
+
+### 预期结果
+
+测试通过，并且放弃任务不污染规划统计且可恢复。
+
+## CASE-060 无原话确认自动记录确认人
+
+- 类型：behavior
+- 优先级：medium
+- 模块：workflow
+- 关联 AC：20261022-round9#AC-1
+- 需求：`.tiller/specs/modules/workflow/requirements.md#flow-15-在关键节点取得人工确认`
+- 源码：`src/flow.ts`
+
+### 前置条件
+
+- 对应模块 workflow 的规格与运行环境可用。
+
+### 步骤
+
+1. 执行测试文件 `test/flow-cli.test.mjs` 中引用本用例的具名测试。
+2. 核对实际结果与预期结果一致，且没有失败、跳过或伪造记录。
+
+### 输入
+
+- 按“无原话确认自动记录确认人”的场景准备正常输入和必要的边界输入。
+
+### 预期结果
+
+测试通过，并且无原话确认自动记录确认人。
+
+## CASE-062 结构化任务模板在确认前校验必填段落
+
+- 类型：behavior
+- 优先级：medium
+- 模块：workflow
+- 关联 AC：20261022-round9#AC-2
+- 需求：`.tiller/specs/modules/workflow/requirements.md#2-开始与接续`
+- 源码：`src/flow.ts`
+
+### 前置条件
+
+- 对应模块 workflow 的规格与运行环境可用。
+
+### 步骤
+
+1. 执行测试文件 `test/flow-cli.test.mjs` 中引用本用例的具名测试。
+2. 核对实际结果与预期结果一致，且没有失败、跳过或伪造记录。
+
+### 输入
+
+- 按“结构化任务模板在确认前校验必填段落”的场景准备正常输入和必要的边界输入。
+
+### 预期结果
+
+测试通过，并且结构化任务模板在确认前校验必填段落。
+
+## CASE-063 需求与设计确认使用独立摘要
+
+- 类型：behavior
+- 优先级：medium
+- 模块：workflow
+- 关联 AC：20261022-round9#AC-3
+- 需求：`.tiller/specs/modules/workflow/requirements.md#flow-06-处理要求和方案变化`
+- 源码：`src/flow.ts`
+
+### 前置条件
+
+- 对应模块 workflow 的规格与运行环境可用。
+
+### 步骤
+
+1. 执行测试文件 `test/flow-cli.test.mjs` 中引用本用例的具名测试。
+2. 核对实际结果与预期结果一致，且没有失败、跳过或伪造记录。
+
+### 输入
+
+- 按“需求与设计确认使用独立摘要”的场景准备正常输入和必要的边界输入。
+
+### 预期结果
+
+测试通过，并且需求与设计确认使用独立摘要。
+
+## CASE-064 旧任务正文与旧确认记录保持有效
+
+- 类型：behavior
+- 优先级：medium
+- 模块：workflow
+- 关联 AC：20261022-round9#AC-4
+- 需求：`.tiller/specs/modules/workflow/requirements.md#4-任务记录`
+- 源码：`src/flow.ts`
+
+### 前置条件
+
+- 对应模块 workflow 的规格与运行环境可用。
+
+### 步骤
+
+1. 执行测试文件 `test/flow-cli.test.mjs` 中引用本用例的具名测试。
+2. 核对实际结果与预期结果一致，且没有失败、跳过或伪造记录。
+
+### 输入
+
+- 按“旧任务正文与旧确认记录保持有效”的场景准备正常输入和必要的边界输入。
+
+### 预期结果
+
+测试通过，并且旧任务正文与旧确认记录保持有效。
+
+## CASE-066 验收确认可省略原话并记录验收人
+
+- 类型：behavior
+- 优先级：medium
+- 模块：workflow
+- 关联 AC：20261022-round9#AC-1
+- 需求：`.tiller/specs/modules/workflow/requirements.md#flow-15-在关键节点取得人工确认`
+- 源码：`src/flow.ts`
+
+### 前置条件
+
+- 对应模块 workflow 的规格与运行环境可用。
+
+### 步骤
+
+1. 执行测试文件 `test/flow-cli.test.mjs` 中引用本用例的具名测试。
+2. 核对实际结果与预期结果一致，且没有失败、跳过或伪造记录。
+
+### 输入
+
+- 按“验收确认可省略原话并记录验收人”的场景准备正常输入和必要的边界输入。
+
+### 预期结果
+
+测试通过，并且验收确认可省略原话并记录验收人。
+
+## CASE-067 设计确认要求方案与影响非空
+
+- 类型：behavior
+- 优先级：medium
+- 模块：workflow
+- 关联 AC：20261022-round9#AC-2
+- 需求：`.tiller/specs/modules/workflow/requirements.md#flow-27-结构化正文与去原话确认`
+- 源码：`src/flow.ts`
+
+### 前置条件
+
+- 对应模块 workflow 的规格与运行环境可用。
+
+### 步骤
+
+1. 执行测试文件 `test/flow-cli.test.mjs` 中引用本用例的具名测试。
+2. 核对实际结果与预期结果一致，且没有失败、跳过或伪造记录。
+
+### 输入
+
+- 按“设计确认要求方案与影响非空”的场景准备正常输入和必要的边界输入。
+
+### 预期结果
+
+测试通过，并且设计确认要求方案与影响非空。
+
+## CASE-077 PR 验证结果按验收条件列出全部记录
+
+- 类型：behavior
+- 优先级：medium
+- 模块：workflow
+- 关联 AC：20261022-round12#AC-3
+- 需求：`.tiller/specs/modules/workflow/requirements.md#5-提交与-prmr-草稿`
+- 源码：`src/pr.ts`
+
+### 前置条件
+
+- 对应模块 workflow 的规格与运行环境可用。
+
+### 步骤
+
+1. 执行测试文件 `test/pr.test.mjs` 中引用本用例的具名测试。
+2. 核对实际结果与预期结果一致，且没有失败、跳过或伪造记录。
+
+### 输入
+
+- 按“PR 验证结果按验收条件列出全部记录”的场景准备正常输入和必要的边界输入。
+
+### 预期结果
+
+测试通过，并且PR 验证结果按验收条件列出全部记录。
+
+## CASE-081 PR 标题摘要按显式、元数据、提交、任务标题回退
+
+- 类型：behavior
+- 优先级：medium
+- 模块：workflow
+- 关联 AC：20261022-round13#AC-1
+- 需求：`.tiller/specs/modules/workflow/requirements.md#5-提交与-prmr-草稿`
+- 源码：`src/pr.ts`, `src/flow.ts`, `src/cli.ts`
+
+### 前置条件
+
+- 对应模块 workflow 的规格与运行环境可用。
+
+### 步骤
+
+1. 执行测试文件 `test/pr.test.mjs` 中引用本用例的具名测试。
+2. 核对实际结果与预期结果一致，且没有失败、跳过或伪造记录。
+
+### 输入
+
+- 按“PR 标题摘要按显式、元数据、提交、任务标题回退”的场景准备正常输入和必要的边界输入。
+
+### 预期结果
+
+测试通过，并且PR 标题摘要按显式、元数据、提交、任务标题回退。
+
+## CASE-082 PR 变更内容按提交时间正序
+
+- 类型：behavior
+- 优先级：medium
+- 模块：workflow
+- 关联 AC：20261022-round13#AC-2
+- 需求：`.tiller/specs/modules/workflow/requirements.md#5-提交与-prmr-草稿`
+- 源码：`src/pr.ts`, `src/commit-conventions.ts`
+
+### 前置条件
+
+- 对应模块 workflow 的规格与运行环境可用。
+
+### 步骤
+
+1. 执行测试文件 `test/pr.test.mjs` 中引用本用例的具名测试。
+2. 核对实际结果与预期结果一致，且没有失败、跳过或伪造记录。
+
+### 输入
+
+- 按“PR 变更内容按提交时间正序”的场景准备正常输入和必要的边界输入。
+
+### 预期结果
+
+测试通过，并且PR 变更内容按提交时间正序。
+
+## CASE-088 按 node:test 输出核实具名测试与文件结果
+
+- 类型：behavior
+- 优先级：medium
+- 模块：workflow
+- 关联 AC：20261022-round14#AC-3
+- 需求：`.tiller/specs/modules/verification/requirements.md#3-用例先行`
+- 源码：`src/flow.ts`, `src/test-output.ts`
+
+### 前置条件
+
+- 对应模块 workflow 的规格与运行环境可用。
+
+### 步骤
+
+1. 执行测试文件 `test/verification-integrity.test.mjs` 中引用本用例的具名测试。
+2. 核对实际结果与预期结果一致，且没有失败、跳过或伪造记录。
+
+### 输入
+
+- 按“按 node:test 输出核实具名测试与文件结果”的场景准备正常输入和必要的边界输入。
+
+### 预期结果
+
+测试通过，并且按 node:test 输出核实具名测试与文件结果。
+
+## CASE-094 失败先行复用私有报告适配器
+
+- 类型：behavior
+- 优先级：medium
+- 模块：workflow
+- 关联 AC：20261022-round15#AC-3
+- 需求：`.tiller/specs/modules/workflow/requirements.md`
+- 源码：`src/flow.ts`, `src/test-output.ts`
+
+### 前置条件
+
+- 对应模块 workflow 的规格与运行环境可用。
+
+### 步骤
+
+1. 执行测试文件 `test/verification-integrity.test.mjs` 中引用本用例的具名测试。
+2. 核对实际结果与预期结果一致，且没有失败、跳过或伪造记录。
+
+### 输入
+
+- 按“失败先行复用私有报告适配器”的场景准备正常输入和必要的边界输入。
+
+### 预期结果
+
+测试通过，并且失败先行复用私有报告适配器。
+
+## CASE-096 验证摘要与详细日志
+
+- 类型：behavior
+- 优先级：medium
+- 模块：workflow
+- 关联 AC：20261022-round15#AC-5
+- 需求：`.tiller/specs/modules/workflow/requirements.md`
+- 源码：`src/flow.ts`
+
+### 前置条件
+
+- 对应模块 workflow 的规格与运行环境可用。
+
+### 步骤
+
+1. 执行测试文件 `test/verification-integrity.test.mjs` 中引用本用例的具名测试。
+2. 核对实际结果与预期结果一致，且没有失败、跳过或伪造记录。
+
+### 输入
+
+- 按“验证摘要与详细日志”的场景准备正常输入和必要的边界输入。
+
+### 预期结果
+
+测试通过，并且验证摘要与详细日志。
+
+## CASE-098 用例先于测试登记完整测试设计
+
+- 类型：behavior
+- 优先级：high
+- 模块：workflow
+- 关联 AC：20261022-round16#AC-1
+- 需求：`.tiller/specs/modules/workflow/requirements.md`
+- 源码：`src/cases.ts`, `src/cli.ts`
+
+### 前置条件
+
+- 已确认任务的 AC-1 与 workflow 模块规范存在。
+
+### 步骤
+
+1. 在该任务尚未创建任何测试文件时执行 case add。
+2. 读取生成的 Markdown 用例并核对设计字段。
+
+### 输入
+
+- 任务 20261022-round16、workflow/behavior、标题、AC-1、预期结果与源码路径。
+
+### 预期结果
+
+用例获得稳定 CASE 编号，Markdown 含前置条件、步骤、输入、预期结果、类型、优先级和关联 AC；命令不要求测试引用，返回待实现状态与测试骨架。
+
+## CASE-102 check 分阶段要求用例与引用测试
+
+- 类型：behavior
+- 优先级：high
+- 模块：workflow
+- 关联 AC：20261022-round16#AC-5
+- 需求：`.tiller/specs/modules/workflow/requirements.md`
+- 源码：`src/flow.ts`
+
+### 前置条件
+
+- 一个任务的需求与设计确认有效，验收条件带编号。
+
+### 步骤
+
+1. 设计确认后先运行 check，再登记缺字段或用例未实现的用例。
+2. 验证后运行 check，核对引用测试、当前核实和新鲜度要求。
+
+### 输入
+
+- 无用例、缺少预期结果、无测试引用、验证缺失或过期等阶段输入。
+
+### 预期结果
+
+设计阶段要求每个 AC 有具备预期结果等关键字段的用例；验证或验收阶段要求每个用例至少一个引用测试，且相关验证当前通过、已核实、未过期。

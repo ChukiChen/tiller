@@ -9,15 +9,17 @@ node .tiller/run.cjs start <task-id> --title "修复退出码" --summary "失败
   --requirement "失败时返回非零" --criterion "AC-1=失败命令返回非零" --size small --target src --target test
 node .tiller/run.cjs confirm <task-id> requirements [--by "确认人"]
 node .tiller/run.cjs case add <task-id> --module cli --kind interface --title "失败退出码" \
-  --test test/cli.test.mjs::失败退出 --criterion AC-1 --source src/cli.ts
-node .tiller/run.cjs verify <task-id> --criterion AC-1 --test test/cli.test.mjs::失败退出
+  --precondition "命令可用" --step "运行失败命令" --input "退出码 2" \
+  --expected "返回退出码 2" --criterion AC-1 --source src/cli.ts
+node .tiller/run.cjs verify <task-id> --case CASE-001
+node .tiller/run.cjs verify <task-id> --criterion AC-1 --test "test/cli.test.mjs::CASE-001 失败退出码"
 node .tiller/run.cjs check <task-id>
 node .tiller/run.cjs accept <task-id> [--by "验收人"]
 node .tiller/run.cjs close <task-id> --reason "交付完成"
 node .tiller/run.cjs pr <task-id> [--summary <中文摘要>] [--slug <英文描述>] [--json]
 ```
 
-`start` 生成目标、范围、编号 AC；standard 另生成方案、取舍、影响与风险。确认前校验必填段。`--summary` 可选，用于记录 PR/MR 标题使用的中文摘要；`--slug` 可选，用于记录建议分支的英文描述。
+`start` 生成目标、范围、编号 AC；standard 另生成方案、取舍、影响与风险。确认前校验必填段。`--summary`/`--slug` 分别记录标题摘要和建议分支描述。
 
 `confirm`/`accept`/`plan confirm` 的 `--quote` 可选；`--by` 默认取 `git config user.name`。记录确认部分、确认人、时间、提交和正文摘要；需求与设计独立失效。旧记录兼容。
 
@@ -25,17 +27,17 @@ node .tiller/run.cjs pr <task-id> [--summary <中文摘要>] [--slug <英文描�
 
 ## 验证
 
-`verify` 只声明测试，由 tiller 构造并执行精确匹配的 node:test 命令。结果只从 tiller 新建的私有临时报告读取，stdout/stderr 不参与判定；报告缺失或损坏、匹配 0 个或多个测试、失败或跳过都不能核实为通过。`--test` 也可只引用文件，此时运行整个文件并要求全部通过。旧 `--run` 已删除，使用时会提示新写法。
+`verify` 只声明测试，由 tiller 构造并执行精确匹配的 node:test 命令；结果只读私有临时报告，stdout/stderr 不参与判定。报告缺失或损坏、匹配 0 个或多个测试、失败或跳过都不能核实；`--test` 只引用文件时要求整个文件通过。旧 `--run` 已删除，使用时会提示新写法。
 
 默认只输出摘要；完整输出写入 `.tiller/local/logs/<任务编号>/run-<序号>.log`，`--verbose` 时同时显示。测试前准备由 `.tiller/project.json` 的 `verify.prepare` 参数数组配置，例如 `["npm","run","build"]`；准备失败即验证失败。`verify.runner` 当前支持 `node-test`；新增适配器需在 `src/test-output.ts` 实现 `TestRunner` 的构造与报告解析接口并注册。
 
-无法本机执行时使用 `--reported --command ... --result ... --reason "<理由>"`，理由必填。`check`/`accept` 默认阻断外部报告，确认事实后仅在 `--allow-reported` 时放行；`pr` 标明“未执行（外部报告）”。
+无法本机执行时使用 `--reported --command ... --result ... --reason "<理由>"`，理由必填。`check`/`accept` 默认阻断外部报告，仅在 `--allow-reported` 时放行；`pr` 标明“未执行（外部报告）”。
 
 bugfix 任务先用 `verify --expect-fail --test "<文件::测试名>"` 在任务基线的临时 Git 工作树运行同一适配器并记录该测试失败，再记录当前通过；缺少任一侧证据时 `check` 阻断。
 
 `start --size standard` 必须至少提供一个 `--target`；small 缺省为 `.`。
 
-`pr` 读取本地任务记录与 Git，输出 PR/MR 标题、五段说明、建议分支或 JSON。标题摘要优先取 `pr --summary`，其次取 `start --summary` 写入的任务元数据，再取任务基线后最早的 `feat`/`fix` 规范提交摘要，最后退回任务标题；标题类型按任务类型映射。提交主题使用 `类型(模块): 中文摘要`，标题末尾加 `[任务编号]`，模块取任务范围中首个声明的主模块，无法推导时省略括号。变更内容按提交时间正序排列；关联任务使用纯文本路径，验证结果按 AC 列出全部记录。分支为 `类型/任务编号[-描述]`，描述依次取 `pr --slug`、任务元数据或当前分支中的匹配描述。`check` 对提交和分支格式问题只提示，不阻塞；`pr` 不调用托管平台，也不联网。
+`pr` 从本地任务与 Git 输出 PR/MR 标题、五段说明、建议分支或 JSON。标题摘要优先取 `pr --summary`，其次取 `start --summary` 元数据、任务基线后最早的规范 feat/fix 提交摘要，最后取任务标题；类型按任务类型映射，模块取范围首个，推不出时省略括号。提交主题为 `类型(模块): 中文摘要`，标题末尾加 `[任务编号]`，变更内容按提交时间正序，关联任务用纯文本，验证结果按 AC 列出全部记录。分支为 `类型/任务编号[-描述]`，描述取 `pr --slug`、任务元数据或当前匹配分支。`check` 对提交和分支格式只提示；`pr` 不联网。
 
 ## 规划与用例
 
@@ -49,15 +51,13 @@ node .tiller/run.cjs start <task-id> --plan batch --item P-1 --title "接入" \
 
 `plan confirm/status` 查看并确认拆分；依赖未验收阻塞，子规划用 `plan=`。模块用例写 `.tiller/cases/modules/<模块>/`，端到端写 `scenarios/`；模块名与 specs 一致。长期结论完成后同步 specs。
 
-确认后先把 AC 转为用例，再写测试并实现。`case add` 分配编号；`verify` 记录命中用例；`check` 阻塞缺失、错配或过期映射。
+确认后先把 AC 转为用例，再写测试并实现。`case add` 不要求测试文件，先写清前置条件、步骤、输入、预期结果、类型、优先级和来源 AC；测试名或紧邻注释引用 `CASE-NNN`，tiller 扫描反查。`verify --case CASE-NNN` 执行覆盖测试，`--test` 验证单个测试。`check` 分阶段要求 AC→用例→当前通过测试；无引用显示待实现，未知编号报错。
 
 ## 规则
 
-- `verify` 记录用例、测试、tiller 实际执行的命令、结果、核实状态、提交、代码树摘要和本机日志路径；原始输出只写 `.tiller/local/logs/`，不进版本库。
-- 外部报告必须写明理由并由 `--allow-reported` 显式放行；失败、未执行和未核实不能写成通过。
-- `check` 检查 AC→用例→测试→当前验证、范围、测试弱化、密钥和本机路径。
-- `accept` 只在 `check` 通过后保存；超大设计先用 plan 拆任务。
-- 单任务只有 `.tiller/task/<id>/task.md`；历史 `.tiller/work/` 只读。不提交全文快照或日志；详细输出仅在 `.tiller/local/logs/`。
+- `verify` 记录用例、测试、tiller 实际执行的命令、结果、核实状态、提交、代码树摘要和日志路径；原始输出只写 `.tiller/local/logs/`，不提交全文快照或日志。
+- 外部报告须写明理由并 `--allow-reported`；`check` 核对 AC→用例→引用测试→当前验证、范围、测试弱化和记录安全；`accept` 只在其通过后保存。
+- 单任务只有 `.tiller/task/<id>/task.md`；历史 `.tiller/work/` 只读。超大设计先用 plan 拆任务。
 
 ## 接入与升级
 

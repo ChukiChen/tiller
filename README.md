@@ -61,16 +61,17 @@ tiller start <task-id> --plan batch --item P-1 --title "接入" \
 
 条目依赖未验收时阻塞开工；规划正文或条目变化后确认失效。规划不是默认人工节点，小改动可以不建。
 
-跨任务回归事实按模块维护在 `.tiller/cases/modules/<模块>/{behavior,interface,performance,security}.json`，跨模块端到端路径放在 `.tiller/cases/scenarios/`。模块名与 `.tiller/specs/modules/` 一致。每条用例保存稳定编号、需求/模块引用、源码路径、具名 `test_ref` 和来源 AC。
+跨任务回归事实按模块维护在 `.tiller/cases/modules/<模块>/{behavior,interface,performance,security}.md`，跨模块端到端路径放在 `.tiller/cases/scenarios/`。模块名与 `.tiller/specs/modules/` 一致。每条用例是写在测试之前的测试设计资产，保存稳定编号、前置条件、步骤、输入、预期结果、类型、优先级、需求/模块与源码引用、来源 AC；测试名或紧邻注释引用 `CASE-NNN`，由 tiller 扫描反查，用例本身不保存测试引用字段。
 
 需求确认后先为每条 AC 新增或修改全局用例，再写测试、实现和验证：
 
 ```sh
 tiller case add <task-id> --module workflow --kind behavior --title "流程行为" \
-  --test "test/example.test.mjs::用例名" --criterion AC-1 --source src/flow.ts
+  --precondition "需求已确认" --step "运行流程" --input "正常输入" \
+  --expected "流程完成" --criterion AC-1 --source src/flow.ts
 ```
 
-`case add` 自动分配下一个 `CASE-NNN`，模块不存在时提示先建规格，缺测试文件时返回骨架。`verify` 自动记录命中的用例；`check` 阻塞缺失、错配、过期或未回指当前 AC 的映射，并汇总模块数量、场景和回归提示。
+`case add` 不要求测试文件，自动分配下一个 `CASE-NNN`；模块不存在时提示先建规格，返回测试骨架。随后在测试名或紧邻注释写 `CASE-NNN`，tiller 扫描建立 case→tests 反查；无引用显示待实现，引用不存在的编号报错。`verify --case CASE-NNN` 执行覆盖该用例的全部测试，`--test` 仍可验证单个测试。`check` 在确认后要求 AC 有用例，在验证/验收时要求每个用例有当前通过且已核实的测试，并汇总模块数量、场景和回归提示。
 
 ## 安装与接入
 

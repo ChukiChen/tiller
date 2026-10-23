@@ -13,7 +13,7 @@ function launch(root, args, options = {}) {
     cwd: root, encoding: 'utf8', windowsHide: true, ...options,
   });
 }
-for (const argument of ['--version', '--help']) test(`launcher ${argument} uses one Node process after loading the full CLI`, async t => {
+async function launcherUsesOneProcess(t, argument) {
   const root = fixture(t);
   await initialize({ root });
   assert.equal((await bindRuntime(root, cli)).ready, true);
@@ -31,9 +31,17 @@ for (const argument of ['--version', '--help']) test(`launcher ${argument} uses 
   const pids = readFileSync(log, 'utf8').trim().split(/\r?\n/u);
   t.diagnostic(`Actual Node starts: ${pids.length}; elapsed ${Math.round(performance.now() - started)}ms`);
   assert.equal(new Set(pids).size, 1, 'The launcher must not spawn a version probe or a second command process.');
+}
+
+test('CASE-020 launcher --version uses one Node process after loading the full CLI', async t => {
+  await launcherUsesOneProcess(t, '--version');
 });
 
-test('importing the complete CLI performs no command or output', () => {
+test('CASE-020 launcher --help uses one Node process after loading the full CLI', async t => {
+  await launcherUsesOneProcess(t, '--help');
+});
+
+test('CASE-021 importing the complete CLI performs no command or output', () => {
   const result = spawnCaptured(process.execPath, ['--input-type=module', '-e',
     `await import(${JSON.stringify(new URL('../dist/cli.js', import.meta.url).href)}); process.stdout.write('imported');`],
   { encoding: 'utf8', windowsHide: true });
@@ -42,7 +50,7 @@ test('importing the complete CLI performs no command or output', () => {
   assert.equal(result.stderr, '');
 });
 
-test('importing the CLI from stdin does not require a file entry or run a command', () => {
+test('CASE-022 importing the CLI from stdin does not require a file entry or run a command', () => {
   const result = spawnCaptured(process.execPath, ['--input-type=module', '-'], {
     encoding: 'utf8', windowsHide: true,
     input: `await import(${JSON.stringify(new URL('../dist/cli.js', import.meta.url).href)}); process.stdout.write('imported');`,
@@ -52,7 +60,7 @@ test('importing the CLI from stdin does not require a file entry or run a comman
   assert.equal(result.stderr, '');
 });
 
-test('launcher rejects a syntax error in a nonselected business module before running a command', async t => {
+test('CASE-023 launcher rejects a syntax error in a nonselected business module before running a command', async t => {
   const root = fixture(t); await initialize({ root });
   const install = join(root, 'node_modules/tiller');
   mkdirSync(install, { recursive: true });
@@ -82,19 +90,25 @@ if (process.argv[1] && import.meta.url === pathToFileURL(realpathSync(process.ar
 `);
 }
 
-for (const [reason, options] of [['version', { version: '9.9.9' }], ['entry', { exported: false }]]) {
-  test(`launcher rejects an invalid exported ${reason} without command side effects`, async t => {
-    const root = fixture(t); await initialize({ root });
-    invalidContract(root, options);
-    const result = launch(root, ['status']);
-    assert.equal(result.status, 1);
-    assert.equal(result.stdout, '');
-    assert.match(result.stderr, /导出契约或版本/u);
-    assert.equal(existsSync(join(root, 'command-ran.txt')), false);
-  });
+async function rejectsInvalidExport(t, options) {
+  const root = fixture(t); await initialize({ root });
+  invalidContract(root, options);
+  const result = launch(root, ['status']);
+  assert.equal(result.status, 1);
+  assert.equal(result.stdout, '');
+  assert.match(result.stderr, /导出契约或版本/u);
+  assert.equal(existsSync(join(root, 'command-ran.txt')), false);
 }
 
-test('a selected command failure does not select another installation or execute twice', async t => {
+test('CASE-024 launcher rejects an invalid exported version without command side effects', async t => {
+  await rejectsInvalidExport(t, { version: '9.9.9' });
+});
+
+test('CASE-024 launcher rejects an invalid exported entry without command side effects', async t => {
+  await rejectsInvalidExport(t, { exported: false });
+});
+
+test('CASE-025 a selected command failure does not select another installation or execute twice', async t => {
   const root = fixture(t); await initialize({ root });
   await bindRuntime(root, cli);
   invalidContract(root, { command: `writeFileSync(${JSON.stringify(join(root, 'command-ran.txt'))}, 'once'); throw new Error('synthetic command failure');` });
