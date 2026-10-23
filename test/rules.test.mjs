@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -215,15 +216,15 @@ test('CASE-048 global cases use module kinds and scenarios with resolvable named
   const kinds = ['behavior', 'interface', 'performance', 'security'];
   const library = await readCaseLibrary(repository);
   assert.deepEqual(library.issues, []);
-  assert.equal(library.cases.length, 162);
+  assert.equal(library.cases.length, 167);
   assert.deepEqual(library.cases.map(item => item.id).sort(),
-    Array.from({ length: 162 }, (_, index) => `CASE-${String(index + 1).padStart(3, '0')}`));
+    Array.from({ length: 167 }, (_, index) => `CASE-${String(index + 1).padStart(3, '0')}`));
   assert.deepEqual(library.modules.map(item => ({ module: item.module, behavior: item.behavior, interface: item.interface,
     performance: item.performance, security: item.security })), [
     { module: 'initialization', behavior: 23, interface: 6, performance: 11, security: 16 },
-    { module: 'standards', behavior: 17, interface: 0, performance: 0, security: 0 },
+    { module: 'standards', behavior: 20, interface: 0, performance: 0, security: 0 },
     { module: 'verification', behavior: 7, interface: 7, performance: 15, security: 3 },
-    { module: 'workflow', behavior: 27, interface: 22, performance: 0, security: 6 },
+    { module: 'workflow', behavior: 29, interface: 22, performance: 0, security: 6 },
   ]);
   assert.equal(library.scenarios.length, 2);
   for (const item of library.scenarios) assert.ok(item.modules.length > 0 && item.modules.every(module => specs.includes(module)));
@@ -370,4 +371,74 @@ test('CASE-162 repository keeps the 0.5.0 release contract and five full verific
   });
   const metadata = JSON.parse(readFileSync(join(repository, '.tiller/project.json'), 'utf8'));
   assert.equal(metadata.resourceVersion, '0.5.0');
+});
+
+test('CASE-163 recent accepted tasks are closed without fabricating legacy acceptance', () => {
+  const stages = new Map(success(cli(repository, 'resume')).tasks.map(item => [item.id, item.stage]));
+  for (const id of [
+    '20261022-first-batch', '20261022-round8', '20261022-round9', '20261022-round11',
+    '20261022-round12', '20261022-round13', '20261022-round14', '20261022-round15',
+    '20261022-round16', '20261022-round17', '20261023-migrate-work',
+    '20261023-case-backfill', '20261023-specs-pure-req',
+  ]) assert.equal(stages.get(id), '已关闭', id);
+});
+
+test('CASE-164 historical empty AC cases stay warned without fabricated backfill', async () => {
+  const decisions = readFileSync(join(repository, '.tiller/specs/decisions.md'), 'utf8');
+  assert.match(decisions, /2026-10-23 历史空 AC 长期提示/u);
+  assert.match(decisions, /长期只提示/u);
+  assert.match(decisions, /不批量回填/u);
+  assert.match(decisions, /不.*冒充历史来源/u);
+  const library = await readCaseLibrary(repository);
+  assert.equal(library.cases.filter(item => item.criteria.length === 0).length, 90);
+});
+
+test('CASE-165 project rules and context match 0.5.0 without stale workflow guidance', () => {
+  const rules = readFileSync(join(repository, '.tiller/rules/project.md'), 'utf8');
+  const context = readFileSync(join(repository, '.tiller/context/project.md'), 'utf8');
+  for (const [name, content] of [['rules', rules], ['context', context]]) {
+    assert.match(content, /0\.5\.0/u, name);
+    assert.doesNotMatch(content, /\.tiller\/work|archive|归档|讨论稿|待验收|round17|实现进度记录/u, name);
+  }
+  assert.match(rules, /close|reopen/u);
+  assert.match(context, /close/u);
+  assert.match(context, /默认人工节点只有需求、设计和交付验收/u);
+});
+
+test('CASE-166 local stale branches are removed while main remains', () => {
+  const listed = spawnSync('git', ['for-each-ref', '--format=%(refname:short)', 'refs/heads'], {
+    cwd: repository, encoding: 'utf8', timeout: 20_000,
+  });
+  assert.equal(listed.status, 0, listed.stderr);
+  const branches = listed.stdout.trim().split(/\r?\n/u).filter(Boolean);
+  for (const stale of [
+    'backup/lightweight-before-author-fix', 'codex/lightweight', 'codex/task-records-backfill',
+    'feat/20261022-round11-pr-conventions', 'feat/20261022-round12-pr-gitlab',
+    'fix/20261022-round13-pr-polish-docs',
+  ]) assert.ok(!branches.includes(stale), stale);
+  assert.ok(branches.includes('main'));
+});
+
+test('CASE-167 README keeps capabilities and removes implementation detail', () => {
+  const readme = readFileSync(join(repository, 'README.md'), 'utf8');
+  assert.match(readme, /小改动：需求确认 → 实现 → 验证/u);
+  assert.match(readme, /标准或大功能：需求确认 → 设计确认 → 实现 → 验证/u);
+  assert.match(readme, /单次任务以 `task\.md` 与 Git 追溯/u);
+  assert.match(readme, /原话只是可选凭证，不能替代正文/u);
+  assert.match(readme, /确认部分、确认人、时间、提交/u);
+  assert.match(readme, /单个任务只保留一份 `task\.md`/u);
+  assert.match(readme, /close --abandon/u);
+  assert.match(readme, /reopen --reason/u);
+  assert.match(readme, /\.tiller\/cases\//u);
+  assert.match(readme, /版本号只在正式发布正式包时修改/u);
+  assert.match(readme, /升级支持当前及直接兼容的上一资源契约/u);
+  assert.match(readme, /私有报告/u);
+  assert.match(readme, /--reported/u);
+  assert.match(readme, /失败先行/u);
+  assert.match(readme, /review/u);
+  assert.match(readme, /release/u);
+  assert.match(readme, /--requirement-file/u);
+  assert.match(readme, /验收提交/u);
+  assert.doesNotMatch(readme, /verify\.prepare|verify\.runner|src\/test-output|test\/suites\.json|文件级并发|stdout\/stderr|advanced/u);
+  assert.ok(readme.length < 6000, `README is ${readme.length} characters`);
 });

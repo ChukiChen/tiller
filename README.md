@@ -2,160 +2,80 @@
 
 tiller 是一套面向 AI 开发的标准工作流程与 CLI。它用较少的人工节点、可重复的检查和可追溯的 Git 记录，帮助开发者明确目标、控制范围、验证交付，并在中断后继续工作。
 
-## 默认工作流
+## 核心能力
 
-先明确交付目标、范围、任务大小和已有授权，再选择流程：
+- 用结构化需求、设计和验收条件承接任务，并把范围、基线与授权留在同一份记录中。
+- 用小改动与标准任务两条路径控制流程成本，只在有意义的节点请求人工确认。
+- 规划大功能并表达条目依赖；依赖未验收时阻止提前开工。
+- 先写测试设计用例，再用测试名建立可扫描关联，让验收条件、测试和验证结果能够互相追溯。
+- 由工具执行测试并读取独立结果，支持按验收条件或按用例定位；无法本机执行时要求说明外部结论。
+- 生成提交、分支和 PR/MR 草稿；独立评审与只读发布检查按需启用。
+
+## 默认工作流
 
 - 小改动：需求确认 → 实现 → 验证。
 - 标准或大功能：需求确认 → 设计确认 → 实现 → 验证。
 - 默认人工节点只有需求、设计（standard 任务）和交付验收；规划、合入、发布按需确认。
 
-默认入口：
+单次任务以 `task.md` 与 Git 追溯。任务是唯一记录，包含目标、范围、编号验收条件、确认、验证和交付自检。确认记录确认部分、确认人、时间、提交和正文摘要；原话只是可选凭证，不能替代正文。需求与设计分别确认，正文变化会使对应确认失效。
 
-```sh
-tiller start <task-id> --title <标题> --summary <中文摘要> --requirement <需求正文> \
-  --criterion "AC-1=<验收条件>" --size small --target src --target test
-tiller resume [task-id]
-tiller confirm <task-id> requirements [--by "<确认人>"]
-tiller verify <task-id> --criterion AC-1 --test "test/example.test.mjs::用例名"
-tiller review <task-id> --blocking "待修复的评审发现"
-tiller check <task-id>
-tiller release <task-id>
-tiller accept <task-id> [--by "<验收人>"]
-tiller close <task-id> --reason "交付完成"
-```
+任务阶段由记录事实推导：已开始 → 需求已确认 → 设计已确认（small 可跳过）→ 已验证 → 已验收 → 已关闭/已放弃。已验收任务使用 `close` 收尾；未验收终止使用 `close --abandon`；需要继续时用 `reopen --reason` 恢复。
 
-单次任务以 `task.md` 与 Git 追溯。`start` 在需求中生成目标、范围和编号 AC，也可用 `--requirement-file <工程相对路径>` 从非空需求文件接入；standard 任务同时生成方案、取舍、影响与风险。确认前校验必填段，自动保存确认部分、确认人、时间、提交和正文摘要；需求与设计独立失效。原话只是可选凭证，不能替代正文。
+## 快速开始
 
-`verify` 只声明测试，由 tiller 构造并执行精确匹配的 node:test 命令。结果只从私有临时报告读取，stdout/stderr 不参与判定：报告缺失/损坏、完整名称匹配 0 个或多个、失败或跳过都不能核实为通过；仅引用文件时运行整个文件并要求全部通过。默认只打印摘要，完整输出写入 `.tiller/local/logs/<任务编号>/run-<序号>.log`，`--verbose` 同时显示。旧 `--run` 已删除。
-
-`.tiller/project.json` 可配置 `verify.prepare`（参数数组，如 `["npm","run","build"]`）和 `verify.runner`（当前支持 `node-test`）。准备失败即验证失败；新增框架在 `src/test-output.ts` 实现 `TestRunner` 的构造命令与报告解析接口并注册。
-
-无法本机执行时，用 `verify ... --reported --command ... --result ... --reason "<理由>"` 记录外部报告；理由必填，`check`/`accept` 默认阻断，只有 `--allow-reported` 显式放行，`pr` 会标明“未执行（外部报告）”。
-
-bugfix 任务先用 `verify --expect-fail --test` 在任务基线工作树走同一适配器和私有报告路径留下失败先行证据，再记录当前通过；`check` 要求两侧证据齐全。standard 任务 `start` 必须声明 `--target`，small 缺省 `.`。
-
-验证保存 AC、用例编号、测试引用、tiller 实际执行的命令、结果、核实状态、提交、代码树摘要和本机日志路径。单个任务只保留一份 `task.md`；完成后把长期有效结论同步到 `.tiller/specs/`，超大设计先用 plan 拆成多个任务。不提交全文快照、原始日志、自举工程或安装包；详细输出只在 `.tiller/local/logs/`。
-
-任务阶段由记录事实推导：已开始 → 需求已确认 → 设计已确认（small 可跳过）→ 已验证 → 已验收 → 已关闭/已放弃。确认失效或验证过期时，`resume` 显示回退后的真实阶段和原因。`close` 只收尾已验收任务；未验收终止使用 `close --abandon`；两者都可通过 `reopen --reason` 显式恢复，之后才能继续确认、验证或验收。
-
-## 评审与发布
-
-`review <task-id>` 记录独立评审清单与发现；`--blocking` 新增阻塞项，`--finding` 新增非阻塞项，`--resolve REV-NNN` 记录清除。发现保存在 `task.md` 的“评审”段；仍有未解决阻塞项时 `check` 与 `accept` 失败。
-
-`release <task-id>` 是只读发布门禁，检查任务已验收、验收提交可读、项目元数据与受管资源有效、README 与包版本一致、任务范围无未提交改动；非 npm 项目跳过包检查。`check` 同时返回该清单，但日常技术自检不因发布项失败而阻断。
-
-已验收任务按 acceptance 记录中的提交读取代码树和测试文件，之后代码演进不会仅因“验证过期”误报；未验收或验收失效的任务仍核对当前工作区与 HEAD。需要历史复查时从该提交取回事实，不保存快照。
-
-## 提交与 PR/MR
-
-提交主题使用 `类型(模块): 中文摘要`，类型限 `feat`、`fix`、`docs`、`refactor`、`test`、`chore`；模块取 `.tiller/specs/modules/` 名称，可省略括号部分。PR/MR 标题沿用该格式并在末尾加 `[任务编号]`；主模块按任务范围声明顺序取首个，无法推导时省略括号。说明固定为关联任务、变更内容、验收条件、验证结果、影响与风险五段，关联任务使用纯文本路径。标题摘要优先取 `pr --summary`，其次取 `start --summary` 写入的任务元数据，再取任务基线后最早的规范 `feat`/`fix` 提交摘要，最后退回任务标题；变更内容按提交时间正序排列，验证结果按 AC 列出全部记录。
-
-分支名为 `类型/任务编号`，可加 `-简短描述`，只使用小写字母、数字、连字符和一个斜杠。`tiller pr <task-id>` 从 `task.md` 与 Git 生成标题、五段说明和建议分支；`--summary` 可临时指定标题摘要，`--json` 返回结构化草稿。分支描述依次取 `pr --slug`、`start --slug` 写入的任务元数据、当前分支中的匹配描述。它不调用 GitHub/GitLab、不联网，提交内容和结论仍需人工复核。
-
-`init` 默认安装 `.github/pull_request_template.md`；`init --platform gitlab` 安装 `.gitlab/merge_request_templates/Default.md`，`both` 同时安装。已有模板不覆盖，`upgrade` 只补齐当前平台缺失的模板。平台在初始化时选定，之后不能通过 CLI 切换；需要切换时应手动修改 `.tiller/project.json` 并补齐对应模板。
-
-## 规划与全局用例
-
-大功能可先建立 `.tiller/plans/<id>.md`：
-
-```sh
-tiller plan start batch --title "第一批" --goal "完成接入" \
-  --spec .tiller/specs/requirements.md#3-默认工作流 \
-  --item "P-1=接入;size=small;deps=-;specs=.tiller/specs/requirements.md#7-初始化与受管升级"
-tiller plan confirm batch [--by "<确认人>"]
-tiller plan status batch
-tiller start <task-id> --plan batch --item P-1 --title "接入" \
-  --requirement "完成最小接入" --criterion "AC-1=接入可用"
-```
-
-条目依赖未验收时阻塞开工；规划正文或条目变化后确认失效。规划不是默认人工节点，小改动可以不建。
-
-跨任务回归事实按模块维护在 `.tiller/cases/modules/<模块>/{behavior,interface,performance,security}.md`，跨模块端到端路径放在 `.tiller/cases/scenarios/`。模块名与 `.tiller/specs/modules/` 一致。每条用例是写在测试之前的测试设计资产，保存稳定编号、前置条件、步骤、输入、预期结果、类型、优先级、需求/模块与源码引用、来源 AC；测试名或紧邻注释引用 `CASE-NNN`，由 tiller 扫描反查，用例本身不保存测试引用字段。
-
-需求确认后先为每条 AC 新增或修改全局用例，再写测试、实现和验证：
-
-```sh
-tiller case add <task-id> --module workflow --kind behavior --title "流程行为" \
-  --precondition "需求已确认" --step "运行流程" --input "正常输入" \
-  --expected "流程完成" --criterion AC-1 --source src/flow.ts
-```
-
-`case add` 不要求测试文件，自动分配下一个 `CASE-NNN`；模块不存在时提示先建规格，返回测试骨架。随后在测试名或紧邻注释写 `CASE-NNN`，tiller 扫描建立 case→tests 反查；无引用显示待实现，引用不存在的编号报错。`verify --case CASE-NNN` 执行覆盖该用例的全部测试，`--test` 仍可验证单个测试。`check` 在确认后要求 AC 有用例，在验证/验收时要求每个用例有当前通过且已核实的测试，并汇总模块数量、场景和回归提示。
-
-## 安装与接入
-
-需要 Node.js 22 或以上。管理已有 Git 仓库时还需要本机 Git。
+需要 Node.js 22 或以上。包与分发资源当前为 0.5.0，尚未发布到 npm 注册表；本地可从打包结果安装。
 
 ```sh
 npm ci
-npm run check
+npm run build
 node dist/cli.js --help
 npm pack
 npm install -g ./tiller-0.5.0.tgz
 ```
 
-当前包尚未发布到 npm 注册表；上面的安装来自本地打包结果。`npm run test:package` 会执行打包、隔离安装、命令入口和中文路径验证。
+在工程中初始化并开始一条任务：
 
 ```sh
 tiller init .
-tiller status .
-node .tiller/run.cjs --help
+node .tiller/run.cjs start <task-id> --title "<标题>" --summary "<中文摘要>" \
+  --requirement-file <工程内相对路径> --criterion "AC-1=<验收条件>" --size standard --target .
+node .tiller/run.cjs confirm <task-id> requirements [--by "<确认人>"]
+node .tiller/run.cjs resume
 ```
 
-初始化生成最小骨架：总体需求/设计/决定、`modules/README.md`、项目背景、全局用例目录、规划目录、入口规则和使用指引。可用 `--platform github|gitlab|both` 选择合并请求模板，缺省 GitHub；平台在初始化时选定，之后不能通过 CLI 切换。已有文件不覆盖；重复执行只补缺失项。`AGENTS.md` 使用固定区段接入，区段外正文保留。
+命令参数和当前可用命令以 `node .tiller/run.cjs --help` 为准。单个任务只保留一份 `task.md`；完成后把长期有效的结论同步到规格或决定，超大设计先拆成规划任务。
 
-独立管理工程可登记已有业务仓库：
+## 验证与交付
 
-```sh
-tiller init ./management-project --mode workspace \
-  --repo repositories/service-a --repo repositories/service-b
-```
+`verify` 只声明测试或用例，由 tiller 执行并读取私有报告核实结果，原始输出只保存在本机且不提交。报告缺失或损坏、目标测试未精确命中、失败或跳过都不能记为通过。
 
-命令不会克隆、移动或修改业务仓库。仓库标识与存放路径分开，工作范围和资料引用使用稳定标识。
+无法本机执行时，使用 `--reported` 记录外部命令、结果和理由；自检与验收默认阻断，只有显式放行才可通过。缺陷修复先用失败先行证据证明基线问题，再保留当前通过证据。
 
-## 目录与资料
+`check` 核对验收条件、用例、测试、当前验证、范围、测试弱化、记录安全和命名；`accept` 仍需人工验收。`review` 记录独立评审发现，阻塞项未清除时阻止交付；`release` 只读检查验收提交、版本、分发资源和范围清洁度，不执行发布。
 
-```text
-src/          TypeScript CLI
-resources/    随工程安装的入口、规则、使用指引和启动器
-test/         规则、契约、集成和端到端测试
-.tiller/      specs、context、cases、plans 与 task
-```
+提交主题使用 `类型(模块): 中文摘要`，PR/MR 标题加任务编号，分支使用 `类型/任务编号[-描述]`。`pr` 只从本地任务与 Git 生成可修订草稿，不联网。推送、合入和发布分别依据实际授权。
 
-项目背景和长期决定分别维护在 `.tiller/context/` 与 `.tiller/specs/`。目录、关键模块职责、构建/启动/测试入口、主要接口或数据流、外部依赖变化时更新背景；普通实现细节不重复记录。
+## 规划与用例
 
-## 验证
+大功能可先在规划中写目标、关联规格、任务条目和依赖；依赖未验收时不能开工，规划正文变化后需要重新确认。小改动可以不建规划。
 
-```sh
-npm run build
-npm run lint
-npm run typecheck
-npm test
-npm run test:package
-```
-
-`npm test` 一次构建后运行全部测试，文件级并发为 2。`test/suites.json` 要求每个测试文件恰好归属一个套件。局部测试通过不代表完整交付通过；失败、跳过和未执行分别报告。
+跨任务回归事实放在 `.tiller/cases/`，按稳定模块和场景组织。每条用例是写在测试之前的测试设计，包含前置条件、步骤、输入、预期结果、类型、优先级、需求和来源验收条件；测试名或紧邻注释引用用例编号，由 tiller 扫描建立反查。历史空来源只提示，不伪造回填。
 
 ## 升级与权限
 
-包与分发资源当前为 0.5.0。版本号只在正式发布正式包时修改，功能迭代不 bump 包或资源版本。
+版本号只在正式发布正式包时修改；功能迭代不提升包或资源版本。升级支持当前及直接兼容的上一资源契约。
 
 ```sh
 tiller upgrade --plan
 tiller upgrade --apply <plan-id>
 ```
 
-升级支持当前及直接兼容的上一资源契约。预览不写文件；应用时只刷新摘要一致且用户未修改的受管文件，用户修改、缺失或区段异常列为冲突并保留原文。成功后更新 `project.json` 的摘要和 `resourceVersion`，不迁移业务资料、历史任务或旧批准。
+升级预览不写文件；应用时只刷新摘要一致且用户未修改的受管文件，冲突保留原文。CLI 检查受控文件和记录，但不认证用户身份，也不能阻止宿主绕过 CLI 直接修改。
 
-提交、推送、合入和发布分别依据实际授权。CLI 检查受控文件和记录，不认证用户身份，也不能阻止宿主绕过 CLI 直接修改。
-
-## 工程文档
+## 工程资料
 
 - [总体需求](.tiller/specs/requirements.md)
 - [总体设计](.tiller/specs/design.md)
 - [决策记录](.tiller/specs/decisions.md)
 - [全局用例说明](.tiller/cases/index.md)
-- [确认去原话化与结构化任务正文](.tiller/task/20261022-round9/task.md)
-- [确认语义与 task 重命名任务记录](.tiller/task/20261022-confirm-task/task.md)
-- [模块用例与用例先行任务记录](.tiller/task/20261022-case-first/task.md)
+- [卫生收尾规划](.tiller/plans/20261023-hygiene.md)
