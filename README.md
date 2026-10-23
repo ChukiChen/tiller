@@ -32,8 +32,6 @@ npm pack
 npm install -g ./tiller-0.5.0.tgz
 ```
 
-开发 tiller 本身时，也可以直接用 `node dist/cli.js`；已初始化的工程里则常用 `node .tiller/run.cjs`。
-
 ## 使用
 
 安装完成后，在工程根目录执行 `tiller init .`。它会写入 `AGENTS.md` 和 `.tiller` 下的规则与入口；之后用编程模型或代理打开这个工程目录，就可以按 tiller 的约定开工——开任务、确认、实现与验证。
