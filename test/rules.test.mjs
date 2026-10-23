@@ -216,14 +216,14 @@ test('CASE-048 global cases use module kinds and scenarios with resolvable named
   const kinds = ['behavior', 'interface', 'performance', 'security'];
   const library = await readCaseLibrary(repository);
   assert.deepEqual(library.issues, []);
-  assert.equal(library.cases.length, 167);
+  assert.equal(library.cases.length, 173);
   assert.deepEqual(library.cases.map(item => item.id).sort(),
-    Array.from({ length: 167 }, (_, index) => `CASE-${String(index + 1).padStart(3, '0')}`));
+    Array.from({ length: 173 }, (_, index) => `CASE-${String(index + 1).padStart(3, '0')}`));
   assert.deepEqual(library.modules.map(item => ({ module: item.module, behavior: item.behavior, interface: item.interface,
     performance: item.performance, security: item.security })), [
-    { module: 'initialization', behavior: 23, interface: 6, performance: 11, security: 16 },
-    { module: 'standards', behavior: 20, interface: 0, performance: 0, security: 0 },
-    { module: 'verification', behavior: 7, interface: 7, performance: 15, security: 3 },
+    { module: 'initialization', behavior: 23, interface: 7, performance: 11, security: 16 },
+    { module: 'standards', behavior: 21, interface: 0, performance: 0, security: 0 },
+    { module: 'verification', behavior: 8, interface: 9, performance: 15, security: 4 },
     { module: 'workflow', behavior: 29, interface: 22, performance: 0, security: 6 },
   ]);
   assert.equal(library.scenarios.length, 2);

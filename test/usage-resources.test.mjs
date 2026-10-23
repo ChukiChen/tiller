@@ -66,7 +66,9 @@ for (const workspace of [false, true]) test(`CASE-140 current noop preserves ind
   const result = await applyUpgrade(root, plan.planId);
   assert.equal(result.ready, true);
   assert.equal(result.changed, false);
-  assert.deepEqual(result.metadata.repositoryPaths, metadata.repositoryPaths);
+  assert.deepEqual(result.metadata.repositories, metadata.repositories);
+  assert.equal(Object.hasOwn(result.metadata, 'repositoryPaths'), false);
+  assert.equal(Object.hasOwn(metadata, 'repositoryPaths'), false);
   assert.equal(read(root, '.tiller/index.md'), index);
   assert.match(index, /\]\(usage\.md\)/u);
   assert.ok(index.includes(workspace ? '管理方式：独立管理工程。' : '管理方式：当前工程。'));
@@ -126,9 +128,13 @@ test('CASE-028 current metadata requires the complete managed set and rejects hi
   const previous = structuredClone(metadata);
   delete previous.managedFiles[PR_TEMPLATE];
   assert.equal(parseMetadata(JSON.stringify(previous)).resourceVersion, RESOURCE_VERSION);
-  const noMappings = structuredClone(metadata);
-  delete noMappings.repositoryPaths;
-  assert.throws(() => parseMetadata(JSON.stringify(noMappings)));
+  const legacy = structuredClone(metadata);
+  legacy.repositories = ['service-a'];
+  delete legacy.repositoryPaths;
+  assert.throws(() => parseMetadata(JSON.stringify(legacy)), /映射/u);
+  const noSidecar = structuredClone(metadata);
+  delete noSidecar.repositoryPaths;
+  assert.equal(parseMetadata(JSON.stringify(noSidecar)).repositories.length, 0);
   const before = snapshot(root);
   for (const version of ['0.1.0', '0.2.0', '0.3.0', '0.5.1', '99.0.0']) {
     assert.throws(() => parseMetadata(JSON.stringify({ ...metadata, resourceVersion: version })), /版本不受支持/u);

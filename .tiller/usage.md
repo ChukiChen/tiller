@@ -33,7 +33,7 @@ node .tiller/run.cjs pr <task-id> [--summary <中文摘要>] [--slug <英文描�
 
 `verify` 只声明测试，由 tiller 构造并执行精确匹配的 node:test 命令；结果只读私有临时报告，stdout/stderr 不参与判定。报告缺失或损坏、匹配 0 个或多个测试、失败或跳过都不能核实；仅引用文件时要求整个文件通过。旧 `--run` 已删除。`start --size standard` 必须声明 `--target`；small 缺省 `.`。
 
-默认只输出摘要；完整输出写入 `.tiller/local/logs/<任务编号>/run-<序号>.log`，`--verbose` 时同时显示。`project.json` 的 `verify.prepare`（如 `["npm","run","build"]`）失败即验证失败；`verify.runner` 当前支持 `node-test`，新框架在 `src/test-output.ts` 实现并注册 `TestRunner` 适配器。
+默认只输出摘要；完整输出写入 `.tiller/local/logs/<任务编号>/run-<序号>.log`，`--verbose` 时同时显示。`project.json` 的 `verify.prepare`（如 `["npm","run","build"]`）失败即验证失败；`verify.runner` 支持 `node-test`、`junit-maven`、`junit-gradle`。仓库可覆盖；归属不明则拒绝。
 
 无法本机执行时使用 `--reported --command ... --result ... --reason "<理由>"`，理由必填。`check`/`accept` 默认阻断外部报告，仅在 `--allow-reported` 时放行；`pr` 标明“未执行（外部报告）”。
 

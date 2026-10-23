@@ -10,7 +10,7 @@
 
 ## 3. 元信息
 
-`init [path]` 支持当前工程与独立管理工程，仓库范围必须显式且可验证。`project.json` 的 `schemaVersion` 固定为 1；`resourceVersion` 只能是受支持契约；可选 `platform` 为 github、gitlab 或 both，缺省视为 github。`--platform github|gitlab|both` 在初始化时选定平台，CLI 不提供切换命令；手动切换需同步修改 `platform` 并补齐对应模板。GitHub 写 `.github/pull_request_template.md`，GitLab 写 `.gitlab/merge_request_templates/Default.md`，both 同时写两者。可选 `verify.runner` 当前只接受 node-test，`verify.prepare` 必须是非空字符串参数数组；读取时拒绝未知字段或值。升级以 `{ ...metadata, resourceVersion, managedFiles }` 写回，保留用户 `verify` 配置。`managedFiles` 必须恰好覆盖当前平台完整受管集或可补齐的兼容子集。校验在取得锁和写入前完成，失败不留下部分文件。
+`init [path]` 支持当前工程与独立管理工程，仓库范围必须显式且可验证。`project.json` 的 `schemaVersion` 固定为 1；`resourceVersion` 只能是受支持契约；可选 `platform` 为 github、gitlab 或 both，缺省视为 github。`--platform github|gitlab|both` 在初始化时选定平台，CLI 不提供切换命令；手动切换需同步修改 `platform` 并补齐对应模板。GitHub 写 `.github/pull_request_template.md`，GitLab 写 `.gitlab/merge_request_templates/Default.md`，both 同时写两者。可选 `verify.runner` 接受 `node-test`、`junit-maven` 和 `junit-gradle`，缺省 `node-test`；`verify.prepare` 必须是非空字符串参数数组。`repositories` 写成对象数组，每项含 `id`、`path` 和可选 `verify`（只含 `runner` 与 `prepare`，按字段覆盖根配置）。仍可读取旧的 `repositories: string[]` 加 `repositoryPaths`；对象清单不能再带这份旁路映射。新初始化和升级写回都使用对象数组，并去掉 `repositoryPaths`。`mode: workspace` 至少一条仓库，`mode: project` 必须为空。读取时拒绝未知字段或值。升级以规范化后的元信息写回，保留根级和仓库级 `verify`。`managedFiles` 必须恰好覆盖当前平台完整受管集或可补齐的兼容子集。校验在取得锁和写入前完成，失败不留下部分文件。
 
 ## 4. 升级算法
 

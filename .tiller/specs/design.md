@@ -62,7 +62,7 @@
 5. 外部报告有理由并仅经 `--allow-reported` 放行，bugfix 有基线失败先行与当前通过；
 6. 用例库结构有效，并报告模块数量、场景覆盖和回归提示。
 
-无 Git 时范围检查降级为提示；有 Git 时同时检查越界、未提交改动、删除/跳过/弱化测试。node:test 之外的框架通过 `src/test-output.ts` 的 `TestRunner` 适配器扩展；`project.json` 的 `verify.runner` 选择适配器，`verify.prepare` 在测试前运行准备命令且失败即验证失败。
+无 Git 时范围检查降级为提示；有 Git 时同时检查越界、未提交改动、删除/跳过/弱化测试。node:test 之外的框架通过 `src/test-output.ts` 的 `TestRunner` 适配器扩展；`project.json` 的 `verify.runner` 选择适配器，`verify.prepare` 在测试前运行准备命令且失败即验证失败。工作区按测试路径所属仓库选择 runner，仓库上的 `verify` 按字段覆盖根配置，准备命令的工作目录是该仓库根；不能唯一匹配时失败，不回退到根配置。当前工程没有仓库清单时使用根配置。`junit-maven` 与 `junit-gradle` 分别构造 Maven `-Dtest` 和 Gradle `--tests`，解析私有目录中的 JUnit XML，命中规则与 node-test 相同。不内嵌 JVM，也不按扩展名猜测语言。
 
 ## 7. 提交、分支与 PR/MR
 

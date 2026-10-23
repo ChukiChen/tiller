@@ -178,3 +178,30 @@ check 给出 specs 回写告警，但不新增阻断。
 ### 预期结果
 
 真实仓库用例扫描无悬空 CASE 引用；CASE-900/901/999 夹具保持不动；待实现旧用例可无测试
+
+## CASE-168 按所属仓库选择运行器并在仓库根准备
+
+- 类型：behavior
+- 优先级：high
+- 模块：verification
+- 关联 AC：20261023-multi-repo-verify#AC-2
+- 需求：`.tiller/specs/modules/verification/requirements.md#3-用例先行`
+- 源码：`src/flow.ts`, `src/test-output.ts`, `test/java-runners.test.mjs`
+
+### 前置条件
+
+- 管理工程登记了多个业务仓库，仓库之间的运行方式可以不同
+
+### 步骤
+
+1. 对每个仓库执行其测试引用
+2. 对不属于任何仓库的测试执行外部结论
+
+### 输入
+
+- Maven 仓库、Gradle 仓库、Node 仓库，以及未登记路径
+
+### 预期结果
+
+每个测试使用所属仓库的运行器；准备步骤的工作目录是该仓库根；未登记路径拒绝执行；尚未适配的框架仍可提交带理由的外部结论
+

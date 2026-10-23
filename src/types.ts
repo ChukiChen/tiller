@@ -6,12 +6,18 @@ export interface VerifyConfig {
   prepare?: string[];
 }
 
+/** One business repository inside a management workspace. `verify` overrides root defaults field by field. */
+export interface RepositoryRecord {
+  id: string;
+  path: string;
+  verify?: VerifyConfig;
+}
+
 export interface ProjectMetadata {
   schemaVersion: 1;
   resourceVersion: string;
   mode: ProjectMode;
-  repositories: string[];
-  repositoryPaths: Record<string, string>;
+  repositories: RepositoryRecord[];
   managedFiles: Record<string, string>;
   createdAt: string;
   platform?: ProjectPlatform;

@@ -65,7 +65,7 @@ test('CASE-115 workspace limits repository scope and never changes repository co
   for (const name of ['甲 repo', 'beta']) await promisify(execFile)('git', ['init', '--quiet', path.join(root, name)]);
   await writeFile(path.join(root, '甲 repo', 'file.txt'), 'Do not edit');
   const result = await initialize({ root, mode: 'workspace', repositories: ['甲 repo', 'beta'] });
-  assert.deepEqual(result.metadata.repositories, ['beta', '甲 repo']);
+  assert.deepEqual(result.metadata.repositories, [{ id: 'beta', path: 'beta' }, { id: '甲 repo', path: '甲 repo' }]);
   assert.equal(await readFile(path.join(root, '甲 repo', 'file.txt'), 'utf8'), 'Do not edit');
   assert.match(await readFile(path.join(root, '.gitignore'), 'utf8'), /\/甲 repo\//);
   await assert.rejects(initialize({ root, mode: 'workspace', repositories: ['beta'] }), /范围/);
@@ -76,8 +76,11 @@ test('CASE-116 workspace groups repositories while keeping stable ids, navigatio
   const root = await project(t);
   for (const name of ['service-a', 'service-b']) await promisify(execFile)('git', ['init', '--quiet', path.join(root, 'repositories', name)]);
   const result = await initialize({ root, mode: 'workspace', repositories: ['service-a', 'repositories/service-b'] });
-  assert.deepEqual(result.metadata.repositories, ['service-a', 'service-b']);
-  assert.deepEqual(result.metadata.repositoryPaths, { 'service-a': 'repositories/service-a', 'service-b': 'repositories/service-b' });
+  assert.deepEqual(result.metadata.repositories, [
+    { id: 'service-a', path: 'repositories/service-a' },
+    { id: 'service-b', path: 'repositories/service-b' },
+  ]);
+  assert.equal(Object.hasOwn(result.metadata, 'repositoryPaths'), false);
   assert.equal((await inspectProject(root)).ready, true);
   assert.match(await readFile(path.join(root, '.tiller/index.md'), 'utf8'), /\.\.\/repositories\/service-a\//u);
   const ignore = await readFile(path.join(root, '.gitignore'), 'utf8');
@@ -91,7 +94,7 @@ test('CASE-117 workspace refuses ambiguous shorthand and never silently remaps i
   await assert.rejects(initialize({ root, mode: 'workspace', repositories: ['service-a'] }), /明确|歧义/u);
   assert.equal(await readTextIfExists(root, '.tiller/project.json'), null);
   const result = await initialize({ root, mode: 'workspace', repositories: ['./service-a'] });
-  assert.deepEqual(result.metadata.repositoryPaths, { 'service-a': 'service-a' });
+  assert.deepEqual(result.metadata.repositories, [{ id: 'service-a', path: 'service-a' }]);
   await assert.rejects(initialize({ root, mode: 'workspace', repositories: ['repositories/service-a'] }), /范围|路径/u);
   assert.equal((await initialize({ root, mode: 'workspace', repositories: ['./service-a'] })).changed, false);
   assert.equal((await initialize({ root, mode: 'workspace', repositories: [path.join(root, 'service-a')] })).changed, false);
@@ -107,9 +110,16 @@ test('CASE-118 grouped repository parent symlinks and fabricated metadata mappin
   const ordinary = await project(t);
   await initialize({ root: ordinary });
   const metadata = JSON.parse(await readFile(path.join(ordinary, '.tiller/project.json'), 'utf8'));
-  delete metadata.repositoryPaths;
+  metadata.repositories = [{ id: 'ghost', path: '../outside' }];
   await writeFile(path.join(ordinary, '.tiller/project.json'), JSON.stringify(metadata));
   assert.equal((await inspectProject(ordinary)).ready, false);
+  const legacyRoot = await project(t);
+  await initialize({ root: legacyRoot });
+  const legacy = JSON.parse(await readFile(path.join(legacyRoot, '.tiller/project.json'), 'utf8'));
+  legacy.repositories = ['service-a'];
+  delete legacy.repositoryPaths;
+  await writeFile(path.join(legacyRoot, '.tiller/project.json'), JSON.stringify(legacy));
+  assert.equal((await inspectProject(legacyRoot)).ready, false);
 });
 
 test('CASE-119 workspace cannot register a management worktree as an independent business repository', async t => {
@@ -232,7 +242,7 @@ test('CASE-124 workspace verifies actual Git repositories and accepts valid gitd
   await git('git', ['init', '--quiet', '--separate-git-dir', path.join(root, 'git-data'), path.join(root, 'actual')]);
   const result = await initialize({ root, mode: 'workspace', repositories: ['actual'] });
   assert.equal(result.ready, true);
-  assert.deepEqual(result.metadata.repositories, ['actual']);
+  assert.deepEqual(result.metadata.repositories, [{ id: 'actual', path: 'actual' }]);
   await rm(path.join(root, 'git-data'), { recursive: true });
   assert.equal((await inspectProject(root)).ready, false);
 });
@@ -269,7 +279,8 @@ test('CASE-028 only current resource metadata is readable and historical bytes r
   const initialized = await initialize({ root });
   assert.equal(RESOURCE_VERSION, '0.5.0');
   assert.equal(initialized.metadata.resourceVersion, RESOURCE_VERSION);
-  assert.deepEqual(initialized.metadata.repositoryPaths, {});
+  assert.deepEqual(initialized.metadata.repositories, []);
+  assert.equal(Object.hasOwn(initialized.metadata, 'repositoryPaths'), false);
   assert.equal(initialized.compatibility, 'read-write');
   const filename = path.join(root, '.tiller/project.json');
   const current = JSON.parse(await readFile(filename, 'utf8'));

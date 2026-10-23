@@ -18,7 +18,7 @@ import { applyChanges, inspectSafePaths, readTextIfExists, validateRelativePath,
 import { readPlanItem } from './plans.js';
 import { releaseChecklist, type ReleaseChecklist } from './release.js';
 import { validateTaskId } from './task-id.js';
-import { namePattern, runnerFor, type TestEvidence, type TestReference } from './test-output.js';
+import { namePattern, resolveVerifyTarget, runnerFor, type TestEvidence, type TestReference } from './test-output.js';
 import type { ProjectMetadata } from './types.js';
 
 const execFileAsync = promisify(execFile);
@@ -1353,6 +1353,10 @@ async function nextLogPath(root: string, id: string, previousRuns: number): Prom
   return `${relativeDirectory}/run-${maximum + 1}.log`;
 }
 
+function posixRelative(from: string, to: string): string {
+  return path.relative(from, to).split(path.sep).join('/');
+}
+
 async function runAdapterTest(
   workspace: string,
   projectRoot: string,
@@ -1361,38 +1365,46 @@ async function runAdapterTest(
   logPath: string,
   verbose: boolean,
 ): Promise<TestObservation> {
-  const config = metadata.verify ?? {};
-  const runner = runnerFor(config.runner);
+  const target = resolveVerifyTarget(metadata, reference);
+  const runner = runnerFor(target.runner);
+  const cwd = path.resolve(workspace, target.cwd);
   const log: string[] = [];
   await mkdir(path.join(workspace, '.tiller/local'), { recursive: true });
   const reportDirectory = await mkdtemp(path.join(workspace, '.tiller/local/verify-'));
   const reportAbsolute = path.join(reportDirectory, 'report.jsonl');
   const reporterAbsolute = path.join(reportDirectory, 'reporter.mjs');
-  const reportRelative = path.relative(workspace, reportAbsolute).split(path.sep).join('/');
-  const reporterRelative = `./${path.relative(workspace, reporterAbsolute).split(path.sep).join('/')}`;
+  const reportRelative = posixRelative(cwd, reportAbsolute);
+  const reporterRelative = `./${posixRelative(cwd, reporterAbsolute)}`;
   let command = '';
   let evidence: TestEvidence = { verified: false, reason: '私有报告不存在。' };
   try {
     await copyFile(fileURLToPath(new URL('./test-reporter.js', import.meta.url)), reporterAbsolute);
-    if (config.prepare?.length) {
-      const [executable, ...args] = config.prepare;
-      const prepare = await runProcess(workspace, executable!, args, displayCommand(executable!, args), log, verbose);
+    if (target.prepare?.length) {
+      const [executable, ...args] = target.prepare;
+      const prepare = await runProcess(cwd, executable!, args, displayCommand(executable!, args), log, verbose);
       if (prepare.exitCode !== 0) fail('VERIFY_PREPARE_FAILED', `验证准备步骤失败（退出码 ${prepare.exitCode ?? '无'}）。`);
     }
     const run = async (pattern: string | undefined): Promise<TestObservation> => {
       await rm(reportAbsolute, { force: true });
-      const built = runner.build(reference, { reporter: reporterRelative, report: reportRelative }, pattern);
-      command = built.display;
-      const processRun = await runProcess(workspace, built.executable, built.args, command, log, verbose);
+      const built = runner.build(target.reference, { reporter: reporterRelative, report: reportRelative }, pattern);
+      for (const file of built.files ?? []) {
+        if (file.name !== 'junit-gradle.init.gradle') fail('VERIFY_RUNNER_FAILED', '运行器声明了非预期的报告文件。');
+        await writeFile(path.join(reportDirectory, file.name), file.content, 'utf8');
+      }
+      command = target.cwd === '.' ? built.display : `${target.cwd}$ ${built.display}`;
+      const processRun = await runProcess(cwd, built.executable, built.args, command, log, verbose);
       let reportText = '';
-      try { reportText = await readFile(reportAbsolute, 'utf8'); }
-      catch { /* Missing reports are unverified, never passed. */ }
-      evidence = runner.parse(reportText, reference, path.join(workspace, reference.path));
+      try {
+        reportText = runner.loadReport
+          ? await runner.loadReport(reportAbsolute, reportDirectory)
+          : await readFile(reportAbsolute, 'utf8');
+      } catch { /* Missing reports are unverified, never passed. */ }
+      evidence = runner.parse(reportText, target.reference, path.resolve(workspace, reference.path));
       const result: FlowResult = evidence.outcome === 'failed' ? 'failed' : processRun.exitCode === 0 ? 'passed' : 'failed';
       if (processRun.timedOut) log.push('\n[tiller] 验证命令超时。\n');
       return { command, result, exitCode: processRun.exitCode, evidence: evidence.verified ? 'verified' : 'unverified', log: logPath };
     };
-    return await run(namePattern(reference));
+    return await run(namePattern(target.reference));
   } finally {
     await mkdir(path.dirname(path.join(projectRoot, logPath)), { recursive: true });
     await writeFile(path.join(projectRoot, logPath), log.join(''), 'utf8');

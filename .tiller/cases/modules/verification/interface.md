@@ -180,3 +180,56 @@ tiller 扫描测试源建立 case→tests 反查；用例文件不含测试引�
 ### 预期结果
 
 验证不建立用例绑定，check 指出 AC 未绑定全局用例
+
+## CASE-169 Maven 只运行并承认声明的测试
+
+- 类型：interface
+- 优先级：high
+- 模块：verification
+- 关联 AC：20261023-multi-repo-verify#AC-3
+- 需求：`.tiller/specs/modules/verification/requirements.md#3-用例先行`
+- 源码：`src/test-output.ts`, `test/java-runners.test.mjs`
+
+### 前置条件
+
+- 运行器名称为 junit-maven，且不依赖本机 JDK
+
+### 步骤
+
+1. 构造 Maven 测试命令
+2. 解析只包含声明结果、缺失、重复、跳过、额外失败和损坏的报告
+
+### 输入
+
+- 类名#方法名、整个类名，以及 src/test/java 下的方法名
+
+### 预期结果
+
+命令使用精确的测试选择并把报告写到私有目录；只有恰好命中的声明结果可以核实，其它情况不能通过
+
+## CASE-170 Gradle 只运行并承认声明的测试
+
+- 类型：interface
+- 优先级：high
+- 模块：verification
+- 关联 AC：20261023-multi-repo-verify#AC-5
+- 需求：`.tiller/specs/modules/verification/requirements.md#3-用例先行`
+- 源码：`src/test-output.ts`, `test/java-runners.test.mjs`
+
+### 前置条件
+
+- 运行器名称为 junit-gradle，且不依赖本机 JDK
+
+### 步骤
+
+1. 构造 Gradle 测试命令和初始化脚本
+2. 解析声明结果、跳过、重复和损坏的报告
+
+### 输入
+
+- 类名#方法名，以及整个类名
+
+### 预期结果
+
+命令使用精确的测试选择并把 JUnit XML 写到私有目录；缺失、重复、跳过和额外失败都不能通过
+

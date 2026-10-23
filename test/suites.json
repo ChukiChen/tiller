@@ -12,6 +12,7 @@
   "integration": [
     "core.test.mjs",
     "repository-paths.test.mjs",
+    "java-runners.test.mjs",
     "runtime.test.mjs",
     "upgrade.test.mjs",
     "work-migration.test.mjs",
