@@ -361,16 +361,22 @@ test('CASE-095 verify runner configuration and prepare are enforced', async t =>
   assert.deepEqual(JSON.parse(read(root, '.tiller/project.json')).verify, { prepare: ['node', 'prepare.mjs'] });
 });
 
-test('CASE-096 verify writes a concise summary and verbose log', async t => {
+test('CASE-096 CASE-181 verify writes a readable command summary and verbose log', async t => {
   const source = "import { writeSync } from 'node:fs';\nimport test from 'node:test';\nwriteSync(1, 'TILLER_LOG_MARKER\\n');\ntest('logging behavior', () => {});\n";
   const root = await project(t, source);
   const id = '20261022-verify-log';
   prepareTask(root, id);
   const quiet = success(cli(root, 'verify', id, '--criterion', 'AC-1', '--test', 'test/value.test.mjs::logging behavior'));
   assert.equal(quiet.log, `.tiller/local/logs/${id}/run-1.log`);
-  assert.ok(read(root, quiet.log).includes('TILLER_LOG_MARKER'), read(root, quiet.log));
+  const quietLog = read(root, quiet.log);
+  assert.ok(quietLog.includes('TILLER_LOG_MARKER'), quietLog);
+  assert.match(quietLog, /\[tiller\] command: node .*--test-name-pattern=/u);
+  assert.match(quietLog, /\[tiller\] started: \d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z/u);
+  assert.match(quietLog, /\[tiller\] exit: 0/u);
+  assert.match(quietLog, /\[tiller\] finished: \d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z/u);
+  assert.notEqual(quietLog.trim().split(/\r?\n/u).length, 1, quietLog);
   assert.ok(!quiet.entries[0].command.includes('TILLER_LOG_MARKER'));
-  assert.ok(!read(root, quiet.log).includes(root));
+  assert.ok(!quietLog.includes(root));
   assert.ok(quiet.entries.length === 1);
   assert.equal(quiet.entries[0].evidence, 'verified');
 

@@ -202,3 +202,111 @@ test('CASE-178 hardening regression names and version stay linked at 0.5.0', () 
     assert.match(read(repository, relative), /骨架随当前 runner 生成/u, relative);
   }
 });
+
+test('CASE-179 standard design fields that are blank or placeholders get located warnings', async t => {
+  const root = fixture(t);
+  success(cli(root, 'init'));
+  baseline(root);
+  const id = '20261023-thin-design';
+  success(cli(root, 'start', id, '--title', 'Thin design', '--requirement', 'Warn before accepting thin design content.',
+    '--criterion', 'AC-1=Thin design fields are visible', '--type', 'feature', '--size', 'standard',
+    '--target', 'src', '--target', 'test'));
+  success(cli(root, 'confirm', id, 'requirements'));
+  const relative = `.tiller/task/${id}/task.md`;
+  put(root, relative, read(root, relative).replace('### 方案\n\n### 取舍\n\n### 影响与风险',
+    '### 方案\n\n待补充\n\n### 取舍\n\n### 影响与风险\n\nTODO'));
+  success(cli(root, 'confirm', id, 'design'));
+  put(root, relative, read(root, relative).replace('### 方案\n\n待补充\n\n### 取舍\n\n### 影响与风险\n\nTODO',
+    '### 方案\n\n### 取舍\n\nTODO\n\n### 影响与风险\n\n<待补充>'));
+
+  const checked = failure(cli(root, 'check', id));
+  const warnings = checked.warnings.join('\n');
+  for (const field of ['方案', '取舍', '影响与风险']) {
+    assert.match(warnings, new RegExp(`任务设计“${field}”.*仅空白或占位.*${relative.replace(/[.*+?^${}()|[\]\\]/gu, '\\$&')}`, 'u'));
+  }
+  assert.ok(!checked.issues.some(issue => issue.includes('仅空白或占位')), checked.issues.join('\n'));
+});
+
+test('CASE-180 empty decisions and touched module design are located in check warnings', async t => {
+  const root = fixture(t);
+  success(cli(root, 'init'));
+  baseline(root);
+  const id = '20261023-thin-specs';
+  success(cli(root, 'start', id, '--title', 'Thin specs', '--requirement', 'Warn before accepting empty specs.',
+    '--criterion', 'AC-1=Empty specs are visible', '--size', 'small',
+    '--target', 'src', '--target', 'test', '--target', '.tiller/specs'));
+  success(cli(root, 'confirm', id, 'requirements'));
+  put(root, '.tiller/specs/decisions.md', '# 长期决定\n\n只记录仍然有效、会约束后续实现的取舍。\n');
+  put(root, '.tiller/specs/modules/workflow/design.md', '# Workflow design\n');
+  put(root, 'src/value.txt', 'changed for module detection\n');
+
+  const checked = failure(cli(root, 'check', id));
+  const warnings = checked.warnings.join('\n');
+  assert.match(warnings, /缺少有效决定条目.*\.tiller\/specs\/decisions\.md/u);
+  assert.match(warnings, /模块 design\.md.*仅有标题或占位.*\.tiller\/specs\/modules\/workflow\/design\.md/u);
+});
+
+test('CASE-182 check and resume explicitly report an expired verification', async t => {
+  const root = fixture(t);
+  success(cli(root, 'init'));
+  baseline(root);
+  const id = '20261023-expired-verification';
+  success(cli(root, 'start', id, '--title', 'Expired verification', '--requirement', 'Keep expiry wording visible.',
+    '--criterion', 'AC-1=Current tree remains verified', '--size', 'small', '--target', 'src', '--target', 'test'));
+  success(cli(root, 'confirm', id, 'requirements'));
+  success(cli(root, 'verify', id, '--criterion', 'AC-1', '--test', 'test/baseline.test.mjs::CASE-001 baseline'));
+  put(root, 'src/value.txt', 'changed after verification\n');
+  git(root, 'add', 'src/value.txt');
+  git(root, 'commit', '--quiet', '-m', 'change after verification');
+
+  const checked = failure(cli(root, 'check', id));
+  assert.ok(checked.issues.some(issue => issue.includes('验证已过期') && issue.includes('记录时的代码树')), checked.issues.join('\n'));
+  const resumed = success(cli(root, 'resume', id));
+  assert.match(resumed.stageReason, /验证已过期/u);
+});
+
+test('CASE-183 check explains a branch name missing the task id', async t => {
+  const root = fixture(t);
+  success(cli(root, 'init'));
+  baseline(root);
+  const id = '20261023-branch-name';
+  success(cli(root, 'start', id, '--title', 'Branch name', '--requirement', 'Keep branch names traceable.',
+    '--criterion', 'AC-1=Branch naming is visible', '--size', 'small', '--target', 'src', '--target', 'test'));
+  success(cli(root, 'confirm', id, 'requirements'));
+  git(root, 'checkout', '--quiet', '-b', 'feat/flow-hardening');
+
+  const checked = failure(cli(root, 'check', id));
+  assert.ok(checked.warnings.some(warning => warning.includes('feat/flow-hardening')
+    && warning.includes(`未包含当前任务编号 ${id}`) && warning.includes(`类型/${id}`)), checked.warnings.join('\n'));
+});
+
+test('CASE-184 help, usage and AGENTS explain thin checks, readable logs and branch naming', async t => {
+  const root = fixture(t);
+  const help = success(cli(root, '--help')).help;
+  assert.match(help, /过薄.*decisions.*模块设计/u);
+  assert.match(help, /日志.*起止.*退出码/u);
+  assert.match(help, /分支.*未包含任务编号/u);
+
+  const usage = read(repository, 'resources/usage.md');
+  assert.equal(usage, read(repository, '.tiller/usage.md'));
+  assert.match(usage, /过薄.*decisions.*模块设计/u);
+  assert.match(usage, /日志.*起止.*退出码/u);
+  assert.match(usage, /分支.*未包含任务编号/u);
+
+  for (const relative of ['resources/entry.md', 'AGENTS.md']) {
+    const entry = read(repository, relative);
+    assert.match(entry, /过薄.*decisions.*模块设计/u, relative);
+    assert.match(entry, /日志.*起止.*退出码/u, relative);
+    assert.match(entry, /分支.*未包含任务编号/u, relative);
+  }
+});
+
+test('CASE-185 wave-two cases are referenced by named tests at version 0.5.0', () => {
+  const source = `${read(repository, 'test/flow-hardening.test.mjs')}\n${read(repository, 'test/verification-integrity.test.mjs')}`;
+  for (const id of ['CASE-179', 'CASE-180', 'CASE-181', 'CASE-182', 'CASE-183', 'CASE-184', 'CASE-185']) {
+    assert.match(source, new RegExp(`test\\('[^'\\n]*${id}\\b`, 'u'));
+  }
+  assert.equal(JSON.parse(read(repository, 'package.json')).version, '0.5.0');
+  assert.equal(JSON.parse(read(repository, '.tiller/project.json')).resourceVersion, '0.5.0');
+  assert.match(read(repository, 'src/cli.ts'), /CLI_VERSION = '0\.5\.0'/u);
+});
