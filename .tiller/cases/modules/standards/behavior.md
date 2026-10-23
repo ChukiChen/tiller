@@ -233,3 +233,28 @@
 ### 预期结果
 
 历史用例具备设计字段，历史测试名含对应 CASE 编号；文档统一说明测试引用用例的反查方向，必读预算在 7000 字符附近，全量构建、检查、测试和打包冒烟通过。
+
+## CASE-109 评审发布与提交锚定文档同步
+
+- 类型：behavior
+- 优先级：medium
+- 模块：standards
+- 关联 AC：20261022-round17#AC-6
+- 需求：`.tiller/specs/modules/standards/requirements.md`
+- 源码：`README.md`, `resources/usage.md`, `.tiller/specs/decisions.md`
+
+### 前置条件
+
+- src、test、resources 与 .tiller 受管资料已更新。
+
+### 步骤
+
+1. 运行规则测试、完整测试与打包冒烟，核对必读预算和版本。
+
+### 输入
+
+- 当前仓库完整工作树。
+
+### 预期结果
+
+文档与用例同步，必读不超过预算，版本保持 0.5.0，历史任务无新的规则型阻断。

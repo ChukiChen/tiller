@@ -7,7 +7,9 @@ import { bindRuntime, runtimeStatus } from './runtime.js';
 import { initialize, inspectProject, recoverProject } from './core.js';
 import { applyUpgrade, planUpgrade } from './upgrade.js';
 import { addGlobalCase } from './cases.js';
-import { acceptFlow, checkFlow, closeFlow, confirmFlow, inspectFlow, reopenFlow, resumeFlow, startFlow, verifyFlow } from './flow.js';
+import {
+  acceptFlow, checkFlow, closeFlow, confirmFlow, inspectFlow, reopenFlow, releaseFlow, resumeFlow, reviewFlow, startFlow, verifyFlow,
+} from './flow.js';
 import { confirmPlan, startPlan, statusPlan } from './plans.js';
 import { draftPullRequest } from './pr.js';
 
@@ -21,7 +23,7 @@ const HELP = `tiller ${CLI_VERSION} — 默认工作流
   tiller plan start <plan-id> --title <标题> --goal <目标> --spec <specs 引用> [--spec ...] --item "P-1=标题;size=small;deps=P-0;specs=<引用>;plan=<子规划>" [--item ...]
   tiller plan confirm <plan-id> [--by <确认人>] [--quote "<可选原话>"] [--commit <oid>] [--path <root>]
   tiller plan status <plan-id> [--path <root>]
-  tiller start <task-id> --title <标题> --requirement <需求正文> --criterion "AC-1=<验收条件>" [--criterion ...] [--type feature] [--size small|standard] [--target <相对路径> ...] [--summary <中文摘要>] [--slug <英文描述>] [--plan <plan-id> --item <条目>] [--path <root>]
+  tiller start <task-id> --title <标题> (--requirement <需求正文> | --requirement-file <工程相对路径>) --criterion "AC-1=<验收条件>" [--criterion ...] [--type feature] [--size small|standard] [--target <相对路径> ...] [--summary <中文摘要>] [--slug <英文描述>] [--plan <plan-id> --item <条目>] [--path <root>]
   tiller resume [task-id] [--path <root>]
   tiller confirm <task-id> requirements|design|acceptance [--by <确认人>] [--quote "<可选原话>"] [--commit <oid>] [--path <root>]
   tiller case add <task-id> --module <模块> --kind behavior|interface|performance|security --title <标题> --criterion AC-1 [--criterion ...] --expected "<预期结果>" [--precondition <条件> ...] [--step <步骤> ...] [--input <输入> ...] [--priority high|medium|low] [--spec <引用> ...] --source <源码路径> [--source ...] [--path <root>]
@@ -30,6 +32,8 @@ const HELP = `tiller ${CLI_VERSION} — 默认工作流
   tiller verify <task-id> [--criterion AC-1 ...] --case CASE-NNN [--verbose] [--path <root>]
   tiller verify <task-id> --criterion AC-1 --test "<文件::测试名>" --reported --command "<外部命令>" --result passed|failed|skipped --reason "<理由>" [--path <root>]
   tiller check <task-id> [--allow-reported] [--path <root>]
+  tiller review <task-id> [--by <评审人>] [--finding <发现> ...] [--blocking <阻塞发现> ...] [--resolve REV-NNN ...] [--path <root>]
+  tiller release <task-id> [--path <root>]
   tiller pr <task-id> [--summary <中文摘要>] [--slug <英文描述>] [--path <root>]
   tiller accept <task-id> [--by <确认人>] [--quote "<可选原话>"] [--commit <oid>] [--allow-reported] [--path <root>]
   tiller close <task-id> --reason "<原因>" [--abandon] [--path <root>]
@@ -43,7 +47,8 @@ const HELP = `tiller ${CLI_VERSION} — 默认工作流
 - small：需求确认 → 实现 → 验证；standard：需求 → 设计 → 实现 → 验证。确认记录人、时间、摘要和提交，原话可选。
 - 默认人工节点只有需求、设计和交付验收；规划、合入、发布按需确认，没有阶段或审计命令。
 - 大功能可先写 .tiller/plans/<id>.md 并确认；start 挂到条目时默认继承粒度，依赖未验收会阻塞。
-- task.md 是唯一任务记录：start 生成结构化需求，标准任务另有设计与影响；确认前校验正文，原话只作可选附注。verify 自主执行测试并从私有报告核实，保存实际命令、结果、日志、提交和代码树摘要。
+- task.md 是唯一任务记录：start 生成结构化需求，可从工程内需求文件接入；确认前校验正文，原话只作可选附注。verify 自主执行测试并从私有报告核实。
+- review 记录独立评审发现；未解决阻塞项会阻断 check/accept。release 只做发布门禁，不发布包。check 汇总发布清单；已验收任务按验收提交读取代码树与测试，之后代码漂移不误报过期。
 - 阶段由 task.md 事实推导；close 收尾已验收任务，未验收终止用 --abandon，必要时 reopen。
 - case add 在测试之前登记测试设计（前置条件、步骤、输入、预期结果、类型、优先级、来源 AC），自动分配 CASE 编号；测试名引用 CASE 编号形成反查。check 分阶段核对 AC→用例→测试→当前验证，校验模块/场景结构并提示相关回归，同时检查范围、测试弱化、密钥和本机绝对路径。
 - pr 从 task.md 和 Git 提交生成五段 PR/MR 草稿及建议分支名；提交用“类型(模块): 中文摘要”，分支用“类型/任务编号[-描述]”；check 只提示格式问题。
@@ -81,7 +86,8 @@ export async function runCli(rawArgs = process.argv.slice(2)): Promise<void> {
       options: {
         help: { type: 'boolean', short: 'h' }, version: { type: 'boolean', short: 'v' },
         json: { type: 'boolean' }, mode: { type: 'string' }, repo: { type: 'string', multiple: true },
-        path: { type: 'string' }, title: { type: 'string' }, requirement: { type: 'string' }, reason: { type: 'string' },
+        path: { type: 'string' }, title: { type: 'string' }, requirement: { type: 'string' }, 'requirement-file': { type: 'string' },
+        reason: { type: 'string' },
         slug: { type: 'string' }, summary: { type: 'string' }, platform: { type: 'string' },
         type: { type: 'string' }, size: { type: 'string' }, target: { type: 'string', multiple: true },
         quote: { type: 'string' }, by: { type: 'string' }, commit: { type: 'string' }, criterion: { type: 'string', multiple: true },
@@ -93,12 +99,13 @@ export async function runCli(rawArgs = process.argv.slice(2)): Promise<void> {
         kind: { type: 'string' }, scenario: { type: 'string' }, source: { type: 'string', multiple: true },
         expected: { type: 'string' }, precondition: { type: 'string', multiple: true }, step: { type: 'string', multiple: true },
         input: { type: 'string', multiple: true }, priority: { type: 'string' }, case: { type: 'string' },
-        apply: { type: 'string' }, abandon: { type: 'boolean' },
+        finding: { type: 'string', multiple: true }, blocking: { type: 'string', multiple: true },
+        resolve: { type: 'string', multiple: true }, apply: { type: 'string' }, abandon: { type: 'boolean' },
       },
     });
     const seenOptions = new Set<string>();
     for (const token of tokens) {
-      if (token.kind !== 'option' || ['repo', 'target', 'criterion', 'item', 'spec', 'module', 'source', 'precondition', 'step', 'input'].includes(token.name)) continue;
+      if (token.kind !== 'option' || ['repo', 'target', 'criterion', 'item', 'spec', 'module', 'source', 'precondition', 'step', 'input', 'finding', 'blocking', 'resolve'].includes(token.name)) continue;
       if (seenOptions.has(token.name)) usage(`选项 --${token.name} 不能重复。`);
       seenOptions.add(token.name);
     }
@@ -108,18 +115,20 @@ export async function runCli(rawArgs = process.argv.slice(2)): Promise<void> {
       if (wantsJson) output({ ok: true, version: CLI_VERSION }); else process.stdout.write(`${CLI_VERSION}\n`);
     } else {
       const [command, second, third] = positionals;
-      const flowCommand = ['start', 'resume', 'confirm', 'verify', 'check', 'accept', 'close', 'reopen'].includes(command ?? '');
+      const flowCommand = ['start', 'resume', 'confirm', 'verify', 'check', 'accept', 'review', 'release', 'close', 'reopen'].includes(command ?? '');
       const planCommand = command === 'plan';
       const caseCommand = command === 'case';
       const prCommand = command === 'pr';
       const allowed = flowCommand
-        ? command === 'start' ? ['path', 'title', 'requirement', 'type', 'size', 'target', 'criterion', 'plan', 'item', 'slug', 'summary']
+        ? command === 'start' ? ['path', 'title', 'requirement', 'requirement-file', 'type', 'size', 'target', 'criterion', 'plan', 'item', 'slug', 'summary']
           : command === 'resume' ? ['path']
             : command === 'confirm' ? ['path', 'quote', 'by', 'commit', 'allow-reported']
               : command === 'verify' ? ['path', 'criterion', 'test', 'case', 'command', 'run', 'result', 'reported', 'reason', 'expect-fail', 'verbose']
                 : command === 'accept' ? ['path', 'quote', 'by', 'commit', 'allow-reported']
-                  : command === 'close' ? ['path', 'reason', 'abandon']
-                    : command === 'reopen' ? ['path', 'reason'] : ['path', 'allow-reported']
+                  : command === 'review' ? ['path', 'by', 'finding', 'blocking', 'resolve']
+                    : command === 'release' ? ['path']
+                      : command === 'close' ? ['path', 'reason', 'abandon']
+                        : command === 'reopen' ? ['path', 'reason'] : ['path', 'allow-reported']
         : planCommand ? second === 'start' ? ['path', 'title', 'goal', 'spec', 'item']
           : second === 'confirm' ? ['path', 'quote', 'by', 'commit']
             : second === 'status' ? ['path'] : []
@@ -138,11 +147,15 @@ export async function runCli(rawArgs = process.argv.slice(2)): Promise<void> {
         const root = resolve(values.path ?? process.cwd());
         if (command === 'start') {
           if (positionals.length !== 2) usage('start 需要一个任务标识。');
-          if (!values.title || !values.requirement) usage('start 需要 --title 和 --requirement；需求正文必须先写清，验收条件使用可重复的 --criterion。');
+          if (!values.title || (!values.requirement === !values['requirement-file'])) {
+            usage('start 需要 --title，以及 --requirement 或 --requirement-file 之一；验收条件使用可重复的 --criterion。');
+          }
           if (!values.criterion?.length) usage('start 至少需要一个 --criterion，例如 --criterion "AC-1=命令正常退出"。');
           if ((values.plan === undefined) !== (values.item === undefined)) usage('start 的 --plan 和 --item 必须同时提供。');
           if (values.item && values.item.length !== 1) usage('start 的 --item 只能提供一个条目。');
-          result = await startFlow(root, second!, { title: values.title, requirement: values.requirement,
+          result = await startFlow(root, second!, { title: values.title,
+            ...(values.requirement === undefined ? {} : { requirement: values.requirement }),
+            ...(values['requirement-file'] === undefined ? {} : { requirementFile: values['requirement-file'] }),
             ...(values.type === undefined ? {} : { type: values.type }), ...(values.size === undefined ? {} : { size: values.size }),
             ...(values.target === undefined ? {} : { targets: values.target }), criteria: values.criterion,
             ...(values.slug === undefined ? {} : { slug: values.slug }),
@@ -193,6 +206,19 @@ export async function runCli(rawArgs = process.argv.slice(2)): Promise<void> {
             ...(values.commit === undefined ? {} : { commit: values.commit }),
             ...(values['allow-reported'] === undefined ? {} : { allowReported: values['allow-reported'] }),
           });
+        } else if (command === 'review') {
+          if (positionals.length !== 2) usage('review 需要一个任务标识。');
+          result = await reviewFlow(root, second!, {
+            ...(values.by === undefined ? {} : { by: values.by }),
+            ...(values.finding === undefined ? {} : { findings: values.finding }),
+            ...(values.blocking === undefined ? {} : { blocking: values.blocking }),
+            ...(values.resolve === undefined ? {} : { resolve: values.resolve }),
+          });
+          ready = (result as { ready?: boolean }).ready !== false;
+        } else if (command === 'release') {
+          if (positionals.length !== 2) usage('release 需要一个任务标识。');
+          result = await releaseFlow(root, second!);
+          ready = (result as { ready?: boolean }).ready !== false;
         } else if (command === 'close') {
           if (positionals.length !== 2) usage('close 需要一个任务标识。');
           if (!values.reason) usage('close 需要 --reason "<关闭原因>"；未验收终止请同时使用 --abandon。');

@@ -18,12 +18,14 @@ tiller start <task-id> --title <标题> --summary <中文摘要> --requirement <
 tiller resume [task-id]
 tiller confirm <task-id> requirements [--by "<确认人>"]
 tiller verify <task-id> --criterion AC-1 --test "test/example.test.mjs::用例名"
+tiller review <task-id> --blocking "待修复的评审发现"
 tiller check <task-id>
+tiller release <task-id>
 tiller accept <task-id> [--by "<验收人>"]
 tiller close <task-id> --reason "交付完成"
 ```
 
-单次任务以 `task.md` 与 Git 追溯。`start` 在需求中生成目标、范围和编号 AC；standard 任务同时生成方案、取舍、影响与风险。确认前校验必填段，自动保存确认部分、确认人、时间、提交和正文摘要；需求与设计独立失效。原话只是可选凭证，不能替代正文。
+单次任务以 `task.md` 与 Git 追溯。`start` 在需求中生成目标、范围和编号 AC，也可用 `--requirement-file <工程相对路径>` 从非空需求文件接入；standard 任务同时生成方案、取舍、影响与风险。确认前校验必填段，自动保存确认部分、确认人、时间、提交和正文摘要；需求与设计独立失效。原话只是可选凭证，不能替代正文。
 
 `verify` 只声明测试，由 tiller 构造并执行精确匹配的 node:test 命令。结果只从私有临时报告读取，stdout/stderr 不参与判定：报告缺失/损坏、完整名称匹配 0 个或多个、失败或跳过都不能核实为通过；仅引用文件时运行整个文件并要求全部通过。默认只打印摘要，完整输出写入 `.tiller/local/logs/<任务编号>/run-<序号>.log`，`--verbose` 同时显示。旧 `--run` 已删除。
 
@@ -36,6 +38,14 @@ bugfix 任务先用 `verify --expect-fail --test` 在任务基线工作树走同
 验证保存 AC、用例编号、测试引用、tiller 实际执行的命令、结果、核实状态、提交、代码树摘要和本机日志路径。单个任务只保留一份 `task.md`；完成后把长期有效结论同步到 `.tiller/specs/`，超大设计先用 plan 拆成多个任务。不提交全文快照、原始日志、自举工程或安装包；详细输出只在 `.tiller/local/logs/`。
 
 任务阶段由记录事实推导：已开始 → 需求已确认 → 设计已确认（small 可跳过）→ 已验证 → 已验收 → 已关闭/已放弃。确认失效或验证过期时，`resume` 显示回退后的真实阶段和原因。`close` 只收尾已验收任务；未验收终止使用 `close --abandon`；两者都可通过 `reopen --reason` 显式恢复，之后才能继续确认、验证或验收。
+
+## 评审与发布
+
+`review <task-id>` 记录独立评审清单与发现；`--blocking` 新增阻塞项，`--finding` 新增非阻塞项，`--resolve REV-NNN` 记录清除。发现保存在 `task.md` 的“评审”段；仍有未解决阻塞项时 `check` 与 `accept` 失败。
+
+`release <task-id>` 是只读发布门禁，检查任务已验收、验收提交可读、项目元数据与受管资源有效、README 与包版本一致、任务范围无未提交改动；非 npm 项目跳过包检查。`check` 同时返回该清单，但日常技术自检不因发布项失败而阻断。
+
+已验收任务按 acceptance 记录中的提交读取代码树和测试文件，之后代码演进不会仅因“验证过期”误报；未验收或验收失效的任务仍核对当前工作区与 HEAD。需要历史复查时从该提交取回事实，不保存快照。
 
 ## 提交与 PR/MR
 

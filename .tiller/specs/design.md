@@ -9,7 +9,8 @@
 | 部分 | 职责 |
 |---|---|
 | `src/core.ts` | 工程初始化、元信息、受管区段、状态检查 |
-| `src/flow.ts` | task 的 start/resume/confirm/verify/check/accept/close/reopen 与阶段推导 |
+| `src/flow.ts` | task 的 start/resume/confirm/verify/review/check/accept/release/close/reopen 与阶段推导 |
+| `src/release.ts` | 只读发布门禁：验收提交、元数据、受管资源、README/版本和范围清洁度 |
 | `src/test-output.ts` | 测试运行适配器注册、node:test 命令构造与私有报告核实 |
 | `src/test-reporter.ts` | 只输出测试事件与总结的私有 JSONL 报告器 |
 | `src/plans.ts` | 规划、条目依赖、确认和状态 |
@@ -23,7 +24,9 @@
 
 ## 3. 默认工作流
 
-`start` 写入结构化需求（目标、范围、编号 AC），standard 必须声明 `--target` 并另写方案、取舍、影响与风险，同时记录类型、规模、范围、基线和开工前已有改动；small 缺省范围为 `.`。`confirm` 先校验必填段，再保存确认部分、确认人、时间、对象摘要和提交；原话可选。需求与设计分别摘要，因此改设计不会使需求确认失效。`verify` 只声明测试，由适配器构造精确匹配的 node:test 命令，在私有临时目录生成报告并读取；stdout/stderr 只写日志，不参与判定。记录实际命令、结果、证据、当前代码树和日志路径；报告缺失/损坏或匹配不唯一均为未核实。外部报告以 `--reported --command --result --reason` 登记，理由必填。`check` 汇总确认、AC 映射、执行/报告证据、范围、测试弱化、安全和未提交改动；`accept` 与此一致，外部报告仅在 `--allow-reported` 时放行。bugfix 的 `--expect-fail` 在基线临时工作树复用同一适配器和报告路径，要求具名测试失败，并要求当前代码有同一测试的已核实通过记录。`close` 只收尾已验收任务，未验收终止必须 `--abandon`；关闭或放弃记录原因和时间，`reopen` 追加恢复事实后重新推导阶段。
+`start` 写入结构化需求（目标、范围、编号 AC），可用 `--requirement-file` 读取工程内非空文件；standard 必须声明 `--target` 并另写方案、取舍、影响与风险，同时记录类型、规模、范围、基线和开工前已有改动；small 缺省范围为 `.`。`confirm` 先校验必填段，再保存确认部分、确认人、时间、对象摘要和提交；原话可选。需求与设计分别摘要，因此改设计不会使需求确认失效。`verify` 只声明测试，由适配器构造精确匹配的 node:test 命令，在私有临时目录生成报告并读取；stdout/stderr 只写日志，不参与判定。记录实际命令、结果、证据、当前代码树和日志路径；报告缺失/损坏或匹配不唯一均为未核实。外部报告以 `--reported --command --result --reason` 登记，理由必填。`check` 汇总确认、AC 映射、执行/报告证据、范围、测试弱化、安全和未提交改动；`accept` 与此一致，外部报告仅在 `--allow-reported` 时放行。bugfix 的 `--expect-fail` 在基线临时工作树复用同一适配器和报告路径，要求具名测试失败，并要求当前代码有同一测试的已核实通过记录。`close` 只收尾已验收任务，未验收终止必须 `--abandon`；关闭或放弃记录原因和时间，`reopen` 追加恢复事实后重新推导阶段。
+
+已验收任务由 `evaluationContext` 固定到 acceptance 确认中的提交：树摘要、测试存在性、范围 diff 和测试弱化检查都读取该提交；未验收或验收对象已失效的任务仍读取工作区/HEAD。已验收任务若当时的核实状态、外部报告理由或测试引用不完整，仍按原记录失败。任务基线后没有 specs/context 回写时，`check` 只增加提示。
 
 阶段不存独立状态字段，而是按需求确认、设计确认、当前验证和最新验收依次推导；需求变化、验证过期或验收对象变化时回退到最近有效阶段并给出原因。`resume` 和 `plan status` 都读取同一推导结果。
 
@@ -77,6 +80,10 @@
 
 输入错误返回参数错误；未初始化、版本不支持、冲突、依赖阻塞、未确认、未验证、范围越界等使用稳定错误码并说明下一步。写操作使用事务与恢复日志，失败后可用 `recover` 恢复；不得凭摘要重建缺失文件或覆盖用户修改。
 
-## 10. 验证入口
+## 10. 评审与发布
+
+`review` 在 `task.md` 写入评审人、检查清单和 `REV-NNN` 发现；一般发现与阻塞发现分开，`--resolve` 记录解决人、时间并恢复可验收状态。`check`/`accept` 将未解决阻塞发现作为阻塞项。`releaseChecklist` 是只读函数，逐项检查已验收、验收提交、项目元数据、受管资源、README、npm 包名/版本与 README 版本、任务范围未提交改动；非 npm 项目跳过包项。`check` 返回同一清单，但 `release` 才是显式发布门禁。
+
+## 11. 验证入口
 
 `npm run build`、`lint`、`typecheck`、`npm test`、`npm run test:package`。构建必须实际编译 TypeScript；局部规则检查不能替代完整测试。

@@ -103,3 +103,53 @@
 ### 预期结果
 
 测试通过，并且check 阻塞未回指当前 AC 的全局用例。
+
+## CASE-106 规格未回写时检查告警
+
+- 类型：behavior
+- 优先级：medium
+- 模块：verification
+- 关联 AC：20261022-round17#AC-3
+- 需求：`.tiller/specs/modules/verification/requirements.md`
+- 源码：`src/flow.ts`
+
+### 前置条件
+
+- 任务基线之后没有 .tiller/specs 或 .tiller/context 的回写提交。
+
+### 步骤
+
+1. 运行 check 并读取 warnings。
+
+### 输入
+
+- 只改代码与测试、未同步长期结论的任务。
+
+### 预期结果
+
+check 给出 specs 回写告警，但不新增阻断。
+
+## CASE-108 已验收任务按验收提交检查
+
+- 类型：behavior
+- 优先级：medium
+- 模块：verification
+- 关联 AC：20261022-round17#AC-5
+- 需求：`.tiller/specs/modules/verification/requirements.md`
+- 源码：`src/flow.ts`, `src/test-output.ts`
+
+### 前置条件
+
+- 任务在提交 A 验收，之后代码漂移到提交 B。
+
+### 步骤
+
+1. 在提交 B 运行 check，并对照验收提交 A 的树与测试文件。
+
+### 输入
+
+- 验收时完整、后续代码变化的已验收任务；以及验收时验证不完整的任务。
+
+### 预期结果
+
+前者不因后续漂移误报验证过期；后者仍失败且原因指向验收时的问题。
