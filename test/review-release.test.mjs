@@ -242,8 +242,11 @@ test('CASE-109 repository docs and suite include review release and pinned check
     const content = read(repository, relative);
     assert.match(content, /review/u, relative);
     assert.match(content, /release/u, relative);
-    assert.match(content, /--requirement-file/u, relative);
     assert.match(content, /验收提交|acceptance/u, relative);
+  }
+  assert.match(read(repository, 'README.md'), /可用工程内需求文件接入/u, 'README.md');
+  for (const relative of ['resources/usage.md', '.tiller/usage.md']) {
+    assert.match(read(repository, relative), /--requirement-file/u, relative);
   }
   const decisions = read(repository, '.tiller/specs/decisions.md');
   assert.match(decisions, /评审/u);
@@ -256,7 +259,7 @@ test('CASE-109 repository docs and suite include review release and pinned check
   assert.ok(suite.e2e.includes('review-release.test.mjs'));
   const library = await readCaseLibrary(repository);
   assert.deepEqual(library.issues, []);
-  assert.equal(library.cases.length, 162);
+  assert.equal(library.cases.length, 167);
   for (const id of ['CASE-104', 'CASE-105', 'CASE-106', 'CASE-107', 'CASE-108', 'CASE-109']) {
     assert.ok(library.cases.find(item => item.id === id)?.tests.length, id);
   }

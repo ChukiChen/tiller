@@ -433,3 +433,78 @@ CLI 参数、实现路径、测试执行细节、源码模块、提交与分支�
 ### 预期结果
 
 版本仍为 0.5.0，五个全量验证入口存在并可执行
+
+## CASE-164 历史空 AC 长期提示且禁止伪造回填
+
+- 类型：behavior
+- 优先级：high
+- 模块：standards
+- 关联 AC：20261023-hygiene-p1p2#AC-2
+- 需求：`.tiller/specs/modules/standards/requirements.md#3-执行规则`
+- 源码：`.tiller/specs/decisions.md`, `test/rules.test.mjs`
+
+### 前置条件
+
+- 历史用例中存在未绑定来源 AC 的用例
+
+### 步骤
+
+1. 读取长期决定并统计历史空来源用例
+
+### 输入
+
+- decisions.md 与全局用例库
+
+### 预期结果
+
+决定明确接受长期 warn、不批量回填；历史空来源用例保持原状
+
+## CASE-165 项目规则与背景对齐 0.5.0 且无旧流程引导
+
+- 类型：behavior
+- 优先级：high
+- 模块：standards
+- 关联 AC：20261023-hygiene-p1p2#AC-3
+- 需求：`.tiller/specs/modules/standards/requirements.md#2-必读与按需读取`
+- 源码：`.tiller/rules/project.md`, `.tiller/context/project.md`, `test/rules.test.mjs`
+
+### 前置条件
+
+- 项目规则与背景可读取
+
+### 步骤
+
+1. 检查版本、当前流程和遗留目录表述
+
+### 输入
+
+- rules/project.md 与 context/project.md
+
+### 预期结果
+
+均描述 0.5.0 当前能力，不引导 archive、旧 work 流程或历史待验收状态
+
+## CASE-167 README 只保留能力、流程、安装与使用入口
+
+- 类型：behavior
+- 优先级：high
+- 模块：standards
+- 关联 AC：20261023-hygiene-p1p2#AC-5
+- 需求：`.tiller/specs/requirements.md#3-默认工作流`
+- 源码：`README.md`, `test/rules.test.mjs`
+
+### 前置条件
+
+- README 可读取且版本为 0.5.0
+
+### 步骤
+
+1. 检查默认流程、能力说明、安装与使用说明和内部实现细节
+
+### 输入
+
+- README.md
+
+### 预期结果
+
+保留能力、默认工作流、简短安装、使用入口、验证与升级说明；用法指向 CLI 帮助与 AGENTS.md/rules，不堆长 start 参数表；无内部实现路径与卫生收尾事务链接；版本仍为 0.5.0

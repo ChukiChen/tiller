@@ -698,3 +698,53 @@
 ### 预期结果
 
 task.md 含「映射」节，列出文件::旧测试名到 CASE 的复用或新建及理由
+
+## CASE-163 近期已验收任务完成关闭且不伪造遗留验收
+
+- 类型：behavior
+- 优先级：high
+- 模块：workflow
+- 关联 AC：20261023-hygiene-p1p2#AC-1
+- 需求：`.tiller/specs/modules/workflow/requirements.md#6-任务阶段与结束`
+- 源码：`.tiller/task/20261023-hygiene-p1p2/task.md`, `test/rules.test.mjs`
+
+### 前置条件
+
+- 近期任务已验收且未关闭
+
+### 步骤
+
+1. 执行 close 后读取 resume 的任务阶段
+
+### 输入
+
+- first-batch、round8/9/11-17、migrate-work、case-backfill、specs-pure-req
+
+### 预期结果
+
+上述任务均为已关闭，迁移遗留任务未被伪造为已验收
+
+## CASE-166 本地陈旧分支清理保留主分支且不触碰远端
+
+- 类型：behavior
+- 优先级：medium
+- 模块：workflow
+- 关联 AC：20261023-hygiene-p1p2#AC-4
+- 需求：`.tiller/specs/modules/workflow/requirements.md#5-提交与-prmr-草稿`
+- 源码：`.tiller/task/20261023-hygiene-p1p2/task.md`, `test/rules.test.mjs`
+
+### 前置条件
+
+- 本地存在已合入的 codex、backup 与旧 round 分支
+
+### 步骤
+
+1. 删除点名的本地陈旧分支后列出 refs/heads
+
+### 输入
+
+- 当前仓库本地分支列表
+
+### 预期结果
+
+陈旧分支不再存在，main 与当前任务分支保留，远端分支未被删除
