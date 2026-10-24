@@ -108,10 +108,119 @@
 - 对象摘要：b45175308e4635be20367048919f7041fe073b2450dfc02ff76006fb1fbb5f52
 - 时间：2026-10-24T04:07:41.687Z
 
+### acceptance
+- 确认部分：交付验收
+- 对象：当前交付（需求、设计、验证与提交）
+- 确认人：boon yu
+- 用户原话：进度
+- 原话用途：可选附注，不替代已写明的正文
+- 提交：8ade9adc2293a293aba6eed5002b0b6101be6b0c
+- 对象摘要：040c1dfe87bf46f6322da85289d50d31370b19fbcc5b3e13e223f6413a7709d2
+- 时间：2026-10-24T06:12:55.464Z
+
 ## 验证
 
-尚无验证。
+### run-1
+- 条件：AC-1
+- 测试：test/task-worktrees.test.mjs::CASE-196 project start creates a task worktree on the task branch and returns its path
+- 用例：CASE-196
+- 命令：node '--test-name-pattern=^CASE-196 project start creates a task worktree on the task branch and returns its path$' --test-reporter=./.tiller/local/verify-vt1PvG/reporter.mjs --test-reporter-destination=.tiller/local/verify-vt1PvG/report.jsonl test/task-worktrees.test.mjs
+- 结果：passed
+- 退出码：0
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/logs/20261024-task-worktrees/run-1.log
+- 提交：8ade9adc2293a293aba6eed5002b0b6101be6b0c
+- 代码树摘要：406660f2835703e13acf88c705ea1b9af08fd798cf341073395b4e0d04dab51b
+- 时间：2026-10-24T06:12:43.420Z
+
+### run-2
+- 条件：AC-2
+- 测试：test/task-worktrees.test.mjs::CASE-197 workspace start mirrors management and registered repositories under one task branch
+- 用例：CASE-197
+- 命令：node '--test-name-pattern=^CASE-197 workspace start mirrors management and registered repositories under one task branch$' --test-reporter=./.tiller/local/verify-7EpcpJ/reporter.mjs --test-reporter-destination=.tiller/local/verify-7EpcpJ/report.jsonl test/task-worktrees.test.mjs
+- 结果：passed
+- 退出码：0
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/logs/20261024-task-worktrees/run-2.log
+- 提交：8ade9adc2293a293aba6eed5002b0b6101be6b0c
+- 代码树摘要：406660f2835703e13acf88c705ea1b9af08fd798cf341073395b4e0d04dab51b
+- 时间：2026-10-24T06:12:44.308Z
+
+### run-3
+- 条件：AC-3
+- 测试：test/task-worktrees.test.mjs::CASE-198 close and abandon force-remove every task worktree and only clear that task log
+- 用例：CASE-198
+- 命令：node '--test-name-pattern=^CASE-198 close and abandon force-remove every task worktree and only clear that task log$' --test-reporter=./.tiller/local/verify-kNlgPU/reporter.mjs --test-reporter-destination=.tiller/local/verify-kNlgPU/report.jsonl test/task-worktrees.test.mjs
+- 结果：passed
+- 退出码：0
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/logs/20261024-task-worktrees/run-3.log
+- 提交：8ade9adc2293a293aba6eed5002b0b6101be6b0c
+- 代码树摘要：406660f2835703e13acf88c705ea1b9af08fd798cf341073395b4e0d04dab51b
+- 时间：2026-10-24T06:12:45.300Z
+
+### run-4
+- 条件：AC-4
+- 测试：test/task-worktrees.test.mjs::CASE-199 old tasks without worktrees still close or abandon and clear their logs
+- 用例：CASE-199
+- 命令：node '--test-name-pattern=^CASE-199 old tasks without worktrees still close or abandon and clear their logs$' --test-reporter=./.tiller/local/verify-02iCyc/reporter.mjs --test-reporter-destination=.tiller/local/verify-02iCyc/report.jsonl test/task-worktrees.test.mjs
+- 结果：passed
+- 退出码：0
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/logs/20261024-task-worktrees/run-4.log
+- 提交：8ade9adc2293a293aba6eed5002b0b6101be6b0c
+- 代码树摘要：406660f2835703e13acf88c705ea1b9af08fd798cf341073395b4e0d04dab51b
+- 时间：2026-10-24T06:12:46.983Z
+
+### run-5
+- 条件：AC-1
+- 测试：test/task-worktrees.test.mjs::CASE-200 start failures leave no task record or partially created worktree
+- 用例：CASE-200
+- 命令：node '--test-name-pattern=^CASE-200 start failures leave no task record or partially created worktree$' --test-reporter=./.tiller/local/verify-4HxQC2/reporter.mjs --test-reporter-destination=.tiller/local/verify-4HxQC2/report.jsonl test/task-worktrees.test.mjs
+- 结果：passed
+- 退出码：0
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/logs/20261024-task-worktrees/run-5.log
+- 提交：8ade9adc2293a293aba6eed5002b0b6101be6b0c
+- 代码树摘要：406660f2835703e13acf88c705ea1b9af08fd798cf341073395b4e0d04dab51b
+- 时间：2026-10-24T06:12:48.608Z
+
+### run-6
+- 条件：AC-2
+- 测试：test/task-worktrees.test.mjs::CASE-200 start failures leave no task record or partially created worktree
+- 用例：CASE-200
+- 命令：node '--test-name-pattern=^CASE-200 start failures leave no task record or partially created worktree$' --test-reporter=./.tiller/local/verify-4HxQC2/reporter.mjs --test-reporter-destination=.tiller/local/verify-4HxQC2/report.jsonl test/task-worktrees.test.mjs
+- 结果：passed
+- 退出码：0
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/logs/20261024-task-worktrees/run-5.log
+- 提交：8ade9adc2293a293aba6eed5002b0b6101be6b0c
+- 代码树摘要：406660f2835703e13acf88c705ea1b9af08fd798cf341073395b4e0d04dab51b
+- 时间：2026-10-24T06:12:48.608Z
 
 ## 自检
 
-交付前运行 check；验收后运行 accept。
+- [x] 需求确认有效
+- [x] 设计确认有效
+- [x] 验收条件均有当前通过且绑定全局用例的测试引用
+- [x] 每条验收条件均映射到本次验证引用的全局用例
+- [x] 验收条件与用例来源 criteria 相互指向或由本任务新增/修改
+- [x] 验证命令已执行且测试输出已核实
+- [x] 全局用例结构与引用有效
+- [x] 改动未超出范围
+- [x] 未弱化仍存在的测试
+- [x] 评审无未清除阻塞项
+- [x] 记录不含密钥或本机绝对路径
+
+提示：
+- 90 条历史用例未绑定来源 AC；新用例请用 case add 写入 criteria。
+- 本次改动涉及模块 initialization：建议回归该模块 59 条用例及经过它的场景 CASE-055, CASE-001。
+- 本次改动涉及模块 standards：建议回归该模块 23 条用例及经过它的场景 CASE-055。
+- 本次改动涉及模块 verification：建议回归该模块 39 条用例及经过它的场景 CASE-055, CASE-001。
+- 本次改动涉及模块 workflow：建议回归该模块 77 条用例及经过它的场景 CASE-055, CASE-001。
