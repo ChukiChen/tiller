@@ -69,10 +69,103 @@
 - 对象摘要：3c9dfe54df1a56df5ba5e306503ba652b69d11d34e5aec9368906e52d67427bf
 - 时间：2026-10-24T00:07:44.896Z
 
+### acceptance
+- 确认部分：交付验收
+- 对象：当前交付（需求、设计、验证与提交）
+- 确认人：boon yu
+- 提交：aa8c05183e35182d3e7bdc777b84330e6f07295f
+- 对象摘要：3b72b36df86437a4fdb45b39445c59cbf8cedfa57ba76f887db995c621993f7f
+- 时间：2026-10-24T00:40:03.924Z
+
 ## 验证
 
-尚无验证。
+### run-1
+- 条件：AC-1
+- 测试：test/gap-closure.test.mjs::CASE-186 check locates specs and context writeback suggestions without blocking on them alone
+- 用例：CASE-186
+- 命令：node '--test-name-pattern=^CASE-186 check locates specs and context writeback suggestions without blocking on them alone$' --test-reporter=./.tiller/local/verify-jBxhSj/reporter.mjs --test-reporter-destination=.tiller/local/verify-jBxhSj/report.jsonl test/gap-closure.test.mjs
+- 结果：passed
+- 退出码：0
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/logs/20261024-gap-closure/run-1.log
+- 提交：aa8c05183e35182d3e7bdc777b84330e6f07295f
+- 代码树摘要：fc883e05e5f8f8afac04c654a0db7928c7eaf8506acc9f9a28f73975375c61d3
+- 时间：2026-10-24T00:39:46.099Z
+
+### run-2
+- 条件：AC-2
+- 测试：test/gap-closure.test.mjs::CASE-187 repeated failures stop retries only for the same AC or CASE and a verified pass resets the count
+- 用例：CASE-187
+- 命令：node '--test-name-pattern=^CASE-187 repeated failures stop retries only for the same AC or CASE and a verified pass resets the count$' --test-reporter=./.tiller/local/verify-kEf2G6/reporter.mjs --test-reporter-destination=.tiller/local/verify-kEf2G6/report.jsonl test/gap-closure.test.mjs
+- 结果：passed
+- 退出码：0
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/logs/20261024-gap-closure/run-2.log
+- 提交：aa8c05183e35182d3e7bdc777b84330e6f07295f
+- 代码树摘要：fc883e05e5f8f8afac04c654a0db7928c7eaf8506acc9f9a28f73975375c61d3
+- 时间：2026-10-24T00:39:47.180Z
+
+### run-3
+- 条件：AC-3
+- 测试：test/gap-closure.test.mjs::CASE-188 pytest detection, skeleton, command construction and private XML verification work end to end
+- 用例：CASE-188
+- 命令：node '--test-name-pattern=^CASE-188 pytest detection, skeleton, command construction and private XML verification work end to end$' --test-reporter=./.tiller/local/verify-Lm3ohw/reporter.mjs --test-reporter-destination=.tiller/local/verify-Lm3ohw/report.jsonl test/gap-closure.test.mjs
+- 结果：passed
+- 退出码：0
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/logs/20261024-gap-closure/run-3.log
+- 提交：aa8c05183e35182d3e7bdc777b84330e6f07295f
+- 代码树摘要：fc883e05e5f8f8afac04c654a0db7928c7eaf8506acc9f9a28f73975375c61d3
+- 时间：2026-10-24T00:39:49.285Z
+
+### run-4
+- 条件：AC-4
+- 测试：test/gap-closure.test.mjs::CASE-189 upgrade adopts managed content and plan attach links an existing task
+- 用例：CASE-189
+- 命令：node '--test-name-pattern=^CASE-189 upgrade adopts managed content and plan attach links an existing task$' --test-reporter=./.tiller/local/verify-lRqJ6x/reporter.mjs --test-reporter-destination=.tiller/local/verify-lRqJ6x/report.jsonl test/gap-closure.test.mjs
+- 结果：passed
+- 退出码：0
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/logs/20261024-gap-closure/run-4.log
+- 提交：aa8c05183e35182d3e7bdc777b84330e6f07295f
+- 代码树摘要：fc883e05e5f8f8afac04c654a0db7928c7eaf8506acc9f9a28f73975375c61d3
+- 时间：2026-10-24T00:39:51.357Z
+
+### run-5
+- 条件：AC-4
+- 测试：test/gap-closure.test.mjs::CASE-189 repository specs and managed copies describe the gap-closure contract
+- 用例：CASE-189
+- 命令：node '--test-name-pattern=^CASE-189 repository specs and managed copies describe the gap-closure contract$' --test-reporter=./.tiller/local/verify-aORiy4/reporter.mjs --test-reporter-destination=.tiller/local/verify-aORiy4/report.jsonl test/gap-closure.test.mjs
+- 结果：passed
+- 退出码：0
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/logs/20261024-gap-closure/run-5.log
+- 提交：aa8c05183e35182d3e7bdc777b84330e6f07295f
+- 代码树摘要：fc883e05e5f8f8afac04c654a0db7928c7eaf8506acc9f9a28f73975375c61d3
+- 时间：2026-10-24T00:39:51.357Z
 
 ## 自检
 
-交付前运行 check；验收后运行 accept。
+- [x] 需求确认有效
+- [x] 设计确认有效
+- [x] 验收条件均有当前通过且绑定全局用例的测试引用
+- [x] 每条验收条件均映射到本次验证引用的全局用例
+- [x] 验收条件与用例来源 criteria 相互指向或由本任务新增/修改
+- [x] 验证命令已执行且测试输出已核实
+- [x] 全局用例结构与引用有效
+- [x] 改动未超出范围
+- [x] 未弱化仍存在的测试
+- [x] 评审无未清除阻塞项
+- [x] 记录不含密钥或本机绝对路径
+
+提示：
+- 90 条历史用例未绑定来源 AC；新用例请用 case add 写入 criteria。
+- 本次改动涉及模块 initialization：建议回归该模块 58 条用例及经过它的场景 CASE-055, CASE-001。
+- 本次改动涉及模块 standards：建议回归该模块 23 条用例及经过它的场景 CASE-055。
+- 本次改动涉及模块 verification：建议回归该模块 39 条用例及经过它的场景 CASE-055, CASE-001。
+- 本次改动涉及模块 workflow：建议回归该模块 67 条用例及经过它的场景 CASE-055, CASE-001。
