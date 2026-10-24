@@ -1,6 +1,6 @@
 # 精简确认自检并修分支命名
 
-<!-- tiller-task:v1 {"version":1,"id":"20261024-taskmd-cleanup","type":"feature","size":"standard","created":"2026-10-24T09:24:11.497Z","base":"940c0b7691a4c2e8157d1fdf1431af3c384b5b07","scope":["src/flow.ts","src/branch-conventions.ts","src/task-worktrees.ts","resources/rules/quality/documents.md","resources/rules/activities/requirements.md","resources/rules/activities/design.md","test",".tiller/specs/modules/workflow"],"format":"structured","plan":"20261024-taskmd-cleanup","item":"P-1","summary":"精简确认自检并修分支命名","requirementFile":".tiller/local/taskmd-cleanup-req.md"} -->
+<!-- tiller-task:v1 {"version":1,"id":"20261024-taskmd-cleanup","type":"feature","size":"standard","created":"2026-10-24T09:24:11.497Z","base":"940c0b7691a4c2e8157d1fdf1431af3c384b5b07","scope":["src","test","resources",".tiller"],"format":"structured","plan":"20261024-taskmd-cleanup","item":"P-1","summary":"精简确认自检并修分支命名","requirementFile":".tiller/local/taskmd-cleanup-req.md"} -->
 
 ## 需求
 
@@ -76,30 +76,109 @@
 
 ## 确认
 
-### requirements
-- 确认部分：需求
-- 对象：需求正文（目标、范围与验收条件）
-- 确认人：boon yu
-- 用户原话：那跟上面的一起优化，包括4
-- 原话用途：可选附注，不替代已写明的正文
-- 提交：940c0b7691a4c2e8157d1fdf1431af3c384b5b07
-- 对象摘要：967d14d260fc5e53354681e714826595b3b4898b6de746b7c8a512e42d1e1ee2
-- 时间：2026-10-24T09:24:42.909Z
+| 部分 | 确认人 | 时间 | 短提交 | 原话 |
+| --- | --- | --- | --- | --- |
+| 需求 | boon yu | 2026-10-24T09:40:57.856Z | 396af27d1b32 | 那跟上面的一起优化，包括4 |
+| 设计 | boon yu | 2026-10-24T09:40:57.928Z | 396af27d1b32 | 那跟上面的一起优化，包括4 |
 
-### design
-- 确认部分：设计
-- 对象：设计正文
-- 确认人：boon yu
-- 用户原话：那跟上面的一起优化，包括4
-- 原话用途：可选附注，不替代已写明的正文
-- 提交：940c0b7691a4c2e8157d1fdf1431af3c384b5b07
-- 对象摘要：a25afc27f500bd1a877a097dd93b41823d913766f4a5310a91c04b8a8845bddb
-- 时间：2026-10-24T09:24:42.989Z
+<!-- tiller-confirm:v1 {"gate":"requirements","object":"需求正文（目标、范围与验收条件）","subject":"0ef264fa0055d3e614c8efec5f95857c142560c546ca4e2cc2451a4f6e516e53","commit":"396af27d1b32f5ef6abcf1fbfa09f08831b8ba76","by":"boon yu","quote":"那跟上面的一起优化，包括4","at":"2026-10-24T09:40:57.856Z"} -->
+<!-- tiller-confirm:v1 {"gate":"design","object":"设计正文","subject":"4a70afb204438c57e889b24e42270cb314d7eff6de892c46ff3c818aa199b906","commit":"396af27d1b32f5ef6abcf1fbfa09f08831b8ba76","by":"boon yu","quote":"那跟上面的一起优化，包括4","at":"2026-10-24T09:40:57.928Z"} -->
 
 ## 验证
 
-尚无验证。
+### run-1
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-204 confirmations render a compact table with a complete machine sidecar$' \u002d\u002dtest-reporter=./.tiller/local/verify-sbsQqE/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-sbsQqE/report.jsonl test/flow-cli.test.mjs","exitCode":0,"tree":"be6006c07946271c24409e4f665f129224107c63ed5a196dee81b8074bd7921c","commit":"396af27d1b32f5ef6abcf1fbfa09f08831b8ba76"} -->
+- 条件：AC-1
+- 测试：test/flow-cli.test.mjs::CASE-204 confirmations render a compact table with a complete machine sidecar
+- 用例：CASE-204
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/logs/20261024-taskmd-cleanup/run-1.log
+- 提交：396af27d1b32
+- 时间：2026-10-24T09:39:56.092Z
+
+### run-2
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-064 CASE-205 legacy task text and quoted confirmation remain readable and valid$' \u002d\u002dtest-reporter=./.tiller/local/verify-bUStCM/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-bUStCM/report.jsonl test/flow-cli.test.mjs","exitCode":0,"tree":"be6006c07946271c24409e4f665f129224107c63ed5a196dee81b8074bd7921c","commit":"396af27d1b32f5ef6abcf1fbfa09f08831b8ba76"} -->
+- 条件：AC-1
+- 测试：test/flow-cli.test.mjs::CASE-064 CASE-205 legacy task text and quoted confirmation remain readable and valid
+- 用例：CASE-205
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/logs/20261024-taskmd-cleanup/run-2.log
+- 提交：396af27d1b32
+- 时间：2026-10-24T09:39:57.099Z
+
+### run-3
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-206 closed self-check omits long regression hints while check still reports them$' \u002d\u002dtest-reporter=./.tiller/local/verify-agE6Bj/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-agE6Bj/report.jsonl test/review-release.test.mjs","exitCode":0,"tree":"be6006c07946271c24409e4f665f129224107c63ed5a196dee81b8074bd7921c","commit":"396af27d1b32f5ef6abcf1fbfa09f08831b8ba76"} -->
+- 条件：AC-2
+- 测试：test/review-release.test.mjs::CASE-206 closed self-check omits long regression hints while check still reports them
+- 用例：CASE-206
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/logs/20261024-taskmd-cleanup/run-3.log
+- 提交：396af27d1b32
+- 时间：2026-10-24T09:39:58.393Z
+
+### run-4
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-207 requirement and design guidance reduces noise while confirmation gates remain$' \u002d\u002dtest-reporter=./.tiller/local/verify-8Ik7LW/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-8Ik7LW/report.jsonl test/doc-templates.test.mjs","exitCode":0,"tree":"be6006c07946271c24409e4f665f129224107c63ed5a196dee81b8074bd7921c","commit":"396af27d1b32f5ef6abcf1fbfa09f08831b8ba76"} -->
+- 条件：AC-3
+- 测试：test/doc-templates.test.mjs::CASE-207 requirement and design guidance reduces noise while confirmation gates remain
+- 用例：CASE-207
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/logs/20261024-taskmd-cleanup/run-4.log
+- 提交：396af27d1b32
+- 时间：2026-10-24T09:40:00.150Z
+
+### run-5
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-208 branch slug already present in the task id is not appended twice$' \u002d\u002dtest-reporter=./.tiller/local/verify-v7stwK/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-v7stwK/report.jsonl test/pr.test.mjs","exitCode":0,"tree":"be6006c07946271c24409e4f665f129224107c63ed5a196dee81b8074bd7921c","commit":"396af27d1b32f5ef6abcf1fbfa09f08831b8ba76"} -->
+- 条件：AC-4
+- 测试：test/pr.test.mjs::CASE-208 branch slug already present in the task id is not appended twice
+- 用例：CASE-208
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/logs/20261024-taskmd-cleanup/run-5.log
+- 提交：396af27d1b32
+- 时间：2026-10-24T09:40:01.169Z
+
+### run-6
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-208 worktree branch and path use the task id once when slug is already its suffix$' \u002d\u002dtest-reporter=./.tiller/local/verify-EKtXrS/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-EKtXrS/report.jsonl test/task-worktrees.test.mjs","exitCode":0,"tree":"be6006c07946271c24409e4f665f129224107c63ed5a196dee81b8074bd7921c","commit":"396af27d1b32f5ef6abcf1fbfa09f08831b8ba76"} -->
+- 条件：AC-4
+- 测试：test/task-worktrees.test.mjs::CASE-208 worktree branch and path use the task id once when slug is already its suffix
+- 用例：CASE-208
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/logs/20261024-taskmd-cleanup/run-6.log
+- 提交：396af27d1b32
+- 时间：2026-10-24T09:40:01.169Z
 
 ## 自检
 
-交付前运行 check；验收后运行 accept。
+- [x] 需求确认有效
+- [x] 设计确认有效
+- [x] 验收条件均有当前通过且绑定全局用例的测试引用
+- [x] 每条验收条件均映射到本次验证引用的全局用例
+- [x] 验收条件与用例来源 criteria 相互指向或由本任务新增/修改
+- [x] 验证命令已执行且测试输出已核实
+- [x] 全局用例结构与引用有效
+- [ ] 改动未超出范围
+- [x] 未弱化仍存在的测试
+- [x] 评审无未清除阻塞项
+- [x] 记录不含密钥或本机绝对路径
+
+阻塞项：
+- 改动超出范围：.tiller/cases/modules/workflow/behavior.md、.tiller/cases/modules/workflow/interface.md、.tiller/plans/20261024-taskmd-cleanup.md、.tiller/rules/activities/design.md、.tiller/rules/activities/requirements.md、.tiller/rules/quality/documents.md、node_modules
+
+提示：
+- 90 条历史用例未绑定来源 AC；新用例请用 case add 写入 criteria。
+- 本次改动涉及模块 initialization：建议回归该模块 59 条用例及经过它的场景 CASE-055, CASE-001。
+- 本次改动涉及模块 standards：建议回归该模块 23 条用例及经过它的场景 CASE-055。
+- 本次改动涉及模块 verification：建议回归该模块 39 条用例及经过它的场景 CASE-055, CASE-001。
+- 本次改动涉及模块 workflow：建议回归该模块 85 条用例及经过它的场景 CASE-055, CASE-001。
+- 修改的测试文件移除了 1 个测试用例（请确认对应功能已删除；详情见 Git diff）。
