@@ -335,6 +335,30 @@ function parseConfirmations(content: string): FlowConfirmation[] {
   }
   return result;
 }
+interface VerificationSidecar {
+  command: string; exitCode: number | null; tree: string; commit: string; legacyEvidence?: boolean;
+}
+function parseVerificationSidecar(lines: string[]): VerificationSidecar | null {
+  const line = lines.map(value => value.trim()).find(value => value.startsWith('<!-- tiller-verify:v1 '));
+  if (!line) return null;
+  const match = /^<!--\s*tiller-verify:v1\s+(\{.*\})\s*-->$/u.exec(line);
+  if (!match) return null;
+  let raw: unknown;
+  try { raw = JSON.parse(match[1]!); } catch { return null; }
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
+  const record = raw as Record<string, unknown>;
+  const command = record.command;
+  const exitCode = record.exitCode;
+  const tree = record.tree;
+  const commit = record.commit;
+  const legacyEvidence = record.legacyEvidence;
+  if (typeof command !== 'string' || !command.trim() || command.length > 4000
+    || !(exitCode === null || Number.isInteger(exitCode))
+    || typeof tree !== 'string' || !/^[a-f0-9]{64}$/u.test(tree)
+    || typeof commit !== 'string' || !validCommit(commit)
+    || (legacyEvidence !== undefined && typeof legacyEvidence !== 'boolean')) return null;
+  return { command, exitCode: exitCode as number | null, tree, commit, ...(legacyEvidence === true ? { legacyEvidence } : {}) };
+}
 function parseVerifications(content: string): FlowVerification[] {
   const body = sectionBody(content, '验证');
   const chunks = body.split(/^###\s+/mu).slice(1);
@@ -347,28 +371,30 @@ function parseVerifications(content: string): FlowVerification[] {
       const prefix = `- ${name}：`;
       return lines.find(line => line.startsWith(prefix))?.slice(prefix.length).trim() ?? '';
     };
+    const sidecar = parseVerificationSidecar(lines);
     const criterion = field('条件');
     const test = field('测试');
     const caseText = field('用例');
     const cases = caseText && caseText !== '无' ? caseText.split(/[,，\s]+/u).filter(Boolean) : [];
-    const command = field('命令');
+    const command = sidecar?.command ?? field('命令');
     const resultValue = field('结果') as FlowResult;
     const exitText = field('退出码');
-    const commit = field('提交');
+    const commit = sidecar?.commit ?? field('提交');
     const at = field('时间');
-    const tree = field('代码树摘要');
+    const tree = sidecar?.tree ?? field('代码树摘要');
     const source = field('来源') as FlowVerification['source'];
     const evidenceText = field('核实');
     const evidence: FlowVerification['evidence'] = evidenceText === '已核实' ? 'verified'
       : evidenceText === '未执行' ? 'not-run' : 'unverified';
-    const legacyEvidence = !evidenceText;
+    const legacyEvidence = sidecar?.legacyEvidence === true || !evidenceText;
     const reason = field('理由');
     const expectFail = field('预期') === '失败先行';
     const baseline = field('基线提交');
     const log = field('日志');
     if (criterion && test && command && RESULTS.includes(resultValue) && validCommit(commit)
       && /^[a-f0-9]{64}$/u.test(tree) && Number.isFinite(Date.parse(at)) && (source === 'executed' || source === 'reported')) {
-      result.push({ id, criterion, test, command, result: resultValue, cases, exitCode: exitText === '无' ? null : Number(exitText),
+      result.push({ id, criterion, test, command, result: resultValue, cases,
+        exitCode: sidecar ? sidecar.exitCode : exitText === '无' ? null : Number(exitText),
         commit, at, tree, source, evidence, ...(legacyEvidence ? { legacyEvidence } : {}), ...(reason ? { reason } : {}), ...(expectFail ? { expectFail } : {}),
         ...(baseline && validCommit(baseline) ? { baseline } : {}), ...(log ? { log } : {}) });
     }
@@ -485,27 +511,23 @@ function renderConfirmations(values: FlowConfirmation[]): string {
 function renderVerifications(values: FlowVerification[]): string {
   if (!values.length) return '';
   return values.map(value => {
-    const common = [
+    const sidecar = JSON.stringify({
+      command: value.command, exitCode: value.exitCode, tree: value.tree, commit: value.commit,
+      ...(value.legacyEvidence ? { legacyEvidence: true } : {}),
+    }).replaceAll('--', '\\u002d\\u002d');
+    return [
       `### ${value.id}`,
+      `<!-- tiller-verify:v1 ${sidecar} -->`,
       `- 条件：${value.criterion}`,
       `- 测试：${value.test}`,
       `- 用例：${value.cases.length ? value.cases.join(', ') : '无'}`,
-      `- 命令：${value.command}`,
       `- 结果：${value.result}`,
-      `- 退出码：${value.exitCode === null ? '无' : value.exitCode}`,
-    ];
-    if (value.legacyEvidence) {
-      return [...common, `- 提交：${value.commit}`, `- 代码树摘要：${value.tree}`, `- 来源：${value.source}`,
-        `- 时间：${value.at}`].join('\n');
-    }
-    return [...common,
       `- 来源：${value.source}`,
-      `- 核实：${value.evidence === 'verified' ? '已核实' : value.evidence === 'not-run' ? '未执行' : '未核实'}`,
+      `- 核实：${value.legacyEvidence ? '未标注' : value.evidence === 'verified' ? '已核实' : value.evidence === 'not-run' ? '未执行' : '未核实'}`,
       ...(value.reason ? [`- 理由：${value.reason}`] : []),
       ...(value.expectFail ? [`- 预期：失败先行`, ...(value.baseline ? [`- 基线提交：${value.baseline}`] : [])] : []),
       ...(value.log ? [`- 日志：${value.log}`] : []),
-      `- 提交：${value.commit}`,
-      `- 代码树摘要：${value.tree}`,
+      `- 提交：${value.commit === 'no-git' ? value.commit : value.commit.slice(0, 12)}`,
       `- 时间：${value.at}`,
     ].join('\n');
   }).join('\n\n');

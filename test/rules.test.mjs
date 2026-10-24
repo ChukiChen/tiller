@@ -173,7 +173,7 @@ test('CASE-111 task records use Git and one task.md rather than snapshots or evi
   const core = read('rules/core.md');
   assert.match(core, /确认前校验必填段/u);
   assert.match(core, /需求和设计独立摘要/u);
-  assert.match(core, /验证记录用例、tiller 实际执行的命令、结果、提交、代码树摘要和本机日志路径/u);
+  assert.match(core, /验证留摘要与旁路.*完整命令.*日志/u);
   assert.match(core, /从 Git 取回或重跑/u);
   assert.doesNotMatch(core, /`work\.md`/u);
   assert.doesNotMatch(core, /record\.json.*必须|reviews\/|证据包/u);
@@ -216,15 +216,15 @@ test('CASE-048 global cases use module kinds and scenarios with resolvable named
   const kinds = ['behavior', 'interface', 'performance', 'security'];
   const library = await readCaseLibrary(repository);
   assert.deepEqual(library.issues, []);
-  assert.equal(library.cases.length, 200);
+  assert.equal(library.cases.length, 203);
   assert.deepEqual(library.cases.map(item => item.id).sort(),
-    Array.from({ length: 200 }, (_, index) => `CASE-${String(index + 1).padStart(3, '0')}`));
+    Array.from({ length: 203 }, (_, index) => `CASE-${String(index + 1).padStart(3, '0')}`));
   assert.deepEqual(library.modules.map(item => ({ module: item.module, behavior: item.behavior, interface: item.interface,
     performance: item.performance, security: item.security })), [
     { module: 'initialization', behavior: 25, interface: 7, performance: 11, security: 16 },
     { module: 'standards', behavior: 22, interface: 1, performance: 0, security: 0 },
     { module: 'verification', behavior: 10, interface: 10, performance: 15, security: 4 },
-    { module: 'workflow', behavior: 44, interface: 27, performance: 0, security: 6 },
+    { module: 'workflow', behavior: 45, interface: 28, performance: 0, security: 7 },
   ]);
   assert.equal(library.scenarios.length, 2);
   for (const item of library.scenarios) assert.ok(item.modules.length > 0 && item.modules.every(module => specs.includes(module)));

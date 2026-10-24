@@ -66,7 +66,7 @@ tiller case add <task-id> --module workflow --kind behavior --title "流程行�
 - `verify <task-id> --case CASE-NNN` 执行覆盖该用例的全部测试，并走 tiller 私有报告核实路径；`--test` 和 `--criterion` 继续可单独使用。
 - 设计确认后，`check` 要求每条 AC 有带完整测试设计的用例；验证或验收时，要求每个用例至少有一个当前通过、已核实且未过期的引用测试。已验收任务按 acceptance 提交复查，未验收任务按工作区/HEAD。
 
-`task.md` 的验证段按 AC 记录用例编号、测试、命令、结果、提交和日志路径。`verify` 只从私有报告核实结果；stdout/stderr 只写 `.tiller/local/logs/`。报告缺失/损坏、匹配不唯一、失败或跳过均不能通过。外部报告用 `--reported --command --result --reason`，理由必填并在默认检查中阻断，只有 `--allow-reported` 放行。
+`task.md` 的验证段按 AC 记录条件、用例、测试、结果、来源、核实、短提交、时间和日志路径；完整命令、退出码与代码树摘要放在机器旁路。`verify` 只从私有报告核实结果；stdout/stderr 只写 `.tiller/local/logs/`。报告缺失/损坏、匹配不唯一、失败或跳过均不能通过。外部报告用 `--reported --command --result --reason`，理由必填并在默认检查中阻断，只有 `--allow-reported` 放行。
 
 ## 与规划、任务记录的分工
 
