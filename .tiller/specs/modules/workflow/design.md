@@ -64,3 +64,11 @@
 ## 9. 验收提交检查
 
 `evaluationContext` 查找最后一次 reopen 之后、对象摘要仍有效的最新 acceptance：提交可读时，用 `git ls-tree`/`git show` 重建范围内树摘要，并把该提交传给测试存在性、范围 diff 和测试弱化检查；不可读时回退当前工作区并给出提示。未验收或验收对象失效的任务不设置端点，继续使用工作区/HEAD 和未提交改动检查。钉住提交只改变检查时点，不跳过已记录的核实状态、外部报告理由或 bugfix 证据判断。
+
+## 10. 任务 worktree
+
+`src/task-worktrees.ts` 统一生成任务分支与布局。project 的检出就是 `.tiller/local/worktrees/<id>/`；workspace 先建 `management`，再按 `project.json.repositories[].path` 建 `repositories/<id>`。每个源仓必须是自身 Git 工作副本根且有提交，分支复用 `commitTypeForTaskType`、`suggestedBranchNameFor`；已有同名分支时直接检出，否则从该仓 HEAD 新建。
+
+建树前先校验任务容器、全部源仓和目标路径，任何一步失败都强制移除本次已建树并清理容器，task.md 不落盘。成功后把相对路径与本机清单 `.tiller/local/tasks/<id>/worktrees.json` 写入；清单缺失或损坏时 close 回退 project/workspace 约定布局。所有目标都经安全路径校验并限制在 `.tiller/local/worktrees/<id>/` 下。
+
+close 在写入关闭事实后按清单或约定布局执行 `git worktree remove --force` 与 prune；路径已缺失记入 `missingWorktrees` 并继续。Git 移除失败时仅对该受管目录强制删除并返回 warning，随后删除本任务日志；清理失败不阻断关闭记录。所有本机路径保持工程相对形式，不写入共享 task.md。

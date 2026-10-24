@@ -18,6 +18,7 @@ import { applyChanges, inspectSafePaths, readTextIfExists, validateRelativePath,
 import { planItemForAttachment, readPlanItem } from './plans.js';
 import { releaseChecklist, type ReleaseChecklist } from './release.js';
 import { taskIdWarnings, validateTaskId } from './task-id.js';
+import { cleanupTaskWorktrees, createTaskWorktrees, rollbackTaskWorktrees, writeTaskWorktreeState } from './task-worktrees.js';
 import { namePattern, resolveVerifyTarget, runnerFor, type TestEvidence, type TestReference } from './test-output.js';
 import type { ProjectMetadata } from './types.js';
 
@@ -760,7 +761,7 @@ export async function startFlow(rootInput: string, idInput: string, input: FlowS
   if ((input.plan === undefined) !== (input.item === undefined)) fail('INVALID_FLOW_INPUT', '--plan 和 --item 必须同时提供。');
   const relative = taskPath(idInput);
   return withProjectLock(root, async () => {
-    await readProjectMetadata(root);
+    const metadata = await readProjectMetadata(root);
     if (await readTextIfExists(root, relative) !== null) fail('TASK_EXISTS', `任务 ${idInput} 已存在，不能覆盖。`);
     let requirementFile: string | undefined;
     let requirement: string;
@@ -808,10 +809,20 @@ export async function startFlow(rootInput: string, idInput: string, input: FlowS
       design: size === 'standard' ? emptyDesignTemplate() : '', criteria,
       confirmations: [], verifications: [], closures: [], review: null };
     const content = renderTask(task);
-    await mkdir(path.dirname(path.join(root, relative)), { recursive: true });
-    await writePreExisting(root, idInput, preExisting);
-    await applyChanges(root, [{ path: relative, before: null, after: content }]);
-    return { id: idInput, path: relative, type, size, base, scope, criteria, warnings, ...(plan && item ? { plan, item } : {}),
+    const worktrees = await createTaskWorktrees(root, metadata, { id: idInput, type, ...(slug ? { slug } : {}) });
+    try {
+      await mkdir(path.dirname(path.join(root, relative)), { recursive: true });
+      await writePreExisting(root, idInput, preExisting);
+      await applyChanges(root, [{ path: relative, before: null, after: content }]);
+    } catch (error) {
+      await rollbackTaskWorktrees(root, worktrees);
+      throw error;
+    }
+    try { await writeTaskWorktreeState(root, worktrees); }
+    catch (error) { warnings.push(`任务 worktree 已创建，但本机清单写入失败；close 将按约定布局清理：${(error as Error).message}`); }
+    return { id: idInput, path: relative, type, size, base, scope, criteria, worktreeRoot: worktrees.root,
+      worktrees: worktrees.worktrees.map(item => ({ repository: item.repository, path: item.path, branch: item.branch })),
+      warnings, ...(plan && item ? { plan, item } : {}),
       ...(slug ? { slug } : {}), ...(summary ? { summary } : {}),
       ...(requirementFile ? { requirementFile } : {}),
       next: `核对结构化需求正文后确认：tiller confirm ${idInput} requirements [--by "<确认人>"]` };
@@ -1943,6 +1954,7 @@ export async function closeFlow(rootInput: string, id: string, reasonInput: stri
   const reason = safeInput(text(reasonInput, '关闭原因', 4000), '关闭原因');
   return withProjectLock(root, async () => {
     const task = await readTask(root, id);
+    const metadata = await readProjectMetadata(root);
     const ended = terminalStage(task);
     if (ended) fail('TASK_ENDED', `任务当前阶段为${ended.stage}；如需继续，先执行 reopen。`);
     const current = await taskStageForTask(root, id, task);
@@ -1960,7 +1972,10 @@ export async function closeFlow(rootInput: string, id: string, reasonInput: stri
     const { content: _content, path: _path, ...body } = next;
     await writeTask(root, id, task.content, renderTask(body, sectionBody(task.content, '自检')), body.meta.preExisting);
     const stage = terminalStage(next)!;
+    const cleanup = await cleanupTaskWorktrees(root, id, metadata);
     return { id, stage: stage.stage, stageReason: stage.reason, reason, at: closure.at, path: task.path,
+      worktrees: cleanup.removedWorktrees, missingWorktrees: cleanup.missingWorktrees, logsRemoved: cleanup.logsRemoved,
+      ...(cleanup.warnings.length ? { warnings: cleanup.warnings } : {}),
       next: `如需继续修改，执行 tiller reopen ${id} --reason "<原因>".` };
   });
 }

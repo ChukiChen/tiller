@@ -22,9 +22,9 @@
 
 需求确认后把编号 AC 转为全局用例：先写前置条件、步骤、输入、预期结果、类型、优先级和来源 AC，测试名或紧邻注释再引用 `CASE-NNN`，tiller 扫描建立 case→tests 反查；每项 AC 至少一个用例。`verify` 只声明 `--test` 或 `--case`，由 tiller 自主执行并从私有报告核实；stdout/stderr 不参与判定，报告缺失/损坏、匹配数不为 1、失败或跳过即阻断。`check` 在确认后要求 AC 有用例，在验证/验收时要求每个用例有当前通过且已核实的引用测试。
 
-外部报告用 `--reported --command ... --result ... --reason "<理由>"`，理由必填；`check`/`accept` 默认阻断，仅 `--allow-reported` 放行。bugfix 须用 `--expect-fail` 在任务基线留失败先行证据并具备当前通过。standard 任务 `start` 必须给 `--target`，small 缺省 `.`。记录命令、结果、提交和树摘要；`check` 拒绝缺失、错配、未核实或过期映射。已验收任务按验收提交核对树与测试，未验收仍查工作区；specs/context 未回写只提示。
+外部报告用 `--reported --command ... --result ... --reason "<理由>"`，理由必填；`check`/`accept` 默认阻断，仅 `--allow-reported` 放行。bugfix 须用 `--expect-fail` 在任务基线留失败先行证据并具备当前通过。standard 任务 `start` 必须给 `--target`，small 缺省 `.`。`start` 要求 Git 工程有提交并创建 `.tiller/local/worktrees/<id>/` 任务 worktree；close/abandon 强拆并清日志。`check` 拒绝缺失、错配、未核实或过期映射。已验收任务按验收提交核对树与测试，未验收仍查工作区；specs/context 未回写只提示。
 
-长期回归写入 `.tiller/cases/modules/<模块>/{behavior,interface,performance,security}.md` 和 `scenarios/*.md`；模块名与 specs 一致。用例保存测试设计、来源 AC 和源码路径，不保存测试引用字段或日志；无测试引用时显示待实现。
+长期回归写入 `.tiller/cases/modules/<模块>/` 与 `scenarios/`；用例保存测试设计、来源 AC、源码与预期，无引用显示待实现。
 
 ## 任务记录约定
 
@@ -32,11 +32,11 @@
 
 确认前校验必填段；需求和设计独立摘要，正文变化仅使对应确认失效。验证记录用例、tiller 实际执行的命令、结果、提交、代码树摘要和本机日志路径；原始输出只在 `.tiller/local/logs/`。不提交全文快照、日志、自举工程或安装包；需要时从 Git 取回或重跑。不得记录密钥、token、凭据或本机绝对路径。
 
-阶段由事实推导：已开始、需求已确认、设计已确认（small 可跳过）、已验证、已验收、已关闭、已放弃。失效时显示回退阶段和原因；终态先 `reopen` 才能继续。
+阶段由事实推导；失效时显示回退阶段与原因，终态先 `reopen` 才能继续。
 
 ## 范围与卡住
 
-只修改声明范围；顺手发现的问题记录后不修。同一问题连续两次失败即停止，报告证据和可选方案；同一 AC 或 CASE 的连续失败计数由 `verify`/`check` 汇总，成功核实后清零。
+只修改声明范围；顺手发现的问题记录后不修。同一问题连续两次失败即停止，报告证据与方案；同一 AC 或 CASE 的连续失败计数由 `verify`/`check` 汇总，成功核实后清零。
 
 ## context 更新
 

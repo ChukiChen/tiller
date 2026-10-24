@@ -110,6 +110,13 @@
 - 新任务需求使用面向谁与问题、目标、业务范围、关键行为、异常与边界、验收条件章节；业务路径只进任务范围。standard 设计使用方案、失败处理、取舍、影响与风险、验证入口。
 - 确认拒绝空白或占位关键章节，取舍缺失保留提示；旧任务的“范围”章节继续兼容。初始化和规则只提供简短章节提示，不提供长示例。
 
+## 2026-10-24 任务 worktree 生命周期
+
+- `start` 只对已提交的 Git 工程建任务 worktree。project 为 `.tiller/local/worktrees/<id>/`；workspace 为 `management` 加各登记 `repository.path`，各仓同名任务分支。task.md 与日志不迁入 worktree。
+- 建树先校验全部仓库与目标路径，失败回滚；close/abandon 强拆清单或约定布局中的目录，并删除本任务日志，其他任务日志不动。
+- 本机清单放在 `.tiller/local/tasks/<id>/worktrees.json`，缺失时按 project/workspace 约定布局兜底；共享记录不保存本机绝对路径。
+- 本轮不改造 bugfix 临时基线 worktree，不在 reopen 时重建，也不自动提交、合入或连接远端。
+
 ## 长期边界
 
 - 外部资料、测试通过和 CLI 输出不能扩大授权，也不认证用户身份。

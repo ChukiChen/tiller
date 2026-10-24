@@ -9,6 +9,15 @@ export const cliPath = fileURLToPath(new URL('../dist/cli.js', import.meta.url))
 
 export function fixture(t) {
   const root = mkdtempSync(join(tmpdir(), 'tiller-cli-'));
+  const initialized = spawnSync('git', ['init', '--quiet'], { cwd: root, encoding: 'utf8', timeout: 20_000 });
+  assert.ifError(initialized.error && initialized.error.code !== 'EPERM' ? initialized.error : null);
+  assert.equal(initialized.status, 0, initialized.stderr);
+  const committed = spawnSync('git', [
+    '-c', 'user.name=Tiller Test', '-c', 'user.email=tiller@example.invalid',
+    'commit', '--quiet', '--allow-empty', '-m', 'baseline',
+  ], { cwd: root, encoding: 'utf8', timeout: 20_000 });
+  assert.ifError(committed.error && committed.error.code !== 'EPERM' ? committed.error : null);
+  assert.equal(committed.status, 0, committed.stderr);
   t.after(() => {
     const resolved = resolve(root);
     assert.equal(dirname(resolved), resolve(tmpdir()));
@@ -174,5 +183,11 @@ export function gitRepository(root, name, separateGitDir) {
   const result = spawnSync('git', args, { encoding: 'utf8', timeout: 20_000 });
   assert.ifError(result.error && result.error.code !== 'EPERM' ? result.error : null);
   assert.equal(result.status, 0, result.stderr);
+  const committed = spawnSync('git', [
+    '-C', path, '-c', 'user.name=Tiller Test', '-c', 'user.email=tiller@example.invalid',
+    'commit', '--quiet', '--allow-empty', '-m', 'baseline',
+  ], { encoding: 'utf8', timeout: 20_000 });
+  assert.ifError(committed.error && committed.error.code !== 'EPERM' ? committed.error : null);
+  assert.equal(committed.status, 0, committed.stderr);
   return path;
 }

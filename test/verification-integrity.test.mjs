@@ -301,7 +301,9 @@ test('CASE-089 CASE-094 bugfix verification requires baseline failure and curren
   assert.match(baseline.entries[0].command, /--test-reporter=\.\/\.tiller\/local\/verify-/u);
   assert.match(baseline.entries[0].baseline, /^[a-f0-9]{40,64}$/u);
   assert.match(read(root, '.tiller/local/baseline-prepared.txt'), /tiller-baseline-/u);
-  assert.equal(git(root, 'worktree', 'list', '--porcelain').trim().split(/\n(?=worktree )/u).length, 1);
+  const listedWorktrees = git(root, 'worktree', 'list', '--porcelain');
+  assert.equal(listedWorktrees.trim().split(/\n(?=worktree )/u).length, 2);
+  assert.doesNotMatch(listedWorktrees, /tiller-baseline-/u);
 
   put(root, 'src/bug.mjs', 'export const add = (a, b) => a + b;\n');
   success(cli(root, 'verify', id, '--criterion', 'AC-1', '--test', testRef));
@@ -329,7 +331,9 @@ test('CASE-089 CASE-094 bugfix verification requires baseline failure and curren
   put(root, casePath, read(root, casePath).replace(`${missingId}#AC-1`, `${missingId}#AC-1, ${noFailureId}#AC-1`));
   const noFailure = failure(cli(root, 'verify', noFailureId, '--criterion', 'AC-1', '--test', testRef, '--expect-fail'));
   assert.equal(noFailure.error.code, 'EXPECTED_FAILURE_NOT_OBSERVED');
-  assert.equal(git(root, 'worktree', 'list', '--porcelain').trim().split(/\n(?=worktree )/u).length, 1);
+  const remainingWorktrees = git(root, 'worktree', 'list', '--porcelain');
+  assert.equal(remainingWorktrees.trim().split(/\n(?=worktree )/u).length, 4);
+  assert.doesNotMatch(remainingWorktrees, /tiller-baseline-/u);
 });
 
 test('CASE-095 verify runner configuration and prepare are enforced', async t => {
