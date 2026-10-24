@@ -186,7 +186,8 @@ test('CASE-001 CASE-066 small flow produces one task file and records verified a
   assert.match(content, /^### 验收条件$/mu);
   assert.match(content, /用户原话：确认这个范围和验收条件/u);
   assert.doesNotMatch(content, /用户原话：验收通过/u);
-  assert.match(content, /代码树摘要：[a-f0-9]{64}/u);
+  assert.match(content, /^<!-- tiller-verify:v1 .*"tree":"[a-f0-9]{64}".* -->$/mu);
+  assert.doesNotMatch(content, /^- 代码树摘要：/mu);
   assert.match(content, /^- 用例：CASE-001$/mu);
   assert.deepEqual(readdirSync(join(root, '.tiller/task', id)), ['task.md']);
   assert.equal(existsSync(join(root, '.tiller/task', id, 'reviews')), false);

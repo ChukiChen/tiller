@@ -1133,3 +1133,28 @@ worktree 缺失按幂等跳过，close/abandon 成功并删除既有日志目录
 ### 预期结果
 
 目标路径已占用、workspace 业务仓非 Git 或 Git 不可用时 start 失败，不写 task.md，也不遗留已建 worktree
+
+## CASE-202 旧版冗长验证块仍可解析与复用
+
+- 类型：behavior
+- 优先级：high
+- 模块：workflow
+- 关联 AC：20261024-slim-verify-render#AC-3
+- 需求：`.tiller/specs/modules/workflow/requirements.md`
+- 源码：`src/flow.ts`, `test/verification-integrity.test.mjs`
+
+### 前置条件
+
+- 任务记录只含旧版命令、退出码和代码树摘要子弹
+
+### 步骤
+
+1. 读取任务并运行 check
+
+### 输入
+
+- 无机器旁路的旧版验证记录
+
+### 预期结果
+
+旧版字段仍被解析为同一验证事实，check 不因格式旧而误报或放宽

@@ -695,3 +695,28 @@ start 生成面向谁与问题、目标、业务范围、关键行为、异常�
 ### 预期结果
 
 管理仓检出到 management，各业务仓检出到其登记 path；各仓同名任务分支，task.md 仍在管理主树
+
+## CASE-201 验证段以人读摘要渲染并在旁路保留机器证据
+
+- 类型：interface
+- 优先级：high
+- 模块：workflow
+- 关联 AC：20261024-slim-verify-render#AC-1
+- 需求：`.tiller/specs/modules/workflow/requirements.md`
+- 源码：`src/flow.ts`, `test/verification-integrity.test.mjs`
+
+### 前置条件
+
+- 任务已完成一次由 tiller 执行的验证
+
+### 步骤
+
+1. 读取 task.md 的验证段
+
+### 输入
+
+- 已核实的 node-test 验证记录
+
+### 预期结果
+
+人读段含条件、测试、用例、结果、来源、核实、日志、短提交与时间，不含命令、退出码、reporter 路径或树摘要；旁路含命令、退出码、树和全量提交

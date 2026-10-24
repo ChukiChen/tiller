@@ -155,3 +155,28 @@
 ### 预期结果
 
 测试通过，并且私有报告防止伪造通过。
+
+## CASE-203 验证旁路不放松已核实判定
+
+- 类型：security
+- 优先级：high
+- 模块：workflow
+- 关联 AC：20261024-slim-verify-render#AC-2
+- 需求：`.tiller/specs/modules/workflow/requirements.md`
+- 源码：`src/flow.ts`, `test/verification-integrity.test.mjs`
+
+### 前置条件
+
+- 任务验证段已有新格式人读摘要
+
+### 步骤
+
+1. 破坏旁路或未核实记录后运行 check
+
+### 输入
+
+- 缺失有效机器证据或未验收的验证记录
+
+### 预期结果
+
+无法还原命令、退出码、树与全量提交的记录不成为已核实，check 仍按原规则阻断

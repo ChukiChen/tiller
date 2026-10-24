@@ -31,7 +31,7 @@ standard 设计确认前 verify 或确认后业务改动未提交时，`check` �
 
 `verify` 只声明测试，由 tiller 构造并执行；结果只读私有临时报告，stdout/stderr 不参与判定。报告缺失或损坏、匹配 0 个或多个测试、失败或跳过不核实；引用文件须全通过。`--run` 已删除。standard 必须声明 `--target`，small 缺省 `.`。
 
-日志位于 `.tiller/local/logs/<任务编号>/run-<序号>.log`，支持 `--verbose`。`verify.prepare` 失败即验证失败；`verify.runner` 支持 `node-test`、`junit-maven`、`junit-gradle`、`pytest`，仓库可覆盖，归属不明拒绝。pytest 通过私有 JUnit XML 核实，不内嵌 Python，也不自动安装依赖；`case add` 骨架随当前 runner 生成。
+日志位于 `.tiller/local/logs/<任务编号>/run-<序号>.log`，含完整命令与输出，支持 `--verbose`；`task.md` 留摘要，命令与证据进旁路。`verify.prepare` 失败即验证失败；`verify.runner` 支持 `node-test`、`junit-maven`、`junit-gradle`、`pytest`，仓库可覆盖，归属不明拒绝。pytest 通过私有 JUnit XML 核实，不内嵌 Python，也不自动安装依赖；`case add` 骨架随当前 runner 生成。
 
 同一 AC/CASE 连续两次验证失败且无成功核实，`verify` 与 `check` 要求停止自动重试，按 FLOW-05 报告现象、已尝试方法、证据和 2～3 个可选方案；成功核实清零。
 

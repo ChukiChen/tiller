@@ -4,13 +4,17 @@ import { join } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import test from 'node:test';
 import { initialize, parseMetadata } from '../dist/core.js';
-import { verifyFlow } from '../dist/flow.js';
+import { readTask, verifyFlow } from '../dist/flow.js';
 import { namePattern, runnerFor, TEST_RUNNERS } from '../dist/test-output.js';
 import { applyUpgrade, planUpgrade } from '../dist/upgrade.js';
 import { cli, confirmTask, failure, fixture, put, success } from './helpers.mjs';
 
 const read = (root, relative) => readFileSync(join(root, relative), 'utf8');
 const taskFile = (id) => `.tiller/task/${id}/task.md`;
+
+function verificationSidecars(content) {
+  return [...content.matchAll(/^<!-- tiller-verify:v1 (\{.*\}) -->$/gmu)].map(match => JSON.parse(match[1]));
+}
 
 function git(root, ...args) {
   const result = spawnSync('git', ['-c', 'user.name=Tiller Test', '-c', 'user.email=tiller@example.invalid', ...args], {
@@ -91,7 +95,9 @@ test('CASE-086 verify executes the recorded command, rejects legacy inputs and r
   assert.match(verified.entries[0].command, /--test-name-pattern=\^CASE-001 value behavior\$/u);
   assert.match(verified.entries[0].command, /--test-reporter=\.\/\.tiller\/local\/verify-/u);
   assert.match(verified.entries[0].command, /test\/value\.test\.mjs$/u);
-  assert.match(read(root, taskFile(id)), /^- 命令：node .*--test-name-pattern=.*test\/value\.test\.mjs$/mu);
+  const content = read(root, taskFile(id));
+  assert.equal(verificationSidecars(content)[0].command, verified.entries[0].command);
+  assert.doesNotMatch(content, /^- 命令：/mu);
   assert.equal(verified.log, `.tiller/local/logs/${id}/run-1.log`);
   assert.ok(existsSync(join(root, verified.log)));
 
@@ -105,6 +111,117 @@ test('CASE-086 verify executes the recorded command, rejects legacy inputs and r
   const legacyRecord = success(cli(root, 'check', id));
   assert.equal(legacyRecord.ready, true, legacyRecord.issues.join('\n'));
   assert.ok(!legacyRecord.issues.some(issue => issue.includes('未核实')), legacyRecord.issues.join('\n'));
+});
+
+test('CASE-201 verification records keep a concise human summary and a complete machine sidecar', async t => {
+  const root = await project(t);
+  const id = '20261024-concise-verification-record';
+  prepareTask(root, id);
+  const added = addCase(root, id, 'test/value.test.mjs::CASE-001 value behavior');
+  put(root, 'src/value.mjs', 'export const value = 4;\n');
+  commitAll(root, 'feat(workflow): 准备精简验证记录');
+
+  const verified = success(cli(root, 'verify', id, '--criterion', 'AC-1',
+    '--test', 'test/value.test.mjs::CASE-001 value behavior'));
+  const content = read(root, taskFile(id));
+  const sidecars = verificationSidecars(content);
+  assert.deepEqual(sidecars, [{
+    command: verified.entries[0].command,
+    exitCode: 0,
+    tree: verified.entries[0].tree,
+    commit: verified.commit,
+  }]);
+  assert.match(sidecars[0].commit, /^[a-f0-9]{40}$/u);
+  assert.deepEqual(verified.entries[0].cases, [added.id]);
+
+  const human = content.replace(/^<!-- tiller-verify:v1 .* -->$/gmu, '');
+  assert.match(human, /^### run-1$/mu);
+  assert.match(human, /^- 条件：AC-1$/mu);
+  assert.match(human, /^- 测试：test\/value\.test\.mjs::CASE-001 value behavior$/mu);
+  assert.match(human, new RegExp(`^- 用例：${added.id}$`, 'mu'));
+  assert.match(human, /^- 结果：passed$/mu);
+  assert.match(human, /^- 来源：executed$/mu);
+  assert.match(human, /^- 核实：已核实$/mu);
+  assert.match(human, new RegExp(`^- 日志：\\.tiller/local/logs/${id}/run-1\\.log$`, 'mu'));
+  assert.match(human, new RegExp(`^- 提交：${verified.commit.slice(0, 12)}$`, 'mu'));
+  assert.match(human, /^- 时间：\d{4}-\d{2}-\d{2}T/mu);
+  assert.doesNotMatch(human, /^- (?:命令|退出码|代码树摘要)：/mu);
+  assert.doesNotMatch(human, /--test-reporter=|verify-[^/]+\/reporter\.mjs/u);
+  assert.ok(!human.includes(verified.commit));
+  assert.equal(verified.log, `.tiller/local/logs/${id}/run-1.log`);
+  assert.ok(existsSync(join(root, verified.log)));
+  assert.equal(success(cli(root, 'check', id)).ready, true);
+});
+
+test('CASE-202 legacy verification bullets remain parseable and are rewritten in the concise format', async t => {
+  const root = await project(t);
+  const id = '20261024-legacy-verification-record';
+  prepareTask(root, id);
+  addCase(root, id, 'test/value.test.mjs::CASE-001 value behavior');
+  put(root, 'src/value.mjs', 'export const value = 5;\n');
+  commitAll(root, 'feat(workflow): 准备旧验证记录');
+
+  const verified = success(cli(root, 'verify', id, '--criterion', 'AC-1',
+    '--test', 'test/value.test.mjs::CASE-001 value behavior'));
+  const run = verified.entries[0];
+  const content = read(root, taskFile(id));
+  const legacy = [
+    '### run-1',
+    `- 条件：${run.criterion}`,
+    `- 测试：${run.test}`,
+    `- 用例：${run.cases.join(', ')}`,
+    `- 命令：${run.command}`,
+    '- 结果：passed',
+    '- 退出码：0',
+    `- 提交：${run.commit}`,
+    `- 代码树摘要：${run.tree}`,
+    '- 来源：executed',
+    `- 时间：${run.at}`,
+  ].join('\n');
+  put(root, taskFile(id), content.replace(/### run-1[\s\S]*?(?=\n## 自检)/u, () => `${legacy}\n`));
+
+  const parsed = await readTask(root, id);
+  assert.equal(parsed.verifications.length, 1);
+  assert.deepEqual({
+    command: parsed.verifications[0].command,
+    exitCode: parsed.verifications[0].exitCode,
+    tree: parsed.verifications[0].tree,
+    commit: parsed.verifications[0].commit,
+    legacyEvidence: parsed.verifications[0].legacyEvidence,
+  }, { command: run.command, exitCode: 0, tree: run.tree, commit: run.commit, legacyEvidence: true });
+  assert.equal(success(cli(root, 'check', id)).ready, true);
+
+  success(cli(root, 'review', id, '--by', 'Tiller Test'));
+  const rendered = read(root, taskFile(id));
+  assert.deepEqual(verificationSidecars(rendered)[0], {
+    command: run.command, exitCode: 0, tree: run.tree, commit: run.commit, legacyEvidence: true,
+  });
+  const human = rendered.replace(/^<!-- tiller-verify:v1 .* -->$/gmu, '');
+  assert.match(human, /^- 核实：未标注$/mu);
+  assert.doesNotMatch(human, /^- (?:命令|退出码|代码树摘要)：/mu);
+  assert.equal(success(cli(root, 'check', id)).ready, true);
+});
+
+test('CASE-203 verification sidecars do not relax corrupt or unverified evidence', async t => {
+  const root = await project(t);
+  const id = '20261024-sidecar-evidence-check';
+  prepareTask(root, id);
+  addCase(root, id, 'test/value.test.mjs::CASE-001 value behavior');
+  put(root, 'src/value.mjs', 'export const value = 6;\n');
+  commitAll(root, 'feat(workflow): 准备证据检查');
+  success(cli(root, 'verify', id, '--criterion', 'AC-1', '--test', 'test/value.test.mjs::CASE-001 value behavior'));
+
+  const original = read(root, taskFile(id));
+  put(root, taskFile(id), original.replace(/^<!-- tiller-verify:v1 .* -->$/mu, '<!-- tiller-verify:v1 {broken -->'));
+  const corrupt = failure(cli(root, 'check', id));
+  assert.ok(corrupt.issues.some(issue => issue.includes('AC-1 尚无验证')), corrupt.issues.join('\n'));
+
+  put(root, taskFile(id), original.replace('- 核实：已核实', '- 核实：未核实'));
+  const unverified = failure(cli(root, 'check', id));
+  assert.ok(unverified.issues.some(issue => issue.includes('AC-1 的验证未核实')), unverified.issues.join('\n'));
+
+  put(root, taskFile(id), original);
+  assert.equal(success(cli(root, 'check', id)).ready, true);
 });
 
 test('CASE-092 verify constructs and executes node:test without a user command', async t => {

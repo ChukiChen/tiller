@@ -61,4 +61,4 @@ Maven 在业务仓库根执行 `mvn -Dsurefire.reportsDirectory=<相对私有目
 
 ## 5. 边界
 
-该模块不提交原始输出、自举工程、安装包和全文文件快照。`verify` 只接受 `--test` 或 `--case`；子进程输出只写 `.tiller/local/logs/`，默认不显示，`--verbose` 时同时转发；日志至少记录显示命令、开始与结束时间和退出码，判定只读私有临时报告。`src/test-output.ts` 暴露 `TestRunner` 的构造命令与报告解析接口并注册适配器，`src/test-reporter.ts` 生成仅含测试事件和总结的 JSONL 报告。无法本机执行时使用 `verify --reported --command ... --result ... --reason`，`--allow-reported` 才放行；缺陷修复使用 `--expect-fail --test`。需要复查时查看 `task.md` 的实际命令和日志路径，并从 Git 或重跑取得事实。
+该模块不提交原始输出、自举工程、安装包和全文文件快照。`verify` 只接受 `--test` 或 `--case`；子进程输出只写 `.tiller/local/logs/`，默认不显示，`--verbose` 时同时转发；日志至少记录显示命令、开始与结束时间和退出码，判定只读私有临时报告。`src/test-output.ts` 暴露 `TestRunner` 的构造命令与报告解析接口并注册适配器，`src/test-reporter.ts` 生成仅含测试事件和总结的 JSONL 报告。无法本机执行时使用 `verify --reported --command ... --result ... --reason`，`--allow-reported` 才放行；缺陷修复使用 `--expect-fail --test`。需要复查时从 `task.md` 的人读摘要与机器旁路取命令、提交、代码树和日志定位，并从 Git 或重跑取得事实。
