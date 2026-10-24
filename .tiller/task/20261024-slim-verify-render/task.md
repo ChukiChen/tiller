@@ -99,10 +99,78 @@
 - 对象摘要：5f7f5186794f7f728f2397756a72d269b2ecdf3055b4abafeb51d0472075c204
 - 时间：2026-10-24T06:19:43.412Z
 
+### acceptance
+- 确认部分：交付验收
+- 对象：当前交付（需求、设计、验证与提交）
+- 确认人：boon yu
+- 用户原话：可以
+- 原话用途：可选附注，不替代已写明的正文
+- 提交：9a2e13aea16abe9fa057bd77883878fe114e9086
+- 对象摘要：70e491196acd8e8f0f00a6a9cf6e00b97e34fe98e1e40776c443bcc817256702
+- 时间：2026-10-24T07:54:44.985Z
+
 ## 验证
 
-尚无验证。
+### run-1
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-201 verification records keep a concise human summary and a complete machine sidecar$' \u002d\u002dtest-reporter=./.tiller/local/verify-3yjDAz/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-3yjDAz/report.jsonl test/verification-integrity.test.mjs","exitCode":0,"tree":"a484cf37fbc7cbd8939ffac25453d35942b1a5db3df2c86868e6718dd39e2863","commit":"9a2e13aea16abe9fa057bd77883878fe114e9086"} -->
+- 条件：AC-1
+- 测试：test/verification-integrity.test.mjs::CASE-201 verification records keep a concise human summary and a complete machine sidecar
+- 用例：CASE-201
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/logs/20261024-slim-verify-render/run-1.log
+- 提交：9a2e13aea16a
+- 时间：2026-10-24T07:54:35.659Z
+
+### run-2
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-202 legacy verification bullets remain parseable and are rewritten in the concise format$' \u002d\u002dtest-reporter=./.tiller/local/verify-ybki60/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-ybki60/report.jsonl test/verification-integrity.test.mjs","exitCode":0,"tree":"a484cf37fbc7cbd8939ffac25453d35942b1a5db3df2c86868e6718dd39e2863","commit":"9a2e13aea16abe9fa057bd77883878fe114e9086"} -->
+- 条件：AC-3
+- 测试：test/verification-integrity.test.mjs::CASE-202 legacy verification bullets remain parseable and are rewritten in the concise format
+- 用例：CASE-202
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/logs/20261024-slim-verify-render/run-2.log
+- 提交：9a2e13aea16a
+- 时间：2026-10-24T07:54:36.732Z
+
+### run-3
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-203 verification sidecars do not relax corrupt or unverified evidence$' \u002d\u002dtest-reporter=./.tiller/local/verify-AeQMvi/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-AeQMvi/report.jsonl test/verification-integrity.test.mjs","exitCode":0,"tree":"a484cf37fbc7cbd8939ffac25453d35942b1a5db3df2c86868e6718dd39e2863","commit":"9a2e13aea16abe9fa057bd77883878fe114e9086"} -->
+- 条件：AC-2
+- 测试：test/verification-integrity.test.mjs::CASE-203 verification sidecars do not relax corrupt or unverified evidence
+- 用例：CASE-203
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/logs/20261024-slim-verify-render/run-3.log
+- 提交：9a2e13aea16a
+- 时间：2026-10-24T07:54:38.017Z
+
+## 关闭
+
+### close
+- 状态：已关闭
+- 原因：验收通过，验证段已精简为人读摘要加旁路
+- 时间：2026-10-24T07:54:45.635Z
 
 ## 自检
 
-交付前运行 check；验收后运行 accept。
+- [x] 需求确认有效
+- [x] 设计确认有效
+- [x] 验收条件均有当前通过且绑定全局用例的测试引用
+- [x] 每条验收条件均映射到本次验证引用的全局用例
+- [x] 验收条件与用例来源 criteria 相互指向或由本任务新增/修改
+- [x] 验证命令已执行且测试输出已核实
+- [x] 全局用例结构与引用有效
+- [x] 改动未超出范围
+- [x] 未弱化仍存在的测试
+- [x] 评审无未清除阻塞项
+- [x] 记录不含密钥或本机绝对路径
+
+提示：
+- 90 条历史用例未绑定来源 AC；新用例请用 case add 写入 criteria。
+- 本次改动涉及模块 initialization：建议回归该模块 59 条用例及经过它的场景 CASE-055, CASE-001。
+- 本次改动涉及模块 standards：建议回归该模块 23 条用例及经过它的场景 CASE-055。
+- 本次改动涉及模块 verification：建议回归该模块 39 条用例及经过它的场景 CASE-055, CASE-001。
+- 本次改动涉及模块 workflow：建议回归该模块 80 条用例及经过它的场景 CASE-055, CASE-001。
