@@ -67,44 +67,125 @@
 - 确认部分：需求
 - 对象：需求正文（目标、范围与验收条件）
 - 确认人：boon yu
-- 提交：c3bad81ef7b030365ddef1eced49f1f1f5b35877
-- 对象摘要：7223e488009e6fc1220b3312069c47fe9675719eb8ce365c037b797196733eb3
-- 时间：2026-10-24T03:34:34.051Z
+- 提交：8bc802045519215a5bb594ebd5e7cf50562ec750
+- 对象摘要：b6a1c2f461d0ade056c3ca1621b92fa52698928af2498d655c4b9328418e57da
+- 时间：2026-10-24T04:00:24.714Z
 
 ### design
 - 确认部分：设计
 - 对象：设计正文
 - 确认人：boon yu
-- 提交：c3bad81ef7b030365ddef1eced49f1f1f5b35877
-- 对象摘要：321487e92b87b0565b2c553f0cf30e19497e3fa70cbda719bbede4418287058f
-- 时间：2026-10-24T03:34:34.129Z
+- 提交：8bc802045519215a5bb594ebd5e7cf50562ec750
+- 对象摘要：77f08ec7866167c8a46da145db82fc144ab5e61a2d7d087d3ddffd269c2ea704
+- 时间：2026-10-24T04:00:24.870Z
+
+### acceptance
+- 确认部分：交付验收
+- 对象：当前交付（需求、设计、验证与提交）
+- 确认人：boon yu
+- 提交：8bc802045519215a5bb594ebd5e7cf50562ec750
+- 对象摘要：827567236f0252fcf1505313cb73fa16f04d5a1bba9e29b6b8d8857a81078acb
+- 时间：2026-10-24T04:01:03.666Z
 
 ## 验证
 
-尚无验证。
+### run-1
+- 条件：AC-1
+- 测试：test/doc-templates.test.mjs::CASE-190 new task marker omits preExisting and keeps the snapshot in the local sidecar
+- 用例：CASE-190
+- 命令：node '--test-name-pattern=^CASE-190 new task marker omits preExisting and keeps the snapshot in the local sidecar$' --test-reporter=./.tiller/local/verify-BXw3Zk/reporter.mjs --test-reporter-destination=.tiller/local/verify-BXw3Zk/report.jsonl test/doc-templates.test.mjs
+- 结果：passed
+- 退出码：0
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/logs/20261024-doc-templates/run-7.log
+- 提交：8bc802045519215a5bb594ebd5e7cf50562ec750
+- 代码树摘要：2e30b6ffd8ffc775944b13248609ddae3ca9f945723666b10bb216aa4da67ffd
+- 时间：2026-10-24T04:00:32.713Z
+
+### run-2
+- 条件：AC-1
+- 测试：test/doc-templates.test.mjs::CASE-191 legacy marker preExisting is still loaded and does not report an unchanged dirty file as scope drift
+- 用例：CASE-191
+- 命令：node '--test-name-pattern=^CASE-191 legacy marker preExisting is still loaded and does not report an unchanged dirty file as scope drift$' --test-reporter=./.tiller/local/verify-04vguS/reporter.mjs --test-reporter-destination=.tiller/local/verify-04vguS/report.jsonl test/doc-templates.test.mjs
+- 结果：passed
+- 退出码：0
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/logs/20261024-doc-templates/run-8.log
+- 提交：8bc802045519215a5bb594ebd5e7cf50562ec750
+- 代码树摘要：2e30b6ffd8ffc775944b13248609ddae3ca9f945723666b10bb216aa4da67ffd
+- 时间：2026-10-24T04:00:34.541Z
+
+### run-3
+- 条件：AC-2
+- 测试：test/doc-templates.test.mjs::CASE-192 structured requirements keep business scope separate from target paths
+- 用例：CASE-192
+- 命令：node '--test-name-pattern=^CASE-192 structured requirements keep business scope separate from target paths$' --test-reporter=./.tiller/local/verify-ipnUCF/reporter.mjs --test-reporter-destination=.tiller/local/verify-ipnUCF/report.jsonl test/doc-templates.test.mjs
+- 结果：passed
+- 退出码：0
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/logs/20261024-doc-templates/run-9.log
+- 提交：8bc802045519215a5bb594ebd5e7cf50562ec750
+- 代码树摘要：2e30b6ffd8ffc775944b13248609ddae3ca9f945723666b10bb216aa4da67ffd
+- 时间：2026-10-24T04:00:36.349Z
+
+### run-4
+- 条件：AC-2
+- 测试：test/doc-templates.test.mjs::CASE-193 requirements confirmation rejects blank or placeholder sections while accepting the legacy scope section
+- 用例：CASE-193
+- 命令：node '--test-name-pattern=^CASE-193 requirements confirmation rejects blank or placeholder sections while accepting the legacy scope section$' --test-reporter=./.tiller/local/verify-M2R3ax/reporter.mjs --test-reporter-destination=.tiller/local/verify-M2R3ax/report.jsonl test/doc-templates.test.mjs
+- 结果：passed
+- 退出码：0
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/logs/20261024-doc-templates/run-10.log
+- 提交：8bc802045519215a5bb594ebd5e7cf50562ec750
+- 代码树摘要：2e30b6ffd8ffc775944b13248609ddae3ca9f945723666b10bb216aa4da67ffd
+- 时间：2026-10-24T04:00:37.942Z
+
+### run-5
+- 条件：AC-3
+- 测试：test/doc-templates.test.mjs::CASE-194 design template covers failure handling and verification entry with located confirm and check feedback
+- 用例：CASE-194
+- 命令：node '--test-name-pattern=^CASE-194 design template covers failure handling and verification entry with located confirm and check feedback$' --test-reporter=./.tiller/local/verify-DViNwM/reporter.mjs --test-reporter-destination=.tiller/local/verify-DViNwM/report.jsonl test/doc-templates.test.mjs
+- 结果：passed
+- 退出码：0
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/logs/20261024-doc-templates/run-11.log
+- 提交：8bc802045519215a5bb594ebd5e7cf50562ec750
+- 代码树摘要：2e30b6ffd8ffc775944b13248609ddae3ca9f945723666b10bb216aa4da67ffd
+- 时间：2026-10-24T04:00:40.206Z
+
+### run-6
+- 条件：AC-4
+- 测试：test/doc-templates.test.mjs::CASE-195 init creates complete requirement and design section skeletons without long examples
+- 用例：CASE-195
+- 命令：node '--test-name-pattern=^CASE-195 init creates complete requirement and design section skeletons without long examples$' --test-reporter=./.tiller/local/verify-aRDh9o/reporter.mjs --test-reporter-destination=.tiller/local/verify-aRDh9o/report.jsonl test/doc-templates.test.mjs
+- 结果：passed
+- 退出码：0
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/logs/20261024-doc-templates/run-12.log
+- 提交：8bc802045519215a5bb594ebd5e7cf50562ec750
+- 代码树摘要：2e30b6ffd8ffc775944b13248609ddae3ca9f945723666b10bb216aa4da67ffd
+- 时间：2026-10-24T04:00:42.478Z
 
 ## 自检
 
 - [x] 需求确认有效
-- [ ] 设计确认有效
-- [ ] 验收条件均有当前通过且绑定全局用例的测试引用
-- [ ] 每条验收条件均映射到本次验证引用的全局用例
+- [x] 设计确认有效
+- [x] 验收条件均有当前通过且绑定全局用例的测试引用
+- [x] 每条验收条件均映射到本次验证引用的全局用例
 - [x] 验收条件与用例来源 criteria 相互指向或由本任务新增/修改
-- [ ] 验证命令已执行且测试输出已核实
+- [x] 验证命令已执行且测试输出已核实
 - [x] 全局用例结构与引用有效
-- [ ] 改动未超出范围
+- [x] 改动未超出范围
 - [x] 未弱化仍存在的测试
 - [x] 评审无未清除阻塞项
 - [x] 记录不含密钥或本机绝对路径
-
-阻塞项：
-- 过程卫生：需求、设计确认提交 c3bad81ef7b0 后，工作区仍有未提交业务改动：resources/rules/activities/design.md、resources/rules/activities/requirements.md、resources/rules/quality/documents.md、resources/usage.md、src/core.ts、src/flow.ts、test/case-redesign.test.mjs、test/doc-templates.test.mjs 等 18 项。请先提交或移出本任务。
-- AC-1 尚无验证。
-- AC-2 尚无验证。
-- AC-3 尚无验证。
-- AC-4 尚无验证。
-- 改动超出范围：scripts/package-smoke.mjs
-- 交付范围存在未提交改动：.tiller/cases/modules/initialization/behavior.md、.tiller/cases/modules/workflow/behavior.md、.tiller/cases/modules/workflow/interface.md、.tiller/plans/20261024-doc-templates.md、.tiller/project.json、.tiller/rules/activities/design.md、.tiller/rules/activities/requirements.md、.tiller/rules/quality/documents.md、.tiller/specs/decisions.md、.tiller/specs/design.md、.tiller/specs/modules/initialization/design.md、.tiller/specs/modules/initialization/requirements.md、.tiller/specs/modules/workflow/design.md、.tiller/specs/modules/workflow/requirements.md、.tiller/specs/requirements.md、.tiller/usage.md、resources/rules/activities/design.md、resources/rules/activities/requirements.md、resources/rules/quality/documents.md、resources/usage.md、src/core.ts、src/flow.ts、test/case-redesign.test.mjs、test/doc-templates.test.mjs、test/first-batch.test.mjs、test/flow-cli.test.mjs、test/flow-hardening.test.mjs、test/gap-closure.test.mjs、test/helpers.mjs、test/pr.test.mjs、test/review-release.test.mjs、test/rules.test.mjs、test/suites.json、test/verification-integrity.test.mjs
 
 提示：
 - 90 条历史用例未绑定来源 AC；新用例请用 case add 写入 criteria。
