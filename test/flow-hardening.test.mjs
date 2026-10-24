@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
-import { cli, failure, fixture, put, success } from './helpers.mjs';
+import { cli, completeDesign, confirmTask, failure, fixture, put, success } from './helpers.mjs';
 
 const repository = fileURLToPath(new URL('../', import.meta.url));
 const read = (root, relative) => readFileSync(join(root, relative), 'utf8');
@@ -82,14 +82,12 @@ test('CASE-175 standard check flags verification recorded before design confirma
   const id = '20261023-process-order';
   success(cli(root, 'start', id, '--title', 'Process order', '--requirement', 'Keep verification ordered after design.',
     '--criterion', 'AC-1=Ordering is visible', '--type', 'feature', '--size', 'standard', '--target', 'src', '--target', 'test'));
-  success(cli(root, 'confirm', id, 'requirements'));
+  success(confirmTask(root, id, 'requirements'));
   const early = success(cli(root, 'verify', id, '--criterion', 'AC-1', '--test', 'test/baseline.test.mjs::CASE-001 baseline'));
   assert.equal(early.entries[0].evidence, 'verified');
 
-  const taskPath = `.tiller/task/${id}/task.md`;
-  put(root, taskPath, read(root, taskPath).replace('### 方案\n\n### 取舍\n\n### 影响与风险',
-    '### 方案\n\nKeep the existing flow.\n\n### 取舍\n\nDo not add a second command.\n\n### 影响与风险\n\nOrdering checks only.'));
-  success(cli(root, 'confirm', id, 'design'));
+  completeDesign(root, id);
+  success(confirmTask(root, id, 'design'));
 
   const checked = cli(root, 'check', id);
   assert.equal(checked.status, 1, JSON.stringify(checked.data));
@@ -106,7 +104,7 @@ test('CASE-175 confirmations expose uncommitted business changes but ignore till
   const id = '20261023-confirm-dirty';
   success(cli(root, 'start', id, '--title', 'Confirmation hygiene', '--requirement', 'Report uncommitted business changes after confirmation.',
     '--criterion', 'AC-1=Business dirt is visible', '--size', 'small', '--target', '.'));
-  success(cli(root, 'confirm', id, 'requirements'));
+  success(confirmTask(root, id, 'requirements'));
 
   put(root, '.tiller/specs/modules/workflow/requirements.md', '# Workflow\n\n## Baseline behavior\n\nMetadata-only edit.\n');
   const metadataOnly = cli(root, 'check', id);
@@ -136,7 +134,7 @@ async function assertRunnerCase(t, buildFile, runner, marker) {
   const id = '20261023-runner-case';
   success(cli(root, 'start', id, '--title', 'Runner case', '--requirement', 'Generate a matching test skeleton.',
     '--criterion', 'AC-1=Skeleton matches runner', '--size', 'small', '--target', 'src'));
-  success(cli(root, 'confirm', id, 'requirements'));
+  success(confirmTask(root, id, 'requirements'));
   const added = success(cli(root, 'case', 'add', id, '--module', 'workflow', '--kind', 'behavior', '--title', 'Runner skeleton',
     '--expected', 'Skeleton uses the configured runner', '--criterion', 'AC-1', '--source', buildFile ?? 'src/app.mjs'));
   assert.equal(added.runner, runner);
@@ -173,7 +171,7 @@ test('CASE-177 untracked managed entries are visible in check and block release'
   const id = '20261023-managed-tracking';
   success(cli(root, 'start', id, '--title', 'Managed tracking', '--requirement', 'Keep managed entries in Git.',
     '--criterion', 'AC-1=Managed entries are tracked', '--size', 'small', '--target', 'src'));
-  success(cli(root, 'confirm', id, 'requirements'));
+  success(confirmTask(root, id, 'requirements'));
   const checked = cli(root, 'check', id);
   assert.ok(checked.data.warnings.some(warning => warning.includes('AGENTS.md') && warning.includes('未纳入 Git')), checked.data.warnings.join('\n'));
 
@@ -211,17 +209,20 @@ test('CASE-179 standard design fields that are blank or placeholders get located
   success(cli(root, 'start', id, '--title', 'Thin design', '--requirement', 'Warn before accepting thin design content.',
     '--criterion', 'AC-1=Thin design fields are visible', '--type', 'feature', '--size', 'standard',
     '--target', 'src', '--target', 'test'));
-  success(cli(root, 'confirm', id, 'requirements'));
+  success(confirmTask(root, id, 'requirements'));
   const relative = `.tiller/task/${id}/task.md`;
-  put(root, relative, read(root, relative).replace('### 方案\n\n### 取舍\n\n### 影响与风险',
-    '### 方案\n\n待补充\n\n### 取舍\n\n### 影响与风险\n\nTODO'));
-  success(cli(root, 'confirm', id, 'design'));
-  put(root, relative, read(root, relative).replace('### 方案\n\n待补充\n\n### 取舍\n\n### 影响与风险\n\nTODO',
-    '### 方案\n\n### 取舍\n\nTODO\n\n### 影响与风险\n\n<待补充>'));
+  completeDesign(root, id);
+  success(confirmTask(root, id, 'design'));
+  put(root, relative, read(root, relative)
+    .replace('沿用现有命令边界实现本次行为。', '待补充')
+    .replace('失败时返回明确结果并保留原记录。', 'TODO')
+    .replace('不新增并行入口，保持现有接口。', '')
+    .replace('影响限于本任务范围，按现有测试复核。', '<待补充>')
+    .replace('运行引用本用例的具名测试。', '…'));
 
   const checked = failure(cli(root, 'check', id));
   const warnings = checked.warnings.join('\n');
-  for (const field of ['方案', '取舍', '影响与风险']) {
+  for (const field of ['方案', '失败处理', '取舍', '影响与风险', '验证入口']) {
     assert.match(warnings, new RegExp(`任务设计“${field}”.*仅空白或占位.*${relative.replace(/[.*+?^${}()|[\]\\]/gu, '\\$&')}`, 'u'));
   }
   assert.ok(!checked.issues.some(issue => issue.includes('仅空白或占位')), checked.issues.join('\n'));
@@ -235,7 +236,7 @@ test('CASE-180 empty decisions and touched module design are located in check wa
   success(cli(root, 'start', id, '--title', 'Thin specs', '--requirement', 'Warn before accepting empty specs.',
     '--criterion', 'AC-1=Empty specs are visible', '--size', 'small',
     '--target', 'src', '--target', 'test', '--target', '.tiller/specs'));
-  success(cli(root, 'confirm', id, 'requirements'));
+  success(confirmTask(root, id, 'requirements'));
   put(root, '.tiller/specs/decisions.md', '# 长期决定\n\n只记录仍然有效、会约束后续实现的取舍。\n');
   put(root, '.tiller/specs/modules/workflow/design.md', '# Workflow design\n');
   put(root, 'src/value.txt', 'changed for module detection\n');
@@ -253,7 +254,7 @@ test('CASE-182 check and resume explicitly report an expired verification', asyn
   const id = '20261023-expired-verification';
   success(cli(root, 'start', id, '--title', 'Expired verification', '--requirement', 'Keep expiry wording visible.',
     '--criterion', 'AC-1=Current tree remains verified', '--size', 'small', '--target', 'src', '--target', 'test'));
-  success(cli(root, 'confirm', id, 'requirements'));
+  success(confirmTask(root, id, 'requirements'));
   success(cli(root, 'verify', id, '--criterion', 'AC-1', '--test', 'test/baseline.test.mjs::CASE-001 baseline'));
   put(root, 'src/value.txt', 'changed after verification\n');
   git(root, 'add', 'src/value.txt');
@@ -272,7 +273,7 @@ test('CASE-183 check explains a branch name missing the task id', async t => {
   const id = '20261023-branch-name';
   success(cli(root, 'start', id, '--title', 'Branch name', '--requirement', 'Keep branch names traceable.',
     '--criterion', 'AC-1=Branch naming is visible', '--size', 'small', '--target', 'src', '--target', 'test'));
-  success(cli(root, 'confirm', id, 'requirements'));
+  success(confirmTask(root, id, 'requirements'));
   git(root, 'checkout', '--quiet', '-b', 'feat/flow-hardening');
 
   const checked = failure(cli(root, 'check', id));

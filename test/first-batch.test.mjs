@@ -3,7 +3,7 @@ import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
-import { cli, failure, fixture, put, snapshot, success } from './helpers.mjs';
+import { cli, completeDesign, confirmTask, failure, fixture, put, snapshot, success } from './helpers.mjs';
 
 const read = (root, relative) => readFileSync(join(root, relative), 'utf8');
 const taskId = '20261022-first-batch';
@@ -31,8 +31,7 @@ function addDesign(root, id) {
   const relative = `.tiller/task/${id}/task.md`;
   const content = read(root, relative);
   assert.match(content, /^### 方案$/mu);
-  put(root, relative, content.replace('### 方案\n\n### 取舍\n\n### 影响与风险',
-    '### 方案\n\n使用任务记录中的结构化正文推进。\n\n### 取舍\n\n保持现有命令边界。\n\n### 影响与风险\n\n阶段推导与任务记录。'));
+  completeDesign(root, id);
 }
 
 function activeFiles(root) {
@@ -107,7 +106,7 @@ test('CASE-053 case add allocates unique ids for module cases and scenarios with
   moduleSpec(root, 'beta');
   success(cli(root, 'start', taskId, '--title', '用例登记', '--requirement', '按验收条件登记模块用例和场景',
     '--criterion', 'AC-1=模块用例可登记', '--criterion', 'AC-2=场景可登记', '--size', 'small', '--target', '.tiller', '--target', 'test'));
-  success(cli(root, 'confirm', taskId, 'requirements', '--quote', '测试确认该需求'));
+  success(confirmTask(root, taskId, 'requirements', '--quote', '测试确认该需求'));
   const first = success(cli(root, 'case', 'add', taskId, '--module', 'alpha', '--kind', 'behavior',
     '--title', '模块行为', '--expected', '模块行为通过测试',
     '--criterion', 'AC-1', '--spec', '.tiller/specs/modules/alpha/requirements.md', '--source', 'src/alpha.mjs'));
@@ -134,7 +133,7 @@ test('CASE-054 check blocks a verified case whose criteria do not point back to 
   moduleSpec(root, 'alpha');
   success(cli(root, 'start', taskId, '--title', '反向绑定', '--requirement', '每条 AC 必须与全局用例双向对应',
     '--criterion', 'AC-1=验证命中正确用例', '--size', 'small', '--target', 'src', '--target', 'test'));
-  success(cli(root, 'confirm', taskId, 'requirements', '--quote', '测试确认该需求'));
+  success(confirmTask(root, taskId, 'requirements', '--quote', '测试确认该需求'));
   put(root, 'src/alpha.mjs', 'export const alpha = true;\n');
   put(root, 'test/alpha.test.mjs', "import assert from 'node:assert/strict';\nimport test from 'node:test';\n\n test('CASE-003 alpha behaves', () => { assert.equal(true, true); });\n");
   put(root, '.tiller/cases/modules/alpha/behavior.md', `# alpha / behavior
@@ -184,7 +183,7 @@ test('CASE-055 new project runs init, plan, start, confirm, case add, verify, ch
     '--criterion', 'AC-1=接入链路可验收', '--target', 'src', '--target', 'test', '--plan', 'onboarding', '--item', 'P-1'));
   assert.equal(started.size, 'small');
   assert.equal(started.plan, 'onboarding');
-  success(cli(root, 'confirm', taskId, 'requirements', '--quote', '测试确认该需求'));
+  success(confirmTask(root, taskId, 'requirements', '--quote', '测试确认该需求'));
   const added = success(cli(root, 'case', 'add', taskId, '--module', 'sample', '--kind', 'behavior',
     '--title', '接入链路行为', '--expected', '接入流程返回预期结果', '--criterion', 'AC-1',
     '--spec', '.tiller/specs/modules/sample/requirements.md', '--source', 'src/sample.mjs'));
@@ -242,11 +241,11 @@ test('CASE-056 task stages derive from task facts and fall back on invalid confi
     '--criterion', 'AC-1=Each confirmed fact advances the stage', '--size', 'standard',
     '--target', 'src', '--target', 'test', '--target', '.tiller'));
   assert.equal(stageTask(root, id), '已开始');
-  success(cli(root, 'confirm', id, 'requirements', '--quote', '确认阶段需求'));
+  success(confirmTask(root, id, 'requirements', '--quote', '确认阶段需求'));
   assert.equal(stageTask(root, id), '需求已确认');
   addDesign(root, id);
   assert.equal(stageTask(root, id), '需求已确认');
-  success(cli(root, 'confirm', id, 'design', '--quote', '确认阶段设计'));
+  success(confirmTask(root, id, 'design', '--quote', '确认阶段设计'));
   assert.equal(stageTask(root, id), '设计已确认');
   const stageCase = success(cli(root, 'case', 'add', id, '--module', 'workflow', '--kind', 'behavior', '--title', '阶段推进',
     '--expected', '阶段随任务事实推进', '--criterion', 'AC-1',
@@ -267,7 +266,7 @@ test('CASE-056 task stages derive from task facts and fall back on invalid confi
   success(cli(root, 'start', staleId, '--title', '验证过期', '--requirement', 'A stale verification falls back to requirements confirmed.',
     '--criterion', 'AC-1=Expired verification is visible', '--size', 'small',
     '--target', 'src', '--target', 'test', '--target', '.tiller'));
-  success(cli(root, 'confirm', staleId, 'requirements', '--quote', '确认过期验证需求'));
+  success(confirmTask(root, staleId, 'requirements', '--quote', '确认过期验证需求'));
   const staleCase = success(cli(root, 'case', 'add', staleId, '--module', 'workflow', '--kind', 'behavior', '--title', '验证过期回退',
     '--expected', '代码变化后显示验证过期', '--criterion', 'AC-1',
     '--spec', '.tiller/specs/modules/workflow/requirements.md#flow-09-依据验证结果判断交付', '--source', 'src/stale.mjs'));
@@ -288,7 +287,7 @@ test('CASE-057 accepted tasks close, block further confirm verify and accept, an
   success(cli(root, 'start', id, '--title', '关闭流程', '--requirement', 'An accepted task can be closed and reopened.',
     '--criterion', 'AC-1=Close blocks terminal changes', '--size', 'small',
     '--target', 'src', '--target', 'test', '--target', '.tiller'));
-  success(cli(root, 'confirm', id, 'requirements', '--quote', '确认关闭需求'));
+  success(confirmTask(root, id, 'requirements', '--quote', '确认关闭需求'));
   const closeCase = success(cli(root, 'case', 'add', id, '--module', 'workflow', '--kind', 'behavior', '--title', '关闭与重开',
     '--expected', '关闭后阻止变更并可重开', '--criterion', 'AC-1',
     '--spec', '.tiller/specs/modules/workflow/requirements.md#flow-15-在关键节点取得人工确认', '--source', 'src/close.mjs'));
@@ -328,7 +327,7 @@ test('CASE-058 abandoned tasks are terminal, reopenable, and not counted as acti
   const id = '20261022-abandon-flow';
   success(cli(root, 'start', id, '--title', '放弃任务', '--requirement', 'An abandoned task stops active plan work.',
     '--criterion', 'AC-1=Abandonment is visible in planning', '--plan', 'abandon-plan', '--item', 'P-1'));
-  success(cli(root, 'confirm', id, 'requirements', '--quote', '确认放弃任务需求'));
+  success(confirmTask(root, id, 'requirements', '--quote', '确认放弃任务需求'));
   const active = success(cli(root, 'plan', 'status', 'abandon-plan'));
   assert.equal(active.items[0].status, '进行中');
   assert.equal(active.items[0].tasks[0].stage, '需求已确认');

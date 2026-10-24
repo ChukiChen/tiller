@@ -7,7 +7,7 @@ import { initialize, parseMetadata } from '../dist/core.js';
 import { verifyFlow } from '../dist/flow.js';
 import { namePattern, runnerFor, TEST_RUNNERS } from '../dist/test-output.js';
 import { applyUpgrade, planUpgrade } from '../dist/upgrade.js';
-import { cli, failure, fixture, put, success } from './helpers.mjs';
+import { cli, confirmTask, failure, fixture, put, success } from './helpers.mjs';
 
 const read = (root, relative) => readFileSync(join(root, relative), 'utf8');
 const taskFile = (id) => `.tiller/task/${id}/task.md`;
@@ -43,7 +43,7 @@ function startSmall(root, id, target = ['src', 'test', '.tiller/cases']) {
 
 function prepareTask(root, id, target) {
   startSmall(root, id, target);
-  success(cli(root, 'confirm', id, 'requirements', '--by', 'Tiller Test'));
+  success(confirmTask(root, id, 'requirements', '--by', 'Tiller Test'));
 }
 
 function addCase(root, id, _testRef, name = 'value behavior') {
@@ -290,7 +290,7 @@ test('CASE-089 CASE-094 bugfix verification requires baseline failure and curren
   success(cli(root, 'start', id, '--title', '修复加法', '--requirement', '修复加法并保留回归证据。',
     '--criterion', 'AC-1=失败先行且当前通过', '--type', 'bugfix', '--size', 'small',
     '--target', 'src', '--target', 'test', '--target', '.tiller/cases'));
-  success(cli(root, 'confirm', id, 'requirements', '--by', 'Tiller Test'));
+  success(confirmTask(root, id, 'requirements', '--by', 'Tiller Test'));
   success(cli(root, 'case', 'add', id, '--module', 'workflow', '--kind', 'behavior', '--title', '加法回归', '--expected', '基线失败且当前通过',
     '--criterion', 'AC-1', '--source', 'src/bug.mjs'));
 
@@ -313,7 +313,7 @@ test('CASE-089 CASE-094 bugfix verification requires baseline failure and curren
   success(cli(root, 'start', missingId, '--title', '缺少失败先行', '--requirement', '检查失败先行证据。',
     '--criterion', 'AC-1=证据完整', '--type', 'bugfix', '--size', 'small',
     '--target', 'src', '--target', 'test', '--target', '.tiller/cases'));
-  success(cli(root, 'confirm', missingId, 'requirements', '--by', 'Tiller Test'));
+  success(confirmTask(root, missingId, 'requirements', '--by', 'Tiller Test'));
   const casePath = '.tiller/cases/modules/workflow/behavior.md';
   put(root, casePath, read(root, casePath).replace('- 关联 AC：20261022-bugfix-evidence#AC-1', `- 关联 AC：20261022-bugfix-evidence#AC-1, ${missingId}#AC-1`));
   success(cli(root, 'verify', missingId, '--criterion', 'AC-1', '--test', testRef));
@@ -325,7 +325,7 @@ test('CASE-089 CASE-094 bugfix verification requires baseline failure and curren
   success(cli(root, 'start', noFailureId, '--title', '基线已通过', '--requirement', '拒绝伪造失败先行证据。',
     '--criterion', 'AC-1=基线必须失败', '--type', 'bugfix', '--size', 'small',
     '--target', 'src', '--target', 'test', '--target', '.tiller/cases'));
-  success(cli(root, 'confirm', noFailureId, 'requirements', '--by', 'Tiller Test'));
+  success(confirmTask(root, noFailureId, 'requirements', '--by', 'Tiller Test'));
   put(root, casePath, read(root, casePath).replace(`${missingId}#AC-1`, `${missingId}#AC-1, ${noFailureId}#AC-1`));
   const noFailure = failure(cli(root, 'verify', noFailureId, '--criterion', 'AC-1', '--test', testRef, '--expect-fail'));
   assert.equal(noFailure.error.code, 'EXPECTED_FAILURE_NOT_OBSERVED');

@@ -19,9 +19,9 @@ node .tiller/run.cjs close <id> --reason "交付完成"
 node .tiller/run.cjs pr <id>
 ```
 
-`start` 生成目标、范围和 AC；standard 另生成设计。`--requirement` 与 `--requirement-file <工程内相对路径>` 二选一且非空；`--summary` 记录标题摘要和建议分支。`confirm`/`accept`/`plan confirm` 的 `--quote` 可选；`--by` 默认取 `git config user.name`。确认记录部分、人、时间和摘要；需求/设计独立失效。
+`start` 生成完整需求章节与 AC；standard 另生成完整设计章节。`--requirement` 与 `--requirement-file <工程内相对路径>` 二选一且非空；交付路径只进 `scope`。`--summary` 记录标题摘要和建议分支。`confirm`/`accept`/`plan confirm` 的 `--quote` 可选；`--by` 默认取 `git config user.name`。确认记录部分、人、时间和摘要；需求/设计独立失效；关键章节空白或占位拒绝确认。
 
-`review` 有阻塞项时阻断 `check`/`accept`；`release` 检查验收提交、元数据、受管资源与入口。阶段由事实推导；已验收任务钉在验收提交，未验收或失效时核对工作区/HEAD。已验收 `close`，未验收 `--abandon`，终态 `reopen`。
+`review` 阻塞阻断 `check`/`accept`；`release` 检查验收提交和资源。阶段由事实推导，已验收任务钉在验收提交；未验收 `--abandon`，终态 `reopen`。
 
 standard 任务在设计确认前已有 verify，或确认后工作区仍有业务改动，`check` 阻断 `accept`；`verify` 本身不要求设计确认。
 
@@ -55,4 +55,4 @@ node .tiller/run.cjs plan attach 20261023-closed-task --plan 20261023-batch --it
 
 ## 接入与升级
 
-`init [--platform github|gitlab|both]` 只补缺失骨架，不覆盖已有文件，按平台生成 PR/MR 模板；检测到 pytest 配置或常见 Python 测试布局时选用 pytest 验证。平台在初始化时选定；之后不能通过 CLI 切换，需手动修改 `.tiller/project.json` 并补齐对应模板。`upgrade` 只刷新未修改文件，冲突保留；`upgrade --adopt <受管文件>` 保留当前内容并只更新摘要，用于有意保留的本地修改。兼容当前及上一资源契约，版本号仅正式发布修改。受管入口未入 Git 时，`check` 警告，`release` 阻断。
+`init [--platform github|gitlab|both]` 只补缺失骨架，不覆盖已有文件，按平台生成 PR/MR 模板；项目与模块规格含完整需求/设计章节和小提示；检测到 pytest 配置或常见 Python 测试布局时选用 pytest 验证。平台在初始化时选定；之后不能通过 CLI 切换，需手动修改 `.tiller/project.json` 并补齐对应模板。`upgrade` 只刷新未修改文件，冲突保留；`upgrade --adopt <受管文件>` 保留当前内容并只更新摘要。兼容当前及上一资源契约，版本号仅正式发布修改。受管入口未入 Git 时，`check` 警告，`release` 阻断。
