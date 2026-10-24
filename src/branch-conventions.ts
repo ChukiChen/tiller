@@ -17,7 +17,8 @@ export function normalizeBranchSlug(value: string): string | null {
 
 export function suggestedBranchNameFor(type: CommitType, taskId: string, slug?: string | null): string {
   const normalized = slug ? normalizeBranchSlug(slug) : null;
-  return `${suggestedBranchName(type, taskId)}${normalized ? `-${normalized}` : ''}`;
+  const alreadyDescribed = normalized !== null && (taskId === normalized || taskId.endsWith(`-${normalized}`));
+  return `${suggestedBranchName(type, taskId)}${normalized && !alreadyDescribed ? `-${normalized}` : ''}`;
 }
 
 export function branchDescriptionForTask(branch: string, taskId: string): string | null {

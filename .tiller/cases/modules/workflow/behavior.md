@@ -1158,3 +1158,55 @@ worktree 缺失按幂等跳过，close/abandon 成功并删除既有日志目录
 ### 预期结果
 
 旧版字段仍被解析为同一验证事实，check 不因格式旧而误报或放宽
+
+## CASE-205 旧版冗长确认块仍可解析
+
+- 类型：behavior
+- 优先级：medium
+- 模块：workflow
+- 关联 AC：20261024-taskmd-cleanup#AC-1
+- 需求：`.tiller/specs/modules/workflow/requirements.md`
+- 源码：`src/flow.ts`, `test/flow-cli.test.mjs`
+
+### 前置条件
+
+- 任务记录只含旧版 ## 确认 bullet 且无机器旁路
+
+### 步骤
+
+1. 读取任务并执行 check
+2. 核对需求确认状态与摘要
+
+### 输入
+
+- 旧版对象、用户原话、提交、对象摘要和时间字段
+
+### 预期结果
+
+旧版确认被解析为同一门禁事实，check 不误报失效，也不放宽摘要或字段校验
+
+## CASE-206 关单后自检收起长提示但 check 仍报告
+
+- 类型：behavior
+- 优先级：medium
+- 模块：workflow
+- 关联 AC：20261024-taskmd-cleanup#AC-2
+- 需求：`.tiller/specs/modules/workflow/requirements.md`
+- 源码：`src/flow.ts`, `test/review-release.test.mjs`
+
+### 前置条件
+
+- 已验收任务触发模块回归与规格回写提示
+
+### 步骤
+
+1. 执行 check 并读取 warnings
+2. 执行 close 后读取 task.md 的 ## 自检
+
+### 输入
+
+- 已验收且 specs 未回写的任务
+
+### 预期结果
+
+check 的 warnings 仍包含回归与回写提示；关单写入的 ## 自检 不堆这些长提示，只保留短检查项或运行指引

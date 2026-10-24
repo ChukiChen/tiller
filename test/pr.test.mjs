@@ -51,6 +51,16 @@ test('CASE-070 branch names follow type and task prefix rules', () => {
   assert.match(branchNameIssue('feat/20261022-round11-', '20261022-round11') ?? '', /分支名应为/u);
 });
 
+test('CASE-208 branch slug already present in the task id is not appended twice', () => {
+  const id = '20261024-slim-verify-render';
+  assert.equal(suggestedBranchNameFor('feat', id, 'slim-verify-render'), `feat/${id}`);
+  assert.equal(suggestedBranchNameFor('feat', id, 'Slim Verify Render'), `feat/${id}`);
+  assert.equal(suggestedBranchNameFor('feat', 'slim-verify-render', 'slim-verify-render'), 'feat/slim-verify-render');
+  assert.equal(suggestedBranchNameFor('feat', id, 'extra-detail'), `feat/${id}-extra-detail`);
+  assert.equal(branchDescriptionForTask(`feat/${id}`, id), null);
+  assert.equal(branchNameIssue(`feat/${id}`, id), null);
+});
+
 test('CASE-073 commit subjects enforce type, module, Chinese summary and no task links', () => {
   assert.equal(commitSubjectIssue('feat(workflow): 添加 PR 草稿', ['workflow']), null);
   assert.equal(commitSubjectIssue('chore: 更新受管资源'), null);
@@ -85,7 +95,7 @@ test('CASE-068 pr draft derives title, five sections and current AC state', asyn
   const draft = success(cli(root, 'pr', id));
   assert.equal(draft.title, `feat(workflow): 生成固定五段 PR 草稿 [${id}]`);
   assert.equal(draft.module, 'workflow');
-  assert.equal(draft.branch, `feat/${id}-pr-draft`);
+  assert.equal(draft.branch, `feat/${id}`);
   assert.match(draft.body, /^## 关联任务$/mu);
   for (const heading of ['关联任务', '变更内容', '验收条件', '验证结果', '影响与风险']) {
     assert.equal(draft.body.split(`## ${heading}`).length - 1, 1, heading);

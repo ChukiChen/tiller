@@ -195,3 +195,36 @@ test('CASE-195 init creates complete requirement and design section skeletons wi
     assert.equal(read(root, `.tiller/${relative}`), readFileSync(new URL(`../resources/${relative}`, import.meta.url), 'utf8'));
   }
 });
+
+test('CASE-207 requirement and design guidance reduces noise while confirmation gates remain', async t => {
+  const root = await project(t);
+  const id = '20261024-doc-noise';
+  success(cli(root, 'start', id, '--title', 'Documentation noise', '--requirement', 'Keep business constraints prominent.',
+    '--criterion', 'AC-1=Guidance stays focused', '--type', 'feature', '--size', 'standard', '--target', 'src', '--target', 'test'));
+  const content = read(root, taskPath(id));
+  assert.match(content, /业务做\/不做\/假设和防跑偏约束.*交付路径.*不在此枚举/u);
+  assert.match(content, /不复制规格全文/u);
+  assert.match(content, /不塞长命令/u);
+  assert.match(content, /引用已有规格，不复制全文/u);
+  assert.match(content, /可重跑的短测试入口.*不塞长命令菜谱/u);
+
+  success(confirmTask(root, id, 'requirements'));
+  const blankDesign = failure(cli(root, 'confirm', id, 'design'));
+  assert.equal(blankDesign.error.code, 'MISSING_DESIGN');
+  assert.match(blankDesign.error.message, /方案/u);
+  assert.match(blankDesign.error.message, /验证入口/u);
+
+  for (const [resource, managed] of [
+    ['resources/rules/quality/documents.md', '.tiller/rules/quality/documents.md'],
+    ['resources/rules/activities/requirements.md', '.tiller/rules/activities/requirements.md'],
+    ['resources/rules/activities/design.md', '.tiller/rules/activities/design.md'],
+  ]) assert.equal(readFileSync(new URL(`../${managed}`, import.meta.url), 'utf8'),
+    readFileSync(new URL(`../${resource}`, import.meta.url), 'utf8'));
+  const quality = readFileSync(new URL('../resources/rules/quality/documents.md', import.meta.url), 'utf8');
+  assert.match(quality, /业务约束.*不枚举交付路径/u);
+  assert.match(quality, /不复制全文或展开长命令菜谱/u);
+  const requirements = readFileSync(new URL('../resources/rules/activities/requirements.md', import.meta.url), 'utf8');
+  assert.match(requirements, /防跑偏约束.*不罗列交付路径.*不复制全文/u);
+  const design = readFileSync(new URL('../resources/rules/activities/design.md', import.meta.url), 'utf8');
+  assert.match(design, /引用已有 specs.*不复制全文.*长命令菜谱.*交付路径/u);
+});

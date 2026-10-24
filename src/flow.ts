@@ -305,7 +305,36 @@ function parseCriteria(content: string, requirement = sectionBody(content, '需�
   const nested = criteriaFromBody(subSectionBody(requirement, '验收条件'));
   return nested.length ? nested : criteriaFromBody(sectionBody(content, '验收条件'));
 }
-function parseConfirmations(content: string): FlowConfirmation[] {
+function parseConfirmationSidecar(line: string): FlowConfirmation | null {
+  const match = /^<!--\s*tiller-confirm:v1\s+(\{.*\})\s*-->$/u.exec(line);
+  if (!match) return null;
+  let raw: unknown;
+  try { raw = JSON.parse(match[1]!); } catch { return null; }
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
+  const record = raw as Record<string, unknown>;
+  const gate = record.gate;
+  const object = record.object;
+  const quote = record.quote;
+  const by = record.by;
+  const commit = record.commit;
+  const subject = record.subject;
+  const at = record.at;
+  const style = record.style;
+  if (typeof gate !== 'string' || !CONFIRMATION_GATES.includes(gate as FlowGate)
+    || typeof object !== 'string' || typeof quote !== 'string' || typeof by !== 'string'
+    || typeof commit !== 'string' || !validCommit(commit)
+    || typeof subject !== 'string' || !/^[a-f0-9]{64}$/u.test(subject)
+    || typeof at !== 'string' || !Number.isFinite(Date.parse(at))
+    || (style !== undefined && style !== 'legacy')) return null;
+  if (style === 'legacy') {
+    if (object !== LEGACY_CONFIRMATION_OBJECTS[gate as FlowGate] && object !== CONFIRMATION_OBJECTS[gate as FlowGate]) return null;
+    return { gate: gate as FlowGate, object, quote: normalizeLine(quote), ...(normalizeLine(by) ? { by: normalizeLine(by) } : {}),
+      commit, subject, at, style: 'legacy' };
+  }
+  if (object !== CONFIRMATION_OBJECTS[gate as FlowGate] || !normalizeLine(by)) return null;
+  return { gate: gate as FlowGate, object, quote: normalizeLine(quote), by: normalizeLine(by), commit, subject, at };
+}
+function parseLegacyConfirmations(content: string): FlowConfirmation[] {
   const body = sectionBody(content, '确认');
   const chunks = body.split(/^###\s+/mu).slice(1);
   const result: FlowConfirmation[] = [];
@@ -334,6 +363,15 @@ function parseConfirmations(content: string): FlowConfirmation[] {
     }
   }
   return result;
+}
+function parseConfirmations(content: string): FlowConfirmation[] {
+  const body = sectionBody(content, '确认');
+  const markers = body.split(/\r?\n/u).map(line => line.trim()).filter(line => line.startsWith('<!-- tiller-confirm:v1 '));
+  if (markers.length) {
+    const parsed = markers.map(parseConfirmationSidecar);
+    if (parsed.every((item): item is FlowConfirmation => item !== null)) return parsed;
+  }
+  return parseLegacyConfirmations(content);
 }
 interface VerificationSidecar {
   command: string; exitCode: number | null; tree: string; commit: string; legacyEvidence?: boolean;
@@ -482,31 +520,24 @@ export async function readTask(root: string, id: string): Promise<FlowTask> {
   return task;
 }
 
+function markdownCell(value: string): string {
+  return normalizeLine(value).replaceAll('|', '\\|') || '—';
+}
 function renderConfirmations(values: FlowConfirmation[]): string {
   if (!values.length) return '';
-  return values.map(value => value.style === 'legacy'
-    ? [
-        `### ${value.gate}`,
-        `- 对象：${value.object}`,
-        `- 用户原话：${normalizeLine(value.quote)}`,
-        `- 原话用途：${LEGACY_QUOTE_PURPOSE}`,
-        `- 提交：${value.commit}`,
-        `- 对象摘要：${value.subject}`,
-        `- 时间：${value.at}`,
-      ].join('\n')
-    : [
-        `### ${value.gate}`,
-        `- 确认部分：${CONFIRMATION_LABELS[value.gate]}`,
-        `- 对象：${value.object}`,
-        `- 确认人：${normalizeLine(value.by ?? '未记录')}`,
-        ...(value.quote ? [
-          `- 用户原话：${normalizeLine(value.quote)}`,
-          `- 原话用途：${OPTIONAL_QUOTE_PURPOSE}`,
-        ] : []),
-        `- 提交：${value.commit}`,
-        `- 对象摘要：${value.subject}`,
-        `- 时间：${value.at}`,
-      ].join('\n')).join('\n\n');
+  const rows = values.map(value => {
+    const shortCommit = value.commit === 'no-git' ? value.commit : value.commit.slice(0, 12);
+    return `| ${CONFIRMATION_LABELS[value.gate]} | ${markdownCell(value.by ?? '')} | ${markdownCell(value.at)} | ${markdownCell(shortCommit)} | ${markdownCell(value.quote)} |`;
+  });
+  const sidecars = values.map(value => {
+    const sidecar = JSON.stringify({
+      gate: value.gate, object: value.object, subject: value.subject, commit: value.commit,
+      by: normalizeLine(value.by ?? ''), quote: normalizeLine(value.quote), at: value.at,
+      ...(value.style === 'legacy' ? { style: 'legacy' } : {}),
+    }).replaceAll('--', '\\u002d\\u002d');
+    return `<!-- tiller-confirm:v1 ${sidecar} -->`;
+  });
+  return ['| 部分 | 确认人 | 时间 | 短提交 | 原话 |', '| --- | --- | --- | --- | --- |', ...rows, '', ...sidecars].join('\n');
 }
 function renderVerifications(values: FlowVerification[]): string {
   if (!values.length) return '';
@@ -573,7 +604,8 @@ function renderTask(task: Omit<FlowTask, 'content' | 'path'>, selfCheck = ''): s
   parts.push('## 验证', renderVerifications(task.verifications) || '尚无验证。');
   if (task.review) parts.push('## 评审', renderReview(task.review));
   if (task.closures.length) parts.push('## 关闭', renderClosures(task.closures));
-  parts.push('## 自检', selfCheck.trim() || '交付前运行 check；验收后运行 accept。');
+  const closedSelfCheck = '任务已结束；如需复核，运行 check；继续修改前先运行 reopen。';
+  parts.push('## 自检', terminalStage(task) ? closedSelfCheck : selfCheck.trim() || '交付前运行 check；验收后运行 accept。');
   return `${parts.join('\n\n').trimEnd()}\n`;
 }
 async function writeTask(root: string, id: string, before: string, after: string,
@@ -598,25 +630,26 @@ function criteriaList(values: string[]): FlowCriterion[] {
 }
 function renderStructuredRequirement(goal: string, criteria: FlowCriterion[], requirementFile?: string): string {
   return [
-    '### 面向谁与问题', '', '<!-- 写主要用户、当前问题与已有依据。 -->', '',
-    '### 目标', '', ...(requirementFile ? [`需求来源：\`${requirementFile}\``, ''] : []), goal, '',
+    '### 面向谁与问题', '', '<!-- 写主要用户、当前问题与已有依据；不复制规格全文。 -->', '',
+    '### 目标', '', '<!-- 写可观察的业务结果与约束；不枚举交付路径。 -->', '',
+    ...(requirementFile ? [`需求来源：\`${requirementFile}\``, ''] : []), goal, '',
     '### 业务范围', '',
-    '<!-- 写业务上做、不做什么和假设；交付路径只记录在任务范围。 -->',
+    '<!-- 写业务做/不做/假设和防跑偏约束；交付路径只记录在任务范围，不在此枚举。 -->',
     '- 做：',
     '- 不做：',
     '- 假设与待确认：', '',
-    '### 关键行为', '', '<!-- 写用户可观察的主要行为。 -->', '',
+    '### 关键行为', '', '<!-- 写用户可观察行为；不塞长命令或实现步骤。 -->', '',
     '### 异常与边界', '', '<!-- 写失败、空值、权限、规模和兼容边界。 -->', '',
     '### 验收条件', '', criteria.map(item => `- ${item.id}: ${normalizeLine(item.text)}`).join('\n'),
   ].join('\n').trim();
 }
 function emptyDesignTemplate(): string {
   return [
-    '### 方案', '', '<!-- 写做法、关键接口与数据流。 -->', '',
+    '### 方案', '', '<!-- 写关键做法、接口与数据流；引用已有规格，不复制全文。 -->', '',
     '### 失败处理', '', '<!-- 写失败、回滚与恢复方式。 -->', '',
     '### 取舍', '', '<!-- 写备选方案与选择理由；没有备选时说明原因。 -->', '',
     '### 影响与风险', '', '<!-- 写受影响范围、兼容性和风险缓解。 -->', '',
-    '### 验证入口', '', '<!-- 写可重跑的命令或测试入口。 -->',
+    '### 验证入口', '', '<!-- 写可重跑的短测试入口；不塞长命令菜谱。 -->',
   ].join('\n');
 }
 const PLACEHOLDER_LINE = /^(?:todo|tbd|tba|n\/a|na|待补充|待完善|待填写|待定|占位|暂无|无|\.{3}|…)$/iu;
