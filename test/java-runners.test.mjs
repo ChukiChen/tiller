@@ -143,11 +143,12 @@ test('CASE-170 junit-gradle builds a precise selector and counts only the declar
 });
 
 test('CASE-172 verify fails closed for an unknown runner or a path that is not uniquely owned', () => {
-  assert.throws(() => normalizeVerifyConfig({ runner: 'pytest' }, '工程'), /node-test、junit-maven、junit-gradle/);
+  assert.deepEqual(normalizeVerifyConfig({ runner: 'pytest' }, '工程'), { runner: 'pytest' });
+  assert.throws(() => normalizeVerifyConfig({ runner: 'cargo' }, '工程'), /node-test、junit-maven、junit-gradle、pytest/);
   assert.throws(() => readRepositoryRecords({
     repositories: [{ id: 'billing', path: 'repositories/billing', verify: { runner: 'cargo' } }],
   }), /junit-maven/);
-  assert.throws(() => runnerFor('pytest'), error => error.code === 'UNKNOWN_VERIFY_RUNNER');
+  assert.throws(() => runnerFor('cargo'), error => error.code === 'UNKNOWN_VERIFY_RUNNER');
   const shared = projectMetadata({
     verify: { runner: 'junit-gradle', prepare: ['node', 'root-prepare.mjs'] },
     repositories: [
@@ -234,10 +235,10 @@ test('CASE-168 workspace uses each repository runner and runs prepare in that re
     const orphan = failure(cli(root, 'verify', id, '--criterion', 'AC-1', '--test', 'test/orphan.test.mjs::orphan'));
     assert.equal(orphan.error.code, 'VERIFY_REPOSITORY_UNRESOLVED');
     const reported = success(cli(root, 'verify', id, '--criterion', 'AC-1', '--test', 'test/orphan.test.mjs::orphan',
-      '--reported', '--command', 'pytest -q', '--result', 'passed', '--reason', '该框架尚未适配'));
+      '--reported', '--command', 'cargo test -q', '--result', 'passed', '--reason', '该框架尚未适配'));
     assert.equal(reported.entries[0].source, 'reported');
     assert.equal(reported.entries[0].evidence, 'not-run');
-    assert.equal(reported.entries[0].command, 'pytest -q');
+    assert.equal(reported.entries[0].command, 'cargo test -q');
   } finally {
     restore();
   }

@@ -73,11 +73,18 @@ export interface CaseLibrary {
 export interface TestBlock { name: string; assertions: number; index: number }
 
 export function testBlocks(content: string): TestBlock[] {
-  const assertion = /\bassert\.|\bexpect\s*\(/gu;
-  const starts = [...content.matchAll(/\b(?:test|it)\s*\(\s*(['"`])(.*?)\1\s*,/gu)];
-  return starts.map((match, index) => {
-    const body = content.slice(match.index, starts[index + 1]?.index ?? content.length);
-    return { name: match[2]!, assertions: [...body.matchAll(assertion)].length, index: match.index ?? 0 };
+  const assertion = /\bassert(?:\.|\s)|\bexpect\s*\(/gu;
+  const starts: { name: string; index: number }[] = [];
+  for (const match of content.matchAll(/\b(?:test|it)\s*\(\s*(['"`])(.*?)\1\s*,/gu)) {
+    starts.push({ name: match[2]!, index: match.index ?? 0 });
+  }
+  for (const match of content.matchAll(/^\s*(?:async\s+)?def\s+(test_[A-Za-z0-9_]+)\s*\(/gmu)) {
+    starts.push({ name: match[1]!, index: match.index ?? 0 });
+  }
+  starts.sort((left, right) => left.index - right.index);
+  return starts.map((start, index) => {
+    const body = content.slice(start.index, starts[index + 1]?.index ?? content.length);
+    return { name: start.name, assertions: [...body.matchAll(assertion)].length, index: start.index };
   });
 }
 
@@ -255,6 +262,12 @@ async function scanTestCoverage(root: string, knownIds: Set<string>, libraryIssu
   const byCase = new Map<string, TestReference[]>();
   const issues: string[] = [];
   const files: string[] = [];
+  const isTestFile = (relative: string, name: string): boolean => {
+    if (/\.(?:test|spec)\.[cm]?[jt]s$/u.test(name)) return true;
+    if (!name.endsWith('.py')) return false;
+    if (/^(?:test_.+|.+_test)\.py$/u.test(name) && !relative.includes('/')) return true;
+    return /^(?:test|tests)\//u.test(relative);
+  };
   async function visit(relative: string): Promise<void> {
     let entries;
     try { entries = await readdir(path.join(root, relative), { withFileTypes: true }); }
@@ -265,10 +278,17 @@ async function scanTestCoverage(root: string, knownIds: Set<string>, libraryIssu
     for (const entry of entries.sort((a, b) => a.name.localeCompare(b.name))) {
       const child = `${relative}/${entry.name}`;
       if (entry.isDirectory()) await visit(child);
-      else if (entry.isFile() && /\.(?:test|spec)\.[cm]?[jt]s$/u.test(entry.name)) files.push(child);
+      else if (entry.isFile() && isTestFile(child, entry.name)) files.push(child);
     }
   }
   await visit('test');
+  await visit('tests');
+  let rootEntries: Dirent[];
+  try { rootEntries = await readdir(root, { withFileTypes: true }); }
+  catch { rootEntries = []; }
+  for (const entry of rootEntries) {
+    if (entry.isFile() && /^(?:test_.+|.+_test)\.py$/u.test(entry.name)) files.push(entry.name);
+  }
   for (const relative of files) {
     const content = await readFile(path.join(root, relative), 'utf8');
     for (const block of testBlocks(content)) {
@@ -278,7 +298,7 @@ async function scanTestCoverage(root: string, knownIds: Set<string>, libraryIssu
       for (let index = prefix.length - 1; index >= 0; index -= 1) {
         const line = prefix[index]!.trim();
         if (!line) continue;
-        if (!/^(?:\/\/|\/\*|\*)/u.test(line)) break;
+        if (!/^(?:\/\/|\/\*|\*|#)/u.test(line)) break;
         comments.unshift(line);
       }
       for (const match of comments.join('\n').matchAll(/\bCASE-\d+\b/gu)) ids.add(match[0]);
@@ -410,6 +430,11 @@ function caseSkeleton(runner: string, id: string, title: string, expected: strin
     const number = id.replace(/[^0-9]/gu, '');
     const comment = (value: string): string => value.replaceAll('*/', '* /');
     return `import org.junit.jupiter.api.Test;\nimport static org.junit.jupiter.api.Assertions.assertTrue;\n\nclass TillerCase${number}Test {\n  @Test\n  void case${number}() {\n    // ${id} ${comment(title)}\n    // TODO: ${comment(expected)}\n    assertTrue(true);\n  }\n}\n`;
+  }
+  if (runner === 'pytest') {
+    const number = id.replace(/[^0-9]/gu, '');
+    const comment = (value: string): string => value.replace(/[\r\n]+/gu, ' ');
+    return `# ${id} ${comment(title)}\ndef test_case_${number}():\n    # TODO: ${comment(expected)}\n    assert True\n`;
   }
   return `import test from 'node:test';\nimport assert from 'node:assert/strict';\n\ntest('${id} ${title.replaceAll("'", "\\'")}', () => {\n  // TODO: ${expected.replaceAll("'", "\\'")}\n  assert.ok(true);\n});\n`;
 }

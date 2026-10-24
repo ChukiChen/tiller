@@ -48,12 +48,14 @@ export interface VerifyTarget {
   repositoryId?: string;
 }
 
-export const VERIFY_RUNNER_NAMES = ['node-test', 'junit-maven', 'junit-gradle'] as const;
+export const VERIFY_RUNNER_NAMES = ['node-test', 'junit-maven', 'junit-gradle', 'pytest'] as const;
 export type VerifyRunnerName = typeof VERIFY_RUNNER_NAMES[number];
 
 const JAVA_IDENTIFIER = String.raw`[\p{L}_$][\p{L}\p{N}_$]*`;
 const JAVA_CLASS_NAME = new RegExp(`^(?:${JAVA_IDENTIFIER}\\.)*${JAVA_IDENTIFIER}$`, 'u');
 const JAVA_METHOD_NAME = new RegExp(`^${JAVA_IDENTIFIER}$`, 'u');
+const PYTHON_IDENTIFIER = String.raw`[\p{L}_][\p{L}\p{N}_]*`;
+const PYTHON_NAME = new RegExp(`^${PYTHON_IDENTIFIER}$`, 'u');
 const GRADLE_INIT_SCRIPT = `gradle.projectsEvaluated {
   rootProject.allprojects {
     tasks.withType(org.gradle.api.tasks.testing.Test).configureEach {
@@ -87,6 +89,11 @@ interface JUnitCase {
 
 interface JUnitSelector {
   className: string;
+  method?: string;
+}
+
+interface PytestSelector {
+  classNames: string[];
   method?: string;
 }
 
@@ -386,6 +393,66 @@ async function loadJUnitReport(_reportFile: string, reportDirectory: string): Pr
   return parts.join('\n');
 }
 
+function pythonModule(filePath: string): string | null {
+  const normalized = filePath.split('\\').join('/').replace(/^\.\//u, '');
+  if (!normalized.endsWith('.py')) return null;
+  const parts = normalized.slice(0, -'.py'.length).split('/');
+  if (!parts.length || parts.some(part => !PYTHON_NAME.test(part))) return null;
+  return parts.join('.');
+}
+
+function pytestSelector(reference: TestReference): PytestSelector {
+  const module = pythonModule(reference.path);
+  if (!module) coded('VERIFY_SELECTOR_INVALID', '无法从 Python 测试路径确定模块；请使用只含字母、数字和下划线的 .py 路径。');
+  const name = reference.name?.trim();
+  if (!name) return { classNames: [module] };
+  const parts = name.split('::');
+  if (parts.length > 2 || parts.some(part => !part.trim())) {
+    coded('VERIFY_SELECTOR_INVALID', `pytest 测试选择器无效：${name}。请使用“test_name”或“TestClass::test_name”。`);
+  }
+  const method = parts.at(-1)!.trim();
+  if (/\s/u.test(method)) {
+    coded('VERIFY_SELECTOR_INVALID', `pytest 测试选择器无效：${name}。测试函数名不能包含空白。`);
+  }
+  if (parts.length === 2) {
+    const className = parts[0]!.trim();
+    if (!PYTHON_NAME.test(className)) {
+      coded('VERIFY_SELECTOR_INVALID', `pytest 测试类名无效：${className}。`);
+    }
+    return { classNames: [`${module}.${className}`], method };
+  }
+  return { classNames: [module], method };
+}
+
+function inspectPytest(cases: JUnitCase[], selector: PytestSelector): TestEvidence {
+  const inModule = cases.filter(item => selector.classNames.some(className =>
+    item.classname === className || item.classname.endsWith(`.${className}`)));
+  if (!inModule.length) return { verified: false, reason: '私有报告中没有可用的测试事件。' };
+  if (!selector.method) {
+    if (inModule.some(item => item.outcome !== 'passed')) return { verified: false, reason: '文件内存在失败或跳过的测试。' };
+    return { verified: true, outcome: 'passed', reason: '文件内测试全部通过。' };
+  }
+  const target = inModule.filter(item => item.name === selector.method);
+  const failures = inModule.filter(item => item.outcome === 'failed');
+  if (target.length !== 1) {
+    return { verified: false, reason: target.length ? `私有报告匹配到 ${target.length} 个测试。` : '私有报告未找到指定测试。' };
+  }
+  const found = target[0]!;
+  if (found.outcome === 'skipped') return { verified: false, reason: `测试被跳过：${found.name}。` };
+  if (found.outcome === 'failed' && failures.length !== 1) return { verified: false, reason: '私有报告包含额外的失败事件。' };
+  if (found.outcome === 'passed' && failures.length) return { verified: false, reason: '私有报告包含失败事件。' };
+  return { verified: true, outcome: found.outcome === 'failed' ? 'failed' : 'passed', reason: '私有报告中的测试结果已核实。' };
+}
+
+function parsePytest(report: string, reference: TestReference): TestEvidence {
+  let selector: PytestSelector;
+  try { selector = pytestSelector(reference); }
+  catch (error) { return { verified: false, reason: (error as Error).message }; }
+  const cases = parseJUnitCases(report);
+  if (cases === null) return { verified: false, reason: '私有报告损坏或无法解析。' };
+  return inspectPytest(cases, selector);
+}
+
 const nodeTestRunner: TestRunner = {
   name: 'node-test',
   build(reference, paths, pattern) {
@@ -437,7 +504,18 @@ const junitGradleRunner: TestRunner = {
   loadReport: loadJUnitReport,
 };
 
-export const TEST_RUNNERS: TestRunner[] = [nodeTestRunner, junitMavenRunner, junitGradleRunner];
+// pytest writes one JUnit XML file to the private report path. Exact selection
+// happens while parsing that report because -k cannot represent every identifier.
+const pytestRunner: TestRunner = {
+  name: 'pytest',
+  build(reference, paths) {
+    const args = [`--junitxml=${paths.report}`, reference.path];
+    return { executable: 'pytest', args, display: commandDisplay('pytest', args) };
+  },
+  parse: parsePytest,
+};
+
+export const TEST_RUNNERS: TestRunner[] = [nodeTestRunner, junitMavenRunner, junitGradleRunner, pytestRunner];
 
 export function runnerFor(name = 'node-test'): TestRunner {
   const runner = TEST_RUNNERS.find(item => item.name === name);

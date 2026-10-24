@@ -16,7 +16,7 @@ tiller 是一套开源的 AI 软件工程方法论与工具集，帮助开发者
 - 提交主题采用 `类型(模块): 中文摘要`，PR/MR 标题加任务编号，分支使用 `类型/任务编号[-描述]`；格式问题只提示。
 - `init` 生成最小工程骨架和当前平台模板，`upgrade` 只刷新未修改的受管文件并兼容当前及直接兼容的上一资源契约。
 
-当前共享资料以 `.tiller/specs/`、`.tiller/context/`、`.tiller/cases/`、`.tiller/plans/` 和 `.tiller/task/` 为准；被替代的过程内容只从 Git 历史追溯。`project.json` 的 `resourceVersion`、包版本、CLI 版本和资源常量保持 0.5.0，功能开发不升版。
+当前共享资料以 `.tiller/specs/`、`.tiller/context/`、`.tiller/cases/`、`.tiller/plans/` 和 `.tiller/task/` 为准；被替代的过程内容只从 Git 历史追溯。`project.json` 的 `resourceVersion`、包版本、CLI 版本和资源常量保持 0.5.0，功能开发不升版。运行器现含 `node-test`、`junit-maven`、`junit-gradle` 和 `pytest`；`upgrade --adopt` 可保留受管文件本地修改，`plan attach` 可补记已有任务的规划归属。
 
 历史实现记录已迁入 `.tiller/task/`，当前入口只指向现存任务记录。
 

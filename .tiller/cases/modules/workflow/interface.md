@@ -617,3 +617,29 @@ check warning 指出当前分支未包含当前任务编号，并给出类型/�
 ### 预期结果
 
 公开入口简述过薄检查、日志可读内容和分支命名约定
+
+## CASE-186 check 给出规格与背景回写路径及提纲
+
+- 类型：interface
+- 优先级：high
+- 模块：workflow
+- 关联 AC：20261024-gap-closure#AC-1
+- 需求：`.tiller/specs/modules/workflow/requirements.md`
+- 源码：`src/flow.ts`
+
+### 前置条件
+
+- 任务已有有效需求确认与改动
+
+### 步骤
+
+1. 在临时工程创建任务并修改业务文件
+2. 运行 check 并读取 warnings
+
+### 输入
+
+- 包含 src 或模块改动的任务
+
+### 预期结果
+
+基线后未回写 specs/context 时，check 警告列出可定位路径与简短提纲，且不单独阻断 accept

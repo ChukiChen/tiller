@@ -38,16 +38,45 @@ export const IGNORE_END = '# tiller:local:end';
 const EOL_EQUIVALENT_MANAGED = new Set([...REQUIRED_MANAGED, GITLAB_TEMPLATE]);
 const execFileAsync = promisify(execFile);
 
-type DetectedRunner = 'junit-maven' | 'junit-gradle';
+type DetectedRunner = 'junit-maven' | 'junit-gradle' | 'pytest';
 
-async function detectVerifyRunner(root: string): Promise<{ runner: DetectedRunner; file: string } | null> {
-  for (const [file, runner] of [['pom.xml', 'junit-maven'], ['build.gradle', 'junit-gradle'], ['build.gradle.kts', 'junit-gradle']] as const) {
+async function hasFile(root: string, relative: string): Promise<boolean> {
+  try { return (await lstat(path.join(root, relative))).isFile(); }
+  catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
+    return false;
+  }
+}
+
+async function hasPytestLayout(root: string): Promise<boolean> {
+  try {
+    for (const entry of await readdir(root, { withFileTypes: true })) {
+      if (entry.isFile() && /^(?:test_.+|.+_test)\.py$/u.test(entry.name)) return true;
+    }
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
+  }
+  for (const directory of ['tests', 'test']) {
     try {
-      if ((await lstat(path.join(root, file))).isFile()) return { runner, file };
+      const entries = await readdir(path.join(root, directory), { withFileTypes: true, recursive: true });
+      if (entries.some(entry => entry.isFile() && entry.name.endsWith('.py'))) return true;
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
     }
   }
+  return false;
+}
+
+async function detectVerifyRunner(root: string): Promise<{ runner: DetectedRunner; file: string } | null> {
+  for (const [file, runner] of [['pom.xml', 'junit-maven'], ['build.gradle', 'junit-gradle'], ['build.gradle.kts', 'junit-gradle']] as const) {
+    if (await hasFile(root, file)) return { runner, file };
+  }
+  if (await hasFile(root, 'pytest.ini')) return { runner: 'pytest', file: 'pytest.ini' };
+  if (await hasFile(root, 'pyproject.toml')) {
+    const pyproject = await readFile(path.join(root, 'pyproject.toml'), 'utf8');
+    if (/^\s*\[tool\.pytest(?:\.ini_options)?\]\s*$/mu.test(pyproject)) return { runner: 'pytest', file: 'pyproject.toml [tool.pytest]' };
+  }
+  if (await hasPytestLayout(root)) return { runner: 'pytest', file: 'Python 测试布局' };
   return null;
 }
 

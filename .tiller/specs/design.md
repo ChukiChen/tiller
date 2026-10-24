@@ -62,7 +62,7 @@
 5. 外部报告有理由并仅经 `--allow-reported` 放行，bugfix 有基线失败先行与当前通过；
 6. 用例库结构有效，并报告模块数量、场景覆盖和回归提示。
 
-无 Git 时范围检查降级为提示；有 Git 时同时检查越界、未提交改动、删除/跳过/弱化测试。node:test 之外的框架通过 `src/test-output.ts` 的 `TestRunner` 适配器扩展；`project.json` 的 `verify.runner` 选择适配器，`verify.prepare` 在测试前运行准备命令且失败即验证失败。工作区按测试路径所属仓库选择 runner，仓库上的 `verify` 按字段覆盖根配置，准备命令的工作目录是该仓库根；不能唯一匹配时失败，不回退到根配置。当前工程没有仓库清单时使用根配置。`junit-maven` 与 `junit-gradle` 分别构造 Maven `-Dtest` 和 Gradle `--tests`，解析私有目录中的 JUnit XML，命中规则与 node-test 相同。不内嵌 JVM，也不按扩展名猜测语言。
+无 Git 时范围检查降级为提示；有 Git 时同时检查越界、未提交改动、删除/跳过/弱化测试。node:test 之外的框架通过 `src/test-output.ts` 的 `TestRunner` 适配器扩展；`project.json` 的 `verify.runner` 选择适配器，`verify.prepare` 在测试前运行准备命令且失败即验证失败。工作区按测试路径所属仓库选择 runner，仓库上的 `verify` 按字段覆盖根配置，准备命令的工作目录是该仓库根；不能唯一匹配时失败，不回退到根配置。当前工程没有仓库清单时使用根配置。`junit-maven` 与 `junit-gradle` 分别构造 Maven `-Dtest` 和 Gradle `--tests`，解析私有目录中的 JUnit XML，命中规则与 node-test 相同。`pytest` 构造 `--junitxml=<私有报告>` 并解析 XML；模块由测试路径推导，类方法使用 `类名::方法名`。不内嵌 JVM/Python，也不按扩展名猜测语言。验证记录按 AC 与 CASE 分别识别连续失败；成功核实清零，连续两次后要求停止自动重试。
 
 ## 7. 提交、分支与 PR/MR
 
@@ -72,9 +72,9 @@
 
 ## 8. 初始化与升级
 
-`init` 只补缺失骨架，维护 `AGENTS.md` 区段、`.gitignore` 本机排除、`.tiller/index.md` 导航和平台对应的合并请求模板；已存在且冲突的入口拒绝覆盖。空工程骨架至少包含 `.tiller/specs/requirements.md`、`design.md`、`decisions.md`、`modules/README.md`、`.tiller/context/project.md`、`.tiller/cases/index.md`、`cases/modules/`、`cases/scenarios/`、`plans/` 和入口规则。`--platform github|gitlab|both` 选择模板，缺省 github；GitHub 使用 `.github/pull_request_template.md`，GitLab 使用 `.gitlab/merge_request_templates/Default.md`，both 同时生成。`project.json` 保存模式、可选平台、仓库映射和各受管文件的规范化摘要；平台切换需手动修改元信息并补齐模板。
+`init` 只补缺失骨架，维护 `AGENTS.md` 区段、`.gitignore` 本机排除、`.tiller/index.md` 导航和平台对应的合并请求模板；已存在且冲突的入口拒绝覆盖。空工程骨架至少包含 `.tiller/specs/requirements.md`、`design.md`、`decisions.md`、`modules/README.md`、`.tiller/context/project.md`、`.tiller/cases/index.md`、`cases/modules/`、`cases/scenarios/`、`plans/` 和入口规则。`--platform github|gitlab|both` 选择模板，缺省 github；GitHub 使用 `.github/pull_request_template.md`，GitLab 使用 `.gitlab/merge_request_templates/Default.md`，both 同时生成。检测到 pytest 配置或 Python 测试布局时写入 `verify.runner=pytest`。`project.json` 保存模式、可选平台、仓库映射和各受管文件的规范化摘要；平台切换需手动修改元信息并补齐模板。
 
-`upgrade --plan` 只读预览，`upgrade --apply <plan-id>` 应用；读取当前或兼容上一资源契约，按记录摘要判断受管文件是否被用户修改。未修改文件按分发资源或固定区段重建；修改、缺失和异常区段只报告冲突，并给出首个差异位置。预览摘要绑定输入、期望结果和元信息；应用时在锁内重新预览并原子写入，成功后更新摘要与 `resourceVersion`，保留 `verify` 等用户配置。事务失败保留恢复依据，可由 `recover` 恢复。
+`upgrade --plan` 只读预览，`upgrade --apply <plan-id>` 应用；读取当前或兼容上一资源契约，按记录摘要判断受管文件是否被用户修改。未修改文件按分发资源或固定区段重建；修改、缺失和异常区段只报告冲突，并给出首个差异位置。`upgrade --adopt <受管文件>` 不重写文件，只把当前受管内容摘要写回元信息，供有意保留本地修改的工程消除漂移。`plan attach <task> --plan <id> --item <id>` 为已有任务补充规划归属；它只校验已确认规划与条目存在，不依赖条目的完成状态，也不改任务确认。预览摘要绑定输入、期望结果和元信息；应用时在锁内重新预览并原子写入，成功后更新摘要与 `resourceVersion`，保留 `verify` 等用户配置。事务失败保留恢复依据，可由 `recover` 恢复。
 
 ## 9. 错误与恢复
 

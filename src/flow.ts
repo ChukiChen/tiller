@@ -15,7 +15,7 @@ import { branchNameWarning, normalizeBranchSlug } from './branch-conventions.js'
 import { commitMessageWarnings } from './commit-conventions.js';
 import { readProjectMetadata } from './core.js';
 import { applyChanges, inspectSafePaths, readTextIfExists, validateRelativePath, withProjectLock, type ResolvedInputPath } from './files.js';
-import { readPlanItem } from './plans.js';
+import { planItemForAttachment, readPlanItem } from './plans.js';
 import { releaseChecklist, type ReleaseChecklist } from './release.js';
 import { taskIdWarnings, validateTaskId } from './task-id.js';
 import { namePattern, resolveVerifyTarget, runnerFor, type TestEvidence, type TestReference } from './test-output.js';
@@ -577,6 +577,30 @@ function changedModuleNames(changed: string[], library: CaseLibrary): string[] {
   }
   return [...modules].sort();
 }
+
+function writebackModuleNames(task: FlowTask, changed: string[], library: CaseLibrary): string[] {
+  const modules = new Set(changedModuleNames(changed, library));
+  for (const relative of task.meta.scope) {
+    const match = /^\.tiller\/specs\/modules\/([^/]+)/u.exec(relative);
+    if (match) modules.add(match[1]!);
+  }
+  return [...modules].sort();
+}
+
+function writebackWarning(task: FlowTask, changed: string[], library: CaseLibrary): string {
+  const modules = writebackModuleNames(task, changed, library);
+  const suggestions = modules.length
+    ? modules.slice(0, 2).flatMap(module => [
+        `\`.tiller/specs/modules/${module}/requirements.md\`（“## <能力>” + 稳定行为/边界）`,
+        `\`.tiller/specs/modules/${module}/design.md\`（“## <方案>” + 取舍与影响）`,
+      ])
+    : [
+        '`.tiller/specs/requirements.md`（“## <能力>” + 目标/边界）',
+        '`.tiller/specs/decisions.md`（“## <问题>” + 决定/代价）',
+        '`.tiller/context/project.md`（“## 当前状态” + 入口/限制）',
+      ];
+  return `未检测到任务基线后的 \`.tiller/specs/\` 或 \`.tiller/context/\` 回写；如本次形成长期结论，建议回写：${suggestions.join('；')}。纯过程性变更可忽略。`;
+}
 async function moduleDesignThinWarnings(root: string, changed: string[], library: CaseLibrary): Promise<string[]> {
   const warnings: string[] = [];
   for (const module of changedModuleNames(changed, library)) {
@@ -599,6 +623,43 @@ function designSubject(task: Pick<FlowTask, 'meta' | 'requirement' | 'criteria' 
 }
 function latestVerification(task: Pick<FlowTask, 'verifications'>, criterion: string): FlowVerification | undefined {
   return [...task.verifications].reverse().find(item => item.criterion === criterion && !item.expectFail);
+}
+
+interface RetryStop {
+  key: string;
+  target: string;
+  failures: number;
+  runs: string[];
+  tests: string[];
+}
+
+function retryStops(task: Pick<FlowTask, 'verifications'>): RetryStop[] {
+  const states = new Map<string, { target: string; failures: number; runs: string[]; tests: string[] }>();
+  for (const run of task.verifications) {
+    if (run.expectFail) continue;
+    const keys = [
+      { key: `AC:${run.criterion}`, target: run.criterion },
+      ...run.cases.map(id => ({ key: `CASE:${id}`, target: id })),
+    ];
+    for (const item of keys) {
+      const state = states.get(item.key) ?? { target: item.target, failures: 0, runs: [], tests: [] };
+      if (run.result === 'passed' && run.evidence === 'verified') {
+        state.failures = 0;
+        state.runs = [];
+        state.tests = [];
+      } else if (run.result === 'failed') {
+        state.failures += 1;
+        state.runs.push(run.id);
+        if (!state.tests.includes(run.test)) state.tests.push(run.test);
+      }
+      states.set(item.key, state);
+    }
+  }
+  return [...states.entries()].filter(([, state]) => state.failures >= 2).map(([key, state]) => ({ key, ...state }));
+}
+
+function retryStopMessage(stop: RetryStop): string {
+  return `FLOW-05：${stop.target} 已连续 ${stop.failures} 次验证失败（${stop.runs.join(', ')}），中间没有成功核实。停止自动重试；请报告现象、已尝试方法、证据和 2～3 个可选方案，等待用户决定。`;
 }
 function deliverySubject(task: FlowTask, commit: string): string {
   return sha(JSON.stringify({
@@ -684,6 +745,31 @@ export async function startFlow(rootInput: string, idInput: string, input: FlowS
       ...(slug ? { slug } : {}), ...(summary ? { summary } : {}),
       ...(requirementFile ? { requirementFile } : {}),
       next: `核对结构化需求正文后确认：tiller confirm ${idInput} requirements [--by "<确认人>"]` };
+  });
+}
+
+export async function attachFlowTask(rootInput: string, id: string, plan: string, item: string) {
+  const root = path.resolve(rootInput);
+  validateTaskId(id);
+  validateTaskId(plan);
+  return withProjectLock(root, async () => {
+    const task = await readTask(root, id);
+    const planned = await planItemForAttachment(root, plan, item);
+    if (task.meta.plan || task.meta.item) {
+      if (task.meta.plan === plan && task.meta.item === item) {
+        return { id, path: task.path, plan, item, size: task.meta.size, changed: false,
+          next: `tiller plan status ${plan}` };
+      }
+      fail('TASK_PLAN_CONFLICT', `任务 ${id} 已挂到 ${task.meta.plan}/${task.meta.item}；不会静默改挂，请先人工核对。`);
+    }
+    const next = { ...task, meta: { ...task.meta, plan, item } };
+    const { content: _content, path: _path, ...body } = next;
+    await writeTask(root, id, task.content, renderTask(body, sectionBody(task.content, '自检')));
+    const warnings = task.meta.size === planned.item.size
+      ? []
+      : [`任务规模 ${task.meta.size} 与规划条目 ${item} 的 ${planned.item.size} 不同；已保留任务记录，仅报告差异。`];
+    return { id, path: task.path, plan, item, size: task.meta.size, changed: true,
+      ...(warnings.length ? { warnings } : {}), next: `tiller plan status ${plan}` };
   });
 }
 
@@ -1370,7 +1456,7 @@ async function evaluateFlow(root: string, id: string, task: FlowTask, options: F
   if (decisionsWarning) warnings.push(decisionsWarning);
   warnings.push(...await moduleDesignThinWarnings(root, changed ?? task.meta.scope, library));
   if (changed !== null && !changed.some(relative => relative.startsWith('.tiller/specs/') || relative.startsWith('.tiller/context/'))) {
-    warnings.push('未检测到任务基线后的 `.tiller/specs/` 或 `.tiller/context/` 回写；如本次形成长期有效结论，请同步；纯过程性变更可忽略。');
+    warnings.push(writebackWarning(task, changed, library));
   }
   if (changedOutsideScope.length) issues.push(`改动超出范围：${changedOutsideScope.join('、')}`);
   const weakened = await weakensTests(root, task.meta.base, context.commit);
@@ -1384,6 +1470,9 @@ async function evaluateFlow(root: string, id: string, task: FlowTask, options: F
   const openBlockers = task.review?.findings.filter(item => item.blocking && !item.resolved).map(item => item.id) ?? [];
   if (openBlockers.length) issues.push(`评审存在未清除阻塞项：${openBlockers.join(', ')}。`);
   issues.push(...recordSafety(task.content));
+  for (const stop of retryStops(task)) {
+    issues.push(`任务记录 \`${task.path}\`：${retryStopMessage(stop)}`);
+  }
   if (acceptance && !acceptanceConfirmed) warnings.push('交付验收后任务对象已变化，需要重新验收。');
   const release = await releaseChecklist(root, { id, accepted: acceptanceConfirmed,
     ...(acceptance?.commit ? { acceptanceCommit: acceptance.commit } : {}), scope: task.meta.scope });
@@ -1681,13 +1770,20 @@ export async function verifyFlow(rootInput: string, id: string, input: FlowVerif
       : nextEntries.every(entry => entry.evidence === 'not-run') ? 'not-run' : 'unverified';
     const tests = entries.map(entry => entry.test);
     const logs = nextEntries.flatMap(entry => entry.log ? [entry.log] : []);
-    const nextCommand = expectFail
-      ? `修复后在当前代码运行：tiller verify ${id} --criterion ${criteria[0]} --test "${entries[0]!.test}"`
-      : evidence === 'unverified' ? `check 将阻断未核实记录：tiller check ${id}`
-        : ready ? `tiller check ${id}` : '修复后重新运行验证';
+    const touchedKeys = new Set(nextEntries.flatMap(entry => [
+      `AC:${entry.criterion}`,
+      ...entry.cases.map(caseId => `CASE:${caseId}`),
+    ]));
+    const stops = retryStops(next).filter(stop => touchedKeys.has(stop.key));
+    const nextCommand = stops.length
+      ? stops.map(retryStopMessage).join(' ')
+      : expectFail
+        ? `修复后在当前代码运行：tiller verify ${id} --criterion ${criteria[0]} --test "${entries[0]!.test}"`
+        : evidence === 'unverified' ? `check 将阻断未核实记录：tiller check ${id}`
+          : ready ? `tiller check ${id}` : '修复后重新运行验证';
     return { id, result, ready, cases: [...new Set(entries.flatMap(entry => entry.cases))], tests,
       commit, tree, evidence, ...(logs[0] ? { log: logs[0] } : {}), ...(logs.length > 1 ? { logs } : {}),
-      entries: nextEntries, next: nextCommand };
+      ...(stops.length ? { stop: true, retryStops: stops } : {}), entries: nextEntries, next: nextCommand };
   });
 }
 function flowResult(value: string): FlowResult {

@@ -447,6 +447,18 @@ export async function readPlanItem(rootInput: string, planId: string, itemId: st
   return { plan, item, confirmation: confirmation! };
 }
 
+/** Validate an existing task's prospective link without dependency or task-size checks. */
+export async function planItemForAttachment(rootInput: string, planId: string, itemId: string) {
+  const root = path.resolve(rootInput);
+  if (!ITEM_ID.test(itemId)) fail('INVALID_PLAN_ITEM', `规划条目编号无效：${itemId}`);
+  const plan = await readPlan(root, planId);
+  const status = await statusPlan(root, planId);
+  const item = status.items.find(entry => entry.id === itemId);
+  if (!item) fail('PLAN_ITEM_NOT_FOUND', `规划 ${planId} 没有条目 ${itemId}。`);
+  if (!status.confirmed) fail('PLAN_NOT_CONFIRMED', `规划 ${planId} 尚未确认或正文已变化；先执行 plan confirm ${planId}。`);
+  return { plan, item };
+}
+
 export async function planItemStatus(rootInput: string, planId: string, itemId: string): Promise<PlanItemStatus> {
   const status = await statusPlan(rootInput, planId);
   const item = status.items.find(entry => entry.id === itemId);

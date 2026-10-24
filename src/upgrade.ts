@@ -21,6 +21,12 @@ export interface UpgradePlan {
   warnings: string[];
 }
 
+export interface AdoptResult {
+  root: string;
+  changed: boolean;
+  adopted: { path: string; digest: string }[];
+}
+
 const LIMITATIONS = [
   '只刷新 project.json 摘要仍一致、且用户未修改的受管文件；用户修改、缺失或冲突文件保持原样并列入冲突。',
   '不迁移业务资料、历史任务、旧确认或旧审计资料；业务文件与项目资料保持原样。',
@@ -168,6 +174,42 @@ export async function planUpgrade(root: string): Promise<UpgradePlan> {
     ready: conflicts.length === 0, changes, conflicts: [...new Set(conflicts)], warnings,
   };
   return { ...plan, planId: sha256(JSON.stringify({ ...plan, inputs })) };
+}
+
+/**
+ * Bind selected managed files to their current bytes without rewriting the files.
+ * Use this when the user intentionally keeps a local change and wants upgrade to
+ * stop reporting that change as drift.
+ */
+export async function adoptManagedFiles(rootInput: string, paths: string[]): Promise<AdoptResult> {
+  const root = path.resolve(rootInput);
+  if (!paths.length) throw new Error('至少提供一个 --adopt 受管文件路径。');
+  return withProjectLock(root, async () => {
+    const metadataText = await readTextIfExists(root, META);
+    if (metadataText === null) throw new Error('工程尚未初始化，不能采纳受管文件。');
+    const metadata = parseMetadata(metadataText);
+    const requested = [...new Set(paths.map(value => value.trim().replace(/^\.\//u, '')))];
+    const managedFiles = { ...metadata.managedFiles };
+    const adopted: AdoptResult['adopted'] = [];
+    for (const relative of requested) {
+      if (!relative || !Object.hasOwn(managedFiles, relative)) {
+        throw new Error(`不是工程受管文件，不能采纳：${relative || '（空路径）'}。`);
+      }
+      const current = await readTextIfExists(root, relative);
+      if (current === null) throw new Error(`受管文件不存在，不能采纳：${relative}。`);
+      let digest: string;
+      try { digest = managedDigest(relative, current); }
+      catch (error) { throw new Error(`无法读取 ${relative} 的受管内容：${(error as Error).message}`); }
+      if (managedFiles[relative] !== digest) {
+        managedFiles[relative] = digest;
+        adopted.push({ path: relative, digest });
+      }
+    }
+    if (!adopted.length) return { root, changed: false, adopted };
+    const nextMetadata: ProjectMetadata = { ...metadata, managedFiles };
+    await applyChanges(root, [{ path: META, before: metadataText, after: `${JSON.stringify(nextMetadata, null, 2)}\n` }]);
+    return { root, changed: true, adopted };
+  });
 }
 
 export async function applyUpgrade(root: string, planId: string): Promise<ProjectInspection & { changed: boolean; planId: string }> {
