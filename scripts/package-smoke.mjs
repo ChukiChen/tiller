@@ -25,6 +25,13 @@ function run(command, args, cwd, status = 0) {
   assert.equal(result.status, status, err || out);
   return out;
 }
+function git(cwd, ...args) {
+  const result = spawnSync('git', ['-c', 'user.name=Tiller Package', '-c', 'user.email=tiller@example.invalid', ...args], {
+    cwd, encoding: 'utf8', timeout: 20_000, windowsHide: true,
+  });
+  assert.ifError(result.error && result.error.code !== 'EPERM' ? result.error : null);
+  assert.equal(result.status, 0, result.stderr);
+}
 function manifest(root) {
   const entries = [];
   const visit = (directory, prefix = '') => {
@@ -54,7 +61,7 @@ for (const path of ['dist/cli.js', 'dist/flow.js', 'resources/entry.md', 'resour
   assert.ok(paths.has(path), path);
 }
 for (const path of [...paths]) assert.ok(!/^resources\/(?:workflows|templates)\//u.test(path), path);
-const expectedModules = ['branch-conventions', 'cases', 'cli', 'commit-conventions', 'confirmer', 'core', 'files', 'flow', 'plans', 'pr', 'project-metadata', 'release', 'repository-paths', 'runtime', 'shared-paths', 'task-id', 'test-output', 'test-reporter', 'types', 'upgrade'];
+const expectedModules = ['branch-conventions', 'cases', 'cli', 'commit-conventions', 'confirmer', 'core', 'files', 'flow', 'plans', 'pr', 'project-metadata', 'release', 'repository-paths', 'runtime', 'shared-paths', 'task-id', 'task-worktrees', 'test-output', 'test-reporter', 'types', 'upgrade'];
 const packagedModules = [...paths].filter(path => /^dist\/[^/]+\.js$/u.test(path)).map(path => path.slice(5, -3)).sort();
 assert.deepEqual(packagedModules, expectedModules);
 assert.ok(![...paths].some(path => /^(src|test|\.tiller|node_modules)\//u.test(path)));
@@ -113,6 +120,9 @@ const planned = invoke(['plan', 'start', 'package-plan', '--title', 'Package pla
   '--spec', '.tiller/specs/requirements.md', '--item', 'P-1=Package flow;size=small;deps=-;specs=.tiller/specs/requirements.md']);
 assert.deepEqual(planned.items, ['P-1']);
 invoke(['plan', 'confirm', 'package-plan', '--quote', 'Package smoke plan confirmed']);
+git(target, 'init', '--quiet');
+git(target, 'add', '-A');
+git(target, 'commit', '--quiet', '--allow-empty', '-m', 'package baseline');
 const started = invoke(['start', taskId, '--title', 'Package smoke', '--requirement', 'Verify the default flow package entry',
   '--criterion', 'AC-1=package starts a task', '--plan', 'package-plan', '--item', 'P-1', '--target', '.']);
 assert.equal(started.id, taskId);
@@ -139,6 +149,8 @@ const added = invoke(['case', 'add', taskId, '--module', 'package-smoke', '--kin
 assert.equal(added.id, 'CASE-001');
 mkdirSync(join(target, 'test'), { recursive: true });
 writeFileSync(join(target, 'test/package-smoke.test.mjs'), "import assert from 'node:assert/strict';\nimport test from 'node:test';\n\ntest('CASE-001 package flow works', () => { assert.equal(1, 1); });\n");
+git(target, 'add', '-A');
+git(target, 'commit', '--quiet', '-m', 'test: package smoke fixture');
 const verified = invoke(['verify', taskId, '--criterion', 'AC-1', '--case', added.id]);
 assert.deepEqual(verified.cases, ['CASE-001']);
 const checked = invoke(['check', taskId]);

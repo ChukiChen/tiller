@@ -19,11 +19,11 @@ node .tiller/run.cjs close <id> --reason "交付完成"
 node .tiller/run.cjs pr <id>
 ```
 
-`start` 生成完整需求章节与 AC；standard 另生成完整设计章节。`--requirement` 与 `--requirement-file <工程内相对路径>` 二选一且非空；交付路径只进 `scope`。`--summary` 记录标题摘要和建议分支。`confirm`/`accept`/`plan confirm` 的 `--quote` 可选；`--by` 默认取 `git config user.name`。确认记录部分、人、时间和摘要；需求/设计独立失效；关键章节空白或占位拒绝确认。
+`start` 生成需求/AC 与任务 worktree（standard 另生成设计）；project 用 `.tiller/local/worktrees/<id>/`，workspace 另有 `management` 与各仓库 `path`，分支为 `类型/任务编号[-描述]`。`--requirement` 与 `--requirement-file <工程内相对路径>` 二选一且非空；交付路径只进 `scope`。`--quote` 可选，`--by` 默认取 `git config user.name`；需求/设计确认独立失效。
 
-`review` 阻塞阻断 `check`/`accept`；`release` 检查验收提交和资源。阶段由事实推导，已验收任务钉在验收提交；未验收 `--abandon`，终态 `reopen`。
+`review` 阻塞阻断 `check`/`accept`；`release` 读验收提交与资源，已验收任务钉在验收提交。阶段由事实推导；未验收用 `--abandon`，终态先 `reopen`。close 含 abandon 时强拆任务 worktree 并删除该任务日志。
 
-standard 任务在设计确认前已有 verify，或确认后工作区仍有业务改动，`check` 阻断 `accept`；`verify` 本身不要求设计确认。
+standard 设计确认前 verify 或确认后业务改动未提交时，`check` 阻断 `accept`；`verify` 本身不要求设计确认。
 
 `check` 对过薄设计、空壳 decisions/模块设计和当前分支未包含任务编号；规格/背景未回写时列路径与提纲 warning。`verify` 日志含命令、起止和退出码。
 

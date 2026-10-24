@@ -669,3 +669,29 @@ check warning 指出当前分支未包含当前任务编号，并给出类型/�
 ### 预期结果
 
 start 生成面向谁与问题、目标、业务范围、关键行为、异常与边界、验收条件；业务范围不含 target 路径，路径只进入 meta.scope
+
+## CASE-197 workspace 模式 start 镜像管理仓与业务仓布局
+
+- 类型：interface
+- 优先级：medium
+- 模块：workflow
+- 关联 AC：20261024-task-worktrees#AC-2
+- 需求：`.tiller/specs/modules/workflow/requirements.md`
+- 源码：`src/task-worktrees.ts`, `test/task-worktrees.test.mjs`
+
+### 前置条件
+
+- 管理仓与业务仓均为有提交的 Git 仓库
+
+### 步骤
+
+1. 初始化 workspace 并执行 start
+2. 核对 management、repositories/<id> 与分支名
+
+### 输入
+
+- 至少两个已登记业务仓
+
+### 预期结果
+
+管理仓检出到 management，各业务仓检出到其登记 path；各仓同名任务分支，task.md 仍在管理主树

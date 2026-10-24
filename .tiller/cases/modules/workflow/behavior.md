@@ -1029,3 +1029,107 @@ confirm requirements 对空白或占位关键章节返回可定位缺失，旧�
 ### 预期结果
 
 standard 设计模板包含方案、失败处理、取舍、影响与风险、验证入口，空白或占位关键节在 confirm design 与 check 中可定位
+
+## CASE-196 project 模式 start 创建任务 worktree
+
+- 类型：behavior
+- 优先级：medium
+- 模块：workflow
+- 关联 AC：20261024-task-worktrees#AC-1
+- 需求：`.tiller/specs/modules/workflow/requirements.md`
+- 源码：`src/task-worktrees.ts`, `test/task-worktrees.test.mjs`
+
+### 前置条件
+
+- 临时 Git 工程已有提交
+
+### 步骤
+
+1. 在 project 工程执行 start
+2. 读取结果并用 Git 核对路径和当前分支
+
+### 输入
+
+- 带 type 与可选 slug 的任务
+
+### 预期结果
+
+start 在 .tiller/local/worktrees/<id>/ 创建分支为类型/任务编号[-描述]的 Git worktree，并在结果中返回路径
+
+## CASE-198 close 与 abandon 强拆 worktree 并清理本任务日志
+
+- 类型：behavior
+- 优先级：medium
+- 模块：workflow
+- 关联 AC：20261024-task-worktrees#AC-3
+- 需求：`.tiller/specs/modules/workflow/requirements.md`
+- 源码：`src/task-worktrees.ts`, `test/task-worktrees.test.mjs`
+
+### 前置条件
+
+- 两个任务各有 worktree 与日志，另有未关闭任务日志
+
+### 步骤
+
+1. 关闭已验收任务并放弃另一任务
+2. 核对 worktree 与本任务日志消失，旁观任务日志仍在
+
+### 输入
+
+- 含未提交改动的 worktree
+
+### 预期结果
+
+close 与 close --abandon 删除该任务全部 worktree 和 .tiller/local/logs/<id>/，其他任务日志保持
+
+## CASE-199 旧任务无 worktree 时 close 与 abandon 仍清理日志
+
+- 类型：behavior
+- 优先级：medium
+- 模块：workflow
+- 关联 AC：20261024-task-worktrees#AC-4
+- 需求：`.tiller/specs/modules/workflow/requirements.md`
+- 源码：`src/task-worktrees.ts`, `test/task-worktrees.test.mjs`
+
+### 前置条件
+
+- 任务记录存在但 worktree 与本机清单均不存在
+
+### 步骤
+
+1. 为旧任务准备日志目录
+2. 分别执行 close 与 close --abandon
+
+### 输入
+
+- 缺少 worktree 的任务
+
+### 预期结果
+
+worktree 缺失按幂等跳过，close/abandon 成功并删除既有日志目录
+
+## CASE-200 start 建树失败不留半套
+
+- 类型：behavior
+- 优先级：medium
+- 模块：workflow
+- 关联 AC：20261024-task-worktrees#AC-1, 20261024-task-worktrees#AC-2
+- 需求：`.tiller/specs/modules/workflow/requirements.md`
+- 源码：`src/task-worktrees.ts`, `test/task-worktrees.test.mjs`
+
+### 前置条件
+
+- project 目标路径已存在；workspace 一个业务仓不是 Git 仓库；另有环境无法执行 Git
+
+### 步骤
+
+1. 分别在冲突路径、失效业务仓与无 Git 环境执行 start
+2. 核对错误码、task.md 与 management 路径
+
+### 输入
+
+- 冲突路径、失效业务仓与缺失 Git
+
+### 预期结果
+
+目标路径已占用、workspace 业务仓非 Git 或 Git 不可用时 start 失败，不写 task.md，也不遗留已建 worktree

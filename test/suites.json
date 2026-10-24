@@ -23,6 +23,7 @@
     "flow-cli.test.mjs",
     "flow-hardening.test.mjs",
     "gap-closure.test.mjs",
+    "task-worktrees.test.mjs",
     "first-batch.test.mjs",
     "pr.test.mjs",
     "verification-integrity.test.mjs",

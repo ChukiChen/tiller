@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
+import { spawnSync } from 'node:child_process';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 import { cli, completeDesign, confirmTask, failure, fixture, put, snapshot, success } from './helpers.mjs';
@@ -12,6 +13,18 @@ async function initialized(t) {
   const root = fixture(t);
   success(cli(root, 'init'));
   return root;
+}
+
+function commitAll(root, message = 'test fixture') {
+  const result = spawnSync('git', ['-c', 'user.name=Tiller Test', '-c', 'user.email=tiller@example.invalid', 'add', '-A'], {
+    cwd: root, encoding: 'utf8', timeout: 20_000,
+  });
+  assert.ifError(result.error && result.error.code !== 'EPERM' ? result.error : null);
+  assert.equal(result.status, 0, result.stderr);
+  const committed = spawnSync('git', ['-c', 'user.name=Tiller Test', '-c', 'user.email=tiller@example.invalid',
+    'commit', '--quiet', '--allow-empty', '-m', message], { cwd: root, encoding: 'utf8', timeout: 20_000 });
+  assert.ifError(committed.error && committed.error.code !== 'EPERM' ? committed.error : null);
+  assert.equal(committed.status, 0, committed.stderr);
 }
 
 function moduleSpec(root, name, heading = '默认工作流') {
@@ -131,11 +144,6 @@ test('CASE-053 case add allocates unique ids for module cases and scenarios with
 test('CASE-054 check blocks a verified case whose criteria do not point back to the task AC', async t => {
   const root = await initialized(t);
   moduleSpec(root, 'alpha');
-  success(cli(root, 'start', taskId, '--title', '反向绑定', '--requirement', '每条 AC 必须与全局用例双向对应',
-    '--criterion', 'AC-1=验证命中正确用例', '--size', 'small', '--target', 'src', '--target', 'test'));
-  success(confirmTask(root, taskId, 'requirements', '--quote', '测试确认该需求'));
-  put(root, 'src/alpha.mjs', 'export const alpha = true;\n');
-  put(root, 'test/alpha.test.mjs', "import assert from 'node:assert/strict';\nimport test from 'node:test';\n\n test('CASE-003 alpha behaves', () => { assert.equal(true, true); });\n");
   put(root, '.tiller/cases/modules/alpha/behavior.md', `# alpha / behavior
 
 ## CASE-003 历史错配用例
@@ -163,6 +171,13 @@ test('CASE-054 check blocks a verified case whose criteria do not point back to 
 
 测试通过。
 `);
+  commitAll(root, 'test: pre-existing alpha mismatch case');
+  success(cli(root, 'start', taskId, '--title', '反向绑定', '--requirement', '每条 AC 必须与全局用例双向对应',
+    '--criterion', 'AC-1=验证命中正确用例', '--size', 'small', '--target', 'src', '--target', 'test'));
+  success(confirmTask(root, taskId, 'requirements', '--quote', '测试确认该需求'));
+  put(root, 'src/alpha.mjs', 'export const alpha = true;\n');
+  put(root, 'test/alpha.test.mjs', "import assert from 'node:assert/strict';\nimport test from 'node:test';\n\n test('CASE-003 alpha behaves', () => { assert.equal(true, true); });\n");
+  commitAll(root, 'test: alpha behavior fixture');
   success(cli(root, 'verify', taskId, '--criterion', 'AC-1', '--test', 'test/alpha.test.mjs::CASE-003 alpha behaves'));
   const checked = failure(cli(root, 'check', taskId));
   assert.ok(checked.issues.some(issue => issue.includes('未在其 criteria 中回指')), checked.issues.join('\n'));
@@ -180,7 +195,7 @@ test('CASE-055 new project runs init, plan, start, confirm, case add, verify, ch
     '--item', 'P-1=接入并验证;size=small;deps=-;specs=.tiller/specs/first-batch.md#R1'));
   success(cli(root, 'plan', 'confirm', 'onboarding', '--quote', '测试确认该接入规划'));
   const started = success(cli(root, 'start', taskId, '--title', '接入冒烟', '--requirement', '空项目接入后能完成一条受控任务',
-    '--criterion', 'AC-1=接入链路可验收', '--target', 'src', '--target', 'test', '--plan', 'onboarding', '--item', 'P-1'));
+    '--criterion', 'AC-1=接入链路可验收', '--target', 'src', '--target', 'test', '--target', '.tiller', '--plan', 'onboarding', '--item', 'P-1'));
   assert.equal(started.size, 'small');
   assert.equal(started.plan, 'onboarding');
   success(confirmTask(root, taskId, 'requirements', '--quote', '测试确认该需求'));
@@ -190,6 +205,7 @@ test('CASE-055 new project runs init, plan, start, confirm, case add, verify, ch
   assert.equal(added.id, 'CASE-001');
   put(root, 'src/sample.mjs', 'export const sample = () => 42;\n');
   put(root, 'test/sample.test.mjs', `import assert from 'node:assert/strict';\nimport test from 'node:test';\nimport { sample } from '../src/sample.mjs';\n\ntest('${added.id} sample flow works', () => { assert.equal(sample(), 42); });\n`);
+  commitAll(root, 'test: accept sample flow fixture');
   const verified = success(cli(root, 'verify', taskId, '--criterion', 'AC-1', '--test', `test/sample.test.mjs::${added.id} sample flow works`));
   assert.deepEqual(verified.cases, ['CASE-001']);
   const checked = success(cli(root, 'check', taskId));
@@ -251,6 +267,7 @@ test('CASE-056 task stages derive from task facts and fall back on invalid confi
     '--expected', '阶段随任务事实推进', '--criterion', 'AC-1',
     '--spec', '.tiller/specs/modules/workflow/requirements.md#2-开始与接续', '--source', 'src/lifecycle.mjs'));
   put(root, 'test/lifecycle.test.mjs', `import assert from 'node:assert/strict';\nimport test from 'node:test';\n\ntest('${stageCase.id} lifecycle stage behavior', () => assert.equal(1, 1));\n`);
+  commitAll(root, 'test: accept lifecycle stage fixture');
   success(cli(root, 'verify', id, '--criterion', 'AC-1', '--test', `test/lifecycle.test.mjs::${stageCase.id} lifecycle stage behavior`));
   assert.equal(stageTask(root, id), '已验证');
   success(cli(root, 'accept', id, '--quote', '验收阶段流程'));
@@ -292,6 +309,7 @@ test('CASE-057 accepted tasks close, block further confirm verify and accept, an
     '--expected', '关闭后阻止变更并可重开', '--criterion', 'AC-1',
     '--spec', '.tiller/specs/modules/workflow/requirements.md#flow-15-在关键节点取得人工确认', '--source', 'src/close.mjs'));
   put(root, 'test/close.test.mjs', `import assert from 'node:assert/strict';\nimport test from 'node:test';\n\ntest('${closeCase.id} close lifecycle behavior', () => assert.equal(1, 1));\n`);
+  commitAll(root, 'test: accept close lifecycle fixture');
   success(cli(root, 'verify', id, '--criterion', 'AC-1', '--test', `test/close.test.mjs::${closeCase.id} close lifecycle behavior`));
   success(cli(root, 'accept', id, '--quote', '验收关闭流程'));
   const alreadyAccepted = failure(cli(root, 'close', id, '--reason', '不能放弃', '--abandon'));
