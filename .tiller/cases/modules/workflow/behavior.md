@@ -925,3 +925,107 @@ CASE-179 至 CASE-185 均有具名测试引用，包与资源版本保持 0.5.0
 ### 预期结果
 
 同一 AC 或 CASE 连续两次失败且无成功核实后，verify 与 check 给出 FLOW-05 停止提示；成功核实清零
+
+## CASE-190 新任务标记省略开工前摘要并写入本机旁路
+
+- 类型：behavior
+- 优先级：medium
+- 模块：workflow
+- 关联 AC：20261024-doc-templates#AC-1
+- 需求：`.tiller/specs/modules/workflow/requirements.md`
+- 源码：`src/flow.ts`, `test/doc-templates.test.mjs`
+
+### 前置条件
+
+- 对应模块与运行环境可用。
+
+### 步骤
+
+1. 执行覆盖本用例的测试。
+2. 核对实际结果与预期结果一致。
+
+### 输入
+
+- 按用例描述准备正常输入及必要的边界输入。
+
+### 预期结果
+
+新 task.md 的 tiller-task 标记不含 preExisting，开工前脏文件摘要保存在 .tiller/local/tasks/<id>/pre-existing.json
+
+## CASE-191 旧标记与旁路摘要兼容且不误报超范围
+
+- 类型：behavior
+- 优先级：medium
+- 模块：workflow
+- 关联 AC：20261024-doc-templates#AC-1
+- 需求：`.tiller/specs/modules/workflow/requirements.md`
+- 源码：`src/flow.ts`, `test/doc-templates.test.mjs`
+
+### 前置条件
+
+- 对应模块与运行环境可用。
+
+### 步骤
+
+1. 执行覆盖本用例的测试。
+2. 核对实际结果与预期结果一致。
+
+### 输入
+
+- 按用例描述准备正常输入及必要的边界输入。
+
+### 预期结果
+
+旧标记内的 preExisting 仍被解析，旁路摘要可过滤开工前脏文件，check 不误报超出范围
+
+## CASE-193 需求确认拒绝关键章节空白或占位
+
+- 类型：behavior
+- 优先级：medium
+- 模块：workflow
+- 关联 AC：20261024-doc-templates#AC-2
+- 需求：`.tiller/specs/modules/workflow/requirements.md`
+- 源码：`src/flow.ts`, `test/doc-templates.test.mjs`
+
+### 前置条件
+
+- 对应模块与运行环境可用。
+
+### 步骤
+
+1. 执行覆盖本用例的测试。
+2. 核对实际结果与预期结果一致。
+
+### 输入
+
+- 按用例描述准备正常输入及必要的边界输入。
+
+### 预期结果
+
+confirm requirements 对空白或占位关键章节返回可定位缺失，旧任务仅有范围章节仍可确认
+
+## CASE-194 设计模板与确认校验覆盖失败处理验证入口
+
+- 类型：behavior
+- 优先级：medium
+- 模块：workflow
+- 关联 AC：20261024-doc-templates#AC-3
+- 需求：`.tiller/specs/modules/workflow/requirements.md`
+- 源码：`src/flow.ts`, `test/doc-templates.test.mjs`
+
+### 前置条件
+
+- 对应模块与运行环境可用。
+
+### 步骤
+
+1. 执行覆盖本用例的测试。
+2. 核对实际结果与预期结果一致。
+
+### 输入
+
+- 按用例描述准备正常输入及必要的边界输入。
+
+### 预期结果
+
+standard 设计模板包含方案、失败处理、取舍、影响与风险、验证入口，空白或占位关键节在 confirm design 与 check 中可定位

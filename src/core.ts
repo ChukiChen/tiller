@@ -320,11 +320,28 @@ function orderedManagedFiles(managedFiles: Record<string, string>, platform: Pro
 const SKELETON_FILES: { path: string; content: string }[] = [
   {
     path: '.tiller/specs/requirements.md',
-    content: '# 项目需求\n\n写面向谁、要解决什么问题、范围、关键行为与编号验收条件。单次任务需求写进 `task.md`；跨任务需求维护在这里。\n',
+    content: [
+      '# 项目需求', '',
+      '写跨任务的业务需求；单次任务需求写进 `task.md`。', '',
+      '## 面向谁与问题', '', '写主要用户、当前问题与已有依据。', '',
+      '## 目标', '', '写希望改变的结果，不写实现路径。', '',
+      '## 业务范围', '', '- 做：', '- 不做：', '- 假设与待确认：', '',
+      '## 关键行为', '', '写用户可观察的主要行为。', '',
+      '## 异常与边界', '', '写失败、空值、权限、规模和兼容边界。', '',
+      '## 验收条件', '', '写可观察、可验证的稳定编号条件。', '',
+    ].join('\n'),
   },
   {
     path: '.tiller/specs/design.md',
-    content: '# 项目设计\n\n写当前有效的架构、模块边界、关键接口、数据流、失败处理与验证入口。简单实现细节留在代码和任务记录中。\n',
+    content: [
+      '# 项目设计', '',
+      '写当前有效的技术方案；简单实现细节留在代码和任务记录中。', '',
+      '## 方案', '', '写架构、模块边界、关键接口与数据流。', '',
+      '## 失败处理', '', '写失败、回滚与恢复方式。', '',
+      '## 取舍', '', '写重要备选方案与选择理由。', '',
+      '## 影响与风险', '', '写影响范围、兼容性与风险缓解。', '',
+      '## 验证入口', '', '写可重跑的构建、测试或检查入口。', '',
+    ].join('\n'),
   },
   {
     path: '.tiller/specs/decisions.md',
@@ -332,7 +349,12 @@ const SKELETON_FILES: { path: string; content: string }[] = [
   },
   {
     path: '.tiller/specs/modules/README.md',
-    content: '# 模块规格\n\n每个模块建立同名目录，按需放 `requirements.md` 与 `design.md`。模块名使用小写字母、数字和连字符；全局用例目录必须使用同一名称。\n',
+    content: [
+      '# 模块规格', '',
+      '每个模块建立同名目录，按需放 `requirements.md` 与 `design.md`。模块名使用小写字母、数字和连字符；全局用例目录必须使用同一名称。', '',
+      '`requirements.md` 写面向谁与问题、目标、业务范围、关键行为、异常与边界、验收条件。', '',
+      '`design.md` 写方案、失败处理、取舍、影响与风险、验证入口。', '',
+    ].join('\n'),
   },
   {
     path: '.tiller/context/project.md',

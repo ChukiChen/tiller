@@ -5,7 +5,7 @@ import { spawnSync } from 'node:child_process';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 import { readCaseLibrary } from '../dist/cases.js';
-import { cli, failure, fixture, put, success } from './helpers.mjs';
+import { cli, completeDesign, confirmTask, failure, fixture, put, success } from './helpers.mjs';
 
 const repository = fileURLToPath(new URL('../', import.meta.url));
 const read = (root, relative) => readFileSync(join(root, relative), 'utf8');
@@ -89,10 +89,7 @@ function caseMarkdown(id, title, options = {}) {
 const sourceTest = (name, body) => `test(${JSON.stringify(name)}, () => ${body});`;
 
 function fillDesign(root, id) {
-  const relative = `.tiller/task/${id}/task.md`;
-  const content = read(root, relative);
-  put(root, relative, content.replace('### 方案\n\n### 取舍\n\n### 影响与风险',
-    '### 方案\n\n按测试设计资产维护用例与测试反查。\n\n### 取舍\n\n只扫描当前测试目录。\n\n### 影响与风险\n\n扫描漏检会阻断交付。'));
+  completeDesign(root, id);
 }
 
 test('CASE-098 case add registers a complete test design before any test exists', async t => {
@@ -162,7 +159,7 @@ test('CASE-101 verify case executes every covering test', async t => {
   const root = await project(t);
   baseline(root);
   start(root, taskId);
-  success(cli(root, 'confirm', taskId, 'requirements', '--by', 'Tiller Test'));
+  success(confirmTask(root, taskId, 'requirements', '--by', 'Tiller Test'));
   const added = addCase(root, taskId);
   put(root, 'test/covered.test.mjs', `import assert from 'node:assert/strict';
 import test from 'node:test';
@@ -184,8 +181,8 @@ test('CASE-102 check enforces cases after design and tests after verification', 
   baseline(root);
   start(root, taskId, 'standard');
   fillDesign(root, taskId);
-  success(cli(root, 'confirm', taskId, 'requirements', '--by', 'Tiller Test'));
-  success(cli(root, 'confirm', taskId, 'design', '--by', 'Tiller Test'));
+  success(confirmTask(root, taskId, 'requirements', '--by', 'Tiller Test'));
+  success(confirmTask(root, taskId, 'design', '--by', 'Tiller Test'));
   const missingCase = failure(cli(root, 'check', taskId));
   assert.ok(missingCase.issues.some(value => value.includes('AC-1 未绑定全局用例')), missingCase.issues.join('\n'));
 
@@ -220,7 +217,7 @@ ${sourceTest('staged coverage without a case id', 'undefined')}
 test('CASE-103 CASE-156 repository history and docs use the new case model', async () => {
   const library = await readCaseLibrary(repository);
   assert.deepEqual(library.issues, []);
-  assert.equal(library.cases.length, 189);
+  assert.equal(library.cases.length, 195);
   assert.ok(library.cases.every(item => item.preconditions.length && item.steps.length && item.inputs.length && item.expected));
   assert.ok(library.cases.every(item => item.tests.length > 0), 'every case should be referenced by a test');
   assert.ok(library.cases.every(item => item.tests.every(reference => reference.name?.includes(item.id))));

@@ -6,7 +6,7 @@ import test from 'node:test';
 import { branchDescriptionForTask, branchNameIssue, normalizeBranchSlug, suggestedBranchName, suggestedBranchNameFor } from '../dist/branch-conventions.js';
 import { commitSubjectIssue } from '../dist/commit-conventions.js';
 import { GITLAB_TEMPLATE, initialize } from '../dist/core.js';
-import { cliPath, cli, failure, fixture, put, spawnCaptured, success } from './helpers.mjs';
+import { cliPath, cli, completeDesign, confirmTask, failure, fixture, put, spawnCaptured, success } from './helpers.mjs';
 
 const read = (root, relative) => readFileSync(join(root, relative), 'utf8');
 
@@ -31,10 +31,9 @@ function setupRepository(root) {
 }
 
 function fillDesign(root, id) {
+  completeDesign(root, id);
   const relative = `.tiller/task/${id}/task.md`;
-  const content = read(root, relative);
-  put(root, relative, content.replace('### 方案\n\n### 取舍\n\n### 影响与风险',
-    '### 方案\n\n从 task.md 与 Git 生成 PR/MR 草稿。\n\n### 取舍\n\n不调用托管平台。\n\n### 影响与风险\n\nPR/MR 标题和说明需要人工复核。'));
+  put(root, relative, read(root, relative).replace('影响限于本任务范围，按现有测试复核。', 'PR/MR 标题和说明需要人工复核。'));
 }
 
 test('CASE-070 branch names follow type and task prefix rules', () => {
@@ -72,7 +71,7 @@ test('CASE-068 pr draft derives title, five sections and current AC state', asyn
     '--size', 'standard', '--target', 'src', '--target', 'test', '--target', '.tiller/cases',
     '--target', '.tiller/specs/modules/workflow'));
   fillDesign(root, id);
-  success(cli(root, 'confirm', id, 'requirements', '--by', 'Tiller Test'));
+  success(confirmTask(root, id, 'requirements', '--by', 'Tiller Test'));
   success(cli(root, 'confirm', id, 'design', '--by', 'Tiller Test'));
   const added = success(cli(root, 'case', 'add', id, '--module', 'workflow', '--kind', 'behavior',
     '--title', 'PR 草稿结构', '--expected', 'PR 草稿包含固定五段', '--criterion', 'AC-1',
@@ -122,7 +121,7 @@ test('CASE-069 check warns about nonconforming commit subjects and skips merge s
   success(cli(root, 'start', id, '--title', '提交信息检查', '--requirement', '提示不合规提交主题。',
     '--criterion', 'AC-1=提交主题违规只产生提示', '--size', 'small', '--target', 'src', '--target', 'test', '--target', '.tiller/cases',
     '--target', '.tiller/specs/modules/workflow'));
-  success(cli(root, 'confirm', id, 'requirements', '--by', 'Tiller Test'));
+  success(confirmTask(root, id, 'requirements', '--by', 'Tiller Test'));
   success(cli(root, 'case', 'add', id, '--module', 'workflow', '--kind', 'behavior', '--title', '提交信息检查', '--expected', '不合规提交只产生提示', '--criterion', 'AC-1', '--source', 'src/workflow.ts'));
   success(cli(root, 'verify', id, '--criterion', 'AC-1', '--test', 'test/workflow.test.mjs::CASE-001 workflow behavior'));
   git(root, 'add', '.');
@@ -193,7 +192,7 @@ test('CASE-077 pr verification section lists every recorded run in order', async
   success(cli(root, 'start', id, '--title', '全部验证记录', '--requirement', '输出每条 AC 的全部验证。',
     '--criterion', 'AC-1=保留每次验证', '--size', 'small', '--target', 'src', '--target', 'test',
     '--target', '.tiller/specs/modules/workflow'));
-  success(cli(root, 'confirm', id, 'requirements', '--by', 'Tiller Test'));
+  success(confirmTask(root, id, 'requirements', '--by', 'Tiller Test'));
   const added = success(cli(root, 'case', 'add', id, '--module', 'workflow', '--kind', 'behavior',
     '--title', '全部验证记录', '--expected', '保留每次验证记录', '--criterion', 'AC-1',
     '--source', 'src/workflow.ts'));
@@ -276,7 +275,7 @@ test('CASE-083 pr verification section uses plain nested records without numbere
   success(cli(root, 'start', id, '--title', '验证格式', '--requirement', '验证记录使用普通嵌套列表。',
     '--criterion', 'AC-1=每条记录单独一行', '--size', 'small', '--target', 'src', '--target', 'test',
     '--target', '.tiller/specs/modules/workflow'));
-  success(cli(root, 'confirm', id, 'requirements', '--by', 'Tiller Test'));
+  success(confirmTask(root, id, 'requirements', '--by', 'Tiller Test'));
   const added = success(cli(root, 'case', 'add', id, '--module', 'workflow', '--kind', 'behavior',
     '--title', '验证格式', '--expected', '验证记录使用普通嵌套列表', '--criterion', 'AC-1',
     '--source', 'src/workflow.ts'));

@@ -616,3 +616,29 @@
 ### 预期结果
 
 Maven/Gradle 工程 init 写入对应 junit runner，case add 输出匹配运行器的骨架
+
+## CASE-195 初始化为项目模块需求设计提供完整章节骨架
+
+- 类型：behavior
+- 优先级：medium
+- 模块：initialization
+- 关联 AC：20261024-doc-templates#AC-4
+- 需求：`.tiller/specs/modules/initialization/requirements.md`
+- 源码：`src/core.ts`, `test/doc-templates.test.mjs`, `resources/rules/activities/requirements.md`
+
+### 前置条件
+
+- 对应模块与运行环境可用。
+
+### 步骤
+
+1. 执行覆盖本用例的测试。
+2. 核对实际结果与预期结果一致。
+
+### 输入
+
+- 按用例描述准备正常输入及必要的边界输入。
+
+### 预期结果
+
+init 生成的项目 requirements.md 与 design.md 及 modules/README.md 包含完整章节标题和简短写作提示，不覆盖已有文件且无长示例

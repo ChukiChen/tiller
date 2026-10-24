@@ -5,7 +5,7 @@ import { spawnSync } from 'node:child_process';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 import { runnerFor } from '../dist/test-output.js';
-import { cli, fixture, put, success } from './helpers.mjs';
+import { cli, confirmTask, fixture, put, success } from './helpers.mjs';
 
 const repository = fileURLToPath(new URL('../', import.meta.url));
 const read = (root, relative) => readFileSync(join(root, relative), 'utf8');
@@ -38,7 +38,7 @@ test('CASE-186 check locates specs and context writeback suggestions without blo
   success(cli(root, 'start', id, '--title', 'Writeback hint', '--requirement', 'Suggest durable writebacks.',
     '--criterion', 'AC-1=Writeback paths are visible', '--size', 'small',
     '--target', 'src', '--target', '.tiller/specs/modules/workflow'));
-  success(cli(root, 'confirm', id, 'requirements'));
+  success(confirmTask(root, id, 'requirements'));
   put(root, 'src/value.txt', 'two\n');
   git(root, 'add', 'src/value.txt');
   git(root, 'commit', '--quiet', '-m', 'change without writeback');
@@ -65,7 +65,7 @@ test('CASE-187 repeated failures stop retries only for the same AC or CASE and a
   const id = '20261024-retry-stop';
   success(cli(root, 'start', id, '--title', 'Retry stop', '--requirement', 'Stop after repeated failures.',
     '--criterion', 'AC-1=Repeated failures are visible', '--size', 'small', '--target', 'src', '--target', 'test', '--target', '.tiller/cases'));
-  success(cli(root, 'confirm', id, 'requirements'));
+  success(confirmTask(root, id, 'requirements'));
   const first = cli(root, 'verify', id, '--criterion', 'AC-1', '--test', 'test/fail.test.mjs::failing attempt');
   assert.equal(first.status, 1);
   assert.equal(first.data.entries[0].result, 'failed');
@@ -134,7 +134,7 @@ test('CASE-188 pytest detection, skeleton, command construction and private XML 
   const id = '20261024-pytest-runner';
   success(cli(root, 'start', id, '--title', 'pytest runner', '--requirement', 'Verify pytest through XML.',
     '--criterion', 'AC-1=pytest results are verified', '--size', 'small', '--target', 'src', '--target', 'tests', '--target', '.tiller/cases'));
-  success(cli(root, 'confirm', id, 'requirements'));
+  success(confirmTask(root, id, 'requirements'));
   const added = success(cli(root, 'case', 'add', id, '--module', 'verification', '--kind', 'interface',
     '--title', 'pytest XML evidence', '--expected', 'Private XML proves the named pytest result.',
     '--criterion', 'AC-1', '--source', 'src/app.py'));

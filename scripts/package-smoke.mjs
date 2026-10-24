@@ -38,6 +38,15 @@ function manifest(root) {
   visit(root);
   return entries.sort(([a], [b]) => a.localeCompare(b));
 }
+function replaceTaskSection(content, title, body) {
+  const lines = content.split('\n');
+  const start = lines.findIndex(line => line.trim() === `### ${title}`);
+  assert.notEqual(start, -1, `missing task section: ${title}`);
+  let end = start + 1;
+  while (end < lines.length && !/^#{2,3}\s+/u.test(lines[end])) end++;
+  while (end > start + 1 && !lines[end - 1].trim()) end--;
+  return [...lines.slice(0, start + 1), '', body, '', ...lines.slice(end)].join('\n');
+}
 
 const packed = JSON.parse(run(process.execPath, [npm, 'pack', '--ignore-scripts=false', '--json', '--pack-destination', output], project))[0];
 const paths = new Set(packed.files.map(file => file.path));
@@ -109,12 +118,20 @@ const started = invoke(['start', taskId, '--title', 'Package smoke', '--requirem
 assert.equal(started.id, taskId);
 assert.equal(started.size, 'small');
 assert.ok(!started.next.includes('advanced'));
+const taskRecord = join(target, '.tiller/task', taskId, 'task.md');
+assert.ok(!readFileSync(taskRecord, 'utf8').includes('"preExisting"'), 'new task marker omits preExisting');
 const resumed = invoke(['resume', taskId]);
 assert.equal(resumed.criteria[0].text, 'package starts a task');
 assert.deepEqual(readdirSync(join(target, '.tiller/task', taskId)), ['task.md']);
 for (const args of [['advanced'], ['work', 'create'], ['workflow', 'list'], ['planning'], ['task'], ['delivery-check']]) {
   assert.equal(invoke(args, 2).error.code, 'INVALID_ARGUMENT', args.join(' '));
 }
+let requirementRecord = readFileSync(taskRecord, 'utf8');
+requirementRecord = replaceTaskSection(requirementRecord, '面向谁与问题', '包安装用户需要可重复验证默认流程。');
+requirementRecord = replaceTaskSection(requirementRecord, '业务范围', ['- 做：验证发布包初始化与默认流程。', '- 不做：扩展发布能力。', '- 假设与待确认：无。'].join('\n'));
+requirementRecord = replaceTaskSection(requirementRecord, '关键行为', '安装后的命令可完成初始化、任务确认与验证。');
+requirementRecord = replaceTaskSection(requirementRecord, '异常与边界', '失败时返回非零并给出可读错误。');
+writeFileSync(taskRecord, requirementRecord);
 invoke(['confirm', taskId, 'requirements', '--quote', 'Package smoke requirement confirmed']);
 const added = invoke(['case', 'add', taskId, '--module', 'package-smoke', '--kind', 'behavior', '--title', 'Packaged flow works',
   '--expected', 'the packaged test passes its named case', '--criterion', 'AC-1',

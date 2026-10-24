@@ -27,6 +27,45 @@ export function put(root, path, content) {
   return target;
 }
 
+function replaceTaskSection(content, title, body) {
+  const lines = content.split('\n');
+  const start = lines.findIndex(line => line.trim() === `### ${title}`);
+  if (start < 0) return content;
+  let end = start + 1;
+  while (end < lines.length && !/^#{2,3}\s+/u.test(lines[end])) end++;
+  while (end > start + 1 && !lines[end - 1].trim()) end--;
+  return [...lines.slice(0, start + 1), '', body, '', ...lines.slice(end)].join('\n');
+}
+
+export function completeRequirement(root, id) {
+  const relative = `.tiller/task/${id}/task.md`;
+  let content = readFileSync(join(root, relative), 'utf8');
+  content = replaceTaskSection(content, '面向谁与问题', '主要用户需要当前行为可靠。');
+  content = replaceTaskSection(content, '业务范围', [
+    '- 做：实现确认的验收条件。', '- 不做：范围外变更。', '- 假设与待确认：无。',
+  ].join('\n'));
+  content = replaceTaskSection(content, '关键行为', '验收条件描述的行为可观察。');
+  content = replaceTaskSection(content, '异常与边界', '失败时返回明确结果，不破坏既有行为。');
+  writeFileSync(join(root, relative), content);
+}
+
+export function completeDesign(root, id) {
+  const relative = `.tiller/task/${id}/task.md`;
+  let content = readFileSync(join(root, relative), 'utf8');
+  content = replaceTaskSection(content, '方案', '沿用现有命令边界实现本次行为。');
+  content = replaceTaskSection(content, '失败处理', '失败时返回明确结果并保留原记录。');
+  content = replaceTaskSection(content, '取舍', '不新增并行入口，保持现有接口。');
+  content = replaceTaskSection(content, '影响与风险', '影响限于本任务范围，按现有测试复核。');
+  content = replaceTaskSection(content, '验证入口', '运行引用本用例的具名测试。');
+  writeFileSync(join(root, relative), content);
+}
+
+export function confirmTask(root, id, gate, ...args) {
+  if (gate === 'requirements') completeRequirement(root, id);
+  if (gate === 'design') completeDesign(root, id);
+  return cli(root, 'confirm', id, gate, ...args);
+}
+
 function hasRepositoryAncestor(pathname) {
   let current = resolve(pathname);
   while (true) {

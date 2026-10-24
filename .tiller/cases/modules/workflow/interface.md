@@ -550,7 +550,7 @@ release 逐项给出 pass/fail/na 并以未通过项决定退出状态；check �
 - 模块：workflow
 - 关联 AC：无
 - 需求：`.tiller/specs/modules/workflow/requirements.md`
-- 源码：`src/flow.ts`, `test/flow-cli.test.mjs`
+- 源码：`src/flow.ts`, `test/doc-templates.test.mjs`
 
 ### 前置条件
 
@@ -643,3 +643,29 @@ check warning 指出当前分支未包含当前任务编号，并给出类型/�
 ### 预期结果
 
 基线后未回写 specs/context 时，check 警告列出可定位路径与简短提纲，且不单独阻断 accept
+
+## CASE-192 结构化需求模板分离业务范围与交付路径
+
+- 类型：interface
+- 优先级：medium
+- 模块：workflow
+- 关联 AC：20261024-doc-templates#AC-2
+- 需求：`.tiller/specs/modules/workflow/requirements.md`
+- 源码：`src/flow.ts`, `test/flow-cli.test.mjs`
+
+### 前置条件
+
+- 对应模块与运行环境可用。
+
+### 步骤
+
+1. 执行覆盖本用例的测试。
+2. 核对实际结果与预期结果一致。
+
+### 输入
+
+- 按用例描述准备正常输入及必要的边界输入。
+
+### 预期结果
+
+start 生成面向谁与问题、目标、业务范围、关键行为、异常与边界、验收条件；业务范围不含 target 路径，路径只进入 meta.scope

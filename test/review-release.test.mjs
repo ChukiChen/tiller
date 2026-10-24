@@ -5,7 +5,7 @@ import { spawnSync } from 'node:child_process';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 import { readCaseLibrary } from '../dist/cases.js';
-import { cli, failure, fixture, put, success } from './helpers.mjs';
+import { cli, confirmTask, failure, fixture, put, success } from './helpers.mjs';
 
 const repository = fileURLToPath(new URL('../', import.meta.url));
 const read = (root, relative) => readFileSync(join(root, relative), 'utf8');
@@ -74,7 +74,7 @@ async function project(t, releaseReady = false) {
 async function verifiedTask(root, id = '20261022-fixture') {
   success(cli(root, 'start', id, '--title', 'Fixture task', '--requirement', 'Keep the fixture behavior stable.',
     '--criterion', 'AC-1=Fixture behavior is verified', '--size', 'small', '--target', 'src', '--target', 'test', '--target', '.tiller'));
-  success(cli(root, 'confirm', id, 'requirements', '--by', 'Tiller Test'));
+  success(confirmTask(root, id, 'requirements', '--by', 'Tiller Test'));
   put(root, 'src/value.txt', 'two\n');
   success(cli(root, 'verify', id, '--criterion', 'AC-1', '--test', 'test/baseline.test.mjs::CASE-001 baseline'));
   return commit(root, 'feat(workflow): 更新夹具行为');
@@ -206,7 +206,7 @@ test('CASE-108 accepted tasks still fail when acceptance evidence was not verifi
   const id = '20261022-acceptance-unverified';
   success(cli(root, 'start', id, '--title', 'Unverified acceptance', '--requirement', 'Keep reported evidence visible.',
     '--criterion', 'AC-1=Reported evidence remains visible', '--size', 'small', '--target', 'src', '--target', 'test', '--target', '.tiller'));
-  success(cli(root, 'confirm', id, 'requirements', '--by', 'Tiller Test'));
+  success(confirmTask(root, id, 'requirements', '--by', 'Tiller Test'));
   put(root, 'src/value.txt', 'two\n');
   success(cli(root, 'verify', id, '--criterion', 'AC-1', '--test', 'test/baseline.test.mjs::CASE-001 baseline',
     '--reported', '--command', 'node --test test/baseline.test.mjs', '--result', 'passed', '--reason', 'Runner unavailable in fixture'));
@@ -259,7 +259,7 @@ test('CASE-109 repository docs and suite include review release and pinned check
   assert.ok(suite.e2e.includes('review-release.test.mjs'));
   const library = await readCaseLibrary(repository);
   assert.deepEqual(library.issues, []);
-  assert.equal(library.cases.length, 189);
+  assert.equal(library.cases.length, 195);
   for (const id of ['CASE-104', 'CASE-105', 'CASE-106', 'CASE-107', 'CASE-108', 'CASE-109']) {
     assert.ok(library.cases.find(item => item.id === id)?.tests.length, id);
   }

@@ -5,10 +5,16 @@ import { join } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import test from 'node:test';
 import { initialize } from '../dist/core.js';
-import { cli, failure, fixture, put, success } from './helpers.mjs';
+import { cli, completeDesign, confirmTask, failure, fixture, put, success } from './helpers.mjs';
 
 const read = (root, relative) => readFileSync(join(root, relative), 'utf8');
 const task = (root, id) => `.tiller/task/${id}/task.md`;
+const subSection = (content, title) => {
+  const start = content.search(new RegExp(`^### ${title}\\s*$`, 'mu'));
+  if (start < 0) return '';
+  const rest = content.slice(start).replace(/^###[^\n]*\n?/u, '');
+  return rest.split(/^#{2,3}\s+/mu)[0];
+};
 
 function git(root, ...args) {
   const result = spawnSync('git', ['-c', 'user.name=Tiller Test', '-c', 'user.email=tiller@example.invalid', ...args], {
@@ -142,7 +148,7 @@ test('CASE-001 CASE-066 small flow produces one task file and records verified a
     '--criterion', 'AC-1=Command exits successfully', '--size', 'small', '--target', 'src', '--target', 'test'));
   assert.equal(started.next.includes('confirm'), true);
   assert.deepEqual(readdirSync(join(root, '.tiller/task', id)), ['task.md']);
-  const confirmed = success(cli(root, 'confirm', id, 'requirements', '--quote', '确认这个范围和验收条件'));
+  const confirmed = success(confirmTask(root, id, 'requirements', '--quote', '确认这个范围和验收条件'));
   assert.equal(confirmed.object, '需求正文（目标、范围与验收条件）');
   assert.equal(confirmed.by, 'Tiller Test');
 
@@ -173,7 +179,10 @@ test('CASE-001 CASE-066 small flow produces one task file and records verified a
   assert.match(content, /^- 确认人：Tiller Test$/mu);
   assert.match(content, /^- 确认人：验收人$/mu);
   assert.match(content, /^### 目标$/mu);
-  assert.match(content, /^### 范围$/mu);
+  assert.match(content, /^### 面向谁与问题$/mu);
+  assert.match(content, /^### 业务范围$/mu);
+  assert.match(content, /^### 关键行为$/mu);
+  assert.match(content, /^### 异常与边界$/mu);
   assert.match(content, /^### 验收条件$/mu);
   assert.match(content, /用户原话：确认这个范围和验收条件/u);
   assert.doesNotMatch(content, /用户原话：验收通过/u);
@@ -189,7 +198,7 @@ test('CASE-013 requirements confirmation binds the written requirement rather th
   const id = '20261022-written-requirement';
   success(cli(root, 'start', id, '--title', 'Written requirement', '--requirement', 'Return a nonzero exit code on failure.',
     '--criterion', 'AC-1=Failure exits nonzero', '--size', 'small', '--target', 'src'));
-  success(cli(root, 'confirm', id, 'requirements', '--quote', '确认这个需求'));
+  success(confirmTask(root, id, 'requirements', '--quote', '确认这个需求'));
   editTask(root, id, content => content.replace('Return a nonzero exit code on failure.', 'Return a zero exit code on failure.'));
   const checked = failure(cli(root, 'check', id));
   assert.ok(checked.issues.some(issue => issue.includes('需求确认后需求正文、范围或验收条件已变化')));
@@ -224,13 +233,12 @@ test('CASE-002 CASE-067 standard flow blocks before design confirmation and acce
   const id = '20261022-standard-flow';
   success(cli(root, 'start', id, '--title', 'Standard flow', '--requirement', 'Add a visible behavior.',
     '--criterion', 'AC-1=Behavior is observable', '--type', 'feature', '--size', 'standard', '--target', 'src', '--target', 'test'));
-  success(cli(root, 'confirm', id, 'requirements', '--quote', '需求确认'));
+  success(confirmTask(root, id, 'requirements', '--quote', '需求确认'));
   const blocked = failure(cli(root, 'check', id));
   assert.ok(blocked.issues.some(issue => issue.includes('设计')));
   failure(cli(root, 'confirm', id, 'design', '--quote', '设计确认'));
-  editTask(root, id, content => content.replace('### 方案\n\n### 取舍\n\n### 影响与风险',
-    '### 方案\n\nUse the existing command boundary.\n\n### 取舍\n\nKeep the current interface.\n\n### 影响与风险\n\nCLI exit behavior only.'));
-  success(cli(root, 'confirm', id, 'design', '--quote', '设计确认'));
+  completeDesign(root, id);
+  success(confirmTask(root, id, 'design', '--quote', '设计确认'));
   put(root, 'src/value.txt', 'standard\n');
   success(cli(root, 'verify', id, '--criterion', 'AC-1', '--test', 'test/baseline.test.mjs::CASE-001 baseline'));
   git(root, 'add', 'src/value.txt');
@@ -246,7 +254,12 @@ test('CASE-060 CASE-062 structured task template validates written requirements 
     '--criterion', 'AC-1=Structured confirmation is recorded', '--size', 'small', '--target', 'src'));
   const original = read(root, task(root, id));
   assert.match(original, /^### 目标$/mu);
-  assert.match(original, /^### 范围$/mu);
+  assert.match(original, /^### 面向谁与问题$/mu);
+  assert.match(original, /^### 业务范围$/mu);
+  assert.match(original, /^### 关键行为$/mu);
+  assert.match(original, /^### 异常与边界$/mu);
+  assert.doesNotMatch(original, /^### 范围$/mu);
+  assert.doesNotMatch(subSection(original, '业务范围'), /`src`|`test`/u);
   assert.match(original, /^### 验收条件$/mu);
   assert.doesNotMatch(original, /^## 验收条件$/mu);
   editTask(root, id, content => content.replace('Write the structured requirement.', ''));
@@ -255,7 +268,7 @@ test('CASE-060 CASE-062 structured task template validates written requirements 
   assert.match(incomplete.error.message, /目标/u);
   put(root, task(root, id), original);
 
-  const confirmed = success(cli(root, 'confirm', id, 'requirements'));
+  const confirmed = success(confirmTask(root, id, 'requirements'));
   assert.equal(confirmed.by, 'Tiller Test');
   assert.equal('quote' in confirmed, false);
   const content = read(root, task(root, id));
@@ -268,7 +281,7 @@ test('CASE-060 CASE-062 structured task template validates written requirements 
   const second = '20261022-explicit-confirmer';
   success(cli(root, 'start', second, '--title', 'Explicit confirmer', '--requirement', 'Record the named confirmer.',
     '--criterion', 'AC-1=Confirmer is explicit', '--size', 'small', '--target', 'src'));
-  const explicit = success(cli(root, 'confirm', second, 'requirements', '--by', 'Product Owner'));
+  const explicit = success(confirmTask(root, second, 'requirements', '--by', 'Product Owner'));
   assert.equal(explicit.by, 'Product Owner');
   assert.match(read(root, task(root, second)), /^- 确认人：Product Owner$/mu);
 });
@@ -278,14 +291,14 @@ test('CASE-063 requirement and design confirmations use independent digests', as
   const id = '20261022-independent-confirmations';
   success(cli(root, 'start', id, '--title', 'Independent confirmations', '--requirement', 'Implement structured confirmations.',
     '--criterion', 'AC-1=Confirmation scopes stay independent', '--size', 'standard', '--target', 'src'));
-  success(cli(root, 'confirm', id, 'requirements', '--by', 'Requirements Owner'));
-  editTask(root, id, content => content.replace('### 方案\n\n### 取舍\n\n### 影响与风险',
-    '### 方案\n\nUse the existing command boundary.\n\n### 影响与风险\n\nConfirmation records only.'));
+  success(confirmTask(root, id, 'requirements', '--by', 'Requirements Owner'));
+  completeDesign(root, id);
+  editTask(root, id, content => content.replace('### 取舍\n\n不新增并行入口，保持现有接口。', '### 取舍\n\n'));
   const design = success(cli(root, 'confirm', id, 'design', '--by', 'Design Owner'));
   assert.equal(design.by, 'Design Owner');
   assert.ok(design.warnings.some(warning => warning.includes('取舍')));
 
-  editTask(root, id, content => content.replace('Use the existing command boundary.', 'Use a revised command boundary.'));
+  editTask(root, id, content => content.replace('沿用现有命令边界实现本次行为。', '调整现有命令边界实现本次行为。'));
   const afterDesign = failure(cli(root, 'check', id));
   assert.equal(afterDesign.confirmations.find(item => item.gate === 'requirements').confirmed, true);
   assert.equal(afterDesign.confirmations.find(item => item.gate === 'design').confirmed, false);
@@ -375,7 +388,7 @@ test('CASE-006 verification becomes stale after an in-scope change', async t => 
   const id = '20261022-stale-verification';
   success(cli(root, 'start', id, '--title', 'Stale verification', '--requirement', 'Detect a stale proof.',
     '--criterion', 'AC-1=Current tree is tested', '--size', 'small', '--target', 'src', '--target', 'test'));
-  success(cli(root, 'confirm', id, 'requirements', '--quote', '确认'));
+  success(confirmTask(root, id, 'requirements', '--quote', '确认'));
   success(cli(root, 'verify', id, '--criterion', 'AC-1', '--test', 'test/baseline.test.mjs::CASE-001 baseline'));
   put(root, 'src/value.txt', 'changed after verification\n');
   git(root, 'add', 'src/value.txt');
@@ -389,7 +402,7 @@ test('CASE-003 requirements confirmation binds the declared scope', async t => {
   const id = '20261022-scope-confirmation';
   success(cli(root, 'start', id, '--title', 'Scope binding', '--requirement', 'Keep the approved scope.',
     '--criterion', 'AC-1=Scope stays explicit', '--size', 'small', '--target', 'src'));
-  success(cli(root, 'confirm', id, 'requirements', '--quote', '确认该范围'));
+  success(confirmTask(root, id, 'requirements', '--quote', '确认该范围'));
   editTask(root, id, content => content.replace('"scope":["src"]', '"scope":["src","test"]'));
   const checked = failure(cli(root, 'check', id));
   assert.ok(checked.issues.some(issue => issue.includes('需求确认后需求正文、范围或验收条件已变化')));
@@ -400,7 +413,7 @@ test('CASE-004 scope checks report committed and uncommitted out-of-scope change
   const id = '20261022-scope-check';
   success(cli(root, 'start', id, '--title', 'Scope check', '--requirement', 'Stay inside src.',
     '--criterion', 'AC-1=src is verified', '--size', 'small', '--target', 'src'));
-  success(cli(root, 'confirm', id, 'requirements', '--quote', '确认'));
+  success(confirmTask(root, id, 'requirements', '--quote', '确认'));
   put(root, 'src/value.txt', 'scoped\n');
   success(cli(root, 'verify', id, '--criterion', 'AC-1', '--test', 'test/baseline.test.mjs::CASE-001 baseline'));
   git(root, 'add', 'src/value.txt');
@@ -423,7 +436,7 @@ test('CASE-005 pre-existing changes are excluded from scope findings only while 
   const id = '20261022-preexisting';
   success(cli(root, 'start', id, '--title', 'Pre-existing change', '--requirement', 'Ignore an unrelated dirty file.',
     '--criterion', 'AC-1=src is verified', '--size', 'small', '--target', 'src'));
-  success(cli(root, 'confirm', id, 'requirements', '--quote', '确认'));
+  success(confirmTask(root, id, 'requirements', '--quote', '确认'));
   put(root, 'src/value.txt', 'implemented\n');
   success(cli(root, 'verify', id, '--criterion', 'AC-1', '--test', 'test/baseline.test.mjs::CASE-001 baseline'));
   git(root, 'add', 'src/value.txt');
@@ -441,7 +454,7 @@ test('CASE-007 test weakening and skipped tests block the delivery self-check', 
   const id = '20261022-test-weakening';
   success(cli(root, 'start', id, '--title', 'Protect tests', '--requirement', 'Do not weaken coverage.',
     '--criterion', 'AC-1=Assertion remains active', '--size', 'small', '--target', 'test'));
-  success(cli(root, 'confirm', id, 'requirements', '--quote', '确认'));
+  success(confirmTask(root, id, 'requirements', '--quote', '确认'));
   put(root, 'test/baseline.test.mjs', "import test from 'node:test';\ntest('CASE-001 baseline', () => {});\ntest.skip('skipped baseline', () => {});\n");
   success(cli(root, 'verify', id, '--criterion', 'AC-1', '--test', 'test/baseline.test.mjs::CASE-001 baseline'));
   git(root, 'add', 'test/baseline.test.mjs');
@@ -459,7 +472,7 @@ test('CASE-008 removing a test with its retired feature is reported without mask
   const id = '20261022-test-removal';
   success(cli(root, 'start', id, '--title', 'Review test removal', '--requirement', 'Keep retained tests intact.',
     '--criterion', 'AC-1=The retained test proves behavior', '--size', 'small', '--target', 'test'));
-  success(cli(root, 'confirm', id, 'requirements', '--quote', '确认'));
+  success(confirmTask(root, id, 'requirements', '--quote', '确认'));
   unlinkSync(join(root, 'test/legacy.test.mjs'));
   success(cli(root, 'verify', id, '--criterion', 'AC-1', '--test', 'test/baseline.test.mjs::CASE-001 baseline'));
   git(root, 'add', '-A');
@@ -483,7 +496,7 @@ test('CASE-009 unsafe paths and secrets are rejected from records before accepta
   success(cli(root, 'start', id, '--title', 'Safe record', '--requirement', 'Keep records portable.',
     '--criterion', 'AC-1=No secrets or absolute paths', '--size', 'small', '--target', 'src'));
   failure(cli(root, 'confirm', id, 'requirements', '--quote', 'Use token = abcdefghijklmnop'));
-  success(cli(root, 'confirm', id, 'requirements', '--quote', '确认'));
+  success(confirmTask(root, id, 'requirements', '--quote', '确认'));
   editTask(root, id, content => content.replace('\n## 确认\n',
     '\n## 设计\n\n### 方案\n\nAccess token = abcdefghijklmnop\n\n### 影响与风险\n\nSecret handling.\n\n## 确认\n'));
   failure(cli(root, 'confirm', id, 'design', '--quote', '设计确认'));
@@ -496,7 +509,7 @@ test('CASE-010 accept refuses an unverified task and leaves no acceptance record
   const id = '20261022-accept-block';
   success(cli(root, 'start', id, '--title', 'Accept gate', '--requirement', 'Require proof first.',
     '--criterion', 'AC-1=Proof exists', '--size', 'small', '--target', 'src'));
-  success(cli(root, 'confirm', id, 'requirements', '--quote', '确认'));
+  success(confirmTask(root, id, 'requirements', '--quote', '确认'));
   const rejected = failure(cli(root, 'accept', id, '--quote', '验收通过'));
   assert.equal(rejected.error.code, 'NOT_READY');
   assert.doesNotMatch(read(root, task(root, id)), /验收通过/u);
@@ -509,7 +522,7 @@ test('CASE-012 check blocks a criterion whose verification test has no global ca
   const id = '20261022-global-cases-mapped';
   success(cli(root, 'start', id, '--title', 'Global case mapping', '--requirement', 'Check regression facts.',
     '--criterion', 'AC-1=The baseline test remains relevant', '--size', 'small', '--target', 'src', '--target', 'test'));
-  success(cli(root, 'confirm', id, 'requirements', '--quote', '确认'));
+  success(confirmTask(root, id, 'requirements', '--quote', '确认'));
   put(root, 'src/value.txt', 'mapped\n');
   const verified = success(cli(root, 'verify', id, '--criterion', 'AC-1', '--test', 'test/other.test.mjs::other'));
   assert.deepEqual(verified.cases, []);
@@ -525,7 +538,7 @@ test('CASE-154 file-level verification references do not bind every test in the 
   const id = '20261022-file-level-test';
   success(cli(root, 'start', id, '--title', 'Exact test binding', '--requirement', 'Require named tests.',
     '--criterion', 'AC-1=Only the named test is bound', '--size', 'small', '--target', 'src'));
-  success(cli(root, 'confirm', id, 'requirements', '--quote', '确认'));
+  success(confirmTask(root, id, 'requirements', '--quote', '确认'));
   put(root, 'src/value.txt', 'file-level\n');
   const verified = success(cli(root, 'verify', id, '--criterion', 'AC-1', '--test', 'test/baseline.test.mjs'));
   assert.deepEqual(verified.cases, []);
@@ -550,7 +563,7 @@ test('CASE-047 module cases and scenarios report counts and regression hints', a
   const id = '20261022-case-summary';
   success(cli(root, 'start', id, '--title', 'Case summary', '--requirement', 'Report module coverage.',
     '--criterion', 'AC-1=The scenario is visible', '--size', 'small', '--target', 'src', '--target', 'test'));
-  success(cli(root, 'confirm', id, 'requirements', '--quote', '确认'));
+  success(confirmTask(root, id, 'requirements', '--quote', '确认'));
   put(root, 'src/value.txt', 'summary\n');
   success(cli(root, 'verify', id, '--criterion', 'AC-1', '--test', 'test/baseline.test.mjs::CASE-001 baseline'));
   git(root, 'add', 'src/value.txt');
@@ -574,7 +587,7 @@ test('CASE-045 check rejects a recorded case whose referenced test no longer mat
   const id = '20261022-case-mismatch';
   success(cli(root, 'start', id, '--title', 'Case mismatch', '--requirement', 'Bind the recorded case.',
     '--criterion', 'AC-1=The recorded case is current', '--size', 'small', '--target', 'src'));
-  success(cli(root, 'confirm', id, 'requirements', '--quote', '确认'));
+  success(confirmTask(root, id, 'requirements', '--quote', '确认'));
   put(root, 'src/value.txt', 'mismatch\n');
   success(cli(root, 'verify', id, '--criterion', 'AC-1', '--test', 'test/baseline.test.mjs::CASE-001 baseline'));
   editTask(root, id, content => content.replace('- 用例：CASE-001', '- 用例：CASE-003'));
@@ -598,7 +611,7 @@ test('CASE-046 global cases block legacy layout, unknown kinds, missing modules 
   const id = '20261022-global-cases-broken';
   success(cli(root, 'start', id, '--title', 'Broken global cases', '--requirement', 'Reject stale facts.',
     '--criterion', 'AC-1=The test exists', '--size', 'small', '--target', 'src', '--target', 'test'));
-  success(cli(root, 'confirm', id, 'requirements', '--quote', '确认'));
+  success(confirmTask(root, id, 'requirements', '--quote', '确认'));
   put(root, 'src/value.txt', 'broken cases\n');
   success(cli(root, 'verify', id, '--criterion', 'AC-1', '--test', 'test/baseline.test.mjs::CASE-001 baseline'));
   git(root, 'add', 'src/value.txt');

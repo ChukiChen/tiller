@@ -50,6 +50,7 @@ const FLOW_STAGES = ['已开始', '需求已确认', '设计已确认', '已验�
 const TASK_DIRECTORY = '.tiller/task';
 const TASK_FILE = 'task.md';
 const LEGACY_TASK_DIRECTORY = '.tiller/work';
+const PRE_EXISTING_DIRECTORY = '.tiller/local/tasks';
 
 export type FlowType = typeof TYPES[number];
 export type FlowSize = 'small' | 'standard';
@@ -85,7 +86,7 @@ export interface FlowReview { by: string; at: string; findings: FlowReviewFindin
 export interface FlowTask {
   meta: FlowMeta; title: string; requirement: string; design: string; criteria: FlowCriterion[];
   confirmations: FlowConfirmation[]; verifications: FlowVerification[]; closures: FlowClosure[];
-  review: FlowReview | null; content: string; path: string;
+  review: FlowReview | null; content: string; path: string; preExistingIssue?: string;
 }
 export interface TaskStage { stage: FlowStage; reason: string }
 
@@ -228,6 +229,53 @@ function parseMeta(marker: string, id: string): FlowMeta {
     ...(slug ? { slug } : {}),
     ...(summary ? { summary } : {}),
     ...(requirementFile ? { requirementFile } : {}) };
+}
+
+function preExistingPath(id: string): string {
+  return `${PRE_EXISTING_DIRECTORY}/${id}/pre-existing.json`;
+}
+
+function preExistingValues(value: unknown): Record<string, string> | null {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
+  const result: Record<string, string> = {};
+  for (const [relative, digest] of Object.entries(value as Record<string, unknown>)) {
+    try { validateRelativePath(relative); }
+    catch { return null; }
+    if (typeof digest !== 'string' || !/^[a-f0-9]{64}$/u.test(digest)) return null;
+    result[relative] = digest;
+  }
+  return result;
+}
+
+async function readPreExisting(root: string, id: string): Promise<{ values: Record<string, string>; issue?: string }> {
+  const relative = preExistingPath(id);
+  let content: string;
+  try {
+    const resolved = (await inspectSafePaths(root, [relative]))[0]!;
+    if (resolved.stat === null) return { values: {} };
+    if (!resolved.stat.isFile()) return { values: {}, issue: `开工前改动旁路不是普通文件，已按空摘要继续：\`${relative}\`。` };
+    content = await readFile(resolved.target, 'utf8');
+  } catch { return { values: {}, issue: `开工前改动旁路不可读，已按空摘要继续：\`${relative}\`。` }; }
+  let raw: unknown;
+  try { raw = JSON.parse(content); }
+  catch { return { values: {}, issue: `开工前改动旁路不是有效 JSON，已按空摘要继续：\`${relative}\`。` }; }
+  const values = preExistingValues(raw);
+  return values === null
+    ? { values: {}, issue: `开工前改动旁路格式无效，已按空摘要继续：\`${relative}\`。` }
+    : { values };
+}
+
+async function writePreExisting(root: string, id: string, values: Record<string, string>): Promise<void> {
+  if (!Object.keys(values).length) return;
+  const relative = preExistingPath(id);
+  const after = `${JSON.stringify(values, null, 2)}\n`;
+  const before = await readTextIfExists(root, relative);
+  if (before === after) return;
+  const resolved = (await inspectSafePaths(root, [relative]))[0]!;
+  await mkdir(path.dirname(resolved.target), { recursive: true });
+  const target = (await inspectSafePaths(root, [relative]))[0]!;
+  if (target.stat !== null && !target.stat.isFile()) throw new Error(`开工前改动旁路不是普通文件：${relative}`);
+  await writeFile(target.target, after, 'utf8');
 }
 function sectionBody(content: string, title: string): string {
   const match = new RegExp(`^## ${title}\\s*$`, 'mu').exec(content);
@@ -400,7 +448,11 @@ export async function readTask(root: string, id: string): Promise<FlowTask> {
   const relative = taskPath(id);
   const content = await readTextIfExists(root, relative);
   if (content === null) fail('TASK_NOT_FOUND', `任务 ${id} 不存在；请先执行 start。`);
-  return parseTask(content, id, relative);
+  const task = parseTask(content, id, relative);
+  const sidecar = await readPreExisting(root, id);
+  task.meta = { ...task.meta, preExisting: { ...task.meta.preExisting, ...sidecar.values } };
+  if (sidecar.issue) task.preExistingIssue = sidecar.issue;
+  return task;
 }
 
 function renderConfirmations(values: FlowConfirmation[]): string {
@@ -487,7 +539,8 @@ function renderReview(review: FlowReview): string {
   return chunks.join('\n\n');
 }
 function renderTask(task: Omit<FlowTask, 'content' | 'path'>, selfCheck = ''): string {
-  const parts = [`# ${task.title}`, `${MARKER_PREFIX}${JSON.stringify(task.meta)}${MARKER_SUFFIX}`, '## 需求', task.requirement];
+  const { preExisting: _preExisting, ...serializedMeta } = task.meta;
+  const parts = [`# ${task.title}`, `${MARKER_PREFIX}${JSON.stringify(serializedMeta)}${MARKER_SUFFIX}`, '## 需求', task.requirement];
   if (task.meta.format !== 'structured' || (task.criteria.length && !subSectionBody(task.requirement, '验收条件'))) {
     parts.push('## 验收条件', task.criteria.map(item => `- ${item.id}: ${normalizeLine(item.text)}`).join('\n'));
   }
@@ -500,7 +553,9 @@ function renderTask(task: Omit<FlowTask, 'content' | 'path'>, selfCheck = ''): s
   parts.push('## 自检', selfCheck.trim() || '交付前运行 check；验收后运行 accept。');
   return `${parts.join('\n\n').trimEnd()}\n`;
 }
-async function writeTask(root: string, id: string, before: string, after: string): Promise<void> {
+async function writeTask(root: string, id: string, before: string, after: string,
+  preExisting?: Record<string, string>): Promise<void> {
+  if (preExisting) await writePreExisting(root, id, preExisting);
   if (before === after) return;
   await applyChanges(root, [{ path: taskPath(id), before, after }]);
 }
@@ -518,17 +573,28 @@ function criteriaList(values: string[]): FlowCriterion[] {
   }
   return result.sort((left, right) => Number(left.id.slice(3)) - Number(right.id.slice(3)));
 }
-function renderStructuredRequirement(goal: string, scope: string[], criteria: FlowCriterion[], requirementFile?: string): string {
-  const paths = scope.map(value => `\`${value}\``).join('、');
-  const outside = scope.includes('.') ? '仓库内未被本任务授权的文件' : `${paths} 以外的文件`;
+function renderStructuredRequirement(goal: string, criteria: FlowCriterion[], requirementFile?: string): string {
   return [
+    '### 面向谁与问题', '', '<!-- 写主要用户、当前问题与已有依据。 -->', '',
     '### 目标', '', ...(requirementFile ? [`需求来源：\`${requirementFile}\``, ''] : []), goal, '',
-    '### 范围', '', `- 做：${paths}`, `- 不做：${outside}`, `- 涉及模块或文件：${paths}`, '',
+    '### 业务范围', '',
+    '<!-- 写业务上做、不做什么和假设；交付路径只记录在任务范围。 -->',
+    '- 做：',
+    '- 不做：',
+    '- 假设与待确认：', '',
+    '### 关键行为', '', '<!-- 写用户可观察的主要行为。 -->', '',
+    '### 异常与边界', '', '<!-- 写失败、空值、权限、规模和兼容边界。 -->', '',
     '### 验收条件', '', criteria.map(item => `- ${item.id}: ${normalizeLine(item.text)}`).join('\n'),
   ].join('\n').trim();
 }
 function emptyDesignTemplate(): string {
-  return ['### 方案', '', '### 取舍', '', '### 影响与风险'].join('\n');
+  return [
+    '### 方案', '', '<!-- 写做法、关键接口与数据流。 -->', '',
+    '### 失败处理', '', '<!-- 写失败、回滚与恢复方式。 -->', '',
+    '### 取舍', '', '<!-- 写备选方案与选择理由；没有备选时说明原因。 -->', '',
+    '### 影响与风险', '', '<!-- 写受影响范围、兼容性和风险缓解。 -->', '',
+    '### 验证入口', '', '<!-- 写可重跑的命令或测试入口。 -->',
+  ].join('\n');
 }
 const PLACEHOLDER_LINE = /^(?:todo|tbd|tba|n\/a|na|待补充|待完善|待填写|待定|占位|暂无|无|\.{3}|…)$/iu;
 function markdownMeaningfulLines(value: string): string[] {
@@ -548,9 +614,12 @@ function markdownMeaningfulLines(value: string): string[] {
   });
 }
 function taskDesignThinWarnings(task: FlowTask): string[] {
-  const structured = task.meta.format === 'structured' || /^###\s+(?:方案|取舍|影响与风险)\s*$/mu.test(task.design);
+  const structured = task.meta.format === 'structured' || /^###\s+(?:方案|失败处理|取舍|影响与风险|验证入口)\s*$/mu.test(task.design);
   if (task.meta.size !== 'standard' || !structured) return [];
-  return (['方案', '取舍', '影响与风险'] as const)
+  const fields = /^###\s+(?:失败处理|验证入口)\s*$/mu.test(task.design)
+    ? ['方案', '失败处理', '取舍', '影响与风险', '验证入口'] as const
+    : ['方案', '取舍', '影响与风险'] as const;
+  return fields
     .filter(field => markdownMeaningfulLines(subSectionBody(task.design, field)).length === 0)
     .map(field => `任务设计“${field}”仅空白或占位：\`${task.path}\`。`);
 }
@@ -730,7 +799,7 @@ export async function startFlow(rootInput: string, idInput: string, input: FlowS
       catch { /* Deleted pre-existing paths cannot be compared later. */ }
     }
     const created = new Date().toISOString();
-    const structuredRequirement = renderStructuredRequirement(requirement, scope, criteria, requirementFile);
+    const structuredRequirement = renderStructuredRequirement(requirement, criteria, requirementFile);
     const task = { meta: { version: 1 as const, id: idInput, type, size, created, base, scope, preExisting,
       format: 'structured' as const,
       ...(plan && item ? { plan, item } : {}), ...(slug ? { slug } : {}), ...(summary ? { summary } : {}),
@@ -740,6 +809,7 @@ export async function startFlow(rootInput: string, idInput: string, input: FlowS
       confirmations: [], verifications: [], closures: [], review: null };
     const content = renderTask(task);
     await mkdir(path.dirname(path.join(root, relative)), { recursive: true });
+    await writePreExisting(root, idInput, preExisting);
     await applyChanges(root, [{ path: relative, before: null, after: content }]);
     return { id: idInput, path: relative, type, size, base, scope, criteria, warnings, ...(plan && item ? { plan, item } : {}),
       ...(slug ? { slug } : {}), ...(summary ? { summary } : {}),
@@ -764,7 +834,7 @@ export async function attachFlowTask(rootInput: string, id: string, plan: string
     }
     const next = { ...task, meta: { ...task.meta, plan, item } };
     const { content: _content, path: _path, ...body } = next;
-    await writeTask(root, id, task.content, renderTask(body, sectionBody(task.content, '自检')));
+    await writeTask(root, id, task.content, renderTask(body, sectionBody(task.content, '自检')), body.meta.preExisting);
     const warnings = task.meta.size === planned.item.size
       ? []
       : [`任务规模 ${task.meta.size} 与规划条目 ${item} 的 ${planned.item.size} 不同；已保留任务记录，仅报告差异。`];
@@ -812,18 +882,33 @@ export async function resumeFlow(rootInput: string, id?: string) {
 function requirementFieldIssues(task: FlowTask): string[] {
   if (task.meta.format !== 'structured') return [];
   const missing: string[] = [];
-  if (!subSectionBody(task.requirement, '目标')) missing.push('目标');
-  if (!subSectionBody(task.requirement, '范围')) missing.push('范围');
-  if (!subSectionBody(task.requirement, '验收条件') || !task.criteria.length) missing.push('验收条件');
+  const current = /^###\s+业务范围\s*$/mu.test(task.requirement);
+  const fields = current
+    ? ['面向谁与问题', '目标', '业务范围', '关键行为', '异常与边界', '验收条件']
+    : ['目标', '范围', '验收条件'];
+  for (const field of fields) {
+    const lines = markdownMeaningfulLines(subSectionBody(task.requirement, field));
+    const meaningful = field === '业务范围'
+      ? lines.some(line => {
+          const value = line.replace(/^(?:做|不做|假设与待确认)[:：]?\s*/u, '').trim();
+          return value.length > 0 && !PLACEHOLDER_LINE.test(value) && !/^<[^<>]+>$/u.test(value);
+        })
+      : lines.length > 0;
+    if (!meaningful) missing.push(field);
+  }
+  if (!task.criteria.length && !missing.includes('验收条件')) missing.push('验收条件');
   return missing;
 }
 function designFieldIssues(task: FlowTask): { missing: string[]; tradeoffsMissing: boolean } {
-  const structured = task.meta.format === 'structured' || /^###\s+(?:方案|取舍|影响与风险)\s*$/mu.test(task.design);
+  const structured = task.meta.format === 'structured' || /^###\s+(?:方案|失败处理|取舍|影响与风险|验证入口)\s*$/mu.test(task.design);
   if (!structured) return { missing: task.design.trim() ? [] : ['设计正文'], tradeoffsMissing: false };
+  const current = /^###\s+(?:失败处理|验证入口)\s*$/mu.test(task.design);
   const missing: string[] = [];
-  if (!subSectionBody(task.design, '方案')) missing.push('方案');
-  if (!subSectionBody(task.design, '影响与风险')) missing.push('影响与风险');
-  return { missing, tradeoffsMissing: !subSectionBody(task.design, '取舍') };
+  const required = current ? ['方案', '失败处理', '影响与风险', '验证入口'] : ['方案', '影响与风险'];
+  for (const field of required) {
+    if (!markdownMeaningfulLines(subSectionBody(task.design, field)).length) missing.push(field);
+  }
+  return { missing, tradeoffsMissing: !markdownMeaningfulLines(subSectionBody(task.design, '取舍')).length };
 }
 
 export async function confirmFlow(rootInput: string, id: string, gateInput: string, input: FlowConfirmInput = {}) {
@@ -864,7 +949,7 @@ export async function confirmFlow(rootInput: string, id: string, gateInput: stri
     const confirmation: FlowConfirmation = { gate, object, quote: normalizeLine(quote), by, commit, subject, at: new Date().toISOString() };
     const next = { ...task, confirmations: [...task.confirmations.filter(item => item.gate !== gate), confirmation] };
     const { content: _content, path: _path, ...body } = next;
-    await writeTask(root, id, task.content, renderTask(body, sectionBody(task.content, '自检')));
+    await writeTask(root, id, task.content, renderTask(body, sectionBody(task.content, '自检')), body.meta.preExisting);
     return { id, gate, confirmed: true, object, by, ...(confirmation.quote ? { quote: confirmation.quote } : {}),
       commit, subject, path: task.path, ...(warnings.length ? { warnings } : {}) };
   });
@@ -1363,6 +1448,7 @@ async function evaluateFlow(root: string, id: string, task: FlowTask, options: F
   const context = await evaluationContext(root, id, task);
   const currentTree = context.tree;
   if (context.warning) warnings.push(context.warning);
+  if (task.preExistingIssue) warnings.push(task.preExistingIssue);
   const confirmationStates: FlowCheck['confirmations'] = [];
   for (const gate of ['requirements', 'design', 'acceptance'] as FlowGate[]) {
     const item = gate === 'acceptance'
@@ -1514,7 +1600,7 @@ export async function checkFlow(rootInput: string, id: string, options: FlowChec
     const task = await readTask(root, id);
     const checked = await evaluateFlow(root, id, task, options);
     const next = renderTask(task, checked.selfCheck);
-    if (next !== task.content) await writeTask(root, id, task.content, next);
+    if (next !== task.content) await writeTask(root, id, task.content, next, task.meta.preExisting);
     return checked;
   });
 }
@@ -1761,7 +1847,7 @@ export async function verifyFlow(rootInput: string, id: string, input: FlowVerif
     }
     const next: FlowTask = { ...task, verifications: [...task.verifications, ...nextEntries] };
     const { content: _content, path: _path, ...body } = next;
-    await writeTask(root, id, task.content, renderTask(body, sectionBody(task.content, '自检')));
+    await writeTask(root, id, task.content, renderTask(body, sectionBody(task.content, '自检')), body.meta.preExisting);
     const ready = expectFail
       ? nextEntries.every(entry => entry.evidence === 'verified' && entry.result === 'failed')
       : nextEntries.every(entry => entry.result === 'passed');
@@ -1831,7 +1917,7 @@ export async function reviewFlow(rootInput: string, id: string, input: FlowRevie
     const review: FlowReview = { by, at, findings };
     const nextTask = { ...task, review };
     const { content: _content, path: _path, ...body } = nextTask;
-    await writeTask(root, id, task.content, renderTask(body, sectionBody(task.content, '自检')));
+    await writeTask(root, id, task.content, renderTask(body, sectionBody(task.content, '自检')), body.meta.preExisting);
     const openBlockers = findings.filter(item => item.blocking && !item.resolved);
     return { id, path: task.path, by, at, reviewed: true, ready: openBlockers.length === 0,
       findings, openBlockers: openBlockers.map(item => item.id), warnings,
@@ -1872,7 +1958,7 @@ export async function closeFlow(rootInput: string, id: string, reasonInput: stri
     };
     const next = { ...task, closures: [...task.closures, closure] };
     const { content: _content, path: _path, ...body } = next;
-    await writeTask(root, id, task.content, renderTask(body, sectionBody(task.content, '自检')));
+    await writeTask(root, id, task.content, renderTask(body, sectionBody(task.content, '自检')), body.meta.preExisting);
     const stage = terminalStage(next)!;
     return { id, stage: stage.stage, stageReason: stage.reason, reason, at: closure.at, path: task.path,
       next: `如需继续修改，执行 tiller reopen ${id} --reason "<原因>".` };
@@ -1888,7 +1974,7 @@ export async function reopenFlow(rootInput: string, id: string, reasonInput: str
     const event: FlowClosure = { action: 'reopen', reason, at: new Date().toISOString() };
     const next = { ...task, closures: [...task.closures, event] };
     const { content: _content, path: _path, ...body } = next;
-    await writeTask(root, id, task.content, renderTask(body, sectionBody(task.content, '自检')));
+    await writeTask(root, id, task.content, renderTask(body, sectionBody(task.content, '自检')), body.meta.preExisting);
     const stage = await taskStage(root, id);
     return { id, stage: stage.stage, stageReason: stage.reason, reason, at: event.at, path: task.path,
       next: stage.stage === '已验收' ? `tiller close ${id} --reason "<原因>"` : `tiller resume ${id}` };
