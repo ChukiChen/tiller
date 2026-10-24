@@ -12,9 +12,9 @@
 - design：需求摘要和设计正文；
 - acceptance：需求、设计、AC 验证结果、提交和代码树。
 
-正文变化导致对应摘要变化，`check` 将需求或设计确认独立标为失效。确认记录保存确认部分、确认人、时间、提交、摘要和可选原话；确认人优先用 `--by`，否则读取 Git `user.name`。验收前必须已通过技术自检。
+正文变化导致对应摘要变化，`check` 将需求或设计确认独立标为失效。确认记录保存确认部分、确认人、时间、提交、摘要和可选原话；人读段渲染为部分、确认人、时间、短提交、原话表，完整对象字段放入单行 `tiller-confirm:v1` 旁路。解析优先旁路，缺失或损坏时回退旧 bullet。确认人优先用 `--by`，否则读取 Git `user.name`。验收前必须已通过技术自检。
 
-新任务把结构化需求写在 `### 面向谁与问题`、`### 目标`、`### 业务范围`、`### 关键行为`、`### 异常与边界`、`### 验收条件`；业务范围不列交付路径，路径只保存在元信息范围中。standard 设计写在 `### 方案`、`### 失败处理`、`### 取舍`、`### 影响与风险`、`### 验证入口`。确认按可读行过滤空标题、注释和占位；旧任务没有格式标记时使用旧正文和顶层 AC，仅有 `### 范围` 的任务继续按旧章节确认。旧 quote 确认继续解析，写回时保留旧样式。
+新任务把结构化需求写在 `### 面向谁与问题`、`### 目标`、`### 业务范围`、`### 关键行为`、`### 异常与边界`、`### 验收条件`；业务范围不列交付路径，路径只保存在元信息范围中。standard 设计写在 `### 方案`、`### 失败处理`、`### 取舍`、`### 影响与风险`、`### 验证入口`。章节注释强调业务约束与关键方案，不复制规格全文、不展开长命令菜谱。确认按可读行过滤空标题、注释和占位；旧任务没有格式标记时使用旧正文和顶层 AC，仅有 `### 范围` 的任务继续按旧章节确认。旧 quote 确认继续解析，再次写入时转为紧凑表并由旁路保留旧字段。
 
 任务阶段在读取时按事实重新推导，优先级为最近关闭/放弃、有效需求确认、有效设计确认（standard）、当前验证、最后一次重开后的有效验收。回退时返回当前阶段与原因；`resume` 列表和 `plan status` 复用同一函数，避免多处状态漂移。
 
@@ -37,7 +37,7 @@
 - standard 设计字段、decisions 有效条目和本任务涉及模块设计是否过薄，分支名是否包含任务编号；
 - 记录中的密钥和本机路径。
 
-结果分为阻塞项、提示、逐项覆盖和可写入 `task.md` 的自检清单。`accept` 复用同一检查，防止技术未就绪时写入验收。
+结果分为阻塞项、提示、逐项覆盖和可写入 `task.md` 的自检清单。`accept` 复用同一检查，防止技术未就绪时写入验收。终态任务写回自检时只保留短复核指引，不复制回归和回写提示；`check` 返回值仍保留完整提示。
 
 ## 5. 关闭与恢复
 
@@ -45,7 +45,7 @@
 
 ## 6. 交付草稿
 
-`commitTypeForTaskType` 将任务类型映射到限定提交类型；`taskCommits` 读取 `base..HEAD` 的非合并主题。`branchNameIssue` 校验 `类型/任务编号[-描述]` 及任务编号前缀；`currentBranch` 在 main/master、detached HEAD 或无 Git 时跳过。
+`commitTypeForTaskType` 将任务类型映射到限定提交类型；`taskCommits` 读取 `base..HEAD` 的非合并主题。`branchNameIssue` 校验 `类型/任务编号[-描述]` 及任务编号前缀；`currentBranch` 在 main/master、detached HEAD 或无 Git 时跳过。`suggestedBranchNameFor` 在规范化 slug 已是任务编号本身或 `-<slug>` 后缀时不再追加。
 
 提交主题固定为 `类型(模块): 中文摘要`，类型限 `feat/fix/docs/refactor/test/chore`，模块取规格模块名；PR/MR 标题沿用该格式并在末尾加 `[任务编号]`。格式问题只提示，不阻断技术自检。
 
@@ -67,7 +67,7 @@
 
 ## 10. 任务 worktree
 
-`src/task-worktrees.ts` 统一生成任务分支与布局。project 的检出就是 `.tiller/local/worktrees/<id>/`；workspace 先建 `management`，再按 `project.json.repositories[].path` 建 `repositories/<id>`。每个源仓必须是自身 Git 工作副本根且有提交，分支复用 `commitTypeForTaskType`、`suggestedBranchNameFor`；已有同名分支时直接检出，否则从该仓 HEAD 新建。
+`src/task-worktrees.ts` 统一生成任务分支与布局。project 的检出就是 `.tiller/local/worktrees/<id>/`；workspace 先建 `management`，再按 `project.json.repositories[].path` 建 `repositories/<id>`。每个源仓必须是自身 Git 工作副本根且有提交，分支复用 `commitTypeForTaskType`、`suggestedBranchNameFor`，任务编号已含同一描述时不双拼；已有同名分支时直接检出，否则从该仓 HEAD 新建。worktree 路径始终只使用任务编号。
 
 建树前先校验任务容器、全部源仓和目标路径，任何一步失败都强制移除本次已建树并清理容器，task.md 不落盘。成功后把相对路径与本机清单 `.tiller/local/tasks/<id>/worktrees.json` 写入；清单缺失或损坏时 close 回退 project/workspace 约定布局。所有目标都经安全路径校验并限制在 `.tiller/local/worktrees/<id>/` 下。
 

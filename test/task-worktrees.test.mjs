@@ -108,6 +108,16 @@ test('CASE-197 workspace start mirrors management and registered repositories un
   assert.ok(existsSync(join(root, worktreePath(id, 'management'), '.tiller/project.json')));
 });
 
+test('CASE-208 worktree branch and path use the task id once when slug is already its suffix', async t => {
+  const root = project(t);
+  const id = '20261024-slim-verify-render';
+  const started = startTask(root, id, ['--type', 'feature', '--slug', 'slim-verify-render']);
+  assert.equal(started.worktreeRoot, worktreePath(id));
+  assert.deepEqual(started.worktrees.map(item => item.path), [worktreePath(id)]);
+  assert.deepEqual(started.worktrees.map(item => item.branch), [`feat/${id}`]);
+  assert.equal(git(join(root, worktreePath(id)), 'branch', '--show-current'), `feat/${id}`);
+});
+
 test('CASE-198 close and abandon force-remove every task worktree and only clear that task log', async t => {
   const root = project(t);
   const acceptedId = '20261024-close-worktree';

@@ -15,6 +15,14 @@ const subSection = (content, title) => {
   const rest = content.slice(start).replace(/^###[^\n]*\n?/u, '');
   return rest.split(/^#{2,3}\s+/mu)[0];
 };
+const section = (content, title) => {
+  const start = content.search(new RegExp(`^## ${title}\\s*$`, 'mu'));
+  if (start < 0) return '';
+  const rest = content.slice(start).replace(/^##[^\n]*\n?/u, '');
+  return rest.split(/^##\s+/mu)[0];
+};
+const confirmationSidecars = content => [...content.matchAll(/^<!-- tiller-confirm:v1 (\{.*\}) -->$/gmu)]
+  .map(match => JSON.parse(match[1]));
 
 function git(root, ...args) {
   const result = spawnSync('git', ['-c', 'user.name=Tiller Test', '-c', 'user.email=tiller@example.invalid', ...args], {
@@ -174,18 +182,21 @@ test('CASE-001 CASE-066 small flow produces one task file and records verified a
   const content = read(root, task(root, id));
   assert.match(content, /^<!-- tiller-task:v1 /mu);
   assert.match(content, /^## 需求$/mu);
-  assert.match(content, /^- 对象：需求正文（目标、范围与验收条件）$/mu);
-  assert.match(content, /^- 原话用途：可选附注，不替代已写明的正文$/mu);
-  assert.match(content, /^- 确认人：Tiller Test$/mu);
-  assert.match(content, /^- 确认人：验收人$/mu);
+  assert.match(content, /^\| 部分 \| 确认人 \| 时间 \| 短提交 \| 原话 \|$/mu);
+  assert.match(content, /^\| 需求 \| Tiller Test \| .* \| [a-f0-9]{12} \| 确认这个范围和验收条件 \|$/mu);
+  assert.match(content, /^\| 交付验收 \| 验收人 \| .* \| [a-f0-9]{12} \| — \|$/mu);
+  const confirmations = confirmationSidecars(content);
+  assert.equal(confirmations.length, 2);
+  assert.equal(confirmations.find(item => item.gate === 'requirements').quote, '确认这个范围和验收条件');
+  assert.equal(confirmations.find(item => item.gate === 'acceptance').quote, '');
   assert.match(content, /^### 目标$/mu);
   assert.match(content, /^### 面向谁与问题$/mu);
   assert.match(content, /^### 业务范围$/mu);
   assert.match(content, /^### 关键行为$/mu);
   assert.match(content, /^### 异常与边界$/mu);
   assert.match(content, /^### 验收条件$/mu);
-  assert.match(content, /用户原话：确认这个范围和验收条件/u);
-  assert.doesNotMatch(content, /用户原话：验收通过/u);
+  assert.doesNotMatch(section(content, '确认'), /^- (?:确认部分|对象|确认人|用户原话|原话用途|提交|对象摘要|时间)：/mu);
+  assert.doesNotMatch(content, /验收通过/u);
   assert.match(content, /^<!-- tiller-verify:v1 .*"tree":"[a-f0-9]{64}".* -->$/mu);
   assert.doesNotMatch(content, /^- 代码树摘要：/mu);
   assert.match(content, /^- 用例：CASE-001$/mu);
@@ -273,10 +284,13 @@ test('CASE-060 CASE-062 structured task template validates written requirements 
   assert.equal(confirmed.by, 'Tiller Test');
   assert.equal('quote' in confirmed, false);
   const content = read(root, task(root, id));
-  assert.match(content, /^- 确认部分：需求$/mu);
-  assert.match(content, /^- 确认人：Tiller Test$/mu);
-  assert.match(content, /^- 对象摘要：[a-f0-9]{64}$/mu);
-  assert.match(content, /^- 提交：[a-f0-9]{40,64}$/mu);
+  assert.match(content, /^\| 部分 \| 确认人 \| 时间 \| 短提交 \| 原话 \|$/mu);
+  assert.match(content, /^\| 需求 \| Tiller Test \| .* \| [a-f0-9]{12} \| — \|$/mu);
+  const [record] = confirmationSidecars(content);
+  assert.equal(record.by, 'Tiller Test');
+  assert.equal(record.quote, '');
+  assert.equal(record.subject, confirmed.subject);
+  assert.equal(record.commit, confirmed.commit);
   assert.doesNotMatch(content, /^- 用户原话：/mu);
 
   const second = '20261022-explicit-confirmer';
@@ -284,7 +298,35 @@ test('CASE-060 CASE-062 structured task template validates written requirements 
     '--criterion', 'AC-1=Confirmer is explicit', '--size', 'small', '--target', 'src'));
   const explicit = success(confirmTask(root, second, 'requirements', '--by', 'Product Owner'));
   assert.equal(explicit.by, 'Product Owner');
-  assert.match(read(root, task(root, second)), /^- 确认人：Product Owner$/mu);
+  const explicitContent = read(root, task(root, second));
+  assert.match(explicitContent, /^\| 需求 \| Product Owner \|/mu);
+  assert.equal(confirmationSidecars(explicitContent)[0].by, 'Product Owner');
+});
+
+test('CASE-204 confirmations render a compact table with a complete machine sidecar', async t => {
+  const root = await project(t);
+  const id = '20261024-confirmation-table';
+  success(cli(root, 'start', id, '--title', 'Compact confirmation', '--requirement', 'Keep confirmations readable.',
+    '--criterion', 'AC-1=Confirmation remains valid', '--size', 'small', '--target', 'src'));
+  const confirmed = success(confirmTask(root, id, 'requirements', '--quote', '确认 | 范围'));
+  const content = read(root, task(root, id));
+  assert.match(content, /^\| 部分 \| 确认人 \| 时间 \| 短提交 \| 原话 \|$/mu);
+  assert.match(content, /^\| 需求 \| Tiller Test \| .* \| [a-f0-9]{12} \| 确认 \\\| 范围 \|$/mu);
+  const [record] = confirmationSidecars(content);
+  assert.deepEqual({
+    gate: record.gate, object: record.object, subject: record.subject, commit: record.commit,
+    by: record.by, quote: record.quote, at: record.at,
+  }, {
+    gate: 'requirements', object: '需求正文（目标、范围与验收条件）', subject: confirmed.subject,
+    commit: confirmed.commit, by: 'Tiller Test', quote: '确认 | 范围', at: record.at,
+  });
+  assert.ok(Number.isFinite(Date.parse(record.at)));
+  const checked = failure(cli(root, 'check', id));
+  assert.equal(checked.confirmations.find(item => item.gate === 'requirements').confirmed, true);
+  editTask(root, id, value => value.replace('Keep confirmations readable.', 'Change the confirmed requirement.'));
+  const invalidated = failure(cli(root, 'check', id));
+  assert.equal(invalidated.confirmations.find(item => item.gate === 'requirements').confirmed, false);
+  assert.ok(invalidated.issues.some(issue => issue.includes('需求确认后需求正文、范围或验收条件已变化')));
 });
 
 test('CASE-063 requirement and design confirmations use independent digests', async t => {
@@ -311,7 +353,7 @@ test('CASE-063 requirement and design confirmations use independent digests', as
   assert.equal(afterRequirements.confirmations.find(item => item.gate === 'requirements').confirmed, false);
 });
 
-test('CASE-064 legacy task text and quoted confirmation remain readable and valid', async t => {
+test('CASE-064 CASE-205 legacy task text and quoted confirmation remain readable and valid', async t => {
   const root = await project(t);
   const id = '20261022-legacy-confirmation';
   success(cli(root, 'start', id, '--title', 'Legacy record', '--requirement', 'Initial structured requirement.',
@@ -363,9 +405,28 @@ test('CASE-064 legacy task text and quoted confirmation remain readable and vali
   const checked = failure(cli(root, 'check', id));
   assert.equal(checked.confirmations.find(item => item.gate === 'requirements').confirmed, true);
   const rewritten = read(root, task(root, id));
-  assert.match(rewritten, /^- 原话用途：确认凭证，不替代已写明的正文$/mu);
+  assert.match(rewritten, /^\| 部分 \| 确认人 \| 时间 \| 短提交 \| 原话 \|$/mu);
+  assert.match(rewritten, /^\| 需求 \| — \| .* \| [a-f0-9]{12} \| 旧格式确认 \|$/mu);
+  const [record] = confirmationSidecars(rewritten);
+  assert.equal(record.style, 'legacy');
+  assert.equal(record.by, '');
+  assert.equal(record.quote, '旧格式确认');
+  assert.equal(record.subject, subject);
+  assert.doesNotMatch(rewritten, /^- 原话用途：/mu);
   assert.doesNotMatch(rewritten, /^- 确认人：/mu);
   assert.equal(success(cli(root, 'resume', id)).stage, '需求已确认');
+
+  const mixed = rewritten.replace(/## 确认\n\n[\s\S]*?(?=\n## 验证)/u, [
+    '## 确认', '', '<!-- tiller-confirm:v1 {broken -->', '', '### requirements',
+    '- 对象：需求正文（目标与验收条件）', '- 用户原话：旧格式确认', '- 原话用途：确认凭证，不替代已写明的正文',
+    `- 提交：${meta.base}`, `- 对象摘要：${subject}`, '- 时间：2026-10-22T00:00:00.000Z',
+  ].join('\n'));
+  put(root, task(root, id), mixed);
+  assert.equal(success(cli(root, 'resume', id)).stage, '需求已确认');
+  put(root, task(root, id), mixed.replace(`- 对象摘要：${subject}\n`, ''));
+  const missingField = success(cli(root, 'resume', id));
+  assert.deepEqual(missingField.confirmations, []);
+  assert.equal(missingField.stage, '已开始');
 });
 
 test('CASE-061 plan confirmation records a confirmer without a quote', async t => {

@@ -720,3 +720,81 @@ start 生成面向谁与问题、目标、业务范围、关键行为、异常�
 ### 预期结果
 
 人读段含条件、测试、用例、结果、来源、核实、日志、短提交与时间，不含命令、退出码、reporter 路径或树摘要；旁路含命令、退出码、树和全量提交
+
+## CASE-204 新确认段为紧凑表并保留机器旁路
+
+- 类型：interface
+- 优先级：medium
+- 模块：workflow
+- 关联 AC：20261024-taskmd-cleanup#AC-1
+- 需求：`.tiller/specs/modules/workflow/requirements.md`
+- 源码：`src/flow.ts`, `test/flow-cli.test.mjs`
+
+### 前置条件
+
+- 任务存在待确认的结构化正文
+
+### 步骤
+
+1. 执行 confirm 写入需求确认
+2. 读取 task.md 的确认段并重新 resume
+
+### 输入
+
+- 带确认人和可选原话的需求确认
+
+### 预期结果
+
+确认段为部分|确认人|时间|短提交|原话的 Markdown 表，并有可还原 gate/object/subject/commit/by/quote/at 的 tiller-confirm:v1 旁路；确认摘要校验保持有效
+
+## CASE-207 需求设计模板与规则去噪保钉
+
+- 类型：interface
+- 优先级：medium
+- 模块：workflow
+- 关联 AC：20261024-taskmd-cleanup#AC-3
+- 需求：`.tiller/specs/modules/workflow/requirements.md`
+- 源码：`src/flow.ts`, `resources/rules/quality/documents.md`, `.tiller/rules/quality/documents.md`
+
+### 前置条件
+
+- 新建 standard 任务且已初始化受管规则
+
+### 步骤
+
+1. 读取 start 生成的需求和设计注释
+2. 读取 resources 与 .tiller/rules 的 QUALITY-DOC、ACT-REQ、ACT-DES
+
+### 输入
+
+- 包含交付范围和验证入口的任务
+
+### 预期结果
+
+注释与规则强调业务约束，避免交付路径枚举、长命令菜谱和 specs 全文复述；默认模板仍缺业务正文，空壳确认继续被拒绝，AC 与确认门禁保留
+
+## CASE-208 slug 已是任务编号后缀时分支不双拼
+
+- 类型：interface
+- 优先级：medium
+- 模块：workflow
+- 关联 AC：20261024-taskmd-cleanup#AC-4
+- 需求：`.tiller/specs/modules/workflow/requirements.md`
+- 源码：`src/branch-conventions.ts`, `src/task-worktrees.ts`, `test/pr.test.mjs`, `test/task-worktrees.test.mjs`
+
+### 前置条件
+
+- 任务编号已包含描述，start 或 pr 再传相同 slug
+
+### 步骤
+
+1. 生成建议分支并创建任务 worktree
+2. 核对 worktree 路径
+
+### 输入
+
+- id 为 20261024-slim-verify-render，slug 为 slim-verify-render 或有额外描述
+
+### 预期结果
+
+slug 是任务编号的 -<slug> 后缀时分支为 类型/任务编号；额外描述仍追加；worktree 路径只使用任务编号一次

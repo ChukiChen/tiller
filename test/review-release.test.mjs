@@ -10,6 +10,12 @@ import { cli, confirmTask, failure, fixture, put, success } from './helpers.mjs'
 const repository = fileURLToPath(new URL('../', import.meta.url));
 const read = (root, relative) => readFileSync(join(root, relative), 'utf8');
 const taskPath = id => `.tiller/task/${id}/task.md`;
+const section = (content, title) => {
+  const start = content.search(new RegExp(`^## ${title}\\s*$`, 'mu'));
+  if (start < 0) return '';
+  const rest = content.slice(start).replace(/^##[^\n]*\n?/u, '');
+  return rest.split(/^##\s+/mu)[0].trim();
+};
 
 function git(root, ...args) {
   const result = spawnSync('git', ['-c', 'user.name=Tiller Test', '-c', 'user.email=tiller@example.invalid', ...args], {
@@ -145,6 +151,25 @@ test('CASE-106 check warns when specs were not written back', async t => {
   assert.ok(!checked.issues.some(issue => issue.includes('回写')));
 });
 
+test('CASE-206 closed self-check omits long regression hints while check still reports them', async t => {
+  const root = await project(t);
+  const id = '20261024-closed-self-check';
+  await acceptedTask(root, id);
+  success(cli(root, 'close', id, '--reason', '交付完成'));
+  const closedSelfCheck = section(read(root, taskPath(id)), '自检');
+  assert.match(closedSelfCheck, /check/u);
+  assert.doesNotMatch(closedSelfCheck, /提示：|本次改动涉及模块|回写|\.tiller\/specs/u);
+  assert.ok(closedSelfCheck.split(/\r?\n/u).filter(Boolean).length <= 2, closedSelfCheck);
+
+  const checked = success(cli(root, 'check', id));
+  const warnings = checked.warnings.join('\n');
+  assert.match(warnings, /本次改动涉及模块 workflow/u);
+  assert.match(warnings, /回写/u);
+
+  const selfCheck = section(read(root, taskPath(id)), '自检');
+  assert.equal(selfCheck, closedSelfCheck);
+});
+
 test('CASE-107 start loads requirement from a project-relative file', async t => {
   const root = await project(t);
   put(root, 'docs/requirement.md', '从工程内需求文件建立任务，并保持需求正文完整可确认。\n');
@@ -259,7 +284,7 @@ test('CASE-109 repository docs and suite include review release and pinned check
   assert.ok(suite.e2e.includes('review-release.test.mjs'));
   const library = await readCaseLibrary(repository);
   assert.deepEqual(library.issues, []);
-  assert.equal(library.cases.length, 203);
+  assert.equal(library.cases.length, 208);
   for (const id of ['CASE-104', 'CASE-105', 'CASE-106', 'CASE-107', 'CASE-108', 'CASE-109']) {
     assert.ok(library.cases.find(item => item.id === id)?.tests.length, id);
   }
