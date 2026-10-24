@@ -233,3 +233,29 @@ tiller 扫描测试源建立 case→tests 反查；用例文件不含测试引�
 
 命令使用精确的测试选择并把 JUnit XML 写到私有目录；缺失、重复、跳过和额外失败都不能通过
 
+## CASE-188 pytest 探测、骨架、命令构造与 XML 核实
+
+- 类型：interface
+- 优先级：high
+- 模块：verification
+- 关联 AC：20261024-gap-closure#AC-3
+- 需求：`.tiller/specs/modules/verification/requirements.md`
+- 源码：`src/test-output.ts`, `src/core.ts`, `src/cases.ts`
+
+### 前置条件
+
+- 临时工程具备 pytest 配置或 tests 布局
+
+### 步骤
+
+1. 初始化并登记用例
+2. 检查 runner 与骨架
+3. 构造 pytest 命令并解析 JUnit XML
+
+### 输入
+
+- pytest.ini、pyproject 或 tests 布局及 XML 报告
+
+### 预期结果
+
+init 探测 pytest 工程并写入 verify.runner=pytest；case add 生成 pytest 骨架；verify 构造 junitxml 命令并从私有 XML 核实结果

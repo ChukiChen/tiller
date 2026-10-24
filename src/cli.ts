@@ -5,10 +5,11 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { realpathSync } from 'node:fs';
 import { bindRuntime, runtimeStatus } from './runtime.js';
 import { initialize, inspectProject, recoverProject } from './core.js';
-import { applyUpgrade, planUpgrade } from './upgrade.js';
+import { adoptManagedFiles, applyUpgrade, planUpgrade } from './upgrade.js';
 import { addGlobalCase } from './cases.js';
 import {
-  acceptFlow, checkFlow, closeFlow, confirmFlow, inspectFlow, reopenFlow, releaseFlow, resumeFlow, reviewFlow, startFlow, verifyFlow,
+  acceptFlow, attachFlowTask, checkFlow, closeFlow, confirmFlow, inspectFlow, reopenFlow, releaseFlow, resumeFlow, reviewFlow, startFlow,
+  verifyFlow,
 } from './flow.js';
 import { confirmPlan, startPlan, statusPlan } from './plans.js';
 import { draftPullRequest } from './pr.js';
@@ -23,6 +24,7 @@ const HELP = `tiller ${CLI_VERSION} — 默认工作流
   tiller plan start <YYYYMMDD-plan-id> --title <标题> --goal <目标> --spec <specs 引用> [--spec ...] --item "P-1=标题;size=small;deps=P-0;specs=<引用>;plan=<子规划>" [--item ...]
   tiller plan confirm <YYYYMMDD-plan-id> [--by <确认人>] [--quote "<可选原话>"] [--commit <oid>] [--path <root>]
   tiller plan status <YYYYMMDD-plan-id> [--path <root>]
+  tiller plan attach <YYYYMMDD-task-id> --plan <YYYYMMDD-plan-id> --item <条目> [--path <root>]
   tiller start <YYYYMMDD-task-id> --title <标题> (--requirement <需求正文> | --requirement-file <工程相对路径>) --criterion "AC-1=<验收条件>" [--criterion ...] [--type feature] [--size small|standard] [--target <相对路径> ...] [--summary <中文摘要>] [--slug <英文描述>] [--plan <YYYYMMDD-plan-id> --item <条目>] [--path <root>]
   tiller resume [YYYYMMDD-task-id] [--path <root>]
   tiller confirm <YYYYMMDD-task-id> requirements|design|acceptance [--by <确认人>] [--quote "<可选原话>"] [--commit <oid>] [--path <root>]
@@ -42,6 +44,7 @@ const HELP = `tiller ${CLI_VERSION} — 默认工作流
   tiller runtime status|bind [--path <root>]
   tiller upgrade [path] --plan
   tiller upgrade [path] --apply <plan-id>
+  tiller upgrade [path] --adopt <受管文件> [--adopt ...]
 
 默认工作流：
 - small：需求确认 → 实现 → 验证；standard：需求 → 设计 → 实现 → 验证。确认记录人、时间、摘要和提交，原话可选。
@@ -50,10 +53,11 @@ const HELP = `tiller ${CLI_VERSION} — 默认工作流
 - task.md 是唯一任务记录：start 生成结构化需求，可从工程内需求文件接入；确认前校验正文，原话只作可选附注。verify 自主执行测试并从私有报告核实。
 - review 记录独立评审发现；未解决阻塞项会阻断 check/accept。release 只做发布门禁，不发布包。check 汇总发布清单；已验收任务按验收提交读取代码树与测试，之后代码漂移不误报过期。
 - 阶段由 task.md 事实推导；close 收尾已验收任务，未验收终止用 --abandon，必要时 reopen。
-- check 对过薄文档给出可定位提示：空白或占位的 standard 设计、无有效条目的 .tiller/specs/decisions.md、空壳模块设计 design.md；默认不单独阻断。verify 日志含显示命令、起止时间与退出码。当前分支未包含任务编号时 check 提示，分支名用“类型/任务编号[-描述]”。
+- check 对过薄文档给出可定位提示：空白或占位的 standard 设计、无有效条目的 .tiller/specs/decisions.md、空壳模块设计 design.md；规格/背景未回写时列出路径与提纲。默认不单独阻断。verify 日志含显示命令、起止时间与退出码。当前分支未包含任务编号时 check 提示，分支名用“类型/任务编号[-描述]”。
+- 同一 AC 或 CASE 连续两次 verify 失败且无成功核实时，verify/check 要求停止自动重试并按 FLOW-05 报告证据与可选方案；成功核实清零。
 - case add 在测试之前登记测试设计（前置条件、步骤、输入、预期结果、类型、优先级、来源 AC），自动分配 CASE 编号；测试名引用 CASE 编号形成反查。check 分阶段核对 AC→用例→测试→当前验证，校验模块/场景结构并提示相关回归，同时检查范围、测试弱化、密钥和本机绝对路径。
 - pr 从 task.md 和 Git 提交生成五段 PR/MR 草稿及建议分支名；提交用“类型(模块): 中文摘要”，分支用“类型/任务编号[-描述]”；check 只提示格式问题。
-- upgrade 刷新未修改的受管文件，保留并报告用户修改；版本号只在正式发布时修改。
+- 验证运行器支持 node-test、junit-maven、junit-gradle 与 pytest；pytest 从私有 JUnit XML 核实。upgrade 刷新未修改的受管文件，--adopt 保留用户当前内容并更新摘要；版本号只在正式发布时修改。
 `;
 
 function usage(message: string): never {
@@ -94,7 +98,7 @@ export async function runCli(rawArgs = process.argv.slice(2)): Promise<void> {
         quote: { type: 'string' }, by: { type: 'string' }, commit: { type: 'string' }, criterion: { type: 'string', multiple: true },
         test: { type: 'string' }, command: { type: 'string' }, run: { type: 'string' }, result: { type: 'string' },
         reported: { type: 'boolean' }, 'expect-fail': { type: 'boolean' }, 'allow-reported': { type: 'boolean' },
-        verbose: { type: 'boolean' },
+        verbose: { type: 'boolean' }, adopt: { type: 'string', multiple: true },
         plan: { type: 'string' }, item: { type: 'string', multiple: true }, goal: { type: 'string' },
         spec: { type: 'string', multiple: true }, module: { type: 'string', multiple: true },
         kind: { type: 'string' }, scenario: { type: 'string' }, source: { type: 'string', multiple: true },
@@ -106,7 +110,7 @@ export async function runCli(rawArgs = process.argv.slice(2)): Promise<void> {
     });
     const seenOptions = new Set<string>();
     for (const token of tokens) {
-      if (token.kind !== 'option' || ['repo', 'target', 'criterion', 'item', 'spec', 'module', 'source', 'precondition', 'step', 'input', 'finding', 'blocking', 'resolve'].includes(token.name)) continue;
+      if (token.kind !== 'option' || ['repo', 'target', 'criterion', 'item', 'spec', 'module', 'source', 'precondition', 'step', 'input', 'finding', 'blocking', 'resolve', 'adopt'].includes(token.name)) continue;
       if (seenOptions.has(token.name)) usage(`选项 --${token.name} 不能重复。`);
       seenOptions.add(token.name);
     }
@@ -130,13 +134,14 @@ export async function runCli(rawArgs = process.argv.slice(2)): Promise<void> {
                     : command === 'release' ? ['path']
                       : command === 'close' ? ['path', 'reason', 'abandon']
                         : command === 'reopen' ? ['path', 'reason'] : ['path', 'allow-reported']
-        : planCommand ? second === 'start' ? ['path', 'title', 'goal', 'spec', 'item']
+        : planCommand ? (second === 'start' ? ['path', 'title', 'goal', 'spec', 'item']
           : second === 'confirm' ? ['path', 'quote', 'by', 'commit']
-            : second === 'status' ? ['path'] : []
+            : second === 'status' ? ['path']
+              : second === 'attach' ? ['path', 'plan', 'item'] : [])
           : caseCommand ? second === 'add' ? ['path', 'module', 'kind', 'scenario', 'title', 'criterion', 'spec', 'source', 'expected', 'precondition', 'step', 'input', 'priority'] : []
             : prCommand ? ['path', 'slug', 'summary']
               : command === 'init' ? ['mode', 'repo', 'platform']
-              : command === 'upgrade' ? ['plan', 'apply']
+              : command === 'upgrade' ? ['plan', 'apply', 'adopt']
                 : command === 'runtime' ? ['path'] : [];
       for (const name of Object.keys(values)) {
         if (!['json', ...allowed].includes(name)) usage(`选项 --${name} 不适用于该命令。`);
@@ -245,7 +250,13 @@ export async function runCli(rawArgs = process.argv.slice(2)): Promise<void> {
         } else if (second === 'status') {
           if (positionals.length !== 3) usage('plan status 需要一个规划标识。');
           result = await statusPlan(root, third!);
-        } else usage('plan 支持 start、confirm 或 status。');
+        } else if (second === 'attach') {
+          if (positionals.length !== 3 || !values.plan || !values.item?.length) {
+            usage('plan attach 需要任务标识、--plan <规划标识> 和 --item <条目>。');
+          }
+          if (values.item.length !== 1) usage('plan attach 的 --item 只能提供一个条目。');
+          result = await attachFlowTask(root, third!, values.plan, values.item[0]!);
+        } else usage('plan 支持 start、confirm、status 或 attach。');
       } else if (caseCommand) {
         if (second !== 'add' || positionals.length !== 3) usage('case 支持 add <task-id>。');
         if (!values.title || !values.criterion?.length || !values.module?.length || !values.expected) {
@@ -292,10 +303,13 @@ export async function runCli(rawArgs = process.argv.slice(2)): Promise<void> {
           result = status; ready = status.ready;
         } else result = await recoverProject(root);
       } else if (command === 'upgrade') {
-        if (positionals.length > 2 || Boolean(values.plan) === Boolean(values.apply)) usage('upgrade 需要 --plan 或 --apply <plan-id>，两者不能同时使用。');
+        const modes = [Boolean(values.plan), Boolean(values.apply), Boolean(values.adopt?.length)].filter(Boolean).length;
+        if (positionals.length > 2 || modes !== 1) usage('upgrade 需要 --plan、--apply <plan-id> 或 --adopt <受管文件>，三者只能选一个。');
         if (values.plan && values.plan !== 'preview') usage('--plan 只需作为预览开关使用，不接收值。');
         const root = second ?? process.cwd();
-        if (values.apply) {
+        if (values.adopt?.length) {
+          result = await adoptManagedFiles(root, values.adopt);
+        } else if (values.apply) {
           const upgraded = await applyUpgrade(root, values.apply);
           ready = upgraded.ready;
           result = upgraded;

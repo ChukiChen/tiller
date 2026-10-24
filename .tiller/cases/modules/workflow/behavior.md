@@ -898,3 +898,30 @@ decisions.md 无有效决定条目、任务涉及模块的 design.md 仅有标�
 ### 预期结果
 
 CASE-179 至 CASE-185 均有具名测试引用，包与资源版本保持 0.5.0
+
+## CASE-187 同一 AC 或 CASE 连续失败后停止自动重试
+
+- 类型：behavior
+- 优先级：high
+- 模块：workflow
+- 关联 AC：20261024-gap-closure#AC-2
+- 需求：`.tiller/specs/modules/workflow/requirements.md`
+- 源码：`src/flow.ts`
+
+### 前置条件
+
+- 任务有两条可失败验证或一个关联用例
+
+### 步骤
+
+1. 连续执行两次失败验证
+2. 运行 check 并读取停止提示
+3. 执行一次成功验证后再运行 check
+
+### 输入
+
+- 失败与成功的验证记录
+
+### 预期结果
+
+同一 AC 或 CASE 连续两次失败且无成功核实后，verify 与 check 给出 FLOW-05 停止提示；成功核实清零
