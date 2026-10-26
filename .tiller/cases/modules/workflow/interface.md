@@ -1002,3 +1002,28 @@ package.json 与 README 版本保持 0.5.0，全量质量命令通过且测试�
 ### 预期结果
 
 未合入默认返回 INIT_BASELINE_PENDING；--skip-init-gate 放行并警告；commit 成为 HEAD 祖先或 status=merged 后放行
+
+## CASE-234 README 面向最终用户的介绍与快速开始
+
+- 类型：interface
+- 优先级：high
+- 模块：workflow
+- 关联 AC：20261026-readme-merge-close#AC-1
+- 需求：`.tiller/specs/modules/workflow/requirements.md`
+- 源码：`README.md`
+
+### 前置条件
+
+- 仓库根 README 可读取
+
+### 步骤
+
+1. 读取 README 的结构与关键文案
+
+### 输入
+
+- 根目录 README.md
+
+### 预期结果
+
+README 只保留介绍与快速开始，包含安装包安装、初始化 PR 标题、合入后 git pull、用 AI 开发功能、tiller merge 自动 close，以及网页合入需手动 close；不含决策、npm 未发布或维护者资料堆砌

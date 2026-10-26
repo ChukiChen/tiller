@@ -693,3 +693,28 @@ init 生成的项目 requirements.md 与 design.md 及 modules/README.md 包含�
 ### 预期结果
 
 初始化 worktree 和提交仍保留，结果给出 git push -u 与 PR/MR 创建命令及失败原因
+
+## CASE-239 init-id merge 合入初始化分支并清理 local
+
+- 类型：behavior
+- 优先级：high
+- 模块：initialization
+- 关联 AC：20261026-readme-merge-close#AC-4
+- 需求：`.tiller/specs/modules/initialization/requirements.md`
+- 源码：`src/pr.ts`, `src/init-baseline.ts`, `src/cli.ts`
+
+### 前置条件
+
+- 初始化基线待合入，存在 chore/tiller-init 的本机 worktree，gh 模拟合入成功
+
+### 步骤
+
+1. 运行 tiller merge <init-id>，随后运行 start
+
+### 输入
+
+- 初始化任务编号与模拟成功的 gh
+
+### 预期结果
+
+调用 gh pr merge chore/tiller-init --squash；成功后 initBaseline 标为 merged、删除该 init local，后续 start 不再被初始化门禁阻断

@@ -5,8 +5,12 @@ import { promisify } from 'node:util';
 import { branchDescriptionForTask, currentBranch, normalizeBranchSlug, suggestedBranchNameFor } from './branch-conventions.js';
 import { readCaseLibrary } from './cases.js';
 import { commitSubjectIssue, commitTypeForTaskType, taskCommits, type CommitType, type TaskCommit } from './commit-conventions.js';
-import { inspectFlow, readTask } from './flow.js';
+import { readProjectMetadata } from './core.js';
+import { closeFlow, inspectFlow, readTask, taskStage } from './flow.js';
 import type { FlowTask } from './flow.js';
+import { isInitBaselineId, markInitBaselineMerged } from './init-baseline.js';
+import { taskBranchName } from './task-worktrees.js';
+import type { ProjectPlatform } from './types.js';
 
 const execFileAsync = promisify(execFile);
 const TASK_HEADINGS = ['关联任务', '变更内容', '验收条件', '验证结果', '影响与风险'] as const;
@@ -21,6 +25,68 @@ export interface PullRequestDraft {
   branch: string;
   commits: TaskCommit[];
   warnings: string[];
+}
+
+interface MergeCommandResult { stdout: string; stderr: string }
+
+export interface MergeResult {
+  id: string;
+  platform: 'github' | 'gitlab';
+  branch: string;
+  merged: true;
+  command: string;
+  close: Awaited<ReturnType<typeof closeFlow>>;
+  warnings?: string[];
+  next: string;
+}
+
+function fail(code: string, message: string): never {
+  throw Object.assign(new Error(message), { code });
+}
+
+function commandDetail(result: { stdout?: string; stderr?: string }, fallback: string): string {
+  return (result.stderr?.trim() || result.stdout?.trim() || fallback).split(/\r?\n/u).slice(0, 3).join(' ');
+}
+
+async function concretePlatform(root: string, configured: ProjectPlatform): Promise<'github' | 'gitlab'> {
+  if (configured === 'github' || configured === 'gitlab') return configured;
+  const remote = await git(root, ['remote', 'get-url', 'origin']);
+  if (!remote.ok || !remote.stdout.trim()) {
+    fail('MERGE_PLATFORM_UNKNOWN', '工程平台配置为 both，但无法读取 origin，不能确定应使用 gh 还是 glab。');
+  }
+  const url = remote.stdout.trim();
+  if (/gitlab/iu.test(url)) return 'gitlab';
+  if (/github/iu.test(url)) return 'github';
+  fail('MERGE_PLATFORM_UNKNOWN', `工程平台配置为 both，无法从 origin 判断平台：${url}；请把 project.json 的 platform 改为 github 或 gitlab。`);
+}
+
+async function runMergeTool(tool: 'gh' | 'glab', args: string[], root: string): Promise<MergeCommandResult> {
+  try {
+    const result = await execFileAsync(tool, args, {
+      cwd: root, encoding: 'utf8', maxBuffer: 16 * 1024 * 1024,
+      env: { ...process.env, LC_ALL: 'C', GIT_TERMINAL_PROMPT: '0' },
+    });
+    return { stdout: result.stdout, stderr: result.stderr };
+  } catch (error) {
+    const item = error as { stdout?: string; stderr?: string; code?: string | number | null };
+    if (item.code === 'ENOENT') fail('MERGE_TOOL_UNAVAILABLE', `无法执行 ${tool}；请先安装并登录托管平台 CLI。`);
+    fail('MERGE_FAILED', `${tool} 合入失败：${commandDetail(item, `${tool} 返回非零退出码`)}`);
+  }
+}
+
+async function mergeTarget(root: string, id: string): Promise<{ branch: string; init: boolean }> {
+  const metadata = await readProjectMetadata(root);
+  if (isInitBaselineId(id)) {
+    const baseline = metadata.initBaseline;
+    if (!baseline || baseline.id !== id) fail('INIT_BASELINE_NOT_FOUND', `工程元信息中没有初始化基线 ${id}。`);
+    return { branch: baseline.branch, init: true };
+  }
+  const task = await readTask(root, id);
+  const stage = await taskStage(root, id);
+  if (stage.stage !== '已验收') {
+    fail('MERGE_NOT_ACCEPTED', `任务当前阶段为${stage.stage}；先完成验收并提交任务记录，再运行 tiller merge ${id}。`);
+  }
+  return { branch: taskBranchName(task.meta), init: false };
 }
 
 function sectionBody(content: string, title: string, level: 2 | 3): string {
@@ -209,5 +275,39 @@ export async function draftPullRequest(
   return {
     id: task.meta.id, title, body, type, module, branch,
     commits: commits.commits, warnings, markdown: `${title}\n\n建议分支：\`${branch}\`\n\n${body}\n`,
+  };
+}
+
+export async function mergeFlow(rootInput: string, id: string): Promise<MergeResult> {
+  const root = path.resolve(rootInput);
+  const metadata = await readProjectMetadata(root);
+  const platform = await concretePlatform(root, metadata.platform ?? 'github');
+  const target = await mergeTarget(root, id);
+  const tool = platform === 'github' ? 'gh' : 'glab';
+  const args = platform === 'github'
+    ? ['pr', 'merge', target.branch, '--squash']
+    : ['mr', 'merge', target.branch, '--squash', '--yes'];
+  await runMergeTool(tool, args, root);
+
+  let metadataError: Error | null = null;
+  if (target.init) {
+    try { await markInitBaselineMerged(root, id); }
+    catch (error) { metadataError = error as Error; }
+  }
+
+  let closed: Awaited<ReturnType<typeof closeFlow>>;
+  try {
+    closed = await closeFlow(root, id, '合入后自动清理');
+  } catch (error) {
+    const metadataNote = metadataError ? `；初始化状态也未更新：${metadataError.message}` : '';
+    fail('MERGE_CLOSE_FAILED', `远端已合入，但本机清理失败：${(error as Error).message}${metadataNote}；请手动运行 tiller close ${id} --reason "已合入"。`);
+  }
+  if (metadataError) {
+    fail('MERGE_METADATA_FAILED', `远端已合入且本机已清理，但初始化状态写入失败：${metadataError.message}；请手动将 project.json 的 initBaseline.status 改为 merged。`);
+  }
+  return {
+    id, platform, branch: target.branch, merged: true,
+    command: `${tool} ${args.join(' ')}`, close: closed,
+    next: '已通过 CLI 合入并清理本机；如从网页合入，仍需手动运行 tiller close。',
   };
 }

@@ -285,16 +285,20 @@ test('CASE-108 invalidated acceptance falls back to the current workspace', asyn
 });
 
 test('CASE-109 repository docs and suite include review release and pinned checks', async () => {
-  for (const relative of ['README.md', 'resources/usage.md', '.tiller/usage.md']) {
+  for (const relative of ['resources/usage.md', '.tiller/usage.md']) {
     const content = read(repository, relative);
     assert.match(content, /review/u, relative);
     assert.match(content, /release/u, relative);
     assert.match(content, /验收提交|acceptance/u, relative);
   }
-  assert.match(read(repository, 'README.md'), /可用工程内需求文件接入/u, 'README.md');
   for (const relative of ['resources/usage.md', '.tiller/usage.md']) {
     assert.match(read(repository, relative), /--requirement-file/u, relative);
   }
+  const readme = read(repository, 'README.md');
+  assert.match(readme, /快速开始/u, 'README.md');
+  assert.match(readme, /tiller merge/u, 'README.md');
+  assert.match(readme, /chore\(tiller\): 完成工程初始化/u, 'README.md');
+  assert.match(readme, /npm install -g \.\/tiller-0\.5\.0\.tgz/u, 'README.md');
   const decisions = read(repository, '.tiller/specs/decisions.md');
   assert.match(decisions, /评审/u);
   assert.match(decisions, /验收提交/u);
@@ -306,7 +310,7 @@ test('CASE-109 repository docs and suite include review release and pinned check
   assert.ok(suite.e2e.includes('review-release.test.mjs'));
   const library = await readCaseLibrary(repository);
   assert.deepEqual(library.issues, []);
-  assert.equal(library.cases.length, 233);
+  assert.equal(library.cases.length, 241);
   for (const id of ['CASE-104', 'CASE-105', 'CASE-106', 'CASE-107', 'CASE-108', 'CASE-109']) {
     assert.ok(library.cases.find(item => item.id === id)?.tests.length, id);
   }

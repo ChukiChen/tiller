@@ -3,7 +3,7 @@ import { mkdir, readFile, realpath, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { promisify } from 'node:util';
 import { assertSafePath } from './files.js';
-import { META } from './project-metadata.js';
+import { META, parseMetadata } from './project-metadata.js';
 import type { FileChange, InitBaseline, ProjectMetadata, ProjectPlatform } from './types.js';
 
 const execFileAsync = promisify(execFile);
@@ -165,6 +165,18 @@ export function isInitBaselineId(id: string): boolean {
 
 export function initBaselinePending(baseline: InitBaseline | undefined): boolean {
   return baseline !== undefined && baseline.status !== 'merged';
+}
+
+export async function markInitBaselineMerged(rootInput: string, id: string): Promise<InitBaseline> {
+  const root = path.resolve(rootInput);
+  const target = await assertSafePath(root, META);
+  const metadata = parseMetadata(await readFile(target, 'utf8'));
+  const baseline = metadata.initBaseline;
+  if (!baseline || baseline.id !== id) fail('INIT_BASELINE_NOT_FOUND', `工程元信息中没有初始化基线 ${id}。`);
+  if (baseline.status === 'merged') return baseline;
+  const merged: InitBaseline = { ...baseline, status: 'merged' };
+  await writeFile(target, `${JSON.stringify({ ...metadata, initBaseline: merged }, null, 2)}\n`, 'utf8');
+  return merged;
 }
 
 export async function assertInitBaselineReady(rootInput: string, metadata: ProjectMetadata): Promise<void> {
