@@ -12,7 +12,7 @@ import {
 } from './cases.js';
 import { cleanupTaskBranches } from './branch-cleanup.js';
 import { resolveConfirmer } from './confirmer.js';
-import { branchNameWarning, normalizeBranchSlug } from './branch-conventions.js';
+import { branchNameWarning, currentBranch, normalizeBranchSlug } from './branch-conventions.js';
 import { commitMessageWarnings } from './commit-conventions.js';
 import { readProjectMetadata } from './core.js';
 import { applyChanges, inspectSafePaths, readTextIfExists, validateRelativePath, withProjectLock, type ResolvedInputPath } from './files.js';
@@ -1679,6 +1679,14 @@ async function evaluateFlow(root: string, id: string, task: FlowTask, options: F
     }
   }
   const changed = await changedFiles(root, task.meta.base, context.commit);
+  if (!historicalAccepted && changed !== null) {
+    const branch = await currentBranch(root);
+    const specs = changed.filter(relative => relative === '.tiller/specs' || relative.startsWith('.tiller/specs/'));
+    if ((branch === 'main' || branch === 'master') && specs.length) {
+      const shown = specs.slice(0, 5).join('、');
+      issues.push(`过程卫生：当前检出位于默认分支 ${branch}，相对任务基线的变更触及 .tiller/specs/（${shown}${specs.length > 5 ? ` 等 ${specs.length} 项` : ''}）。请先 start 任务，在任务 worktree 修改 specs，并随任务 PR/MR 合入；请勿在默认分支直改或直推。`);
+    }
+  }
   const changedOutsideScope: string[] = [];
   if (changed === null) warnings.push('未检测到可用 Git 基线，范围检查已跳过。');
   else for (const relative of changed) {

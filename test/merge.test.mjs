@@ -83,6 +83,7 @@ async function acceptTask(root, id) {
   git(root, 'add', '-A');
   git(root, 'commit', '--quiet', '-m', 'test(workflow): 准备 merge 夹具');
   success(cli(root, 'verify', id, '--criterion', 'AC-1', '--test', `${testPath}::${testName}`));
+  git(root, 'checkout', '--quiet', '-b', `fix/${id}-fixture`);
   success(cli(root, 'accept', id, '--by', 'Tiller Test'));
 }
 

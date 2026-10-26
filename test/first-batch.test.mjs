@@ -27,6 +27,14 @@ function commitAll(root, message = 'test fixture') {
   assert.equal(committed.status, 0, committed.stderr);
 }
 
+function checkoutTaskBranch(root, id) {
+  const checkedOut = spawnSync('git', ['checkout', '--quiet', '-b', `fix/${id}-fixture`], {
+    cwd: root, encoding: 'utf8', timeout: 20_000,
+  });
+  assert.ifError(checkedOut.error && checkedOut.error.code !== 'EPERM' ? checkedOut.error : null);
+  assert.equal(checkedOut.status, 0, checkedOut.stderr);
+}
+
 function moduleSpec(root, name, heading = '默认工作流') {
   put(root, `.tiller/specs/modules/${name}/requirements.md`, `# ${heading}\n\n## 行为\n\n模块行为应可验证。\n`);
   put(root, `.tiller/specs/modules/${name}/design.md`, `# ${heading}设计\n\n测试引用可定位到具体行为。\n`);
@@ -154,6 +162,7 @@ test('CASE-054 CASE-264 check accepts verified coverage without a task AC back-r
   put(root, 'test/alpha.test.mjs', `import assert from 'node:assert/strict';\nimport test from 'node:test';\n\ntest('${added.id} alpha behaves', () => { assert.equal(true, true); });\n`);
   commitAll(root, 'test: alpha behavior fixture');
   success(cli(root, 'verify', taskId, '--criterion', 'AC-1', '--test', `test/alpha.test.mjs::${added.id} alpha behaves`));
+  checkoutTaskBranch(root, taskId);
   const checked = success(cli(root, 'check', taskId));
   assert.equal(checked.ready, true, checked.issues.join('\n'));
   assert.deepEqual(checked.criteria[0].cases, [added.id]);
@@ -184,6 +193,7 @@ test('CASE-055 new project runs init, plan, start, confirm, case add, verify, ch
   commitAll(root, 'test: accept sample flow fixture');
   const verified = success(cli(root, 'verify', taskId, '--criterion', 'AC-1', '--test', `test/sample.test.mjs::${added.id} sample flow works`));
   assert.deepEqual(verified.cases, ['CASE-001']);
+  checkoutTaskBranch(root, taskId);
   const checked = success(cli(root, 'check', taskId));
   assert.equal(checked.ready, true, checked.issues.join('\n'));
   assert.equal(checked.cases.matched, 1);
@@ -246,6 +256,7 @@ test('CASE-056 task stages derive from task facts and fall back on invalid confi
   commitAll(root, 'test: accept lifecycle stage fixture');
   success(cli(root, 'verify', id, '--criterion', 'AC-1', '--test', `test/lifecycle.test.mjs::${stageCase.id} lifecycle stage behavior`));
   assert.equal(stageTask(root, id), '已验证');
+  checkoutTaskBranch(root, id);
   success(cli(root, 'accept', id, '--quote', '验收阶段流程'));
   assert.equal(stageTask(root, id), '已验收');
   const taskPath = `.tiller/task/${id}/task.md`;

@@ -104,6 +104,7 @@ test('CASE-175 confirmations expose uncommitted business changes but ignore till
   success(cli(root, 'start', id, '--title', 'Confirmation hygiene', '--requirement', 'Report uncommitted business changes after confirmation.',
     '--criterion', 'AC-1=Business dirt is visible', '--size', 'small', '--target', '.'));
   success(confirmTask(root, id, 'requirements'));
+  git(root, 'checkout', '--quiet', '-b', `feat/${id}-confirm-dirty`);
 
   put(root, '.tiller/specs/modules/workflow/requirements.md', '# Workflow\n\n## Baseline behavior\n\nMetadata-only edit.\n');
   const metadataOnly = cli(root, 'check', id);
@@ -301,6 +302,50 @@ test('CASE-260 check warns about delivery paths inside the business scope do lis
   assert.match(warnings, /业务范围·做.*test\/flow-hardening\.test\.mjs/u);
   assert.match(warnings, new RegExp(relative.replace(/[.*+?^${}()|[\]\\]/gu, '\\$&'), 'u'));
   assert.ok(!checked.issues.some(issue => issue.includes('业务范围') && issue.includes('交付路径')), checked.issues.join('\n'));
+});
+
+test('CASE-276 check blocks specs changes on the default branch', async t => {
+  const root = fixture(t);
+  success(cli(root, 'init'));
+  baseline(root);
+  if (git(root, 'branch', '--show-current').trim() === 'master') git(root, 'branch', '-m', 'main');
+  const id = '20261026-specs-default-branch';
+  success(cli(root, 'start', id, '--title', 'Default branch specs gate', '--requirement', 'Keep specs changes on task branches.',
+    '--criterion', 'AC-1=Default branch changes are blocked', '--size', 'small',
+    '--target', 'src', '--target', 'test', '--target', '.tiller/specs'));
+  success(confirmTask(root, id, 'requirements'));
+  put(root, '.tiller/specs/modules/workflow/design.md', '# Workflow design\n\nSpecs changes use task worktrees.\n');
+
+  const mainChecked = failure(cli(root, 'check', id));
+  const mainIssue = mainChecked.issues.find(issue => issue.includes('过程卫生') && issue.includes('.tiller/specs/'));
+  assert.ok(mainIssue, mainChecked.issues.join('\n'));
+  assert.match(mainIssue, /默认分支 main/u);
+  assert.match(mainIssue, /任务 worktree/u);
+  assert.match(mainIssue, /任务 PR\/MR/u);
+  assert.match(mainIssue, /请勿.*默认分支.*直改.*直推/u);
+
+  git(root, 'branch', '-m', 'master');
+  const masterChecked = failure(cli(root, 'check', id));
+  assert.ok(masterChecked.issues.some(issue => issue.includes('过程卫生') && issue.includes('默认分支 master')
+    && issue.includes('.tiller/specs/')), masterChecked.issues.join('\n'));
+});
+
+test('CASE-277 check allows specs changes on a task branch', async t => {
+  const root = fixture(t);
+  success(cli(root, 'init'));
+  baseline(root);
+  if (git(root, 'branch', '--show-current').trim() === 'master') git(root, 'branch', '-m', 'main');
+  const id = '20261026-specs-task-branch';
+  success(cli(root, 'start', id, '--title', 'Task branch specs gate', '--requirement', 'Allow specs changes on task branches.',
+    '--criterion', 'AC-1=Task branch changes are allowed', '--size', 'small',
+    '--target', 'src', '--target', 'test', '--target', '.tiller/specs'));
+  success(confirmTask(root, id, 'requirements'));
+  put(root, '.tiller/specs/modules/workflow/design.md', '# Workflow design\n\nSpecs changes use task worktrees.\n');
+  git(root, 'checkout', '--quiet', '-b', `feat/${id}-branch-check`);
+
+  const checked = failure(cli(root, 'check', id));
+  assert.ok(!checked.issues.some(issue => issue.includes('过程卫生') && issue.includes('.tiller/specs/')
+    && issue.includes('默认分支')), checked.issues.join('\n'));
 });
 
 test('CASE-184 help, usage and AGENTS explain thin checks, readable logs and branch naming', async t => {

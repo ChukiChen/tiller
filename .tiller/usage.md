@@ -20,7 +20,7 @@ node .tiller/run.cjs merge <id>
 node .tiller/run.cjs close <id> --reason "已合入"
 ```
 
-`start` 生成需求（standard 另生成设计），worktree：`.tiller/local/<id>/worktrees/`；正文引用稳定 specs，`--requirement`/`--requirement-file` 二选一。后者限 `.tiller/specs/`，保留多行并写来源；“验收条件”中 `- AC-n: …` 会导入任务，有 AC 可省略 `--criterion`，无 AC 仍须提供。验收条件按路径作用域用 AC-n，任务不写模块前缀或“对照”列表。`--quote` 可选，`--by` 默认取 `git config user.name`。首次 `init` → 初始化 PR/MR → 人工合入 → `start`；pending 基线由平台 API 确认合入，无证据阻断，`--skip-init-gate` 例外。`specs` 经任务 worktree 合入。
+`start` 生成需求（standard 另生成设计），worktree：`.tiller/local/<id>/worktrees/`；引用 specs，`--requirement`/`--requirement-file` 二选一。后者限 `.tiller/specs/`，保留多行并写来源；“验收条件”中 `- AC-n: …` 会导入任务，有 AC 可省略 `--criterion`，无 AC 仍须提供。验收条件按路径作用域用 AC-n，不写模块前缀/对照列表。`--quote` 可选，`--by` 默认取 `git config user.name`。首次 `init` → 初始化 PR/MR → 人工合入 → `start`；pending 基线须 API 证明合入，--skip-init-gate 例外。`specs` 经任务 worktree，随任务 PR/MR 合入；禁止默认分支直改/直推。
 
 `review` 阻塞 `check`/`accept`；`release` 与已验收任务钉在验收提交。未验收终止用 `close --abandon`；再交付先 `reopen`。
 
