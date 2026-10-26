@@ -49,7 +49,7 @@ function replaceTaskSection(content, title, body) {
 export function completeRequirement(root, id) {
   const relative = `.tiller/task/${id}/task.md`;
   let content = readFileSync(join(root, relative), 'utf8');
-  content = replaceTaskSection(content, '面向谁与问题', '主要用户需要当前行为可靠。');
+  content = replaceTaskSection(content, '使用场景', '主要用户需要当前行为可靠。');
   content = replaceTaskSection(content, '业务范围', [
     '- 做：实现确认的验收条件。', '- 不做：范围外变更。', '- 假设与待确认：无。',
   ].join('\n'));

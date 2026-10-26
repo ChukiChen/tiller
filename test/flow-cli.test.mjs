@@ -187,7 +187,7 @@ test('CASE-001 CASE-066 small flow produces one task file and records verified a
   assert.equal(confirmations.find(item => item.gate === 'requirements').quote, '确认这个范围和验收条件');
   assert.equal(confirmations.find(item => item.gate === 'acceptance').quote, '');
   assert.match(content, /^### 目标$/mu);
-  assert.match(content, /^### 面向谁与问题$/mu);
+  assert.match(content, /^### 使用场景$/mu);
   assert.match(content, /^### 业务范围$/mu);
   assert.match(content, /^### 关键行为$/mu);
   assert.match(content, /^### 异常与边界$/mu);
@@ -263,7 +263,7 @@ test('CASE-060 CASE-062 structured task template validates written requirements 
     '--criterion', 'AC-1=Structured confirmation is recorded', '--size', 'small', '--target', 'src'));
   const original = read(root, task(root, id));
   assert.match(original, /^### 目标$/mu);
-  assert.match(original, /^### 面向谁与问题$/mu);
+  assert.match(original, /^### 使用场景$/mu);
   assert.match(original, /^### 业务范围$/mu);
   assert.match(original, /^### 关键行为$/mu);
   assert.match(original, /^### 异常与边界$/mu);

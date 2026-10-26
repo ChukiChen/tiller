@@ -1,6 +1,6 @@
 # 用例锚定稳定需求（取消 task#AC，AC 进 specs）
 
-## 面向谁与问题
+## 使用场景
 
 维护 tiller 的人与执行 AI。用例曾强制「关联 AC：`<任务>#AC-n`」，且 `--requirement-file` 常指向会被 close 删除的 `.tiller/local/…-req.md`。正确模型：稳定 AC 与需求在 `.tiller/specs/...`；任务只引用；用例挂 specs；覆盖靠 verify。
 

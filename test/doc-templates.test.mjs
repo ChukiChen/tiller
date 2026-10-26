@@ -113,7 +113,7 @@ test('CASE-214 pre-existing sidecars prefer the task-local layout and fall back 
   assert.equal((await readTask(root, id)).meta.preExisting['docs/new-preferred.md'], undefined);
 });
 
-test('CASE-192 structured requirements keep business scope separate from target paths', async t => {
+test('CASE-192 CASE-270 structured requirements keep business scope separate from target paths', async t => {
   const root = await project(t);
   const id = '20261024-requirement-template';
   success(cli(root, 'start', id, '--title', 'Requirement template', '--requirement', 'Write complete requirements.',
@@ -121,7 +121,7 @@ test('CASE-192 structured requirements keep business scope separate from target 
 
   const content = read(root, taskPath(id));
   const requirement = section(content, '需求');
-  for (const heading of ['面向谁与问题', '目标', '业务范围', '关键行为', '异常与边界', '验收条件']) {
+  for (const heading of ['使用场景', '目标', '业务范围', '关键行为', '异常与边界', '验收条件']) {
     assert.match(requirement, new RegExp(`^### ${heading}$`, 'mu'));
   }
   const business = subSection(requirement, '业务范围');
@@ -132,7 +132,7 @@ test('CASE-192 structured requirements keep business scope separate from target 
   assert.deepEqual(marker(content).scope, ['src', 'test']);
 });
 
-test('CASE-193 requirements confirmation rejects blank or placeholder sections while accepting the legacy scope section', async t => {
+test('CASE-193 CASE-270 requirements confirmation rejects blank or placeholder sections while accepting the legacy scope section', async t => {
   const root = await project(t);
   const id = '20261024-requirement-confirm';
   success(cli(root, 'start', id, '--title', 'Requirement confirmation', '--requirement', 'Reject empty fields.',
@@ -140,7 +140,7 @@ test('CASE-193 requirements confirmation rejects blank or placeholder sections w
 
   const blank = failure(cli(root, 'confirm', id, 'requirements'));
   assert.equal(blank.error.code, 'MISSING_REQUIREMENTS');
-  for (const heading of ['面向谁与问题', '业务范围', '关键行为', '异常与边界']) assert.match(blank.error.message, new RegExp(heading, 'u'));
+  for (const heading of ['使用场景', '业务范围', '关键行为', '异常与边界']) assert.match(blank.error.message, new RegExp(heading, 'u'));
 
   completeRequirement(root, id);
   put(root, taskPath(id), read(root, taskPath(id)).replace(
@@ -190,12 +190,12 @@ test('CASE-194 design template covers failure handling and verification entry wi
   assert.match(checked.warnings.join('\n'), new RegExp(`任务设计“验证入口”.*仅空白或占位.*${taskPath(id).replaceAll('.', '\\.')}`, 'u'));
 });
 
-test('CASE-195 init creates complete requirement and design section skeletons without long examples', async t => {
+test('CASE-195 CASE-270 CASE-272 init creates complete requirement and design section skeletons without long examples', async t => {
   const root = fixture(t);
   success(cli(root, 'init'));
 
   const requirements = read(root, '.tiller/specs/requirements.md');
-  for (const heading of ['面向谁与问题', '目标', '业务范围', '关键行为', '异常与边界', '验收条件']) {
+  for (const heading of ['使用场景', '目标', '业务范围', '关键行为', '异常与边界', '验收条件']) {
     assert.match(requirements, new RegExp(`^## ${heading}$`, 'mu'));
   }
   const design = read(root, '.tiller/specs/design.md');
@@ -203,8 +203,10 @@ test('CASE-195 init creates complete requirement and design section skeletons wi
     assert.match(design, new RegExp(`^## ${heading}$`, 'mu'));
   }
   const modules = read(root, '.tiller/specs/modules/README.md');
-  assert.match(modules, /requirements\.md.*面向谁与问题/u);
+  assert.match(modules, /requirements\.md.*使用场景/u);
   assert.match(modules, /design\.md.*验证入口/u);
+  assert.match(read(root, '.tiller/rules/activities/requirements.md'), /任务记录的需求固定写使用场景、目标/u);
+  assert.match(read(root, '.tiller/rules/quality/documents.md'), /需求写使用场景、目标/u);
   for (const content of [requirements, design, modules]) {
     assert.doesNotMatch(content, /```/u);
     assert.ok(content.length < 1200);

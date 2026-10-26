@@ -1722,3 +1722,28 @@ check 返回可定位 warning 且不因此升级为阻塞项。
 ### 预期结果
 
 用例关联 AC 为无时，只要 verify 记录 AC→测试→CASE 且测试通过，check/accept 不因缺少 task#AC 回指失败
+
+## CASE-271 requirement-file 旧标题可映射到使用场景
+
+- 类型：behavior
+- 优先级：medium
+- 模块：workflow
+- 关联 AC：无
+- 需求：`.tiller/specs/modules/workflow/req-scene-heading.md`
+
+### 前置条件
+
+- 存在含旧标题的结构化需求文件
+
+### 步骤
+
+1. start --requirement-file 指向该文件
+2. 核对 task 需求首节
+
+### 输入
+
+- 旧标题小节正文
+
+### 预期结果
+
+含旧首节标题的结构化 requirement-file 解析进「使用场景」槽位，不落入 extras；新渲染标题为「使用场景」

@@ -130,6 +130,7 @@ assert.equal(started.size, 'small');
 assert.ok(!started.next.includes('advanced'));
 const taskRecord = join(target, '.tiller/task', taskId, 'task.md');
 assert.ok(!readFileSync(taskRecord, 'utf8').includes('"preExisting"'), 'new task marker omits preExisting');
+assert.match(readFileSync(taskRecord, 'utf8'), /^### 使用场景$/mu);
 const resumed = invoke(['resume', taskId]);
 assert.equal(resumed.criteria[0].text, 'package starts a task');
 assert.deepEqual(readdirSync(join(target, '.tiller/task', taskId)), ['task.md']);
@@ -137,7 +138,7 @@ for (const args of [['advanced'], ['work', 'create'], ['workflow', 'list'], ['pl
   assert.equal(invoke(args, 2).error.code, 'INVALID_ARGUMENT', args.join(' '));
 }
 let requirementRecord = readFileSync(taskRecord, 'utf8');
-requirementRecord = replaceTaskSection(requirementRecord, '面向谁与问题', '包安装用户需要可重复验证默认流程。');
+requirementRecord = replaceTaskSection(requirementRecord, '使用场景', '包安装用户需要可重复验证默认流程。');
 requirementRecord = replaceTaskSection(requirementRecord, '业务范围', ['- 做：验证发布包初始化与默认流程。', '- 不做：扩展发布能力。', '- 假设与待确认：无。'].join('\n'));
 requirementRecord = replaceTaskSection(requirementRecord, '关键行为', '安装后的命令可完成初始化、任务确认与验证。');
 requirementRecord = replaceTaskSection(requirementRecord, '异常与边界', '失败时返回非零并给出可读错误。');

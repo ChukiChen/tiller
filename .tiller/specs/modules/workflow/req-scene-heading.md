@@ -1,0 +1,36 @@
+# 需求章节标题改为「使用场景」
+
+## 使用场景
+
+维护 tiller 的人与执行 AI 写任务需求、读模板与规则时，需要第一节标题表达场景与背景。用户已选定「使用场景」作为该槽位固定标题。
+
+## 目标
+
+将结构化需求模板、校验键、规则与文档中该节标题统一为「使用场景」；占位说明与标题对齐；章节顺序保持：使用场景、目标、业务范围、关键行为、异常与边界、验收条件。版本保持 0.5.0。
+
+稳定条件：
+
+- FLOW-SCENE-1：`start` / 骨架 / `REQUIREMENT_SECTIONS` 与确认校验列表使用「使用场景」作为第一节标题键
+- FLOW-SCENE-2：rules、模块说明、workflow/initialization 规格与 decisions 中描述该槽位的措辞改为「使用场景」
+- FLOW-SCENE-3：相关测试与 package-smoke 断言新标题；占位改为「写主要使用场景与背景依据」类短文；历史 `.tiller/task/*/task.md` 可保留旧标题
+
+## 业务范围
+
+- 做：更新 `src/core.ts`、`src/flow.ts`、resources/rules、受管 `.tiller/rules`、相关 specs 描述、测试与 smoke；解析可将历史标题映射到「使用场景」以免旧 requirement-file 落入 extras；新增 CASE 覆盖渲染/校验
+- 不做：升版本；批量改写历史已关闭任务正文；改其它需求章节名
+- 假设：用户已确认标题用词为「使用场景」
+
+## 关键行为
+
+1. 新建任务与 init 骨架首节标题为「使用场景」
+2. confirm requirements 校验该节键名为「使用场景」
+3. `--requirement-file` 若仍写旧标题，解析映射到新键（可选兼容）或仓库内 specs 已改写
+
+## 异常与边界
+
+- 历史任务记录中的旧标题不强制改写
+- 不改「目标」等其它节名
+
+## 验收条件（稳定）
+
+- FLOW-SCENE-1 / FLOW-SCENE-2 / FLOW-SCENE-3（见上）

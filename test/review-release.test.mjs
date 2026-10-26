@@ -9,6 +9,7 @@ import { readCaseLibrary } from '../dist/cases.js';
 import { cli, confirmTask, failure, fixture, put, success } from './helpers.mjs';
 
 const repository = fileURLToPath(new URL('../', import.meta.url));
+const legacyScenarioHeading = ['面向谁', '与问题'].join('');
 const read = (root, relative) => readFileSync(join(root, relative), 'utf8');
 const taskPath = id => `.tiller/task/${id}/task.md`;
 const section = (content, title) => {
@@ -194,12 +195,12 @@ test('CASE-224 accepted close only cleans local state and leaves shared task con
   assert.equal(success(cli(root, 'resume', id)).stage, '已验收');
 });
 
-test('CASE-107 CASE-265 start requirement-file preserves structured multiline content and source', async t => {
+test('CASE-107 CASE-265 CASE-271 start requirement-file preserves structured multiline content and source', async t => {
   const root = await project(t);
   const requirementFile = '.tiller/specs/modules/workflow/requirement-file.md';
   put(root, requirementFile, `# 文件需求
 
-## 面向谁与问题
+## ${legacyScenarioHeading}
 
 维护者需要从稳定需求建立任务。
 
@@ -224,7 +225,8 @@ test('CASE-107 CASE-265 start requirement-file preserves structured multiline co
   assert.equal(started.requirementFile, requirementFile);
   const body = read(root, taskPath(id));
   assert.match(body, /需求来源：`\.tiller\/specs\/modules\/workflow\/requirement-file\.md`/u);
-  assert.match(body, /### 面向谁与问题\n\n维护者需要从稳定需求建立任务。/u);
+  assert.match(body, /### 使用场景\n\n维护者需要从稳定需求建立任务。/u);
+  assert.doesNotMatch(body, new RegExp(legacyScenarioHeading, 'u'));
   assert.match(body, /### 目标\n\n需求来源：`\.tiller\/specs\/modules\/workflow\/requirement-file\.md`\n\n从工程内需求文件建立任务。\n\n保持多行结构和可追溯来源。/u);
   assert.match(body, /### 业务范围\n\n- 做：保留结构化小节。\n- 不做：把正文压成一行。/u);
   assert.match(body, /- AC-1: Requirement file is loaded/u);
@@ -266,7 +268,7 @@ test('CASE-269 requirement-file rejects local paths and keeps specs multiline so
   const stable = '.tiller/specs/modules/workflow/case-req-link.md';
   put(root, stable, `# 稳定需求
 
-## 面向谁与问题
+## 使用场景
 
 维护者需要可追踪的需求来源。
 
@@ -285,7 +287,7 @@ test('CASE-269 requirement-file rejects local paths and keeps specs multiline so
   assert.equal(started.requirementFile, stable);
   const body = read(root, taskPath(id));
   assert.match(body, /需求来源：`\.tiller\/specs\/modules\/workflow\/case-req-link\.md`/u);
-  assert.match(body, /### 面向谁与问题\n\n维护者需要可追踪的需求来源。/u);
+  assert.match(body, /### 使用场景\n\n维护者需要可追踪的需求来源。/u);
   assert.match(body, /### 目标\n\n需求来源：`\.tiller\/specs\/modules\/workflow\/case-req-link\.md`\n\n保留多行结构并指向稳定 specs。/u);
   assert.match(body, /### 业务范围\n\n- 做：引用稳定需求。\n- 不做：引用临时路径。/u);
 });
@@ -379,7 +381,7 @@ test('CASE-109 repository docs and suite include review release and pinned check
   assert.ok(suite.e2e.includes('review-release.test.mjs'));
   const library = await readCaseLibrary(repository);
   assert.deepEqual(library.issues, []);
-  assert.equal(library.cases.length, 269);
+  assert.equal(library.cases.length, 272);
   for (const id of ['CASE-104', 'CASE-105', 'CASE-106', 'CASE-107', 'CASE-108', 'CASE-109']) {
     assert.ok(library.cases.find(item => item.id === id)?.tests.length, id);
   }
