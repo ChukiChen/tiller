@@ -100,41 +100,165 @@ tiller 对远端/平台的操作（推送 init 分支、创建 PR/MR、squash �
 
 | 部分 | 确认人 | 时间 | 短提交 | 原话 |
 | --- | --- | --- | --- | --- |
-| 需求 | boon yu | 2026-10-26T08:41:50.904Z | ef1a2de38ded | 做：默认只用 API，不再依赖 CLI；其他git操作也一样，都通过api调用执行 |
-| 设计 | boon yu | 2026-10-26T08:42:33.430Z | ef1a2de38ded | 做：默认只用 API；其他git操作也一样都通过api调用执行 |
+| 需求 | boon yu | 2026-10-26T09:38:09.672Z | 11e90da37917 | 做：默认只用 API，不再依赖 CLI；其他git操作也一样，都通过api调用执行 |
+| 设计 | boon yu | 2026-10-26T09:38:09.841Z | 11e90da37917 | 做：默认只用 API；其他git操作也一样都通过api调用执行 |
+| 交付验收 | boon yu | 2026-10-26T09:38:41.338Z | 11e90da37917 | 开pr |
 
-<!-- tiller-confirm:v1 {"gate":"requirements","object":"需求正文（目标、范围与验收条件）","subject":"57599e5efe3b532e8af6101a52bc3d3fcf45e6260e5f826c2837521effc07e90","commit":"ef1a2de38ded0b4ec827b5b76a174ee1fa3b30a9","by":"boon yu","quote":"做：默认只用 API，不再依赖 CLI；其他git操作也一样，都通过api调用执行","at":"2026-10-26T08:41:50.904Z"} -->
-<!-- tiller-confirm:v1 {"gate":"design","object":"设计正文","subject":"c48dde513f2cab64d0920c535cde20b621ab7938327b3c1dc71b5f54479debfc","commit":"ef1a2de38ded0b4ec827b5b76a174ee1fa3b30a9","by":"boon yu","quote":"做：默认只用 API；其他git操作也一样都通过api调用执行","at":"2026-10-26T08:42:33.430Z"} -->
+<!-- tiller-confirm:v1 {"gate":"requirements","object":"需求正文（目标、范围与验收条件）","subject":"e781d3d7caa72011c7adca14ce980e2378a4e3ab3eb383145521293d151f4742","commit":"11e90da37917acf7e22d5f58c10d30b40f767a7e","by":"boon yu","quote":"做：默认只用 API，不再依赖 CLI；其他git操作也一样，都通过api调用执行","at":"2026-10-26T09:38:09.672Z"} -->
+<!-- tiller-confirm:v1 {"gate":"design","object":"设计正文","subject":"657210cc1413aaf970643070030ef7c460894ae28887bf767ab71eae4152b95e","commit":"11e90da37917acf7e22d5f58c10d30b40f767a7e","by":"boon yu","quote":"做：默认只用 API；其他git操作也一样都通过api调用执行","at":"2026-10-26T09:38:09.841Z"} -->
+<!-- tiller-confirm:v1 {"gate":"acceptance","object":"当前交付（需求、设计、验证与提交）","subject":"2fa09e779bb772b325f0d450fd0d2ac1a5a6dc2cd49a3a21630c8570d8a67bbe","commit":"11e90da37917acf7e22d5f58c10d30b40f767a7e","by":"boon yu","quote":"开pr","at":"2026-10-26T09:38:41.338Z"} -->
 
 ## 验证
 
-尚无验证。
+### run-1
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-247 init without platform CLI pushes and creates a PR through GitHub REST API$' \u002d\u002dtest-reporter=./.tiller/local/verify-AIh6v0/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-AIh6v0/report.jsonl test/init-baseline.test.mjs","exitCode":0,"tree":"cb53ca33bab8c90bde81681629f508e217ad175529c280e4ce8920ff18296455","commit":"11e90da37917acf7e22d5f58c10d30b40f767a7e"} -->
+- 条件：AC-2
+- 测试：test/init-baseline.test.mjs::CASE-247 init without platform CLI pushes and creates a PR through GitHub REST API
+- 用例：CASE-247
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/20261026-api-remote-ops/logs/run-12.log
+- 提交：11e90da37917
+- 时间：2026-10-26T09:38:22.585Z
+
+### run-2
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-247 init without platform CLI pushes and creates a PR through GitHub REST API$' \u002d\u002dtest-reporter=./.tiller/local/verify-AIh6v0/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-AIh6v0/report.jsonl test/init-baseline.test.mjs","exitCode":0,"tree":"cb53ca33bab8c90bde81681629f508e217ad175529c280e4ce8920ff18296455","commit":"11e90da37917acf7e22d5f58c10d30b40f767a7e"} -->
+- 条件：AC-1
+- 测试：test/init-baseline.test.mjs::CASE-247 init without platform CLI pushes and creates a PR through GitHub REST API
+- 用例：CASE-247
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/20261026-api-remote-ops/logs/run-12.log
+- 提交：11e90da37917
+- 时间：2026-10-26T09:38:22.585Z
+
+### run-3
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-248 init without token keeps local state and gives API/token guidance in Chinese$' \u002d\u002dtest-reporter=./.tiller/local/verify-RUmn8z/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-RUmn8z/report.jsonl test/init-baseline.test.mjs","exitCode":0,"tree":"cb53ca33bab8c90bde81681629f508e217ad175529c280e4ce8920ff18296455","commit":"11e90da37917acf7e22d5f58c10d30b40f767a7e"} -->
+- 条件：AC-2
+- 测试：test/init-baseline.test.mjs::CASE-248 init without token keeps local state and gives API/token guidance in Chinese
+- 用例：CASE-248
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/20261026-api-remote-ops/logs/run-13.log
+- 提交：11e90da37917
+- 时间：2026-10-26T09:38:25.066Z
+
+### run-4
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-248 init without token keeps local state and gives API/token guidance in Chinese$' \u002d\u002dtest-reporter=./.tiller/local/verify-RUmn8z/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-RUmn8z/report.jsonl test/init-baseline.test.mjs","exitCode":0,"tree":"cb53ca33bab8c90bde81681629f508e217ad175529c280e4ce8920ff18296455","commit":"11e90da37917acf7e22d5f58c10d30b40f767a7e"} -->
+- 条件：AC-1
+- 测试：test/init-baseline.test.mjs::CASE-248 init without token keeps local state and gives API/token guidance in Chinese
+- 用例：CASE-248
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/20261026-api-remote-ops/logs/run-13.log
+- 提交：11e90da37917
+- 时间：2026-10-26T09:38:25.066Z
+
+### run-5
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-244 远端操作只调用平台 REST API 与 tokenized git transport$' \u002d\u002dtest-reporter=./.tiller/local/verify-93rVAb/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-93rVAb/report.jsonl test/merge.test.mjs","exitCode":0,"tree":"cb53ca33bab8c90bde81681629f508e217ad175529c280e4ce8920ff18296455","commit":"11e90da37917acf7e22d5f58c10d30b40f767a7e"} -->
+- 条件：AC-1
+- 测试：test/merge.test.mjs::CASE-244 远端操作只调用平台 REST API 与 tokenized git transport
+- 用例：CASE-244
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/20261026-api-remote-ops/logs/run-14.log
+- 提交：11e90da37917
+- 时间：2026-10-26T09:38:27.695Z
+
+### run-6
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-235 CASE-249 GitHub merge 经 REST API squash 成功后自动清理本机任务$' \u002d\u002dtest-reporter=./.tiller/local/verify-hBdO85/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-hBdO85/report.jsonl test/merge.test.mjs","exitCode":0,"tree":"cb53ca33bab8c90bde81681629f508e217ad175529c280e4ce8920ff18296455","commit":"11e90da37917acf7e22d5f58c10d30b40f767a7e"} -->
+- 条件：AC-3
+- 测试：test/merge.test.mjs::CASE-235 CASE-249 GitHub merge 经 REST API squash 成功后自动清理本机任务
+- 用例：CASE-249
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/20261026-api-remote-ops/logs/run-15.log
+- 提交：11e90da37917
+- 时间：2026-10-26T09:38:28.581Z
+
+### run-7
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-235 CASE-249 GitHub merge 经 REST API squash 成功后自动清理本机任务$' \u002d\u002dtest-reporter=./.tiller/local/verify-hBdO85/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-hBdO85/report.jsonl test/merge.test.mjs","exitCode":0,"tree":"cb53ca33bab8c90bde81681629f508e217ad175529c280e4ce8920ff18296455","commit":"11e90da37917acf7e22d5f58c10d30b40f767a7e"} -->
+- 条件：AC-1
+- 测试：test/merge.test.mjs::CASE-235 CASE-249 GitHub merge 经 REST API squash 成功后自动清理本机任务
+- 用例：CASE-249
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/20261026-api-remote-ops/logs/run-15.log
+- 提交：11e90da37917
+- 时间：2026-10-26T09:38:28.581Z
+
+### run-8
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-236 CASE-250 GitHub merge API 失败时保留本机任务$' \u002d\u002dtest-reporter=./.tiller/local/verify-q0IzBi/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-q0IzBi/report.jsonl test/merge.test.mjs","exitCode":0,"tree":"cb53ca33bab8c90bde81681629f508e217ad175529c280e4ce8920ff18296455","commit":"11e90da37917acf7e22d5f58c10d30b40f767a7e"} -->
+- 条件：AC-3
+- 测试：test/merge.test.mjs::CASE-236 CASE-250 GitHub merge API 失败时保留本机任务
+- 用例：CASE-250
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/20261026-api-remote-ops/logs/run-16.log
+- 提交：11e90da37917
+- 时间：2026-10-26T09:38:32.437Z
+
+### run-9
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-251 文档以 token/API 为主且 decisions 记录 push 选择$' \u002d\u002dtest-reporter=./.tiller/local/verify-CHSprA/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-CHSprA/report.jsonl test/merge.test.mjs","exitCode":0,"tree":"cb53ca33bab8c90bde81681629f508e217ad175529c280e4ce8920ff18296455","commit":"11e90da37917acf7e22d5f58c10d30b40f767a7e"} -->
+- 条件：AC-1
+- 测试：test/merge.test.mjs::CASE-251 文档以 token/API 为主且 decisions 记录 push 选择
+- 用例：CASE-251
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/20261026-api-remote-ops/logs/run-17.log
+- 提交：11e90da37917
+- 时间：2026-10-26T09:38:36.269Z
+
+### run-10
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-251 文档以 token/API 为主且 decisions 记录 push 选择$' \u002d\u002dtest-reporter=./.tiller/local/verify-CHSprA/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-CHSprA/report.jsonl test/merge.test.mjs","exitCode":0,"tree":"cb53ca33bab8c90bde81681629f508e217ad175529c280e4ce8920ff18296455","commit":"11e90da37917acf7e22d5f58c10d30b40f767a7e"} -->
+- 条件：AC-4
+- 测试：test/merge.test.mjs::CASE-251 文档以 token/API 为主且 decisions 记录 push 选择
+- 用例：CASE-251
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/20261026-api-remote-ops/logs/run-17.log
+- 提交：11e90da37917
+- 时间：2026-10-26T09:38:36.269Z
+
+### run-11
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-241 CASE-245 CASE-252 API 远端操作保持 0\\.5\\.0 且打包模块同步$' \u002d\u002dtest-reporter=./.tiller/local/verify-5X5dv7/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-5X5dv7/report.jsonl test/merge.test.mjs","exitCode":0,"tree":"cb53ca33bab8c90bde81681629f508e217ad175529c280e4ce8920ff18296455","commit":"11e90da37917acf7e22d5f58c10d30b40f767a7e"} -->
+- 条件：AC-4
+- 测试：test/merge.test.mjs::CASE-241 CASE-245 CASE-252 API 远端操作保持 0.5.0 且打包模块同步
+- 用例：CASE-252
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/20261026-api-remote-ops/logs/run-18.log
+- 提交：11e90da37917
+- 时间：2026-10-26T09:38:37.159Z
 
 ## 自检
 
 - [x] 需求确认有效
-- [ ] 设计确认有效
-- [ ] 验收条件均有当前通过且绑定全局用例的测试引用
-- [ ] 每条验收条件均映射到本次验证引用的全局用例
+- [x] 设计确认有效
+- [x] 验收条件均有当前通过且绑定全局用例的测试引用
+- [x] 每条验收条件均映射到本次验证引用的全局用例
 - [x] 验收条件与用例来源 criteria 相互指向或由本任务新增/修改
-- [ ] 验证命令已执行且测试输出已核实
+- [x] 验证命令已执行且测试输出已核实
 - [x] 全局用例结构与引用有效
-- [ ] 改动未超出范围
+- [x] 改动未超出范围
 - [x] 未弱化仍存在的测试
 - [x] 评审无未清除阻塞项
 - [x] 记录不含密钥或本机绝对路径
 
-阻塞项：
-- 过程卫生：需求、设计确认提交 ef1a2de38ded 后，工作区仍有未提交业务改动：resources/rules/activities/delivery.md、resources/rules/core.md、resources/usage.md、src/cli.ts、src/init-baseline.ts、src/platform-api.ts、src/platform-cli.ts、src/pr.ts 等 14 项。请先提交或移出本任务。
-- AC-1 尚无验证。
-- AC-2 尚无验证。
-- AC-3 尚无验证。
-- AC-4 尚无验证。
-- 改动超出范围：scripts/package-smoke.mjs
-- 交付范围存在未提交改动：.tiller/cases/modules/initialization/behavior.md、.tiller/cases/modules/standards/interface.md、.tiller/cases/modules/workflow/behavior.md、.tiller/cases/modules/workflow/interface.md、.tiller/project.json、.tiller/rules/activities/delivery.md、.tiller/rules/core.md、.tiller/specs/decisions.md、.tiller/specs/design.md、.tiller/specs/modules/initialization/design.md、.tiller/usage.md、README.md、resources/rules/activities/delivery.md、resources/rules/core.md、resources/usage.md、src/cli.ts、src/init-baseline.ts、src/platform-api.ts、src/platform-cli.ts、src/pr.ts、test/case-redesign.test.mjs、test/init-baseline.test.mjs、test/merge.test.mjs、test/platform-api-mock.mjs、test/review-release.test.mjs、test/rules.test.mjs
-
 提示：
 - 90 条历史用例未绑定来源 AC；新用例请用 case add 写入 criteria。
+- 提交 11e90da 不符合提交信息规范：重构(workflow): 远端操作改走平台 HTTP API（主题应为“类型(模块): 中文摘要”，类型限 feat/fix/docs/refactor/test/chore）。
 - 本次改动涉及模块 initialization：建议回归该模块 64 条用例及经过它的场景 CASE-055, CASE-001。
 - 本次改动涉及模块 standards：建议回归该模块 31 条用例及经过它的场景 CASE-055。
 - 本次改动涉及模块 verification：建议回归该模块 40 条用例及经过它的场景 CASE-055, CASE-001。
