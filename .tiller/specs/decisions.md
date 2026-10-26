@@ -47,8 +47,8 @@
 ## 2026-10-22 任务阶段与关闭
 
 - 阶段从 task.md 的确认、验证、验收与关闭事实推导，不另存状态字段；失效时显示回退阶段和原因。
-- 已验收任务用 `close` 收尾；未验收终止用 `close --abandon`。两者记录原因和时间，并阻塞后续确认、验证与验收。
-- `reopen` 追加恢复事实；规划不把放弃任务算作进行中或已验收。
+- 已验收即交付完成；合入后 `close` 只清理 `.tiller/local/<id>/` 与任务 worktree，不改写共享 `task.md`。未验收终止用 `close --abandon`，仍把放弃原因和时间写入共享记录并阻塞后续确认、验证与验收。
+- `reopen` 追加恢复事实；已验收任务再次交付可从已验收重开；规划不把放弃任务算作进行中或已验收。
 
 ## 2026-10-22 确认去原话化
 
@@ -113,21 +113,26 @@
 ## 2026-10-24 任务 worktree 生命周期
 
 - `start` 只对已提交的 Git 工程建任务 worktree。project 为 `.tiller/local/<id>/worktrees/`；workspace 为同目录的 `management` 加各登记 `repository.path`，各仓同名任务分支。task.md 不迁入 worktree。
-- 建树先校验全部仓库与目标路径，失败回滚；close/abandon 强拆清单或约定布局中的目录，并删除整棵 `.tiller/local/<id>/`，其他任务目录不动。
+- 建树先校验全部仓库与目标路径，失败回滚；已验收 close 与 abandon 都强拆清单或约定布局中的目录，并删除整棵 `.tiller/local/<id>/`，其他任务目录不动。
 - 本机清单放在 `.tiller/local/<id>/worktrees.json`，缺失时按 project/workspace 约定布局兜底；共享记录不保存本机绝对路径。
 - 本轮不改造 bugfix 临时基线 worktree，不在 reopen 时重建，也不自动提交、合入或连接远端。
 
 ## 2026-10-26 任务本机目录聚合
 
 - `.tiller/local/<id>/` 聚合 `worktrees/`、`logs/`、`pre-existing.json` 和 `worktrees.json`，新写入不再创建 `.tiller/local/worktrees|logs|tasks/<id>/`。
-- close 与 abandon 拆除 worktree 后删除整棵任务本机目录，并兼容清理旧布局三路径；缺失幂等，不触碰其他任务目录。
+- close 与 abandon 拆除 worktree 后删除整棵任务本机目录，并兼容清理旧布局三路径；缺失幂等，不触碰其他任务目录。已验收 close 只做本机清理，abandon 仍写共享放弃记录。
 - sidecar 和开工前摘要读取先新后旧；旧 `TaskWorktreeState.root` 仍可解析用于拆除；不自动搬迁进行中旧任务，也不在 reopen 时重建。
 
 ## 2026-10-26 PR 前同步任务记录
 
-- `verify`/`check` 或 cases/specs 回写后，先提交任务记录，即把本任务 `.tiller/task/<id>/` 与 scope 覆盖的 `.tiller/cases/`、`.tiller/specs/` 提交到任务分支，再运行 `pr`；未提交记录以 `PR_TASK_RECORDS_DIRTY` 硬阻断并列出路径。
-- 门禁只检查本任务 id 与 scope；其他任务 `.tiller/task/<other>/` 不阻断，本版不自动 `git commit`，也不提供 `--allow-dirty-records`。无 Git 或无法读工作树时跳过并提示。
-- 合入后 `accept`/`close` 若再改 `task.md`，须另作收尾提交；这不由 accept/close 自动提交实现。
+- 标准交付链为 `verify` → `check` → `accept` → 提交任务记录（其中含 acceptance）→ `pr` → 人工合入 → `close`（只清 local）。accept 必须在 pr 前完成并进入任务分支。
+- `pr` 无有效交付验收时以 `PR_NOT_ACCEPTED` 硬阻断，提示先 `accept`、提交任务记录再生成草稿；记录未提交仍以 `PR_TASK_RECORDS_DIRTY` 阻断并列出本任务 id 与 scope 覆盖的路径。
+- 门禁只检查本任务 id 与 scope；其他任务 `.tiller/task/<other>/` 不阻断，本版不自动 `git commit`，也不提供 `--allow-dirty-records`。无 Git 或无法读工作树时仅跳过记录门禁并提示，验收门禁仍生效。
+
+## 2026-10-26 合入后冻结共享任务记录
+
+- 合入即交付完成；合入后 `close` 只清理任务 worktree 和 `.tiller/local/<id>/`，不调用共享 `task.md` 写入，不要求补 `accept` 或另作收尾提交。
+- 旧只认共享“已关闭”段的任务可由已验收或 local 已清理推导完成；`abandon` 发生在合入前，继续写共享放弃事实。重开是显式写操作，不进入合入后主路径。
 
 ## 长期边界
 

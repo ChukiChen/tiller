@@ -41,6 +41,36 @@ function fillDesign(root, id) {
   put(root, relative, read(root, relative).replace('影响限于本任务范围，按现有测试复核。', 'PR/MR 标题和说明需要人工复核。'));
 }
 
+function commitAll(root, message = 'chore(workflow): 同步验收夹具') {
+  git(root, 'add', '-A');
+  git(root, 'commit', '--quiet', '--allow-empty', '-m', message);
+}
+
+function acceptTaskForPr(root, id, source = 'src/workflow.ts') {
+  const task = success(cli(root, 'resume', id));
+  if (!task.confirmations.some(item => item.gate === 'requirements')) {
+    success(confirmTask(root, id, 'requirements', '--by', 'Tiller Test'));
+  }
+  if (task.size === 'standard' && !task.confirmations.some(item => item.gate === 'design')) {
+    fillDesign(root, id);
+    success(cli(root, 'confirm', id, 'design', '--by', 'Tiller Test'));
+  }
+  if (!task.verifications.length) {
+    const added = success(cli(root, 'case', 'add', id, '--module', 'workflow', '--kind', 'behavior',
+      '--title', 'PR 验收夹具', '--expected', '任务可进入交付验收', '--criterion', 'AC-1', '--source', source));
+    const testPath = 'test/pr-acceptance.test.mjs';
+    const testName = `${added.id} pr acceptance fixture`;
+    const testSource = existsSync(join(root, testPath))
+      ? read(root, testPath)
+      : "import assert from 'node:assert/strict';\nimport test from 'node:test';\n";
+    put(root, testPath, `${testSource}\ntest('${testName}', () => assert.equal(1, 1));\n`);
+    success(cli(root, 'verify', id, '--criterion', 'AC-1', '--test', `${testPath}::${testName}`));
+  }
+  commitAll(root, 'test(workflow): 准备 PR 验收夹具');
+  success(cli(root, 'accept', id, '--by', 'Tiller Test'));
+  commitAll(root, 'chore(workflow): 记录交付验收');
+}
+
 test('CASE-070 branch names follow type and task prefix rules', () => {
   assert.equal(suggestedBranchName('feat', '20261022-round11'), 'feat/20261022-round11');
   for (const branch of ['feat/20261022-round11', 'feat/20261022-round11-pr-conventions', 'fix/bug-1']) {
@@ -96,6 +126,7 @@ test('CASE-068 pr draft derives title, five sections and current AC state', asyn
   git(root, 'add', '.');
   git(root, 'commit', '--quiet', '-m', 'feat(workflow): 生成固定五段 PR 草稿');
   git(root, 'checkout', '--quiet', '-b', `feat/${id}-pr-draft`);
+  acceptTaskForPr(root, id);
 
   const draft = success(cli(root, 'pr', id));
   assert.equal(draft.title, `feat(workflow): 生成固定五段 PR 草稿 [${id}]`);
@@ -162,11 +193,16 @@ test('CASE-075 pr title selects first declared module and omits unknown modules'
     put(root, `.tiller/specs/modules/${module}/requirements.md`, `# ${module}\n`);
     put(root, `.tiller/specs/modules/${module}/design.md`, `# ${module}\n`);
   }
+  put(root, 'src/workflow.ts', 'export const value = 1;\n');
+  put(root, 'test/workflow.test.mjs', "import test from 'node:test';\n\ntest('CASE-001 workflow behavior', () => {});\n");
+  git(root, 'add', '.');
+  git(root, 'commit', '--quiet', '--allow-empty', '-m', 'baseline workflow');
   const id = '20261022-module-title';
   success(cli(root, 'start', id, '--title', '模块标题', '--requirement', '从范围选择首个主模块。',
     '--criterion', 'AC-1=标题包含首个模块', '--size', 'small',
-    '--target', '.tiller/specs/modules/initialization', '--target', '.tiller/specs/modules/workflow'));
-  commitTaskRecords(root, id, '.tiller/specs/modules/initialization', '.tiller/specs/modules/workflow');
+    '--target', '.tiller/specs/modules/initialization', '--target', '.tiller/specs/modules/workflow',
+    '--target', 'src', '--target', 'test', '--target', '.tiller/cases'));
+  acceptTaskForPr(root, id);
   const draft = success(cli(root, 'pr', id));
   assert.equal(draft.module, 'initialization');
   assert.equal(draft.title, `feat(initialization): 模块标题 [${id}]`);
@@ -174,10 +210,11 @@ test('CASE-075 pr title selects first declared module and omits unknown modules'
 
   const unknown = fixture(t);
   await initialize({ root: unknown });
+  setupRepository(unknown);
   const unknownId = '20261022-unknown-module';
   success(cli(unknown, 'start', unknownId, '--title', '未知模块标题', '--requirement', '没有可推导模块。',
-    '--criterion', 'AC-1=标题省略模块', '--size', 'small', '--target', 'src'));
-  commitTaskRecords(unknown, unknownId);
+    '--criterion', 'AC-1=标题省略模块', '--size', 'small', '--target', 'src', '--target', 'test', '--target', '.tiller/cases'));
+  acceptTaskForPr(unknown, unknownId, '.tiller/context/project.md');
   const fallback = success(cli(unknown, 'pr', unknownId));
   assert.equal(fallback.module, null);
   assert.equal(fallback.title, `feat: 未知模块标题 [${unknownId}]`);
@@ -189,17 +226,19 @@ test('CASE-076 branch slug precedence uses flag then task metadata then current 
   setupRepository(root);
   const metadataTask = '20261022-slug-meta';
   const started = success(cli(root, 'start', metadataTask, '--title', '元数据分支描述', '--requirement', '记录英文标识。',
-    '--criterion', 'AC-1=分支包含元数据描述', '--size', 'small', '--target', 'src', '--slug', 'Structured Task'));
+    '--criterion', 'AC-1=分支包含元数据描述', '--size', 'small', '--target', 'src', '--target', 'test',
+    '--target', '.tiller/cases', '--slug', 'Structured Task'));
   assert.equal(started.slug, 'structured-task');
-  commitTaskRecords(root, metadataTask);
+  acceptTaskForPr(root, metadataTask);
   assert.equal(success(cli(root, 'pr', metadataTask)).branch, `feat/${metadataTask}-structured-task`);
   assert.equal(success(cli(root, 'pr', metadataTask, '--slug', 'PR_Draft 2')).branch, `feat/${metadataTask}-pr-draft-2`);
 
   const branchTask = '20261022-slug-branch';
   success(cli(root, 'start', branchTask, '--title', '当前分支描述', '--requirement', '从当前分支读取描述。',
-    '--criterion', 'AC-1=分支包含当前分支描述', '--size', 'small', '--target', 'src'));
+    '--criterion', 'AC-1=分支包含当前分支描述', '--size', 'small', '--target', 'src', '--target', 'test',
+    '--target', '.tiller/cases'));
   git(root, 'checkout', '--quiet', '-b', `fix/${branchTask}-from-current`);
-  commitTaskRecords(root, branchTask);
+  acceptTaskForPr(root, branchTask);
   assert.equal(success(cli(root, 'pr', branchTask)).branch, `feat/${branchTask}-from-current`);
 });
 
@@ -210,7 +249,7 @@ test('CASE-077 pr verification section lists every recorded run in order', async
   const id = '20261022-all-verifications';
   success(cli(root, 'start', id, '--title', '全部验证记录', '--requirement', '输出每条 AC 的全部验证。',
     '--criterion', 'AC-1=保留每次验证', '--size', 'small', '--target', 'src', '--target', 'test',
-    '--target', '.tiller/specs/modules/workflow'));
+    '--target', '.tiller/specs/modules/workflow', '--target', '.tiller/cases'));
   success(confirmTask(root, id, 'requirements', '--by', 'Tiller Test'));
   const added = success(cli(root, 'case', 'add', id, '--module', 'workflow', '--kind', 'behavior',
     '--title', '全部验证记录', '--expected', '保留每次验证记录', '--criterion', 'AC-1',
@@ -220,7 +259,7 @@ test('CASE-077 pr verification section lists every recorded run in order', async
   const first = firstRun.entries[0].command;
   const second = secondRun.entries[0].command;
 
-  commitTaskRecords(root, id, '.tiller/cases');
+  acceptTaskForPr(root, id);
   const draft = success(cli(root, 'pr', id));
   assert.ok(draft.body.indexOf(`命令：\`${first}\``) >= 0, draft.body);
   assert.ok(draft.body.indexOf(`命令：\`${second}\``) > draft.body.indexOf(`命令：\`${first}\``), draft.body);
@@ -239,9 +278,9 @@ test('CASE-081 pr summary prefers flag then metadata then earliest conventional 
   const started = success(cli(root, 'start', metadataId, '--title', '英文标题 fallback',
     '--summary', '元数据中文摘要', '--requirement', '标题摘要优先取任务元数据。',
     '--criterion', 'AC-1=使用元数据摘要', '--size', 'small', '--target', 'src', '--target', 'test',
-    '--target', '.tiller/specs/modules/workflow'));
+    '--target', '.tiller/specs/modules/workflow', '--target', '.tiller/cases'));
   assert.equal(started.summary, '元数据中文摘要');
-  commitTaskRecords(root, metadataId);
+  acceptTaskForPr(root, metadataId);
   assert.equal(success(cli(root, 'pr', metadataId)).title, `feat(workflow): 元数据中文摘要 [${metadataId}]`);
   assert.equal(success(cli(root, 'pr', metadataId, '--summary', '命令行中文摘要')).title,
     `feat(workflow): 命令行中文摘要 [${metadataId}]`);
@@ -249,7 +288,7 @@ test('CASE-081 pr summary prefers flag then metadata then earliest conventional 
   const commitId = '20261022-summary-commit';
   success(cli(root, 'start', commitId, '--title', '提交摘要回退标题', '--requirement', '从提交历史取最早摘要。',
     '--criterion', 'AC-1=使用最早提交摘要', '--size', 'small', '--target', 'src', '--target', 'test',
-    '--target', '.tiller/specs/modules/workflow'));
+    '--target', '.tiller/specs/modules/workflow', '--target', '.tiller/cases'));
   put(root, 'src/workflow.ts', 'export const value = 2;\n');
   git(root, 'add', '.');
   git(root, 'commit', '--quiet', '-m', 'chore: 准备提交');
@@ -259,13 +298,17 @@ test('CASE-081 pr summary prefers flag then metadata then earliest conventional 
   put(root, 'src/workflow.ts', 'export const value = 4;\n');
   git(root, 'add', '.');
   git(root, 'commit', '--quiet', '-m', 'fix(workflow): 后续中文摘要');
+  acceptTaskForPr(root, commitId);
   assert.equal(success(cli(root, 'pr', commitId)).title, `feat(workflow): 最早中文摘要 [${commitId}]`);
 
+  const fallbackRoot = fixture(t);
+  success(cli(fallbackRoot, 'init'));
+  setupRepository(fallbackRoot);
   const fallbackId = '20261022-summary-fallback';
-  success(cli(root, 'start', fallbackId, '--title', '任务标题回退', '--requirement', '没有提交摘要时使用任务标题。',
-    '--criterion', 'AC-1=使用任务标题', '--size', 'small', '--target', 'src'));
-  commitTaskRecords(root, fallbackId);
-  assert.equal(success(cli(root, 'pr', fallbackId)).title, `feat: 任务标题回退 [${fallbackId}]`);
+  success(cli(fallbackRoot, 'start', fallbackId, '--title', '任务标题回退', '--requirement', '没有提交摘要时使用任务标题。',
+    '--criterion', 'AC-1=使用任务标题', '--size', 'small', '--target', 'src', '--target', 'test', '--target', '.tiller/cases'));
+  acceptTaskForPr(fallbackRoot, fallbackId, '.tiller/context/project.md');
+  assert.equal(success(cli(fallbackRoot, 'pr', fallbackId)).title, `feat: 任务标题回退 [${fallbackId}]`);
 });
 
 test('CASE-082 pr change list orders commits from oldest to newest', async t => {
@@ -275,18 +318,20 @@ test('CASE-082 pr change list orders commits from oldest to newest', async t => 
   const id = '20261022-commit-order';
   success(cli(root, 'start', id, '--title', '提交顺序', '--requirement', '变更内容按时间正序。',
     '--criterion', 'AC-1=较早提交在前', '--size', 'small', '--target', 'src', '--target', 'test',
-    '--target', '.tiller/specs/modules/workflow'));
+    '--target', '.tiller/specs/modules/workflow', '--target', '.tiller/cases'));
   put(root, 'src/workflow.ts', 'export const value = 2;\n');
   git(root, 'add', '.');
   git(root, 'commit', '--quiet', '-m', 'feat(workflow): 较早提交');
   put(root, 'src/workflow.ts', 'export const value = 3;\n');
   git(root, 'add', '.');
   git(root, 'commit', '--quiet', '-m', 'fix(workflow): 较晚提交');
+  acceptTaskForPr(root, id);
 
   const draft = success(cli(root, 'pr', id));
   const changeSection = draft.body.split('## 变更内容\n\n')[1].split('\n\n## 验收条件')[0];
-  assert.equal(changeSection, '- feat(workflow): 较早提交\n- fix(workflow): 较晚提交');
-  assert.deepEqual(draft.commits.map(commit => commit.subject), ['feat(workflow): 较早提交', 'fix(workflow): 较晚提交']);
+  assert.ok(changeSection.indexOf('- feat(workflow): 较早提交') < changeSection.indexOf('- fix(workflow): 较晚提交'), changeSection);
+  const subjects = draft.commits.map(commit => commit.subject);
+  assert.ok(subjects.indexOf('feat(workflow): 较早提交') < subjects.indexOf('fix(workflow): 较晚提交'), subjects.join('\n'));
 });
 
 test('CASE-083 pr verification section uses plain nested records without numbered bullets', async t => {
@@ -296,7 +341,7 @@ test('CASE-083 pr verification section uses plain nested records without numbere
   const id = '20261022-verification-format';
   success(cli(root, 'start', id, '--title', '验证格式', '--requirement', '验证记录使用普通嵌套列表。',
     '--criterion', 'AC-1=每条记录单独一行', '--size', 'small', '--target', 'src', '--target', 'test',
-    '--target', '.tiller/specs/modules/workflow'));
+    '--target', '.tiller/specs/modules/workflow', '--target', '.tiller/cases'));
   success(confirmTask(root, id, 'requirements', '--by', 'Tiller Test'));
   const added = success(cli(root, 'case', 'add', id, '--module', 'workflow', '--kind', 'behavior',
     '--title', '验证格式', '--expected', '验证记录使用普通嵌套列表', '--criterion', 'AC-1',
@@ -304,7 +349,7 @@ test('CASE-083 pr verification section uses plain nested records without numbere
   const verified = success(cli(root, 'verify', id, '--criterion', 'AC-1', '--test', 'test/workflow.test.mjs::CASE-001 workflow behavior'));
   const command = verified.entries[0].command;
 
-  commitTaskRecords(root, id, '.tiller/cases');
+  acceptTaskForPr(root, id);
   const draft = success(cli(root, 'pr', id));
   assert.match(draft.body, /^- AC-1：每条记录单独一行（当前有效）$/mu);
   assert.ok(draft.body.includes(`  - 测试：\`test/workflow.test.mjs::CASE-001 workflow behavior\`；命令：\`${command}\`；结果：passed；提交：\`${verified.entries[0].commit}\`；用例：${added.id}`), draft.body);
@@ -396,10 +441,12 @@ test('CASE-079 upgrade adds only templates for the configured platform', async t
 test('CASE-080 pr task section is plain text and PR MR neutral', async t => {
   const root = fixture(t);
   await initialize({ root });
+  setupRepository(root);
   const id = '20261022-neutral-output';
   success(cli(root, 'start', id, '--title', '中性文案', '--requirement', '关联任务使用纯文本。',
-    '--criterion', 'AC-1=输出纯文本记录路径', '--size', 'small', '--target', 'src'));
-  commitTaskRecords(root, id);
+    '--criterion', 'AC-1=输出纯文本记录路径', '--size', 'small', '--target', 'src', '--target', 'test',
+    '--target', '.tiller/cases'));
+  acceptTaskForPr(root, id);
   const draft = success(cli(root, 'pr', id));
   assert.match(draft.body, new RegExp(`^## 关联任务\\n\\n任务 ${id}，记录见 \`\\.tiller/task/${id}/task\\.md\`$`, 'mu'));
   assert.doesNotMatch(draft.body, /\[[^\]]+\]\(\.tiller\/task\//u);
@@ -418,14 +465,16 @@ test('CASE-216 pr blocks uncommitted task records and lists relative paths', asy
   const id = '20261026-pr-records-dirty';
   success(cli(root, 'start', id, '--title', 'PR 前同步记录', '--requirement', '任务记录必须已提交。',
     '--criterion', 'AC-1=未提交记录阻断 PR 草稿', '--size', 'small',
-    '--target', 'src', '--target', '.tiller/cases', '--target', '.tiller/specs'));
+    '--target', 'src', '--target', 'test', '--target', '.tiller/cases', '--target', '.tiller/specs'));
+  acceptTaskForPr(root, id);
 
   const taskPath = `.tiller/task/${id}/task.md`;
+  put(root, taskPath, `${read(root, taskPath)}\n<!-- 临时任务记录改动 -->\n`);
   const taskDirty = failure(cli(root, 'pr', id));
   assert.equal(taskDirty.error.code, 'PR_TASK_RECORDS_DIRTY');
   assert.ok(taskDirty.error.message.includes(taskPath), taskDirty.error.message);
 
-  git(root, 'add', `.tiller/task/${id}`);
+  git(root, 'add', taskPath);
   git(root, 'commit', '--quiet', '-m', 'chore(workflow): 记录任务');
 
   const casePath = '.tiller/cases/modules/workflow/behavior.md';
@@ -452,7 +501,8 @@ test('CASE-217 pr generates the five-section draft after task records are commit
   const id = '20261026-pr-records-clean';
   success(cli(root, 'start', id, '--title', '已提交记录', '--requirement', '干净记录生成草稿。',
     '--criterion', 'AC-1=干净记录生成五段草稿', '--size', 'small',
-    '--target', 'src', '--target', '.tiller/specs'));
+    '--target', 'src', '--target', 'test', '--target', '.tiller/cases', '--target', '.tiller/specs'));
+  acceptTaskForPr(root, id);
   const specPath = '.tiller/specs/modules/workflow/requirements.md';
   put(root, specPath, `${read(root, specPath)}\n## 记录同步\n\nPR 前记录已提交。\n`);
   git(root, 'add', `.tiller/task/${id}`, specPath);
@@ -472,9 +522,9 @@ test('CASE-218 another dirty task does not block this task pr', async t => {
   setupRepository(root);
   const id = '20261026-pr-records-current';
   success(cli(root, 'start', id, '--title', '当前任务', '--requirement', '其他任务不误伤。',
-    '--criterion', 'AC-1=其他任务记录不阻断', '--size', 'small', '--target', 'src'));
-  git(root, 'add', `.tiller/task/${id}`);
-  git(root, 'commit', '--quiet', '-m', 'chore(workflow): 记录当前任务');
+    '--criterion', 'AC-1=其他任务记录不阻断', '--size', 'small', '--target', 'src', '--target', 'test',
+    '--target', '.tiller/cases'));
+  acceptTaskForPr(root, id);
   put(root, '.tiller/task/20261026-pr-records-other/task.md', '# 其他任务\n\n未提交记录。\n');
 
   const draft = success(cli(root, 'pr', id));
@@ -488,7 +538,9 @@ test('CASE-219 pr skips the record gate with a warning when Git is unavailable',
   setupRepository(root);
   const id = '20261026-pr-records-no-git';
   success(cli(root, 'start', id, '--title', '无 Git', '--requirement', '无 Git 时降级提示。',
-    '--criterion', 'AC-1=无 Git 时跳过门禁', '--size', 'small', '--target', 'src'));
+    '--criterion', 'AC-1=无 Git 时跳过门禁', '--size', 'small', '--target', 'src', '--target', 'test',
+    '--target', '.tiller/cases'));
+  acceptTaskForPr(root, id);
   rmSync(join(root, '.git'), { recursive: true, force: true });
 
   const draft = success(cli(root, 'pr', id));
@@ -504,7 +556,9 @@ test('CASE-220 delivery docs require committing task records before pr', () => {
   const design = readFileSync(new URL('../.tiller/specs/modules/workflow/design.md', import.meta.url), 'utf8');
   for (const text of [usage, delivery, decisions]) assert.match(text, /提交任务记录/u);
   assert.match(usage, /PR_TASK_RECORDS_DIRTY/u);
-  assert.match(usage, /accept.*close.*收尾提交/su);
+  assert.match(usage, /accept.*提交任务记录.*pr/su);
+  assert.match(usage, /合入后 `close` 只.*local/su);
+  assert.doesNotMatch(usage, /合入后\s*`accept`\/`close`[^。\n]*另作收尾提交/u);
   assert.match(delivery, /其他任务.*不阻断/su);
   assert.match(decisions, /不自动提交/u);
   assert.match(requirements, /FLOW-35/u);
@@ -530,4 +584,70 @@ test('CASE-222 package stays 0.5.0 and pr dirty-record coverage exists', () => {
   assert.match(readme, /0\.5\.0/u);
   assert.match(smoke, /0\.5\.0/u);
   assert.match(prSrc, /PR_TASK_RECORDS_DIRTY/u);
+});
+
+test('CASE-223 pr blocks a task without a valid delivery acceptance', async t => {
+  const root = fixture(t);
+  success(cli(root, 'init'));
+  setupRepository(root);
+  const id = '20261026-pr-not-accepted';
+  success(cli(root, 'start', id, '--title', 'PR 前验收', '--requirement', '开 PR 前必须先完成验收。',
+    '--criterion', 'AC-1=未验收不能生成 PR 草稿', '--size', 'small', '--target', 'src', '--target', 'test',
+    '--target', '.tiller/cases'));
+  success(confirmTask(root, id, 'requirements', '--by', 'Tiller Test'));
+  const added = success(cli(root, 'case', 'add', id, '--module', 'workflow', '--kind', 'behavior',
+    '--title', 'PR 前验收', '--expected', '未验收时阻断 PR', '--criterion', 'AC-1', '--source', 'src/workflow.ts'));
+  const testPath = 'test/pr-not-accepted.test.mjs';
+  const testName = `${added.id} unaccepted pr fixture`;
+  put(root, testPath, `import assert from 'node:assert/strict';\nimport test from 'node:test';\n\ntest('${testName}', () => assert.equal(1, 1));\n`);
+  success(cli(root, 'verify', id, '--criterion', 'AC-1', '--test', `${testPath}::${testName}`));
+  commitAll(root, 'test(workflow): 准备未验收 PR 夹具');
+
+  const blocked = failure(cli(root, 'pr', id));
+  assert.equal(blocked.error.code, 'PR_NOT_ACCEPTED');
+  assert.match(blocked.error.message, new RegExp(`accept ${id}`, 'u'));
+  assert.match(blocked.error.message, /提交任务记录/u);
+});
+
+test('CASE-225 delivery docs freeze shared task records after merge', () => {
+  const usage = readFileSync(new URL('../resources/usage.md', import.meta.url), 'utf8');
+  const delivery = readFileSync(new URL('../resources/rules/activities/delivery.md', import.meta.url), 'utf8');
+  const decisions = readFileSync(new URL('../.tiller/specs/decisions.md', import.meta.url), 'utf8');
+  const requirements = readFileSync(new URL('../.tiller/specs/modules/workflow/requirements.md', import.meta.url), 'utf8');
+  const design = readFileSync(new URL('../.tiller/specs/modules/workflow/design.md', import.meta.url), 'utf8');
+  for (const text of [usage, delivery, decisions]) {
+    assert.match(text, /合入即交付完成|合入后.*交付完成/u);
+    assert.match(text, /accept.*pr 前|pr 前.*accept/su);
+    assert.match(text, /close.*只.*local|close.*不改.*task\.md/su);
+    assert.doesNotMatch(text, /合入后\s*`accept`\/`close`[^。\n]*另作收尾提交/u);
+  }
+  assert.match(requirements, /PR_NOT_ACCEPTED|先验收/u);
+  assert.match(design, /PR_NOT_ACCEPTED/u);
+  assert.equal(readFileSync(new URL('../.tiller/usage.md', import.meta.url), 'utf8'), usage);
+  assert.equal(readFileSync(new URL('../.tiller/rules/activities/delivery.md', import.meta.url), 'utf8'), delivery);
+});
+
+test('CASE-226 pr-task-sync record converges to the merged content without post-merge sections', () => {
+  const relative = '.tiller/task/20261026-pr-task-sync/task.md';
+  const content = readFileSync(new URL(`../${relative}`, import.meta.url), 'utf8');
+  assert.doesNotMatch(content, /^## 关闭$/mu);
+  assert.doesNotMatch(content, /"gate":"acceptance"/u);
+  const diff = spawnSync('git', ['diff', '--name-only', '--', relative], {
+    cwd: new URL('..', import.meta.url), encoding: 'utf8', timeout: 20_000,
+  });
+  assert.equal(diff.status, 0, diff.stderr);
+  assert.equal(diff.stdout.trim(), '');
+});
+
+test('CASE-227 version stays 0.5.0 and freeze behavior remains covered', () => {
+  const pkg = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'));
+  const readme = readFileSync(new URL('../README.md', import.meta.url), 'utf8');
+  const smoke = readFileSync(new URL('../scripts/package-smoke.mjs', import.meta.url), 'utf8');
+  const tests = readFileSync(new URL('./pr.test.mjs', import.meta.url), 'utf8');
+  assert.equal(pkg.version, '0.5.0');
+  assert.match(readme, /0\.5\.0/u);
+  assert.match(smoke, /0\.5\.0/u);
+  assert.match(tests, /CASE-223/u);
+  assert.match(tests, /CASE-225/u);
+  assert.match(tests, /CASE-226/u);
 });

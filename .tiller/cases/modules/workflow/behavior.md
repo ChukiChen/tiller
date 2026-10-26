@@ -182,7 +182,7 @@
 
 测试通过，并且任务阶段由记录事实推导并在失效时回退。
 
-## CASE-057 已验收任务关闭后阻塞推进并可重新打开
+## CASE-057 已验收任务关闭只清本机并可重新打开
 
 - 类型：behavior
 - 优先级：medium
@@ -198,15 +198,15 @@
 ### 步骤
 
 1. 执行测试文件 `test/first-batch.test.mjs` 中引用本用例的具名测试。
-2. 核对实际结果与预期结果一致，且没有失败、跳过或伪造记录。
+2. 核对共享 task.md 内容与修改时间不变、本机任务目录已删除，随后 reopen 回到已验证。
 
 ### 输入
 
-- 按“已验收任务关闭后阻塞推进并可重新打开”的场景准备正常输入和必要的边界输入。
+- 按“已验收任务关闭只清本机并可重新打开”的场景准备正常输入和必要的边界输入。
 
 ### 预期结果
 
-测试通过，并且已验收任务关闭后阻塞推进并可重新打开。
+测试通过，并且已验收任务 close 只删除本机任务目录、不改写共享 task.md，仍可 reopen 继续交付。
 
 ## CASE-058 放弃任务不污染规划统计且可恢复
 
@@ -1185,7 +1185,7 @@ worktree 缺失按幂等跳过，close/abandon 成功并删除既有日志目录
 
 旧版确认被解析为同一门禁事实，check 不误报失效，也不放宽摘要或字段校验
 
-## CASE-206 关单后自检收起长提示但 check 仍报告
+## CASE-206 已验收 close 保持共享自检且 check 仍报告提示
 
 - 类型：behavior
 - 优先级：medium
@@ -1200,8 +1200,8 @@ worktree 缺失按幂等跳过，close/abandon 成功并删除既有日志目录
 
 ### 步骤
 
-1. 执行 check 并读取 warnings
-2. 执行 close 后读取 task.md 的 ## 自检
+1. 执行 close 前后读取 task.md 全文与 ## 自检
+2. 执行 check 并读取 warnings
 
 ### 输入
 
@@ -1209,7 +1209,7 @@ worktree 缺失按幂等跳过，close/abandon 成功并删除既有日志目录
 
 ### 预期结果
 
-check 的 warnings 仍包含回归与回写提示；关单写入的 ## 自检 不堆这些长提示，只保留短检查项或运行指引
+close 前后 task.md 内容完全一致且不新增 ## 关闭；check 的 warnings 仍包含回归与回写提示。
 
 ## CASE-210 workspace 任务本机目录保留 management 与登记路径
 
@@ -1411,3 +1411,78 @@ pr 不因记录门禁失败，并在 warnings 说明无法读取未提交改动
 ### 预期结果
 
 仓库中 .tiller/task/20261026-local-task-layout/task.md 含验收与关闭记录，且相对 HEAD 已提交
+
+## CASE-223 未验收任务 pr 被阻断
+
+- 类型：behavior
+- 优先级：medium
+- 模块：workflow
+- 关联 AC：20261026-post-merge-freeze#AC-1
+- 需求：`.tiller/specs/modules/workflow/requirements.md#flow-35-prmr-前同步任务记录`
+- 源码：`src/pr.ts`, `test/pr.test.mjs`
+
+### 前置条件
+
+- 任务已验证但尚无有效交付验收
+
+### 步骤
+
+1. 运行 pr
+
+### 输入
+
+- 任务记录干净或存在未提交改动
+
+### 预期结果
+
+pr 以 PR_NOT_ACCEPTED 失败并提示先 accept、提交任务记录再 pr
+
+## CASE-224 已验收 close 只清本机不改共享记录
+
+- 类型：behavior
+- 优先级：medium
+- 模块：workflow
+- 关联 AC：20261026-post-merge-freeze#AC-2
+- 需求：`.tiller/specs/modules/workflow/requirements.md#flow-26-关闭放弃与恢复`
+- 源码：`src/flow.ts`, `test/review-release.test.mjs`
+
+### 前置条件
+
+- 任务已有有效交付验收
+
+### 步骤
+
+1. 记录 task.md 内容与哈希后运行 close
+
+### 输入
+
+- 已验收任务及本机 .tiller/local/<id>/ 数据
+
+### 预期结果
+
+close 删除本机任务目录和工作树，task.md 内容与哈希不变，重新 check 仍通过
+
+## CASE-226 PR 同步任务遗留记录按冻结约定收敛
+
+- 类型：behavior
+- 优先级：medium
+- 模块：workflow
+- 关联 AC：20261026-post-merge-freeze#AC-4
+- 需求：`.tiller/specs/modules/workflow/requirements.md#flow-35-prmr-前同步任务记录`
+- 源码：`.tiller/task/20261026-pr-task-sync/task.md`, `test/pr.test.mjs`
+
+### 前置条件
+
+- 20261026-pr-task-sync 主仓记录含合入后写入的验收与关闭段
+
+### 步骤
+
+1. 读取该任务 task.md 并与合入提交内容核对
+
+### 输入
+
+- 任务分支工作区
+
+### 预期结果
+
+共享记录恢复为合入内容，不含合入后追加的验收与关闭段，工作区无该文件脏改动

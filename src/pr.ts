@@ -167,13 +167,18 @@ export async function draftPullRequest(
   const task = await readTask(root, id);
   const type = commitTypeForTaskType(task.meta.type);
   if (!type) throw Object.assign(new Error(`无法从任务类型 ${task.meta.type} 推导提交类型。`), { code: 'PR_TYPE_UNKNOWN' });
+  const checked = await inspectFlow(root, id);
+  if (!checked.acceptance.confirmed) {
+    throw Object.assign(new Error(`任务尚未通过交付验收；先运行 tiller accept ${id}，提交任务记录后再运行 pr。`), {
+      code: 'PR_NOT_ACCEPTED',
+    });
+  }
   const records = await uncommittedTaskRecords(root, task);
   if (records.paths.length) {
     throw Object.assign(new Error(`任务记录尚未提交，先提交后再运行 pr：${records.paths.join('、')}`), {
       code: 'PR_TASK_RECORDS_DIRTY',
     });
   }
-  const checked = await inspectFlow(root, id);
   const available = await specModules(root);
   const modules = new Set(referencedModules(task, available));
   const library = await readCaseLibrary(root);

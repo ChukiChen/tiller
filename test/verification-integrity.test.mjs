@@ -355,10 +355,11 @@ test('CASE-087 reported verification is blocked by default and allowed explicitl
   const allowed = success(cli(root, 'check', id, '--allow-reported'));
   assert.equal(allowed.ready, true, allowed.issues.join('\n'));
   commitAll(root, 'chore(workflow): 同步外部报告验证记录');
-  const draft = success(cli(root, 'pr', id));
-  assert.ok(draft.body.includes(`未执行（外部报告）：${reason}`), draft.body);
   assert.equal(failure(cli(root, 'accept', id, '--by', 'Tiller Test')).error.code, 'NOT_READY');
   assert.equal(success(cli(root, 'accept', id, '--by', 'Tiller Test', '--allow-reported')).gate, 'acceptance');
+  commitAll(root, 'chore(workflow): 记录外部报告验收');
+  const draft = success(cli(root, 'pr', id));
+  assert.ok(draft.body.includes(`未执行（外部报告）：${reason}`), draft.body);
 });
 
 test('CASE-088 named node test output is verified for TAP, spec and nested special characters', async t => {
