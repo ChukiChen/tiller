@@ -268,3 +268,54 @@ check 给出 specs 回写告警，但不新增阻断。
 ### 预期结果
 
 解析不要求源码字段，旧源码行被忽略，仓库用例结构与引用有效。
+
+## CASE-266 历史 task#AC 与空 criteria 可读且不硬阻断
+
+- 类型：behavior
+- 优先级：medium
+- 模块：verification
+- 关联 AC：无
+- 需求：`.tiller/specs/modules/verification/requirements.md`
+
+### 前置条件
+
+- 库中存在历史用例
+
+### 步骤
+
+1. 解析含历史关联 AC 的用例库
+2. 对新模型任务执行 check
+3. 跑全量门禁
+
+### 输入
+
+- 历史用例文件与新任务
+
+### 预期结果
+
+历史含 task#AC 或关联 AC 为无的用例仍可解析；check 最多 warning；版本 0.5.0；全量门禁通过
+
+## CASE-268 稳定 AC 写在 specs 且任务用例引用 specs
+
+- 类型：behavior
+- 优先级：high
+- 模块：verification
+- 关联 AC：无
+- 需求：`.tiller/specs/modules/verification/requirements.md`, `.tiller/specs/modules/verification/case-req-link.md`
+
+### 前置条件
+
+- 对应模块与运行环境可用。
+
+### 步骤
+
+1. 执行覆盖本用例的测试。
+2. 核对实际结果与预期结果一致。
+
+### 输入
+
+- 按用例描述准备正常输入及必要的边界输入。
+
+### 预期结果
+
+稳定验收条件正文在 .tiller/specs；任务与用例引用 specs 条件；覆盖不依赖 taskId#AC

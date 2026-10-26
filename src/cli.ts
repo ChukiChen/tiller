@@ -25,13 +25,13 @@ const HELP = `tiller ${CLI_VERSION} — 默认工作流
   tiller plan confirm <YYYYMMDD-plan-id> [--by <确认人>] [--quote "<可选原话>"] [--commit <oid>] [--path <root>]
   tiller plan status <YYYYMMDD-plan-id> [--path <root>]
   tiller plan attach <YYYYMMDD-task-id> --plan <YYYYMMDD-plan-id> --item <条目> [--path <root>]
-  tiller start <YYYYMMDD-task-id> --title <标题> (--requirement <需求正文> | --requirement-file <工程相对路径>) --criterion "AC-1=<验收条件>" [--criterion ...] [--type feature] [--size small|standard] [--target <相对路径> ...] [--summary <中文摘要>] [--slug <英文描述>] [--plan <YYYYMMDD-plan-id> --item <条目>] [--skip-init-gate] [--path <root>]
+  tiller start <YYYYMMDD-task-id> --title <标题> (--requirement <需求正文> | --requirement-file <.tiller/specs/...>) --criterion "AC-1=<验收条件>" [--criterion ...] [--type feature] [--size small|standard] [--target <相对路径> ...] [--summary <中文摘要>] [--slug <英文描述>] [--plan <YYYYMMDD-plan-id> --item <条目>] [--skip-init-gate] [--path <root>]
   tiller resume [YYYYMMDD-task-id] [--path <root>]
   tiller confirm <YYYYMMDD-task-id> requirements|design|acceptance [--by <确认人>] [--quote "<可选原话>"] [--commit <oid>] [--path <root>]
-  tiller case add <YYYYMMDD-task-id> --module <模块> --kind behavior|interface|performance|security --title <标题> --criterion AC-1 [--criterion ...] --expected "<预期结果>" [--precondition <条件> ...] [--step <步骤> ...] [--input <输入> ...] [--priority high|medium|low] [--spec <引用> ...] [--path <root>]
-  tiller case add <YYYYMMDD-task-id> --scenario <场景名> --module <模块> [--module ...] --title <标题> --criterion AC-1 --expected "<预期结果>" [--spec <引用> ...] [--path <root>]
+  tiller case add <YYYYMMDD-task-id> --module <模块> --kind behavior|interface|performance|security --title <标题> --expected "<预期结果>" [--precondition <条件> ...] [--step <步骤> ...] [--input <输入> ...] [--priority high|medium|low] [--spec <specs 引用> ...] [--path <root>]
+  tiller case add <YYYYMMDD-task-id> --scenario <场景名> --module <模块> [--module ...] --title <标题> --expected "<预期结果>" [--spec <specs 引用> ...] [--path <root>]
   tiller verify <YYYYMMDD-task-id> --criterion AC-1 [--criterion ...] --test "<文件::测试名>" [--expect-fail] [--verbose] [--path <root>]
-  tiller verify <YYYYMMDD-task-id> [--criterion AC-1 ...] --case CASE-NNN [--verbose] [--path <root>]
+  tiller verify <YYYYMMDD-task-id> --criterion AC-1 [--criterion ...] --case CASE-NNN [--verbose] [--path <root>]
   tiller verify <YYYYMMDD-task-id> --criterion AC-1 --test "<文件::测试名>" --reported --command "<外部命令>" --result passed|failed|skipped --reason "<理由>" [--path <root>]
   tiller check <YYYYMMDD-task-id> [--allow-reported] [--path <root>]
   tiller review <YYYYMMDD-task-id> [--by <评审人>] [--finding <发现> ...] [--blocking <阻塞发现> ...] [--resolve REV-NNN ...] [--path <root>]
@@ -51,13 +51,13 @@ const HELP = `tiller ${CLI_VERSION} — 默认工作流
 - small：需求确认 → 实现 → 验证；standard：需求 → 设计 → 实现 → 验证。确认记录人、时间、摘要和提交，原话可选。
 - 默认人工节点只有需求、设计和交付验收；规划、合入、发布按需确认，没有阶段或审计命令。
 - 大功能可先写 .tiller/plans/<id>.md 并确认；start 挂到条目时默认继承粒度，依赖未验收会阻塞。
-- task.md 是唯一任务记录：start 生成结构化需求，可从工程内需求文件接入；确认前校验正文，原话只作可选附注。verify 自主执行测试并从私有报告核实。
+- task.md 是唯一任务记录：start 生成结构化需求，并引用所实现的稳定 specs；--requirement-file 必须位于 .tiller/specs/；确认前校验正文，原话只作可选附注。verify 自主执行测试并从私有报告核实。
 - review 记录独立评审发现；未解决阻塞项会阻断 check/accept。release 只做发布门禁，不发布包。check 汇总发布清单；已验收任务按验收提交读取代码树与测试，之后代码漂移不误报过期。
 - 阶段由 task.md 事实推导；accept 须在 pr 前；merge 通过 GitHub/GitLab REST API 以 squash 合入，成功后自动 close；merge/close 默认删除本地与远端任务分支，close init-id 同样清理 chore/tiller-init；--keep-branch 保留，删除失败只记 warning。token 从 GITHUB_TOKEN/GH_TOKEN 或 GITLAB_TOKEN/GL_TOKEN 读取；init 推送与 PR/MR 同走平台 API，GitLab 传输层可用 tokenized HTTPS git push，不依赖平台 CLI；网页合入后仍需手动 close；未验收终止用 --abandon，必要时 reopen。
 - start 对 pending 初始化基线先判祖先，再通过平台 API 查同分支已合入 PR/MR；确认后写回 merged 并放行，无 token、API 失败或无记录仍阻断，--skip-init-gate 例外。
 - check 对过薄文档给出可定位提示：空白或占位的 standard 设计、无有效条目的 .tiller/specs/decisions.md、空壳模块设计 design.md；需求“业务范围·做”中的交付路径给 warning；规格/背景未回写时列出路径与提纲。默认不单独阻断。verify 日志含显示命令、起止时间与退出码。当前分支未包含任务编号时 check 提示，分支名用“类型/任务编号[-描述]”。
 - 同一 AC 或 CASE 连续两次 verify 失败且无成功核实时，verify/check 要求停止自动重试并按 FLOW-05 报告证据与可选方案；成功核实清零。
-- case add 在测试之前登记测试设计（前置条件、步骤、输入、预期结果、类型、优先级、来源 AC），不保存源码字段，自动分配 CASE 编号；测试名引用 CASE 编号形成反查。check 分阶段核对 AC→用例→测试→当前验证，校验模块/场景结构并提示相关回归，同时检查范围、测试弱化、密钥和本机绝对路径。
+- case add 在测试之前登记测试设计（前置条件、步骤、输入、预期结果、类型、优先级、稳定 specs 需求），关联 AC 固定写“无”，不保存源码字段，自动分配 CASE 编号；测试名引用 CASE 编号形成反查。check 以 verify 的 AC→测试→CASE 记录核对当前验证，校验模块/场景结构并提示相关回归，同时检查范围、测试弱化、密钥和本机绝对路径。
 - pr 从 task.md 和 Git 提交生成五段 PR/MR 草稿及建议分支名；提交用“类型(模块): 中文摘要”，分支用“类型/任务编号[-描述]”；check 只提示格式问题。
 - 验证运行器支持 node-test、junit-maven、junit-gradle 与 pytest；pytest 从私有 JUnit XML 核实。upgrade 刷新未修改的受管文件，--adopt 保留用户当前内容并更新摘要；版本号只在正式发布时修改。
 `;
@@ -142,7 +142,7 @@ export async function runCli(rawArgs = process.argv.slice(2)): Promise<void> {
           : second === 'confirm' ? ['path', 'quote', 'by', 'commit']
             : second === 'status' ? ['path']
               : second === 'attach' ? ['path', 'plan', 'item'] : [])
-          : caseCommand ? second === 'add' ? ['path', 'module', 'kind', 'scenario', 'title', 'criterion', 'spec', 'expected', 'precondition', 'step', 'input', 'priority'] : []
+          : caseCommand ? second === 'add' ? ['path', 'module', 'kind', 'scenario', 'title', 'spec', 'expected', 'precondition', 'step', 'input', 'priority'] : []
             : prCommand ? ['path', 'slug', 'summary']
               : command === 'init' ? ['mode', 'repo', 'platform']
               : command === 'upgrade' ? ['plan', 'apply', 'adopt']
@@ -268,15 +268,15 @@ export async function runCli(rawArgs = process.argv.slice(2)): Promise<void> {
         } else usage('plan 支持 start、confirm、status 或 attach。');
       } else if (caseCommand) {
         if (second !== 'add' || positionals.length !== 3) usage('case 支持 add <task-id>。');
-        if (!values.title || !values.criterion?.length || !values.module?.length || !values.expected) {
-          usage('case add 需要 --module、--title、--criterion 和 --expected（预期结果）。');
+        if (!values.title || !values.module?.length || !values.expected) {
+          usage('case add 需要 --module、--title 和 --expected（预期结果）；关联 AC 固定写“无”。');
         }
         if (!values.scenario && !values.kind) usage('case add 需要 --kind，或使用 --scenario 登记端到端场景。');
         if (!values.scenario && values.module.length !== 1) usage('模块用例只能指定一个 --module；场景可重复 --module 声明经过模块。');
         if (values.scenario && values.kind) usage('--scenario 与 --kind 不能同时使用。');
         const root = resolve(values.path ?? process.cwd());
         result = await addGlobalCase(root, {
-          task: third!, title: values.title, criteria: values.criterion,
+          task: third!, title: values.title,
           requirements: values.spec ?? [], modules: values.module,
           preconditions: values.precondition ?? [], steps: values.step ?? [], inputs: values.input ?? [],
           expected: values.expected,

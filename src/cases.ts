@@ -35,7 +35,7 @@ export interface GlobalCase {
 export interface AddCaseInput {
   task: string;
   title: string;
-  criteria: string[];
+  criteria?: string[];
   requirements: string[];
   preconditions: string[];
   steps: string[];
@@ -236,7 +236,7 @@ export function parseCaseMarkdown(content: string, relative: string, kind: CaseS
     const checkedCriteria = caseCriteria(criteria);
     if (!checkedModules) issues.push(`${subject} 的模块列表无效。`);
     if (!checkedRequirements) issues.push(`${subject} 的需求引用无效。`);
-    if (checkedCriteria === null) issues.push(`${subject} 的关联 AC 必须是 <任务>#AC-<编号> 列表。`);
+    if (checkedCriteria === null) issues.push(`${subject} 的关联 AC 必须为“无”、留空，或历史 <任务>#AC-<编号> 列表。`);
     if (!preconditions.length) issues.push(`${subject} 缺少前置条件。`);
     if (!steps.length) issues.push(`${subject} 缺少步骤。`);
     if (!inputs.length) issues.push(`${subject} 缺少输入。`);
@@ -322,7 +322,8 @@ export async function readCaseLibrary(root: string): Promise<CaseLibrary> {
   const specModules = specs ?? [];
   const specSet = new Set(specModules);
   const ids = new Map<string, string>();
-  let historicalCases = 0;
+  let emptyCriteriaCases = 0;
+  let legacyCriteriaCases = 0;
 
   let rootEntries;
   try { rootEntries = await readdir(path.join(root, CASE_ROOT), { withFileTypes: true }); }
@@ -350,7 +351,10 @@ export async function readCaseLibrary(root: string): Promise<CaseLibrary> {
           if (relativePath && !(await fileExists(root, relativePath))) issues.push(`全局用例 ${item.id} 的需求文件不存在：${relativePath}`);
         }
       }
-      if (!item.criteria.length) historicalCases++;
+      if (!item.criteria.length) emptyCriteriaCases++;
+      else if (item.criteria.every(value => /^((?:[0-9]{8}-)?[a-z][a-z0-9]*(?:-[a-z0-9]+)*)#AC-\d+$/u.test(value))) {
+        legacyCriteriaCases++;
+      }
       rawCases.push(item);
     }
   }
@@ -408,7 +412,12 @@ export async function readCaseLibrary(root: string): Promise<CaseLibrary> {
   const scenarioModules = new Set(scenarios.flatMap(item => item.modules));
   const uncovered = specModules.filter(module => !scenarioModules.has(module));
   for (const module of uncovered) warnings.push(`模块 ${module} 未被任何场景覆盖；请按需补充端到端场景。`);
-  if (historicalCases) warnings.push(`${historicalCases} 条历史用例未绑定来源 AC；新用例请用 case add 写入 criteria。`);
+  if (legacyCriteriaCases) {
+    warnings.push(`${legacyCriteriaCases} 条历史用例仍以 <任务>#AC-n 记录关联 AC；这是可迁移的历史债，不阻断当前覆盖。`);
+  }
+  if (emptyCriteriaCases) {
+    warnings.push(`${emptyCriteriaCases} 条用例的关联 AC 为无；覆盖以需求字段和 verify 的 AC→测试→CASE 记录为准。`);
+  }
   for (const item of cases.filter(value => value.status === 'pending')) warnings.push(`用例 ${item.id} 待实现：尚无测试名引用 ${item.id}。`);
   return { cases, issues: [...new Set(issues)], warnings: [...new Set(warnings)], modules, scenarios, uncovered };
 }
@@ -434,35 +443,12 @@ function caseSkeleton(runner: string, id: string, title: string, expected: strin
   return `import test from 'node:test';\nimport assert from 'node:assert/strict';\n\ntest('${id} ${title.replaceAll("'", "\\'")}', () => {\n  // TODO: ${expected.replaceAll("'", "\\'")}\n  assert.ok(true);\n});\n`;
 }
 
-function sectionBody(content: string, title: string): string {
-  const match = new RegExp(`^## ${title}\\s*$`, 'mu').exec(content);
-  if (!match) return '';
-  const rest = content.slice(match.index + match[0].length);
-  const next = /^##\s+/mu.exec(rest);
-  return rest.slice(0, next?.index ?? rest.length);
-}
-
-function subSectionBody(content: string, title: string): string {
-  const match = new RegExp(`^### ${title}\\s*$`, 'mu').exec(content);
-  if (!match) return '';
-  const rest = content.slice(match.index + match[0].length);
-  const next = /^#{1,3}\s+/mu.exec(rest);
-  return rest.slice(0, next?.index ?? rest.length);
-}
-
-async function taskCriteria(root: string, taskId: string): Promise<Set<string>> {
+async function assertTaskExists(root: string, taskId: string): Promise<void> {
   validateTaskId(taskId);
   const content = await readTextIfExists(root, `.tiller/task/${taskId}/task.md`);
   if (content === null || !content.includes(`<!-- tiller-task:v1 {"version":1,"id":"${taskId}"`)) {
     throw Object.assign(new Error(`任务 ${taskId} 不存在或不是当前格式；先执行 start。`), { code: 'TASK_NOT_FOUND' });
   }
-  const ids = new Set<string>();
-  const requirement = sectionBody(content, '需求');
-  const nested = subSectionBody(requirement, '验收条件');
-  const criteria = nested || sectionBody(content, '验收条件');
-  for (const match of criteria.matchAll(/^-\s+(AC-\d+):/gmu)) ids.add(match[1]!);
-  if (!ids.size) throw Object.assign(new Error(`任务 ${taskId} 没有验收条件。`), { code: 'MISSING_REQUIREMENTS' });
-  return ids;
 }
 
 async function allocateCaseId(root: string): Promise<string> {
@@ -524,20 +510,13 @@ export async function addGlobalCase(rootInput: string, input: AddCaseInput) {
   const root = path.resolve(rootInput);
   validateTaskId(input.task);
   const title = requiredText(input.title, '用例标题', 200);
-  const available = await taskCriteria(root, input.task);
-  const criteria = [...new Set(input.criteria.map(raw => {
-    const value = raw.trim();
-    const direct = /^((?:[0-9]{8}-)?[a-z][a-z0-9]*(?:-[a-z0-9]+)*)#(AC-\d+)$/u.exec(value);
-    if (direct) {
-      if (direct[1] !== input.task) throw Object.assign(new Error(`来源 AC 必须属于任务 ${input.task}：${value}`), { code: 'INVALID_CASE_INPUT' });
-      if (!available.has(direct[2]!)) throw Object.assign(new Error(`任务 ${input.task} 没有验收条件：${direct[2]}`), { code: 'UNKNOWN_CRITERION' });
-      return value;
-    }
-    if (!/^AC-\d+$/u.test(value)) throw Object.assign(new Error(`来源 AC 格式为 AC-1 或 ${input.task}#AC-1：${value}`), { code: 'INVALID_CASE_INPUT' });
-    if (!available.has(value)) throw Object.assign(new Error(`任务 ${input.task} 没有验收条件：${value}`), { code: 'UNKNOWN_CRITERION' });
-    return `${input.task}#${value}`;
-  }))];
-  if (!criteria.length) throw Object.assign(new Error('case add 至少需要一个 --criterion，记录来源 AC。'), { code: 'INVALID_CASE_INPUT' });
+  await assertTaskExists(root, input.task);
+  if (input.criteria?.length) {
+    throw Object.assign(new Error('case add 不再接受 --criterion；用例以“需求”字段挂稳定 specs，AC 覆盖由 verify 记录。'), {
+      code: 'INVALID_CASE_INPUT',
+    });
+  }
+  const criteria: string[] = [];
   const priority = (input.priority ?? 'medium') as CasePriority;
   if (!CASE_PRIORITIES.includes(priority)) throw Object.assign(new Error(`优先级必须是：${CASE_PRIORITIES.join(', ')}。`), { code: 'INVALID_CASE_INPUT' });
   const expected = requiredText(input.expected, '预期结果', 4000);
@@ -572,6 +551,9 @@ export async function addGlobalCase(rootInput: string, input: AddCaseInput) {
   for (const reference of requirements) {
     const relative = referencePath(reference);
     if (!relative) throw Object.assign(new Error(`需求引用无效：${reference}`), { code: 'INVALID_CASE_INPUT' });
+    if (!relative.startsWith('.tiller/specs/')) {
+      throw Object.assign(new Error(`需求引用必须指向稳定 specs 路径：${relative}`), { code: 'INVALID_CASE_INPUT' });
+    }
     if (!(await fileExists(root, relative))) throw Object.assign(new Error(`需求引用文件不存在：${relative}`), { code: 'CASE_REFERENCE_NOT_FOUND' });
   }
   const preconditions = outputList(input.preconditions, ['对应模块与运行环境可用。']);
@@ -589,7 +571,7 @@ export async function addGlobalCase(rootInput: string, input: AddCaseInput) {
     await applyChanges(root, [{ path: relative, before, after }]);
     return {
       id, title, path: relative, kind, priority, modules, criteria, status: 'pending', runner,
-      next: `编写测试并在测试名中引用 ${id}，然后运行：tiller verify ${input.task} --criterion ${criteria[0]!.split('#')[1]} --case ${id}`,
+      next: `编写测试并在测试名中引用 ${id}，然后用 verify --criterion <AC-N> --case ${id} 绑定验收条件。`,
       skeleton: caseSkeleton(runner, id, title, expected),
     };
   });

@@ -196,7 +196,7 @@ init 推送、PR/MR 创建与 squash 合入均走平台 REST API；GitHub 优先
 
 ### 预期结果
 
-package、project 与 CLI 版本均为 0.5.0；CASE-242 至 CASE-245 均有命名测试引用；CASE-048 的 total 为 262、standards/interface 为 10；build、lint、typecheck、test 与 test:package 全部通过
+package、project 与 CLI 版本均为 0.5.0；CASE-242 至 CASE-245 均有命名测试引用；CASE-048 的 total 为 269、standards/interface 为 11；build、lint、typecheck、test 与 test:package 全部通过
 
 ## CASE-246 代码质量与安全通用规则纳入受管资源
 
@@ -222,7 +222,7 @@ package、project 与 CLI 版本均为 0.5.0；CASE-242 至 CASE-245 均有命�
 
 ### 预期结果
 
-quality/code.md 在双份镜像中包含命名、结构、扩展性、反过度设计、可读性、边界校验一次、保持简单、假想风险与注释约束；documents.md 双份保留密钥和绝对路径限制并补充记录凭据、输入校验与授权边界、可信依赖、危险操作确认和无具体威胁不过度加固；implementation、delivery 与 rules/index 双份形成质量/安全交叉引用；RULES 含 rules/quality/code.md，project.json 摘要覆盖新文件及被改文件；CASE-048 的 total 为 262、standards/interface 为 10；版本保持 0.5.0，资源镜像一致且规则测试通过
+quality/code.md 在双份镜像中包含命名、结构、扩展性、反过度设计、可读性、边界校验一次、保持简单、假想风险与注释约束；documents.md 双份保留密钥和绝对路径限制并补充记录凭据、输入校验与授权边界、可信依赖、危险操作确认和无具体威胁不过度加固；implementation、delivery 与 rules/index 双份形成质量/安全交叉引用；RULES 含 rules/quality/code.md，project.json 摘要覆盖新文件及被改文件；CASE-048 的 total 为 269、standards/interface 为 11；版本保持 0.5.0，资源镜像一致且规则测试通过
 
 ## CASE-261 帮助与受管文档同步基线 API、清分支、无源码与 check warning
 
@@ -247,3 +247,28 @@ quality/code.md 在双份镜像中包含命名、结构、扩展性、反过度�
 ### 预期结果
 
 文档一致说明 API 基线放行、默认清分支与 --keep-branch、无源码字段和业务路径 warning。
+
+## CASE-267 文档与 decisions 写明 task 到需求与用例到需求
+
+- 类型：interface
+- 优先级：medium
+- 模块：standards
+- 关联 AC：无
+- 需求：`.tiller/specs/modules/standards/requirements.md`
+
+### 前置条件
+
+- 受管文档与 decisions 可写
+
+### 步骤
+
+1. 阅读 usage/rules/decisions/resources
+2. 核对关键字与旧表述已替换
+
+### 输入
+
+- 文档路径
+
+### 预期结果
+
+usage、rules、decisions、受管 resources 写明 task→需求、用例→需求，不再要求用例来源 AC 回指任务

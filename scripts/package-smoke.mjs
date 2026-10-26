@@ -144,7 +144,7 @@ requirementRecord = replaceTaskSection(requirementRecord, '异常与边界', '�
 writeFileSync(taskRecord, requirementRecord);
 invoke(['confirm', taskId, 'requirements', '--quote', 'Package smoke requirement confirmed']);
 const added = invoke(['case', 'add', taskId, '--module', 'package-smoke', '--kind', 'behavior', '--title', 'Packaged flow works',
-  '--expected', 'the packaged test passes its named case', '--criterion', 'AC-1',
+  '--expected', 'the packaged test passes its named case',
   '--spec', '.tiller/specs/modules/package-smoke/requirements.md']);
 assert.equal(added.id, 'CASE-001');
 mkdirSync(join(target, 'test'), { recursive: true });

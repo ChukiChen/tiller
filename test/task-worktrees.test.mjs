@@ -55,7 +55,7 @@ function acceptTask(root, id) {
   put(root, '.tiller/specs/modules/workflow/design.md', '# Workflow design\n\nUse task-scoped worktrees and logs.\n');
   put(root, 'src/worktree-fixture.ts', 'export const worktreeFixture = true;\n');
   const added = success(cli(root, 'case', 'add', id, '--module', 'workflow', '--kind', 'behavior',
-    '--title', `${id} worktree cleanup`, '--criterion', 'AC-1', '--expected', 'The task can be accepted and closed.'));
+    '--title', `${id} worktree cleanup`, '--expected', 'The task can be accepted and closed.'));
   const testFile = `test/${id}.test.mjs`;
   put(root, testFile, [
     "import test from 'node:test';",

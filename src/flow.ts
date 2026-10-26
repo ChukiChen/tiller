@@ -6,7 +6,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { promisify } from 'node:util';
 import {
-  casesForCriterion, casesForTest, fallbackTestReference, parseCaseMarkdown, readCaseLibrary,
+  casesForTest, fallbackTestReference, parseCaseMarkdown, readCaseLibrary,
   regressionWarnings, sameTestReference, testBlocks,
   type CaseLibrary, type GlobalCase,
 } from './cases.js';
@@ -54,6 +54,7 @@ const TASK_DIRECTORY = '.tiller/task';
 const TASK_FILE = 'task.md';
 const LEGACY_TASK_DIRECTORY = '.tiller/work';
 const LEGACY_PRE_EXISTING_DIRECTORY = '.tiller/local/tasks';
+const STABLE_REQUIREMENT_PREFIX = '.tiller/specs/';
 
 export type FlowType = typeof TYPES[number];
 export type FlowSize = 'small' | 'standard';
@@ -636,18 +637,56 @@ function criteriaList(values: string[]): FlowCriterion[] {
   }
   return result.sort((left, right) => Number(left.id.slice(3)) - Number(right.id.slice(3)));
 }
-function renderStructuredRequirement(goal: string, criteria: FlowCriterion[], requirementFile?: string): string {
+const REQUIREMENT_SECTIONS = ['面向谁与问题', '目标', '业务范围', '关键行为', '异常与边界'] as const;
+type RequirementSection = typeof REQUIREMENT_SECTIONS[number];
+interface ParsedRequirementFile {
+  structured: boolean;
+  preamble: string;
+  sections: Map<RequirementSection, string>;
+  extras: string[];
+}
+function parseRequirementFile(content: string): ParsedRequirementFile {
+  const normalized = content.replace(/^\uFEFF/u, '').replace(/\r\n?/gu, '\n');
+  const headings = [...normalized.matchAll(/^#{2,3}\s+(.+?)\s*$/gmu)];
+  if (!headings.length) return { structured: false, preamble: normalized.trim(), sections: new Map(), extras: [] };
+  const rawPreamble = normalized.slice(0, headings[0]!.index ?? 0);
+  const preamble = rawPreamble.replace(/^\s*#\s+.*(?:\n|$)/u, '').trim();
+  const sections = new Map<RequirementSection, string>();
+  const extras: string[] = [];
+  for (const [index, heading] of headings.entries()) {
+    const rawTitle = heading[1]!.trim();
+    const title = rawTitle.replace(/^(?:\d+(?:\.\d+)*[.)、]?)\s*/u, '').trim();
+    const body = normalized.slice((heading.index ?? 0) + heading[0].length, headings[index + 1]?.index ?? normalized.length).trim();
+    if (title === '验收条件') continue;
+    if (REQUIREMENT_SECTIONS.includes(title as RequirementSection)) {
+      const key = title as RequirementSection;
+      sections.set(key, [sections.get(key), body].filter(Boolean).join('\n\n'));
+    } else if (body) {
+      extras.push(`**${rawTitle}**\n\n${body}`);
+    }
+  }
+  return { structured: true, preamble, sections, extras };
+}
+function renderStructuredRequirement(goal: string, criteria: FlowCriterion[], requirementFile?: string,
+  requirementContent?: string): string {
+  const source = requirementFile ? [`需求来源：\`${requirementFile}\``, ''] : [];
+  const parsed = requirementFile && requirementContent !== undefined ? parseRequirementFile(requirementContent) : undefined;
+  const targetExtras = [...(parsed?.structured && parsed.preamble ? [parsed.preamble] : []), ...(parsed?.extras ?? [])];
+  const target = parsed?.structured
+    ? [parsed.sections.get('目标'), ...targetExtras].filter(Boolean).join('\n\n')
+    : requirementFile && requirementContent !== undefined ? requirementContent.trim() : goal;
+  const section = (name: RequirementSection, fallback: string): string => parsed?.structured
+    ? parsed.sections.get(name) || fallback : fallback;
   return [
-    '### 面向谁与问题', '', '<!-- 写主要用户、当前问题与已有依据；不复制规格全文。 -->', '',
-    '### 目标', '', '<!-- 写可观察的业务结果与约束；不枚举交付路径。 -->', '',
-    ...(requirementFile ? [`需求来源：\`${requirementFile}\``, ''] : []), goal, '',
+    '### 面向谁与问题', '', section('面向谁与问题', '<!-- 写主要用户、当前问题与已有依据；不复制规格全文。 -->'), '',
+    '### 目标', '', ...source, target || '<!-- 写可观察的业务结果、所实现的 `.tiller/specs/...` 稳定需求与约束；不枚举交付路径。 -->', '',
     '### 业务范围', '',
-    '<!-- 写业务做/不做/假设和防跑偏约束；交付路径只记录在任务范围，不在此枚举。 -->',
-    '- 做：',
-    '- 不做：',
-    '- 假设与待确认：', '',
-    '### 关键行为', '', '<!-- 写用户可观察行为；不塞长命令或实现步骤。 -->', '',
-    '### 异常与边界', '', '<!-- 写失败、空值、权限、规模和兼容边界。 -->', '',
+    section('业务范围', [
+      '<!-- 写业务做/不做/假设和防跑偏约束；交付路径只记录在任务范围，不在此枚举。 -->',
+      '- 做：', '- 不做：', '- 假设与待确认：',
+    ].join('\n')), '',
+    '### 关键行为', '', section('关键行为', '<!-- 写用户可观察行为；不塞长命令或实现步骤。 -->'), '',
+    '### 异常与边界', '', section('异常与边界', '<!-- 写失败、空值、权限、规模和兼容边界。 -->'), '',
     '### 验收条件', '', criteria.map(item => `- ${item.id}: ${normalizeLine(item.text)}`).join('\n'),
   ].join('\n').trim();
 }
@@ -848,10 +887,14 @@ export async function startFlow(rootInput: string, idInput: string, input: FlowS
     if (await readTextIfExists(root, relative) !== null) fail('TASK_EXISTS', `任务 ${idInput} 已存在，不能覆盖。`);
     let requirementFile: string | undefined;
     let requirement: string;
+    let requirementContent: string | undefined;
     if (input.requirementFile !== undefined) {
       try { validateRelativePath(input.requirementFile); }
       catch { fail('INVALID_REQUIREMENT_FILE', `需求文件必须是工程内相对路径：${input.requirementFile}`); }
       requirementFile = input.requirementFile;
+      if (!requirementFile.startsWith(STABLE_REQUIREMENT_PREFIX)) {
+        fail('REQUIREMENT_FILE_NOT_STABLE', `需求文件必须位于 ${STABLE_REQUIREMENT_PREFIX} 下稳定路径：${requirementFile}。请先写入或拷贝到 .tiller/specs/ 再引用，不能使用 .tiller/local/ 或其它临时路径。`);
+      }
       let resolved: ResolvedInputPath;
       try { resolved = (await inspectSafePaths(root, [requirementFile]))[0]!; }
       catch { fail('INVALID_REQUIREMENT_FILE', `需求文件路径无效或不安全：${requirementFile}`); }
@@ -860,7 +903,8 @@ export async function startFlow(rootInput: string, idInput: string, input: FlowS
       const raw = await readFile(resolved.target, 'utf8');
       if (!raw.trim()) fail('EMPTY_REQUIREMENT_FILE', `需求文件为空：${requirementFile}`);
       if (raw.length > 50_000) fail('REQUIREMENT_FILE_TOO_LARGE', `需求文件不能超过 50000 字符：${requirementFile}`);
-      requirement = safeInput(normalizeLine(raw), '需求文件内容');
+      requirementContent = safeInput(raw.replace(/\r\n?/gu, '\n').trim(), '需求文件内容');
+      requirement = requirementContent;
     } else {
       requirement = safeInput(text(input.requirement, '需求正文'), '需求正文');
     }
@@ -883,7 +927,7 @@ export async function startFlow(rootInput: string, idInput: string, input: FlowS
       catch { /* Deleted pre-existing paths cannot be compared later. */ }
     }
     const created = new Date().toISOString();
-    const structuredRequirement = renderStructuredRequirement(requirement, criteria, requirementFile);
+    const structuredRequirement = renderStructuredRequirement(requirement, criteria, requirementFile, requirementContent);
     const task = { meta: { version: 1 as const, id: idInput, type, size, created, base, scope, preExisting,
       format: 'structured' as const,
       ...(plan && item ? { plan, item } : {}), ...(slug ? { slug } : {}), ...(summary ? { summary } : {}),
@@ -1372,7 +1416,7 @@ async function verificationProblem(
 
 interface CriterionEvaluation {
   id: string; covered: boolean; test?: string; cases?: string[]; result?: string; commit?: string;
-  issues: string[]; bindingValid: boolean;
+  issues: string[];
 }
 
 async function evaluateCriterion(
@@ -1387,27 +1431,21 @@ async function evaluateCriterion(
   contentCommit?: string,
 ): Promise<CriterionEvaluation> {
   const issues: string[] = [];
-  const expected = `${task.meta.id}#${criterion.id}`;
   const runs = task.verifications.filter(item => item.criterion === criterion.id && !item.expectFail);
   const latest = runs.at(-1);
-  const criteriaMapped = casesForCriterion(library, expected);
   const linked = new Map<string, GlobalCase>();
-  for (const entry of criteriaMapped) linked.set(entry.id, entry);
   for (const caseId of latest?.cases ?? []) {
     const entry = library.cases.find(item => item.id === caseId);
     if (entry) linked.set(entry.id, entry);
   }
-  const mapped = criteriaMapped.length ? criteriaMapped : [...linked.values()];
-  let bindingValid = true;
-  for (const entry of linked.values()) {
-    if (!entry.criteria.length) continue;
-    if (!entry.criteria.includes(expected) && !(await caseChangedSinceBase(root, task.meta.base, entry))) {
-      bindingValid = false;
-      issues.push(`${criterion.id} 引用的用例 ${entry.id} 未在其 criteria 中回指 ${expected}，且本任务没有新增或修改该用例。`);
+  if (!latest) {
+    for (const entry of library.cases) {
+      if (await caseChangedSinceBase(root, task.meta.base, entry)) linked.set(entry.id, entry);
     }
   }
+  const mapped = [...linked.values()];
   const designRequired = criterionCasePhase(task) && !historicalAccepted;
-  if (designRequired && !mapped.length) {
+  if (designRequired && !latest && !mapped.length) {
     issues.push(`${criterion.id} 未绑定全局用例；先用 case add 把验收条件转为用例，并在测试名中引用用例编号。`);
   }
   let caseCoverage = true;
@@ -1466,10 +1504,10 @@ async function evaluateCriterion(
       }
     }
   }
-  const covered = runValid && bindingValid && caseCoverage && (!designRequired || mapped.length > 0);
+  const covered = runValid && caseCoverage;
   return {
     id: criterion.id, covered, ...(latest ? { test: latest.test, cases: latest.cases, result: latest.result, commit: latest.commit } : {}),
-    issues: [...new Set(issues)], bindingValid,
+    issues: [...new Set(issues)],
   };
 }
 
@@ -1575,17 +1613,12 @@ async function evaluateFlow(root: string, id: string, task: FlowTask, options: F
   const branchWarning = await branchNameWarning(root, id);
   if (branchWarning) warnings.push(branchWarning);
   let matched = 0;
-  let criteriaBindingValid = true;
   const criteria: FlowCheck['criteria'] = [];
   for (const item of task.criteria) {
     const evaluated = await evaluateCriterion(root, task, item, library, options, currentTree,
       historicalAccepted, task.verifications.length > 0, context.commit);
     issues.push(...evaluated.issues);
-    if (!evaluated.bindingValid) criteriaBindingValid = false;
     if (evaluated.covered) matched++;
-    for (const entry of casesForCriterion(library, `${id}#${item.id}`)) {
-      if (!entry.criteria.length) warnings.push(`${item.id} 引用的历史用例 ${entry.id} 未绑定来源 AC；可在本次修改该用例时补上 criteria: ["${id}#${item.id}"]。`);
-    }
     criteria.push({
       id: item.id, covered: evaluated.covered,
       ...(evaluated.test ? { test: evaluated.test } : {}),
@@ -1665,7 +1698,7 @@ async function evaluateFlow(root: string, id: string, task: FlowTask, options: F
     `- ${requiresDesign(task) && uniqueIssues.some(item => item.includes('设计')) ? '[ ]' : '[x]'} ${requiresDesign(task) ? '设计确认有效' : '该任务无需设计确认'}`,
     `- ${criteria.every(item => item.covered) ? '[x]' : '[ ]'} 验收条件均有当前通过且绑定全局用例的测试引用`,
     `- ${matched === task.criteria.length && task.criteria.length > 0 ? '[x]' : '[ ]'} 每条验收条件均映射到本次验证引用的全局用例`,
-    `- ${criteriaBindingValid ? '[x]' : '[ ]'} 验收条件与用例来源 criteria 相互指向或由本任务新增/修改`,
+    `- ${criteria.every(item => item.covered) ? '[x]' : '[ ]'} 验收条件与用例通过 verify 的 AC→测试→CASE 记录关联`,
     `- ${criteria.every(item => item.covered) ? '[x]' : '[ ]'} 验证命令已执行且测试输出已核实`,
     ...(task.meta.type === 'bugfix' ? [`- ${failureFirstValid ? '[x]' : '[ ]'} 缺陷修复包含基线失败与当前通过证据`] : []),
     `- ${library.issues.length ? '[ ]' : '[x]'} 全局用例结构与引用有效`,
@@ -1858,10 +1891,7 @@ export async function verifyFlow(rootInput: string, id: string, input: FlowVerif
       if (!selectedCase.tests.length) fail('CASE_PENDING', `用例 ${selectedCase.id} 待实现：尚无测试名引用该用例。先在测试名中加入 ${selectedCase.id}。`);
       const linkedCriteria = selectedCase.criteria.filter(value => value.startsWith(`${id}#`)).map(value => value.split('#')[1]!);
       criteria = requested.length ? requested : linkedCriteria;
-      if (!criteria.length) fail('UNKNOWN_CRITERION', `用例 ${selectedCase.id} 未关联当前任务的验收条件；请用 --criterion 指定。`);
-      for (const criterion of criteria) if (!linkedCriteria.includes(criterion)) {
-        fail('UNKNOWN_CRITERION', `用例 ${selectedCase.id} 未关联验收条件：${criterion}`);
-      }
+      if (!criteria.length) fail('UNKNOWN_CRITERION', `用例 ${selectedCase.id} 不再内嵌任务 AC；请用 --criterion 指定本次验收条件。`);
       references = selectedCase.tests.map(reference => ({ ...reference }));
     } else {
       if (!input.test) fail('INVALID_FLOW_INPUT', 'verify 需要 --test "<文件::测试名>" 或 --case CASE-xxx。');

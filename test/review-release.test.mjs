@@ -194,33 +194,100 @@ test('CASE-224 accepted close only cleans local state and leaves shared task con
   assert.equal(success(cli(root, 'resume', id)).stage, '已验收');
 });
 
-test('CASE-107 start loads requirement from a project-relative file', async t => {
+test('CASE-107 CASE-265 start requirement-file preserves structured multiline content and source', async t => {
   const root = await project(t);
-  put(root, 'docs/requirement.md', '从工程内需求文件建立任务，并保持需求正文完整可确认。\n');
-  const id = '20261022-requirement-file';
-  const started = success(cli(root, 'start', id, '--title', 'File requirement', '--requirement-file', 'docs/requirement.md',
-    '--criterion', 'AC-1=Requirement file is loaded', '--size', 'small', '--target', 'src'));
-  assert.equal(started.requirementFile, 'docs/requirement.md');
-  const body = read(root, taskPath(id));
-  assert.match(body, /需求来源：`docs\/requirement\.md`/u);
-  assert.match(body, /从工程内需求文件建立任务/u);
+  const requirementFile = '.tiller/specs/modules/workflow/requirement-file.md';
+  put(root, requirementFile, `# 文件需求
 
-  put(root, 'docs/empty.md', '\n');
-  const empty = failure(cli(root, 'start', '20261022-empty-requirement', '--title', 'Empty', '--requirement-file', 'docs/empty.md',
+## 面向谁与问题
+
+维护者需要从稳定需求建立任务。
+
+## 目标
+
+从工程内需求文件建立任务。
+
+保持多行结构和可追溯来源。
+
+## 业务范围
+
+- 做：保留结构化小节。
+- 不做：把正文压成一行。
+
+## 验收条件
+
+- AC-9: 文件内验收条件不应覆盖命令行条件。
+`);
+  const id = '20261022-requirement-file';
+  const started = success(cli(root, 'start', id, '--title', 'File requirement', '--requirement-file', requirementFile,
+    '--criterion', 'AC-1=Requirement file is loaded', '--size', 'small', '--target', 'src'));
+  assert.equal(started.requirementFile, requirementFile);
+  const body = read(root, taskPath(id));
+  assert.match(body, /需求来源：`\.tiller\/specs\/modules\/workflow\/requirement-file\.md`/u);
+  assert.match(body, /### 面向谁与问题\n\n维护者需要从稳定需求建立任务。/u);
+  assert.match(body, /### 目标\n\n需求来源：`\.tiller\/specs\/modules\/workflow\/requirement-file\.md`\n\n从工程内需求文件建立任务。\n\n保持多行结构和可追溯来源。/u);
+  assert.match(body, /### 业务范围\n\n- 做：保留结构化小节。\n- 不做：把正文压成一行。/u);
+  assert.match(body, /- AC-1: Requirement file is loaded/u);
+  assert.doesNotMatch(body, /AC-9/u);
+
+  put(root, '.tiller/specs/modules/workflow/empty.md', '\n');
+  const empty = failure(cli(root, 'start', '20261022-empty-requirement', '--title', 'Empty', '--requirement-file', '.tiller/specs/modules/workflow/empty.md',
     '--criterion', 'AC-1=Empty fails', '--size', 'small', '--target', 'src'));
   assert.equal(empty.error.code, 'EMPTY_REQUIREMENT_FILE');
   const invalid = failure(cli(root, 'start', '20261022-invalid-requirement', '--title', 'Invalid', '--requirement-file', '../outside.md',
     '--criterion', 'AC-1=Invalid path fails', '--size', 'small', '--target', 'src'));
   assert.equal(invalid.error.code, 'INVALID_REQUIREMENT_FILE');
   if (process.platform !== 'win32') {
-    symlinkSync('requirement.md', join(root, 'docs/link.md'));
-    const linked = failure(cli(root, 'start', '20261022-linked-requirement', '--title', 'Linked', '--requirement-file', 'docs/link.md',
+    symlinkSync('requirement-file.md', join(root, '.tiller/specs/modules/workflow/link.md'));
+    const linked = failure(cli(root, 'start', '20261022-linked-requirement', '--title', 'Linked', '--requirement-file', '.tiller/specs/modules/workflow/link.md',
       '--criterion', 'AC-1=Linked path fails', '--size', 'small', '--target', 'src'));
     assert.equal(linked.error.code, 'INVALID_REQUIREMENT_FILE');
   }
   const both = failure(cli(root, 'start', '20261022-both-requirement', '--title', 'Both', '--requirement', 'inline',
-    '--requirement-file', 'docs/requirement.md', '--criterion', 'AC-1=One source only', '--size', 'small', '--target', 'src'));
+    '--requirement-file', requirementFile, '--criterion', 'AC-1=One source only', '--size', 'small', '--target', 'src'));
   assert.equal(both.error.code, 'INVALID_ARGUMENT');
+});
+
+test('CASE-269 requirement-file rejects local paths and keeps specs multiline source', async t => {
+  const root = await project(t);
+  for (const [relative, title] of [
+    ['.tiller/local/20261022-requirement-source.md', 'stable requirement'],
+    ['docs/requirement.md', 'temporary requirement'],
+  ]) {
+    put(root, relative, `# ${title}\n\n## 目标\n\n该路径不应成为任务需求来源。\n`);
+    const rejected = failure(cli(root, 'start', `20261022-${relative.startsWith('.tiller/local/') ? 'local' : 'docs'}-requirement`,
+      '--title', 'Unstable requirement', '--requirement-file', relative,
+      '--criterion', 'AC-1=Unstable source fails', '--size', 'small', '--target', 'src'));
+    assert.equal(rejected.error.code, 'REQUIREMENT_FILE_NOT_STABLE');
+    assert.match(rejected.error.message, /\.tiller\/specs\//u);
+    assert.match(rejected.error.message, /写入或拷贝/u);
+  }
+
+  const stable = '.tiller/specs/modules/workflow/case-req-link.md';
+  put(root, stable, `# 稳定需求
+
+## 面向谁与问题
+
+维护者需要可追踪的需求来源。
+
+## 目标
+
+保留多行结构并指向稳定 specs。
+
+## 业务范围
+
+- 做：引用稳定需求。
+- 不做：引用临时路径。
+`);
+  const id = '20261022-stable-requirement';
+  const started = success(cli(root, 'start', id, '--title', 'Stable requirement', '--requirement-file', stable,
+    '--criterion', 'AC-1=Stable source succeeds', '--size', 'small', '--target', 'src'));
+  assert.equal(started.requirementFile, stable);
+  const body = read(root, taskPath(id));
+  assert.match(body, /需求来源：`\.tiller\/specs\/modules\/workflow\/case-req-link\.md`/u);
+  assert.match(body, /### 面向谁与问题\n\n维护者需要可追踪的需求来源。/u);
+  assert.match(body, /### 目标\n\n需求来源：`\.tiller\/specs\/modules\/workflow\/case-req-link\.md`\n\n保留多行结构并指向稳定 specs。/u);
+  assert.match(body, /### 业务范围\n\n- 做：引用稳定需求。\n- 不做：引用临时路径。/u);
 });
 
 test('CASE-108 accepted tasks verify against their acceptance commit', async t => {
@@ -312,7 +379,7 @@ test('CASE-109 repository docs and suite include review release and pinned check
   assert.ok(suite.e2e.includes('review-release.test.mjs'));
   const library = await readCaseLibrary(repository);
   assert.deepEqual(library.issues, []);
-  assert.equal(library.cases.length, 262);
+  assert.equal(library.cases.length, 269);
   for (const id of ['CASE-104', 'CASE-105', 'CASE-106', 'CASE-107', 'CASE-108', 'CASE-109']) {
     assert.ok(library.cases.find(item => item.id === id)?.tests.length, id);
   }

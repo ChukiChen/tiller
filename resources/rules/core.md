@@ -20,17 +20,17 @@
 
 ## 测试与验证资料
 
-需求确认后把编号 AC 转为全局用例：写完整测试设计，测试名或紧邻注释引用 `CASE-NNN` 并反查；每项 AC 至少一个用例。`verify` 只声明 `--test`/`--case`，由 tiller 自主执行并读私有报告；stdout/stderr 不参与判定，报告缺失/损坏、匹配数不为 1、失败或跳过即阻断。`check` 核对 AC、用例、测试与当前核实，并提示“业务范围·做”中的交付路径。
+需求确认后把编号 AC 转为全局用例：用例“需求”指向稳定 `.tiller/specs/...`，关联 AC 写“无”；测试名或紧邻注释引用 `CASE-NNN`。`verify` 只声明 `--test`/`--case`，记录 AC→测试→CASE，由 tiller 自主执行并读私有报告；stdout/stderr 不参与判定，报告缺失/损坏、匹配数不为 1、失败或跳过即阻断。`check` 按记录核对核实，并提示“业务范围·做”中的交付路径。
 
 外部报告用 `--reported` 写明命令、结果和理由，默认阻断，放行用 `--allow-reported`；bugfix 用 `--expect-fail` 在基线留失败先行证据。standard 任务 `start` 必须 `--target`，small 缺省 `.`。`start` 建 `.tiller/local/<id>/worktrees/`；close/abandon 强拆 local，并默认删本地与远端任务分支，`--keep-branch` 保留；删失败只提示，已验收 close 不写共享记录。
 
 首次接入 `init` → 初始化 PR/MR → 人工合入 → `start`；也可 `merge <init-id>` 合入并清理。网页合入后，`start` 经平台 API 确认同分支已合入 PR/MR，写回 merged 并放行；无 token、API 失败或无记录仍阻断，`--skip-init-gate` 例外。`close init-id` 默认删本地与远端 `chore/tiller-init`。`specs` 在任务 worktree 修改并随分支合入。
 
-长期回归写 `.tiller/cases/modules/<模块>/` 与 `scenarios/`；用例保存测试设计、来源 AC 与预期，不保存源码路径；关联只靠测试名或紧邻注释中的 CASE 编号，无引用待实现。
+长期回归写 `.tiller/cases/modules/<模块>/` 与 `scenarios/`；用例保存测试设计、稳定 specs 需求与预期，不保存源码路径；关联 AC 写“无”，测试只靠测试名或紧邻注释中的 CASE 编号，无引用待实现。
 
 ## 任务记录约定
 
-轻量任务只维护 `.tiller/task/<id>/task.md`，依靠 Git 追溯。需求含目标、范围、编号 AC；standard 设计含方案、取舍、影响、风险。长期结论同步 specs，未回写由 `check` 列出路径与提纲 warning；大设计用 plan 拆任务，已有任务用 `plan attach` 补挂。
+轻量任务只维护 `.tiller/task/<id>/task.md`，依靠 Git 追溯。任务引用稳定 `.tiller/specs/...`；需求含目标、范围、编号 AC；standard 设计含方案、取舍、影响、风险。长期结论同步 specs，未回写由 `check` 列出路径与提纲 warning；大设计用 plan 拆任务，已有任务用 `plan attach` 补挂。
 
 确认前校验必填段；需求和设计独立摘要，正文变化使确认失效。验证留摘要与旁路，完整命令和输出只进日志。不提交全文快照、日志、自举工程或安装包；需要时从 Git 取回或重跑。不得记录密钥、凭据或本机绝对路径。
 
