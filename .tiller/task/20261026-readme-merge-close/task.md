@@ -93,128 +93,125 @@
 
 | 部分 | 确认人 | 时间 | 短提交 | 原话 |
 | --- | --- | --- | --- | --- |
-| 需求 | boon yu | 2026-10-26T06:24:03.298Z | 7cd14fe242f5 | — |
-| 设计 | boon yu | 2026-10-26T06:24:03.377Z | 7cd14fe242f5 | — |
+| 需求 | boon yu | 2026-10-26T06:25:31.457Z | e007f9975821 | — |
+| 设计 | boon yu | 2026-10-26T06:25:31.540Z | e007f9975821 | — |
+| 交付验收 | boon yu | 2026-10-26T06:26:04.771Z | e007f9975821 | — |
 
-<!-- tiller-confirm:v1 {"gate":"requirements","object":"需求正文（目标、范围与验收条件）","subject":"6af362181d93dd56d6a555e694de264fecc7edeee7187ec91a7f78c98712cbef","commit":"7cd14fe242f5b70576b59a1dfaf3f7d62427819f","by":"boon yu","quote":"","at":"2026-10-26T06:24:03.298Z"} -->
-<!-- tiller-confirm:v1 {"gate":"design","object":"设计正文","subject":"495b181228f9f4ccad5ef758b12cb3b9b9801b005f77026d33d24007a9646c3b","commit":"7cd14fe242f5b70576b59a1dfaf3f7d62427819f","by":"boon yu","quote":"","at":"2026-10-26T06:24:03.377Z"} -->
+<!-- tiller-confirm:v1 {"gate":"requirements","object":"需求正文（目标、范围与验收条件）","subject":"6af362181d93dd56d6a555e694de264fecc7edeee7187ec91a7f78c98712cbef","commit":"e007f9975821e60b5ce3499db9e7c9b1bd84bf75","by":"boon yu","quote":"","at":"2026-10-26T06:25:31.457Z"} -->
+<!-- tiller-confirm:v1 {"gate":"design","object":"设计正文","subject":"495b181228f9f4ccad5ef758b12cb3b9b9801b005f77026d33d24007a9646c3b","commit":"e007f9975821e60b5ce3499db9e7c9b1bd84bf75","by":"boon yu","quote":"","at":"2026-10-26T06:25:31.540Z"} -->
+<!-- tiller-confirm:v1 {"gate":"acceptance","object":"当前交付（需求、设计、验证与提交）","subject":"4f38e1544e6ee6499dc1f72e14301393492ebe9708b322fc47d862f364073a71","commit":"e007f9975821e60b5ce3499db9e7c9b1bd84bf75","by":"boon yu","quote":"","at":"2026-10-26T06:26:04.771Z"} -->
 
 ## 验证
 
 ### run-1
-<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-234 README 面向最终用户的介绍与快速开始$' \u002d\u002dtest-reporter=./.tiller/local/verify-cH5Ndp/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-cH5Ndp/report.jsonl test/merge.test.mjs","exitCode":0,"tree":"a0c88f96631d0bd4ee77ad39c453dba093574d34eaa68f4a15c820abb11be665","commit":"7cd14fe242f5b70576b59a1dfaf3f7d62427819f"} -->
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-234 README 面向最终用户的介绍与快速开始$' \u002d\u002dtest-reporter=./.tiller/local/verify-UpqKjP/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-UpqKjP/report.jsonl test/merge.test.mjs","exitCode":0,"tree":"bb2d89a890b2fe37efd7e0b14ef7ad5bee1e30d6f79ffdda5173661c47e65260","commit":"e007f9975821e60b5ce3499db9e7c9b1bd84bf75"} -->
 - 条件：AC-1
 - 测试：test/merge.test.mjs::CASE-234 README 面向最终用户的介绍与快速开始
 - 用例：CASE-234
 - 结果：passed
 - 来源：executed
 - 核实：已核实
-- 日志：.tiller/local/20261026-readme-merge-close/logs/run-1.log
-- 提交：7cd14fe242f5
-- 时间：2026-10-26T06:24:09.880Z
+- 日志：.tiller/local/20261026-readme-merge-close/logs/run-25.log
+- 提交：e007f9975821
+- 时间：2026-10-26T06:25:54.127Z
 
 ### run-2
-<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-235 GitHub merge 成功后自动清理本机任务$' \u002d\u002dtest-reporter=./.tiller/local/verify-d1ZlR9/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-d1ZlR9/report.jsonl test/merge.test.mjs","exitCode":0,"tree":"a0c88f96631d0bd4ee77ad39c453dba093574d34eaa68f4a15c820abb11be665","commit":"7cd14fe242f5b70576b59a1dfaf3f7d62427819f"} -->
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-235 GitHub merge 成功后自动清理本机任务$' \u002d\u002dtest-reporter=./.tiller/local/verify-vLFRPL/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-vLFRPL/report.jsonl test/merge.test.mjs","exitCode":0,"tree":"bb2d89a890b2fe37efd7e0b14ef7ad5bee1e30d6f79ffdda5173661c47e65260","commit":"e007f9975821e60b5ce3499db9e7c9b1bd84bf75"} -->
 - 条件：AC-2
 - 测试：test/merge.test.mjs::CASE-235 GitHub merge 成功后自动清理本机任务
 - 用例：CASE-235
 - 结果：passed
 - 来源：executed
 - 核实：已核实
-- 日志：.tiller/local/20261026-readme-merge-close/logs/run-2.log
-- 提交：7cd14fe242f5
-- 时间：2026-10-26T06:24:10.348Z
+- 日志：.tiller/local/20261026-readme-merge-close/logs/run-26.log
+- 提交：e007f9975821
+- 时间：2026-10-26T06:25:54.624Z
 
 ### run-3
-<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-236 GitHub merge 失败时保留下本机任务$' \u002d\u002dtest-reporter=./.tiller/local/verify-KgyzKn/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-KgyzKn/report.jsonl test/merge.test.mjs","exitCode":0,"tree":"a0c88f96631d0bd4ee77ad39c453dba093574d34eaa68f4a15c820abb11be665","commit":"7cd14fe242f5b70576b59a1dfaf3f7d62427819f"} -->
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-236 GitHub merge 失败时保留下本机任务$' \u002d\u002dtest-reporter=./.tiller/local/verify-LSwKqA/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-LSwKqA/report.jsonl test/merge.test.mjs","exitCode":0,"tree":"bb2d89a890b2fe37efd7e0b14ef7ad5bee1e30d6f79ffdda5173661c47e65260","commit":"e007f9975821e60b5ce3499db9e7c9b1bd84bf75"} -->
 - 条件：AC-2
 - 测试：test/merge.test.mjs::CASE-236 GitHub merge 失败时保留下本机任务
 - 用例：CASE-236
 - 结果：passed
 - 来源：executed
 - 核实：已核实
-- 日志：.tiller/local/20261026-readme-merge-close/logs/run-3.log
-- 提交：7cd14fe242f5
-- 时间：2026-10-26T06:24:12.090Z
+- 日志：.tiller/local/20261026-readme-merge-close/logs/run-27.log
+- 提交：e007f9975821
+- 时间：2026-10-26T06:25:56.443Z
 
 ### run-4
-<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-237 GitLab merge 成功后自动清理本机任务$' \u002d\u002dtest-reporter=./.tiller/local/verify-FWIcxc/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-FWIcxc/report.jsonl test/merge.test.mjs","exitCode":0,"tree":"a0c88f96631d0bd4ee77ad39c453dba093574d34eaa68f4a15c820abb11be665","commit":"7cd14fe242f5b70576b59a1dfaf3f7d62427819f"} -->
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-237 GitLab merge 成功后自动清理本机任务$' \u002d\u002dtest-reporter=./.tiller/local/verify-93CYGi/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-93CYGi/report.jsonl test/merge.test.mjs","exitCode":0,"tree":"bb2d89a890b2fe37efd7e0b14ef7ad5bee1e30d6f79ffdda5173661c47e65260","commit":"e007f9975821e60b5ce3499db9e7c9b1bd84bf75"} -->
 - 条件：AC-3
 - 测试：test/merge.test.mjs::CASE-237 GitLab merge 成功后自动清理本机任务
 - 用例：CASE-237
 - 结果：passed
 - 来源：executed
 - 核实：已核实
-- 日志：.tiller/local/20261026-readme-merge-close/logs/run-4.log
-- 提交：7cd14fe242f5
-- 时间：2026-10-26T06:24:13.764Z
+- 日志：.tiller/local/20261026-readme-merge-close/logs/run-28.log
+- 提交：e007f9975821
+- 时间：2026-10-26T06:25:58.413Z
 
 ### run-5
-<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-238 GitLab merge 失败时保留下本机任务$' \u002d\u002dtest-reporter=./.tiller/local/verify-ibzWXa/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-ibzWXa/report.jsonl test/merge.test.mjs","exitCode":0,"tree":"a0c88f96631d0bd4ee77ad39c453dba093574d34eaa68f4a15c820abb11be665","commit":"7cd14fe242f5b70576b59a1dfaf3f7d62427819f"} -->
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-238 GitLab merge 失败时保留下本机任务$' \u002d\u002dtest-reporter=./.tiller/local/verify-bObcxi/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-bObcxi/report.jsonl test/merge.test.mjs","exitCode":0,"tree":"bb2d89a890b2fe37efd7e0b14ef7ad5bee1e30d6f79ffdda5173661c47e65260","commit":"e007f9975821e60b5ce3499db9e7c9b1bd84bf75"} -->
 - 条件：AC-3
 - 测试：test/merge.test.mjs::CASE-238 GitLab merge 失败时保留下本机任务
 - 用例：CASE-238
 - 结果：passed
 - 来源：executed
 - 核实：已核实
-- 日志：.tiller/local/20261026-readme-merge-close/logs/run-5.log
-- 提交：7cd14fe242f5
-- 时间：2026-10-26T06:24:15.540Z
+- 日志：.tiller/local/20261026-readme-merge-close/logs/run-29.log
+- 提交：e007f9975821
+- 时间：2026-10-26T06:26:00.281Z
 
 ### run-6
-<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-239 init-id merge 合入初始化分支并清理 local$' \u002d\u002dtest-reporter=./.tiller/local/verify-u5mocD/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-u5mocD/report.jsonl test/merge.test.mjs","exitCode":0,"tree":"a0c88f96631d0bd4ee77ad39c453dba093574d34eaa68f4a15c820abb11be665","commit":"7cd14fe242f5b70576b59a1dfaf3f7d62427819f"} -->
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-239 init-id merge 合入初始化分支并清理 local$' \u002d\u002dtest-reporter=./.tiller/local/verify-PnA9r6/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-PnA9r6/report.jsonl test/merge.test.mjs","exitCode":0,"tree":"bb2d89a890b2fe37efd7e0b14ef7ad5bee1e30d6f79ffdda5173661c47e65260","commit":"e007f9975821e60b5ce3499db9e7c9b1bd84bf75"} -->
 - 条件：AC-4
 - 测试：test/merge.test.mjs::CASE-239 init-id merge 合入初始化分支并清理 local
 - 用例：CASE-239
 - 结果：passed
 - 来源：executed
 - 核实：已核实
-- 日志：.tiller/local/20261026-readme-merge-close/logs/run-6.log
-- 提交：7cd14fe242f5
-- 时间：2026-10-26T06:24:17.285Z
+- 日志：.tiller/local/20261026-readme-merge-close/logs/run-30.log
+- 提交：e007f9975821
+- 时间：2026-10-26T06:26:02.063Z
 
 ### run-7
-<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-240 接入文档说明 merge 与网页合入手动 close$' \u002d\u002dtest-reporter=./.tiller/local/verify-eoYJCL/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-eoYJCL/report.jsonl test/merge.test.mjs","exitCode":0,"tree":"a0c88f96631d0bd4ee77ad39c453dba093574d34eaa68f4a15c820abb11be665","commit":"7cd14fe242f5b70576b59a1dfaf3f7d62427819f"} -->
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-240 接入文档说明 merge 与网页合入手动 close$' \u002d\u002dtest-reporter=./.tiller/local/verify-l8Mkx5/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-l8Mkx5/report.jsonl test/merge.test.mjs","exitCode":0,"tree":"bb2d89a890b2fe37efd7e0b14ef7ad5bee1e30d6f79ffdda5173661c47e65260","commit":"e007f9975821e60b5ce3499db9e7c9b1bd84bf75"} -->
 - 条件：AC-4
 - 测试：test/merge.test.mjs::CASE-240 接入文档说明 merge 与网页合入手动 close
 - 用例：CASE-240
 - 结果：passed
 - 来源：executed
 - 核实：已核实
-- 日志：.tiller/local/20261026-readme-merge-close/logs/run-7.log
-- 提交：7cd14fe242f5
-- 时间：2026-10-26T06:24:18.489Z
+- 日志：.tiller/local/20261026-readme-merge-close/logs/run-31.log
+- 提交：e007f9975821
+- 时间：2026-10-26T06:26:03.242Z
 
 ### run-8
-<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-241 版本保持 0\\.5\\.0 且新用例均有测试引用$' \u002d\u002dtest-reporter=./.tiller/local/verify-cEaTcZ/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-cEaTcZ/report.jsonl test/merge.test.mjs","exitCode":0,"tree":"a0c88f96631d0bd4ee77ad39c453dba093574d34eaa68f4a15c820abb11be665","commit":"7cd14fe242f5b70576b59a1dfaf3f7d62427819f"} -->
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-241 版本保持 0\\.5\\.0 且新用例均有测试引用$' \u002d\u002dtest-reporter=./.tiller/local/verify-jqwrTY/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-jqwrTY/report.jsonl test/merge.test.mjs","exitCode":0,"tree":"bb2d89a890b2fe37efd7e0b14ef7ad5bee1e30d6f79ffdda5173661c47e65260","commit":"e007f9975821e60b5ce3499db9e7c9b1bd84bf75"} -->
 - 条件：AC-5
 - 测试：test/merge.test.mjs::CASE-241 版本保持 0.5.0 且新用例均有测试引用
 - 用例：CASE-241
 - 结果：passed
 - 来源：executed
 - 核实：已核实
-- 日志：.tiller/local/20261026-readme-merge-close/logs/run-8.log
-- 提交：7cd14fe242f5
-- 时间：2026-10-26T06:24:19.010Z
+- 日志：.tiller/local/20261026-readme-merge-close/logs/run-32.log
+- 提交：e007f9975821
+- 时间：2026-10-26T06:26:03.763Z
 
 ## 自检
 
 - [x] 需求确认有效
-- [ ] 设计确认有效
+- [x] 设计确认有效
 - [x] 验收条件均有当前通过且绑定全局用例的测试引用
 - [x] 每条验收条件均映射到本次验证引用的全局用例
 - [x] 验收条件与用例来源 criteria 相互指向或由本任务新增/修改
 - [x] 验证命令已执行且测试输出已核实
 - [x] 全局用例结构与引用有效
 - [x] 改动未超出范围
-- [ ] 未弱化仍存在的测试
+- [x] 未弱化仍存在的测试
 - [x] 评审无未清除阻塞项
 - [x] 记录不含密钥或本机绝对路径
-
-阻塞项：
-- 过程卫生：需求、设计确认提交 7cd14fe242f5 后，工作区仍有未提交业务改动：resources/rules/activities/delivery.md、resources/rules/core.md、resources/usage.md、src/cli.ts、src/init-baseline.ts、src/pr.ts、test/case-redesign.test.mjs、test/flow-hardening.test.mjs 等 12 项。请先提交或移出本任务。
-- 弱化测试断言：test/review-release.test.mjs::CASE-109 repository docs and suite include review release and pinned checks
-- 交付范围存在未提交改动：.tiller/cases/modules/initialization/behavior.md、.tiller/cases/modules/standards/interface.md、.tiller/cases/modules/workflow/behavior.md、.tiller/cases/modules/workflow/interface.md、.tiller/project.json、.tiller/rules/activities/delivery.md、.tiller/rules/core.md、.tiller/usage.md、README.md、resources/rules/activities/delivery.md、resources/rules/core.md、resources/usage.md、src/cli.ts、src/init-baseline.ts、src/pr.ts、test/case-redesign.test.mjs、test/flow-hardening.test.mjs、test/merge.test.mjs、test/review-release.test.mjs、test/rules.test.mjs、test/suites.json
 
 提示：
 - 90 条历史用例未绑定来源 AC；新用例请用 case add 写入 criteria。
