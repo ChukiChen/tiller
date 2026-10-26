@@ -12,7 +12,7 @@
 
 `verify` 必须由 tiller 实际执行声明的测试并从私有报告核实；未执行的外部报告须用 `--reported ... --reason` 记录理由，并由 `--allow-reported` 显式放行后才可通过 `check`/`accept`。PR/MR 草稿会把这些记录标为“未执行（外部报告）”。bugfix 还要保留基线失败先行和当前通过两侧证据。
 
-默认使用 `check` 执行自检，再执行 `accept`；`--by` 记录验收人，原话可选。技术就绪、用户验收、合入和发布分别报告；合入与发布仍需各自授权和当前提交绑定。
+默认使用 `check` 执行自检，再执行 `accept` 并提交任务记录（其中含验收事实）。accept 必须在 pr 前完成，之后才生成 PR/MR 草稿。`--by` 记录验收人，原话可选。合入即交付完成；技术就绪、用户验收、合入和发布分别报告，合入与发布仍需各自授权和当前提交绑定。
 
 ## 独立评审
 
@@ -29,15 +29,15 @@
 - README 非空；npm 项目还需有效的包名/版本，且 README 包含当前版本。非 npm 项目跳过包项。
 - 任务范围内没有未提交改动。发布前仍需单独取得授权，并绑定当前提交和目标。
 
-已验收任务交付完成后用 `close --reason` 收尾；确认不再推进的未验收任务用 `close --reason ... --abandon`。关闭或放弃后先 `reopen --reason` 才能继续，关闭原因和时间留在 `task.md`；两种结束动作都会强拆该任务 worktree，拆除后删除整棵 `.tiller/local/<id>/`（含日志与旁路），并兼容清理旧布局 `.tiller/local/worktrees|logs|tasks/<id>/`；其他任务目录不动。
+合入后用 `close --reason` 清理已验收任务的本机状态；它只强拆该任务 worktree 并删除整棵 `.tiller/local/<id>/`（含日志与旁路），兼容清理旧布局 `.tiller/local/worktrees|logs|tasks/<id>/`，其他任务目录不动。`close` 不写共享 `task.md`，合入后不因收尾产生脏记录。确认不再推进的未验收任务用 `close --reason ... --abandon`，仍写共享放弃原因和时间；终止任务先 `reopen --reason` 才能继续，已验收任务再次交付也可 `reopen`。
 
 ## 提交、分支与 PR/MR
 
 - 提交主题为 `类型(模块): 中文摘要`；类型限 `feat`、`fix`、`docs`、`refactor`、`test`、`chore`，模块取 specs 模块名，可省略括号部分。摘要用中文，不带任务链接。
 - PR/MR 标题沿用提交格式并在末尾加 `[任务编号]`；主模块按范围声明顺序取首个，无法推导时省略括号。说明固定五段：关联任务、变更内容、验收条件、验证结果、影响与风险。
 - 分支名为 `类型/任务编号`，可加 `-简短描述`；只用小写字母、数字、连字符和一个斜杠，不使用 `codex/` 前缀。
-- `pr <task-id>` 只读 `task.md` 与 Git，生成标题、五段说明和建议分支，列出每条 AC 的全部验证；关联任务用纯文本路径。标题摘要依次取 `pr --summary`、任务元数据、任务基线后最早的规范 feat/fix 提交摘要和任务标题；变更内容按提交时间正序。分支描述取 `--slug`、任务元数据或当前分支。`--json` 返回相同字段；它不调用托管平台、不联网。
-- `verify`/`check` 或 cases/specs 回写后，先提交任务记录，即把本任务 `.tiller/task/<id>/` 与任务范围覆盖的 `.tiller/cases/`、`.tiller/specs/` 改动提交到任务分支，再运行 `pr`。`pr` 对未提交任务记录默认失败（`PR_TASK_RECORDS_DIRTY`）并列出路径；只检查本任务 id 与 scope，其他任务 `.tiller/task/<other>/` 不阻断，tiller 不自动提交。无 Git 或无法读工作树时跳过门禁并提示。
-- 合入后 `accept`/`close` 若再次改写 `task.md`，须另作收尾提交；本版不通过 accept/close 自动提交。
+- `pr <task-id>` 只读 `task.md` 与 Git，先要求有效交付验收，再生成标题、五段说明和建议分支，列出每条 AC 的全部验证；关联任务用纯文本路径。标题摘要依次取 `pr --summary`、任务元数据、任务基线后最早的规范 feat/fix 提交摘要和任务标题；变更内容按提交时间正序。分支描述取 `--slug`、任务元数据或当前分支。`--json` 返回相同字段；它不调用托管平台、不联网。
+- `verify`/`check` 或 cases/specs 回写后，先提交验证记录，再 `accept` 并把含 acceptance 的本任务记录提交到任务分支，最后运行 `pr`。无有效验收默认以 `PR_NOT_ACCEPTED` 失败并提示先 `accept`；任务记录未提交以 `PR_TASK_RECORDS_DIRTY` 阻断并列出路径。只检查本任务 id 与 scope，其他任务 `.tiller/task/<other>/` 不阻断，tiller 不自动提交。无 Git 或无法读工作树时仅跳过记录门禁并提示，验收门禁仍生效。
+- 合入即交付完成；合入后 `close` 只清 local，不再 `accept`，也不改写共享 `task.md` 或另作收尾提交。未验收终止的 `abandon` 仍写共享记录。
 - `init --platform github|gitlab|both` 按平台安装对应模板，默认 GitHub；平台在初始化时选定，之后不能通过 CLI 切换，需手动修改 `project.json` 并补齐模板。`upgrade` 只补齐当前平台模板，不跨平台新增。
 - `check` 对任务基线后的非合并提交主题和当前分支名给出提示，不阻塞；main/master 与 detached HEAD 跳过分支检查。

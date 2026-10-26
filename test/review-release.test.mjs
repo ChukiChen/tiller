@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
-import { readFileSync, symlinkSync } from 'node:fs';
+import { createHash } from 'node:crypto';
+import { existsSync, readFileSync, statSync, symlinkSync } from 'node:fs';
 import { join } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import test from 'node:test';
@@ -151,23 +152,44 @@ test('CASE-106 check warns when specs were not written back', async t => {
   assert.ok(!checked.issues.some(issue => issue.includes('回写')));
 });
 
-test('CASE-206 closed self-check omits long regression hints while check still reports them', async t => {
+test('CASE-206 accepted close preserves the shared self-check while check still reports hints', async t => {
   const root = await project(t);
   const id = '20261024-closed-self-check';
   await acceptedTask(root, id);
+  const beforeClose = read(root, taskPath(id));
   success(cli(root, 'close', id, '--reason', '交付完成'));
-  const closedSelfCheck = section(read(root, taskPath(id)), '自检');
-  assert.match(closedSelfCheck, /check/u);
-  assert.doesNotMatch(closedSelfCheck, /提示：|本次改动涉及模块|回写|\.tiller\/specs/u);
-  assert.ok(closedSelfCheck.split(/\r?\n/u).filter(Boolean).length <= 2, closedSelfCheck);
+  assert.equal(read(root, taskPath(id)), beforeClose);
+  assert.doesNotMatch(beforeClose, /^## 关闭$/mu);
 
   const checked = success(cli(root, 'check', id));
   const warnings = checked.warnings.join('\n');
   assert.match(warnings, /本次改动涉及模块 workflow/u);
   assert.match(warnings, /回写/u);
 
-  const selfCheck = section(read(root, taskPath(id)), '自检');
-  assert.equal(selfCheck, closedSelfCheck);
+  assert.equal(read(root, taskPath(id)), beforeClose);
+});
+
+test('CASE-224 accepted close only cleans local state and leaves shared task content unchanged', async t => {
+  const root = await project(t);
+  const id = '20261026-post-merge-close';
+  await acceptedTask(root, id);
+  const before = read(root, taskPath(id));
+  const digestBefore = createHash('sha256').update(before).digest('hex');
+  const mtimeBefore = statSync(join(root, taskPath(id))).mtimeMs;
+  put(root, `.tiller/local/${id}/cleanup-marker.txt`, 'local only\n');
+
+  const closed = success(cli(root, 'close', id, '--reason', '合入后清理本机'));
+  assert.equal(closed.stage, '已验收');
+  assert.match(closed.stageReason, /本机清理完成/u);
+  assert.equal(createHash('sha256').update(read(root, taskPath(id))).digest('hex'), digestBefore);
+  assert.equal(statSync(join(root, taskPath(id))).mtimeMs, mtimeBefore);
+  assert.equal(read(root, taskPath(id)), before);
+  assert.doesNotMatch(before, /^## 关闭$/mu);
+  assert.equal(existsSync(join(root, `.tiller/local/${id}`)), false);
+
+  const checked = success(cli(root, 'check', id));
+  assert.equal(checked.acceptance.confirmed, true);
+  assert.equal(success(cli(root, 'resume', id)).stage, '已验收');
 });
 
 test('CASE-107 start loads requirement from a project-relative file', async t => {
@@ -284,7 +306,7 @@ test('CASE-109 repository docs and suite include review release and pinned check
   assert.ok(suite.e2e.includes('review-release.test.mjs'));
   const library = await readCaseLibrary(repository);
   assert.deepEqual(library.issues, []);
-  assert.equal(library.cases.length, 222);
+  assert.equal(library.cases.length, 227);
   for (const id of ['CASE-104', 'CASE-105', 'CASE-106', 'CASE-107', 'CASE-108', 'CASE-109']) {
     assert.ok(library.cases.find(item => item.id === id)?.tests.length, id);
   }

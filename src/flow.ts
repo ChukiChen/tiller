@@ -2025,8 +2025,16 @@ export async function closeFlow(rootInput: string, id: string, reasonInput: stri
     if (current.stage !== '已验收' && !abandon) {
       fail('NOT_ACCEPTED', `任务当前阶段为${current.stage}；只有已验收任务可以 close，未验收终止请使用 --abandon。`);
     }
+    if (!abandon) {
+      const at = new Date().toISOString();
+      const cleanup = await cleanupTaskWorktrees(root, id, metadata);
+      return { id, stage: current.stage, stageReason: '交付验收有效；本机清理完成。', reason, at, path: task.path,
+        worktrees: cleanup.removedWorktrees, missingWorktrees: cleanup.missingWorktrees, logsRemoved: cleanup.logsRemoved,
+        ...(cleanup.warnings.length ? { warnings: cleanup.warnings } : {}),
+        next: `任务已交付；如需继续修改，执行 tiller reopen ${id} --reason "<原因>".` };
+    }
     const closure: FlowClosure = {
-      action: 'close', status: abandon ? 'abandoned' : 'closed', reason,
+      action: 'close', status: 'abandoned', reason,
       at: new Date().toISOString(),
     };
     const next = { ...task, closures: [...task.closures, closure] };
@@ -2046,7 +2054,9 @@ export async function reopenFlow(rootInput: string, id: string, reasonInput: str
   const reason = safeInput(text(reasonInput, '重开原因', 4000), '重开原因');
   return withProjectLock(root, async () => {
     const task = await readTask(root, id);
-    if (!terminalStage(task)) fail('TASK_NOT_CLOSED', '任务尚未关闭或放弃，不能 reopen。');
+    if (!terminalStage(task) && (await taskStageForTask(root, id, task)).stage !== '已验收') {
+      fail('TASK_NOT_CLOSED', '任务尚未进入已验收或终止阶段，不能 reopen。');
+    }
     const event: FlowClosure = { action: 'reopen', reason, at: new Date().toISOString() };
     const next = { ...task, closures: [...task.closures, event] };
     const { content: _content, path: _path, ...body } = next;

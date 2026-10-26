@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { existsSync, readFileSync, readdirSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import test from 'node:test';
@@ -296,7 +296,7 @@ test('CASE-056 task stages derive from task facts and fall back on invalid confi
   assert.match(stale.stageReason, /验证已过期/u);
 });
 
-test('CASE-057 accepted tasks close, block further confirm verify and accept, and reopen for another delivery', async t => {
+test('CASE-057 accepted task close cleans local state without changing shared records and reopens for another delivery', async t => {
   const root = await initialized(t);
   moduleSpec(root, 'workflow');
   put(root, 'src/close.mjs', 'export const close = 1;\n');
@@ -315,19 +315,19 @@ test('CASE-057 accepted tasks close, block further confirm verify and accept, an
   success(cli(root, 'accept', id, '--quote', '验收关闭流程'));
   const alreadyAccepted = failure(cli(root, 'close', id, '--reason', '不能放弃', '--abandon'));
   assert.equal(alreadyAccepted.error.code, 'ALREADY_ACCEPTED');
+  const taskFile = `.tiller/task/${id}/task.md`;
+  const beforeClose = read(root, taskFile);
+  const beforeMtime = statSync(join(root, taskFile)).mtimeMs;
+  put(root, `.tiller/local/${id}/cleanup-marker.txt`, 'local only\n');
   const closed = success(cli(root, 'close', id, '--reason', '交付完成并收尾'));
-  assert.equal(closed.stage, '已关闭');
-  const content = read(root, `.tiller/task/${id}/task.md`);
-  assert.match(content, /^## 关闭$/mu);
-  assert.match(content, /^- 状态：已关闭$/mu);
-  assert.match(content, /^- 原因：交付完成并收尾$/mu);
-  assert.match(content, /^- 时间：\d{4}-\d{2}-\d{2}T/mu);
+  assert.equal(closed.stage, '已验收');
+  assert.match(closed.stageReason, /本机清理完成/u);
+  assert.equal(read(root, taskFile), beforeClose);
+  assert.equal(statSync(join(root, taskFile)).mtimeMs, beforeMtime);
+  assert.doesNotMatch(beforeClose, /^## 关闭$/mu);
+  assert.equal(existsSync(join(root, `.tiller/local/${id}`)), false);
   const listed = success(cli(root, 'resume'));
-  assert.equal(listed.tasks.find(entry => entry.id === id).stage, '已关闭');
-  assert.equal(failure(cli(root, 'confirm', id, 'requirements', '--quote', '关闭后不能确认')).error.code, 'TASK_CLOSED');
-  assert.equal(failure(cli(root, 'verify', id, '--criterion', 'AC-1',
-    '--test', 'test/close.test.mjs::CASE-001 close lifecycle behavior')).error.code, 'TASK_CLOSED');
-  assert.equal(failure(cli(root, 'accept', id, '--quote', '关闭后不能验收')).error.code, 'TASK_CLOSED');
+  assert.equal(listed.tasks.find(entry => entry.id === id).stage, '已验收');
   const reopened = success(cli(root, 'reopen', id, '--reason', '需要再次交付'));
   assert.equal(reopened.stage, '已验证');
   const checked = success(cli(root, 'check', id));

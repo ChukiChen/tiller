@@ -925,3 +925,53 @@ usage、rules、workflow specs 与 decisions 描述 .tiller/local/<id>/ 聚合�
 ### 预期结果
 
 package.json 与 README 版本为 0.5.0；定向 pr 测试与 package-smoke 覆盖门禁相关断言
+
+## CASE-225 交付文档固化合入后冻结约定
+
+- 类型：interface
+- 优先级：medium
+- 模块：workflow
+- 关联 AC：20261026-post-merge-freeze#AC-3
+- 需求：`.tiller/specs/modules/workflow/requirements.md#flow-35-prmr-前同步任务记录`
+- 源码：`resources/usage.md`, `resources/rules/activities/delivery.md`, `.tiller/specs/decisions.md`, `test/pr.test.mjs`
+
+### 前置条件
+
+- usage、delivery 规则、workflow 规格与 decisions 已更新
+
+### 步骤
+
+1. 阅读 usage、delivery、workflow requirements/design 与 decisions
+
+### 输入
+
+- 按标准交付链阅读文档
+
+### 预期结果
+
+文档写明 accept 在 pr 前、合入即交付完成、合入后 close 只清 local 且不再改写共享 task.md，且不再要求合入后 accept 或另作收尾提交
+
+## CASE-227 版本保持 0.5.0 且质量门禁覆盖冻结行为
+
+- 类型：interface
+- 优先级：medium
+- 模块：workflow
+- 关联 AC：20261026-post-merge-freeze#AC-5
+- 需求：`.tiller/specs/modules/workflow/requirements.md#7-验收方向`
+- 源码：`package.json`, `README.md`, `test/pr.test.mjs`, `test/review-release.test.mjs`
+
+### 前置条件
+
+- 实现、文档与用例已更新
+
+### 步骤
+
+1. 读取版本并运行全量 build、lint、typecheck、test 与 test:package
+
+### 输入
+
+- 本任务分支
+
+### 预期结果
+
+package.json 与 README 版本保持 0.5.0，全量质量命令通过且测试引用冻结行为用例
