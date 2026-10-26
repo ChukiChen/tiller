@@ -113,14 +113,151 @@
 | --- | --- | --- | --- | --- |
 | 需求 | ChukiChen | 2026-10-26T10:56:33.664Z | adae0747a0ee | 按选项确认：API探测合入后放行；默认删分支与keep-branch；彻底去掉用例源码字段；check对做路径warning |
 | 设计 | ChukiChen | 2026-10-26T10:56:33.762Z | adae0747a0ee | 同意设计：API自愈、默认删分支、去除源码字段、做路径仅warning |
+| 交付验收 | ChukiChen | 2026-10-26T11:37:55.225Z | e6a01d98c7f9 | 开启PR |
 
 <!-- tiller-confirm:v1 {"gate":"requirements","object":"需求正文（目标、范围与验收条件）","subject":"28e4c4c3f6227552d800e6cabb8ee19dda876932b1967533b5139b67049fced7","commit":"adae0747a0eebdaa63fcfb5b59880ff642df1c4d","by":"ChukiChen","quote":"按选项确认：API探测合入后放行；默认删分支与keep-branch；彻底去掉用例源码字段；check对做路径warning","at":"2026-10-26T10:56:33.664Z"} -->
 <!-- tiller-confirm:v1 {"gate":"design","object":"设计正文","subject":"6cb7cf48b6e0cb2263029a9af54e8e528fea6885ffef38595dfab6bad48fc6bd","commit":"adae0747a0eebdaa63fcfb5b59880ff642df1c4d","by":"ChukiChen","quote":"同意设计：API自愈、默认删分支、去除源码字段、做路径仅warning","at":"2026-10-26T10:56:33.762Z"} -->
+<!-- tiller-confirm:v1 {"gate":"acceptance","object":"当前交付（需求、设计、验证与提交）","subject":"ced9e54c6f170a10a82a1666e26c8120aacded1433bfa4d3c859f7ff6db833b0","commit":"e6a01d98c7f90bc4bb9bfdde6509087544e993ae","by":"ChukiChen","quote":"开启PR","at":"2026-10-26T11:37:55.225Z"} -->
 
 ## 验证
 
-尚无验证。
+### run-1
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-253 init baseline merged through the platform API unlocks start and records merged$' \u002d\u002dtest-reporter=./.tiller/local/verify-RbWqXo/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-RbWqXo/report.jsonl test/init-baseline.test.mjs","exitCode":0,"tree":"db31a7b7a34881ac3921eac9f708956016f949d724c0a1d8cab5861ecb8ee137","commit":"e6a01d98c7f90bc4bb9bfdde6509087544e993ae"} -->
+- 条件：AC-1
+- 测试：test/init-baseline.test.mjs::CASE-253 init baseline merged through the platform API unlocks start and records merged
+- 用例：CASE-253
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/20261026-flow-stability/logs/run-1.log
+- 提交：e6a01d98c7f9
+- 时间：2026-10-26T11:37:27.260Z
+
+### run-2
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-254 missing token or platform API failure keeps the init gate closed$' \u002d\u002dtest-reporter=./.tiller/local/verify-SDIC1g/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-SDIC1g/report.jsonl test/init-baseline.test.mjs","exitCode":0,"tree":"db31a7b7a34881ac3921eac9f708956016f949d724c0a1d8cab5861ecb8ee137","commit":"e6a01d98c7f90bc4bb9bfdde6509087544e993ae"} -->
+- 条件：AC-1
+- 测试：test/init-baseline.test.mjs::CASE-254 missing token or platform API failure keeps the init gate closed
+- 用例：CASE-254
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/20261026-flow-stability/logs/run-2.log
+- 提交：e6a01d98c7f9
+- 时间：2026-10-26T11:37:29.639Z
+
+### run-3
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-255 merge deletes the feat branch locally and remotely by default$' \u002d\u002dtest-reporter=./.tiller/local/verify-DKzRpz/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-DKzRpz/report.jsonl test/merge.test.mjs","exitCode":0,"tree":"db31a7b7a34881ac3921eac9f708956016f949d724c0a1d8cab5861ecb8ee137","commit":"e6a01d98c7f90bc4bb9bfdde6509087544e993ae"} -->
+- 条件：AC-2
+- 测试：test/merge.test.mjs::CASE-255 merge deletes the feat branch locally and remotely by default
+- 用例：CASE-255
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/20261026-flow-stability/logs/run-3.log
+- 提交：e6a01d98c7f9
+- 时间：2026-10-26T11:37:31.381Z
+
+### run-4
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-256 close init-id deletes the initialization branch locally and remotely by default$' \u002d\u002dtest-reporter=./.tiller/local/verify-I0C6kM/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-I0C6kM/report.jsonl test/merge.test.mjs","exitCode":0,"tree":"db31a7b7a34881ac3921eac9f708956016f949d724c0a1d8cab5861ecb8ee137","commit":"e6a01d98c7f90bc4bb9bfdde6509087544e993ae"} -->
+- 条件：AC-2
+- 测试：test/merge.test.mjs::CASE-256 close init-id deletes the initialization branch locally and remotely by default
+- 用例：CASE-256
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/20261026-flow-stability/logs/run-4.log
+- 提交：e6a01d98c7f9
+- 时间：2026-10-26T11:37:35.697Z
+
+### run-5
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-257 merge and close keep branches when \u002d\u002dkeep-branch is explicit$' \u002d\u002dtest-reporter=./.tiller/local/verify-gYUJgZ/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-gYUJgZ/report.jsonl test/merge.test.mjs","exitCode":0,"tree":"db31a7b7a34881ac3921eac9f708956016f949d724c0a1d8cab5861ecb8ee137","commit":"e6a01d98c7f90bc4bb9bfdde6509087544e993ae"} -->
+- 条件：AC-2
+- 测试：test/merge.test.mjs::CASE-257 merge and close keep branches when --keep-branch is explicit
+- 用例：CASE-257
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/20261026-flow-stability/logs/run-5.log
+- 提交：e6a01d98c7f9
+- 时间：2026-10-26T11:37:37.417Z
+
+### run-6
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-258 case add writes no source field and rejects the removed \u002d\u002dsource option$' \u002d\u002dtest-reporter=./.tiller/local/verify-KGZfEM/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-KGZfEM/report.jsonl test/case-redesign.test.mjs","exitCode":0,"tree":"db31a7b7a34881ac3921eac9f708956016f949d724c0a1d8cab5861ecb8ee137","commit":"e6a01d98c7f90bc4bb9bfdde6509087544e993ae"} -->
+- 条件：AC-3
+- 测试：test/case-redesign.test.mjs::CASE-258 case add writes no source field and rejects the removed --source option
+- 用例：CASE-258
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/20261026-flow-stability/logs/run-6.log
+- 提交：e6a01d98c7f9
+- 时间：2026-10-26T11:37:40.936Z
+
+### run-7
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-259 historical cases parse without a source field and ignore residual source lines$' \u002d\u002dtest-reporter=./.tiller/local/verify-ec91Y9/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-ec91Y9/report.jsonl test/case-redesign.test.mjs","exitCode":0,"tree":"db31a7b7a34881ac3921eac9f708956016f949d724c0a1d8cab5861ecb8ee137","commit":"e6a01d98c7f90bc4bb9bfdde6509087544e993ae"} -->
+- 条件：AC-3
+- 测试：test/case-redesign.test.mjs::CASE-259 historical cases parse without a source field and ignore residual source lines
+- 用例：CASE-259
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/20261026-flow-stability/logs/run-7.log
+- 提交：e6a01d98c7f9
+- 时间：2026-10-26T11:37:42.243Z
+
+### run-8
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-260 check warns about delivery paths inside the business scope do list$' \u002d\u002dtest-reporter=./.tiller/local/verify-ioHgHg/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-ioHgHg/report.jsonl test/flow-hardening.test.mjs","exitCode":0,"tree":"db31a7b7a34881ac3921eac9f708956016f949d724c0a1d8cab5861ecb8ee137","commit":"e6a01d98c7f90bc4bb9bfdde6509087544e993ae"} -->
+- 条件：AC-4
+- 测试：test/flow-hardening.test.mjs::CASE-260 check warns about delivery paths inside the business scope do list
+- 用例：CASE-260
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/20261026-flow-stability/logs/run-8.log
+- 提交：e6a01d98c7f9
+- 时间：2026-10-26T11:37:42.876Z
+
+### run-9
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-261 help and managed docs describe API baseline, branch cleanup, no source field and scope path warnings$' \u002d\u002dtest-reporter=./.tiller/local/verify-Vwmkpg/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-Vwmkpg/report.jsonl test/merge.test.mjs","exitCode":0,"tree":"db31a7b7a34881ac3921eac9f708956016f949d724c0a1d8cab5861ecb8ee137","commit":"e6a01d98c7f90bc4bb9bfdde6509087544e993ae"} -->
+- 条件：AC-4
+- 测试：test/merge.test.mjs::CASE-261 help and managed docs describe API baseline, branch cleanup, no source field and scope path warnings
+- 用例：CASE-261
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/20261026-flow-stability/logs/run-9.log
+- 提交：e6a01d98c7f9
+- 时间：2026-10-26T11:37:44.251Z
+
+### run-10
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-262 branch deletion failure is reported as a warning without failing merge cleanup$' \u002d\u002dtest-reporter=./.tiller/local/verify-QSsrFy/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-QSsrFy/report.jsonl test/merge.test.mjs","exitCode":0,"tree":"db31a7b7a34881ac3921eac9f708956016f949d724c0a1d8cab5861ecb8ee137","commit":"e6a01d98c7f90bc4bb9bfdde6509087544e993ae"} -->
+- 条件：AC-2
+- 测试：test/merge.test.mjs::CASE-262 branch deletion failure is reported as a warning without failing merge cleanup
+- 用例：CASE-262
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/20261026-flow-stability/logs/run-10.log
+- 提交：e6a01d98c7f9
+- 时间：2026-10-26T11:37:44.872Z
 
 ## 自检
 
-交付前运行 check；验收后运行 accept。
+- [x] 需求确认有效
+- [x] 设计确认有效
+- [x] 验收条件均有当前通过且绑定全局用例的测试引用
+- [x] 每条验收条件均映射到本次验证引用的全局用例
+- [x] 验收条件与用例来源 criteria 相互指向或由本任务新增/修改
+- [x] 验证命令已执行且测试输出已核实
+- [x] 全局用例结构与引用有效
+- [x] 改动未超出范围
+- [x] 未弱化仍存在的测试
+- [x] 评审无未清除阻塞项
+- [x] 记录不含密钥或本机绝对路径
+
+提示：
+- 90 条历史用例未绑定来源 AC；新用例请用 case add 写入 criteria。
+- 本次改动涉及模块 initialization：建议回归该模块 67 条用例及经过它的场景 CASE-055, CASE-001。
+- 本次改动涉及模块 standards：建议回归该模块 32 条用例及经过它的场景 CASE-055。
+- 本次改动涉及模块 verification：建议回归该模块 42 条用例及经过它的场景 CASE-055, CASE-001。
+- 本次改动涉及模块 workflow：建议回归该模块 119 条用例及经过它的场景 CASE-055, CASE-001。
