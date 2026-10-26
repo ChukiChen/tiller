@@ -296,3 +296,27 @@ usage、rules、decisions、受管 resources 写明 task→需求、用例→需
 ### 预期结果
 
 activities/requirements、quality/documents、模块 README 说明与相关 specs 描述使用「使用场景」而非旧标题作为该槽位名
+
+## CASE-275 文档引导路径作用域 AC-n 且无模块前缀示例
+
+- 类型：interface
+- 优先级：medium
+- 模块：standards
+- 关联 AC：无
+- 需求：`.tiller/specs/modules/workflow/ac-criteria-link.md`
+
+### 前置条件
+
+- 可读取 rules、usage、decisions 与相关 specs 示例
+
+### 步骤
+
+1. 检索验收条件标题、LIB-AC、对照 与 AC 编号引导
+
+### 输入
+
+- 受管文档与示例 specs
+
+### 预期结果
+
+引导为路径作用域 AC-n、任务只引用、用例关联 AC 为无；新示例不输出（稳定）或 LIB-AC

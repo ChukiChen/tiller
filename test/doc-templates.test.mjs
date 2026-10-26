@@ -205,7 +205,7 @@ test('CASE-195 CASE-270 CASE-272 init creates complete requirement and design se
   const modules = read(root, '.tiller/specs/modules/README.md');
   assert.match(modules, /requirements\.md.*使用场景/u);
   assert.match(modules, /design\.md.*验证入口/u);
-  assert.match(read(root, '.tiller/rules/activities/requirements.md'), /任务记录的需求固定写使用场景、目标/u);
+  assert.match(read(root, '.tiller/rules/activities/requirements.md'), /任务记录固定写使用场景、目标/u);
   assert.match(read(root, '.tiller/rules/quality/documents.md'), /需求写使用场景、目标/u);
   for (const content of [requirements, design, modules]) {
     assert.doesNotMatch(content, /```/u);
@@ -215,6 +215,23 @@ test('CASE-195 CASE-270 CASE-272 init creates complete requirement and design se
   for (const relative of ['rules/activities/requirements.md', 'rules/activities/design.md', 'rules/quality/documents.md', 'usage.md']) {
     assert.equal(read(root, `.tiller/${relative}`), readFileSync(new URL(`../resources/${relative}`, import.meta.url), 'utf8'));
   }
+});
+
+test('CASE-273 acceptance heading is always 验收条件 without the legacy stable suffix', async t => {
+  const root = fixture(t);
+  success(cli(root, 'init'));
+  const requirements = read(root, '.tiller/specs/requirements.md');
+  assert.match(requirements, /^## 验收条件$/mu);
+  assert.match(requirements, /AC-n/u);
+  assert.doesNotMatch(requirements, /^## 验收条件（稳定）$/mu);
+
+  const id = '20261026-acceptance-heading';
+  success(cli(root, 'start', id, '--title', 'Acceptance heading', '--requirement', 'Render the canonical heading.',
+    '--criterion', 'AC-1=Heading has no legacy suffix', '--size', 'small', '--target', 'src'));
+  const content = read(root, taskPath(id));
+  assert.match(content, /^### 验收条件$/mu);
+  assert.match(content, /^- AC-1: Heading has no legacy suffix$/mu);
+  assert.doesNotMatch(content, /验收条件（稳定）/u);
 });
 
 test('CASE-207 requirement and design guidance reduces noise while confirmation gates remain', async t => {

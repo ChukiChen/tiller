@@ -171,9 +171,10 @@
 ## 2026-10-26 用例锚定稳定需求
 
 - 任务是短暂交付物：`task.md` 通过正文或“需求来源”引用稳定 `.tiller/specs/...`；全局用例的“需求”字段挂 specs，不再用 `taskId#AC` 作为主要链接。
-- 稳定 AC 正文在 `.tiller/specs/...`（本波为 VER-CASE-REQ-1～3、FLOW-SPEC-AC-1～2）；任务只引用这些条件与文件，不把 `taskId#AC` 当用例锚。
+- specs 的验收条件使用普通 `AC-1`/`AC-2`…，由文件路径区分模块；禁止给 AC 编号加模块前缀或另造其它编号。`VER-CASE-REQ-*`、`FLOW-SPEC-AC-*` 等可保留为叙述性能力小节标题，但不作为验收条件编号。
+- 任务通过“需求来源”挂 specs，验收条件复用该文件的同一套 `AC-n` 正文；不写模块前缀或“对照”平行列表，也不把 `taskId#AC` 当用例锚。
 - 新用例的“关联 AC”固定写“无”；`case add` 不要求 `--criterion`，继续要求存在的稳定 specs 需求路径。误传 `--criterion` 明确拒绝，不写入 `task#AC`。
 - AC 覆盖只认 `verify` 记录的 AC→测试→CASE 与测试扫描；历史 `task#AC` 和空关联 AC 保持可读，只给可迁移 warning，不阻断已验收历史。
 - `start --requirement-file` 与任务“需求来源”只允许 `.tiller/specs/` 下相对路径；`.tiller/local/` 等临时或其它路径明确失败，并提示先写入或拷贝进 specs。
-- `start --requirement-file` 保留多行/结构化需求：识别 `##`/`###` 小节嵌入对应段，无结构时保留在目标下，并始终写“需求来源”路径；`--criterion` 仍生成验收条件列表。
+- `start --requirement-file` 保留多行/结构化需求并始终写“需求来源”路径；文件“验收条件”（历史“验收条件（稳定）”仅作读取别名）中的 `- AC-n: ...` 导入任务并以文件为准，可省略 `--criterion`；文件无 AC 时仍要求命令行条件。新渲染只写“验收条件”。
 - 资源契约保持 0.5.0；CLI、usage、rules、初始化模板和 decisions 同步“task→需求、用例→需求、无来源 AC 回指”。
