@@ -95,122 +95,113 @@
 
 | 部分 | 确认人 | 时间 | 短提交 | 原话 |
 | --- | --- | --- | --- | --- |
-| 需求 | boon yu | 2026-10-26T12:17:36.361Z | 72448eba9010 | — |
-| 设计 | boon yu | 2026-10-26T12:17:36.447Z | 72448eba9010 | — |
+| 需求 | boon yu | 2026-10-26T12:56:20.152Z | dd9d2db9e210 | — |
+| 设计 | boon yu | 2026-10-26T12:56:20.245Z | dd9d2db9e210 | — |
+| 交付验收 | boon yu | 2026-10-26T12:56:51.008Z | dd9d2db9e210 | 开启PR |
 
-<!-- tiller-confirm:v1 {"gate":"requirements","object":"需求正文（目标、范围与验收条件）","subject":"5bd0c46217008245ceef5289420b018ff286fe4dacc2919aa00e1895bcf7fb0e","commit":"72448eba9010e6666b684fa7881a39aa95b21f86","by":"boon yu","quote":"","at":"2026-10-26T12:17:36.361Z"} -->
-<!-- tiller-confirm:v1 {"gate":"design","object":"设计正文","subject":"78ffda5ebdd7d8d5882acbe72a4f0d20a441908b5d72c08f83614c603236e3d2","commit":"72448eba9010e6666b684fa7881a39aa95b21f86","by":"boon yu","quote":"","at":"2026-10-26T12:17:36.447Z"} -->
+<!-- tiller-confirm:v1 {"gate":"requirements","object":"需求正文（目标、范围与验收条件）","subject":"e6f9af198b60075640b5c438e5a51402280f646ba206bb9c4d4f26e454cab44c","commit":"dd9d2db9e2105fea1201b84ced6a97c96ea9023d","by":"boon yu","quote":"","at":"2026-10-26T12:56:20.152Z"} -->
+<!-- tiller-confirm:v1 {"gate":"design","object":"设计正文","subject":"f367c310a3754e88a217b52f26eee2d197a7241e84b14f8d06db82c8d2056619","commit":"dd9d2db9e2105fea1201b84ced6a97c96ea9023d","by":"boon yu","quote":"","at":"2026-10-26T12:56:20.245Z"} -->
+<!-- tiller-confirm:v1 {"gate":"acceptance","object":"当前交付（需求、设计、验证与提交）","subject":"ded485c1a39d1e55ecd31ff8fb7c2c681c267c4a223bd8613f5a8c2ede420550","commit":"dd9d2db9e2105fea1201b84ced6a97c96ea9023d","by":"boon yu","quote":"开启PR","at":"2026-10-26T12:56:51.008Z"} -->
 
 ## 验证
 
 ### run-1
-<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-263 case add needs no criterion, writes no task AC and rejects the old option$' \u002d\u002dtest-reporter=./.tiller/local/verify-k7Z2zx/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-k7Z2zx/report.jsonl test/case-redesign.test.mjs","exitCode":0,"tree":"75c2e3d6f98e18fa18daef9b8ba1bcbedd33a0029a673495217fbf718f7a0ad5","commit":"72448eba9010e6666b684fa7881a39aa95b21f86"} -->
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-263 case add needs no criterion, writes no task AC and rejects the old option$' \u002d\u002dtest-reporter=./.tiller/local/verify-RRxdba/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-RRxdba/report.jsonl test/case-redesign.test.mjs","exitCode":0,"tree":"75c2e3d6f98e18fa18daef9b8ba1bcbedd33a0029a673495217fbf718f7a0ad5","commit":"dd9d2db9e2105fea1201b84ced6a97c96ea9023d"} -->
 - 条件：AC-1
 - 测试：test/case-redesign.test.mjs::CASE-263 case add needs no criterion, writes no task AC and rejects the old option
 - 用例：CASE-263
 - 结果：passed
 - 来源：executed
 - 核实：已核实
-- 日志：.tiller/local/20261026-case-req-link/logs/run-1.log
-- 提交：72448eba9010
-- 时间：2026-10-26T12:55:52.775Z
+- 日志：.tiller/local/20261026-case-req-link/logs/run-15.log
+- 提交：dd9d2db9e210
+- 时间：2026-10-26T12:56:37.175Z
 
 ### run-2
-<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-054 CASE-264 check accepts verified coverage without a task AC back-reference$' \u002d\u002dtest-reporter=./.tiller/local/verify-lFOPMT/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-lFOPMT/report.jsonl test/first-batch.test.mjs","exitCode":0,"tree":"75c2e3d6f98e18fa18daef9b8ba1bcbedd33a0029a673495217fbf718f7a0ad5","commit":"72448eba9010e6666b684fa7881a39aa95b21f86"} -->
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-054 CASE-264 check accepts verified coverage without a task AC back-reference$' \u002d\u002dtest-reporter=./.tiller/local/verify-PqiLby/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-PqiLby/report.jsonl test/first-batch.test.mjs","exitCode":0,"tree":"75c2e3d6f98e18fa18daef9b8ba1bcbedd33a0029a673495217fbf718f7a0ad5","commit":"dd9d2db9e2105fea1201b84ced6a97c96ea9023d"} -->
 - 条件：AC-2
 - 测试：test/first-batch.test.mjs::CASE-054 CASE-264 check accepts verified coverage without a task AC back-reference
 - 用例：CASE-054, CASE-264
 - 结果：passed
 - 来源：executed
 - 核实：已核实
-- 日志：.tiller/local/20261026-case-req-link/logs/run-2.log
-- 提交：72448eba9010
-- 时间：2026-10-26T12:55:54.060Z
+- 日志：.tiller/local/20261026-case-req-link/logs/run-16.log
+- 提交：dd9d2db9e210
+- 时间：2026-10-26T12:56:38.499Z
 
 ### run-3
-<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-267 guidance and decisions use task-to-specs and case-to-specs links$' \u002d\u002dtest-reporter=./.tiller/local/verify-e04n8L/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-e04n8L/report.jsonl test/rules.test.mjs","exitCode":0,"tree":"75c2e3d6f98e18fa18daef9b8ba1bcbedd33a0029a673495217fbf718f7a0ad5","commit":"72448eba9010e6666b684fa7881a39aa95b21f86"} -->
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-267 guidance and decisions use task-to-specs and case-to-specs links$' \u002d\u002dtest-reporter=./.tiller/local/verify-dGSKxG/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-dGSKxG/report.jsonl test/rules.test.mjs","exitCode":0,"tree":"75c2e3d6f98e18fa18daef9b8ba1bcbedd33a0029a673495217fbf718f7a0ad5","commit":"dd9d2db9e2105fea1201b84ced6a97c96ea9023d"} -->
 - 条件：AC-2
 - 测试：test/rules.test.mjs::CASE-267 guidance and decisions use task-to-specs and case-to-specs links
 - 用例：CASE-267
 - 结果：passed
 - 来源：executed
 - 核实：已核实
-- 日志：.tiller/local/20261026-case-req-link/logs/run-3.log
-- 提交：72448eba9010
-- 时间：2026-10-26T12:55:55.577Z
+- 日志：.tiller/local/20261026-case-req-link/logs/run-17.log
+- 提交：dd9d2db9e210
+- 时间：2026-10-26T12:56:40.059Z
 
 ### run-4
-<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-107 CASE-265 start requirement-file preserves structured multiline content and source$' \u002d\u002dtest-reporter=./.tiller/local/verify-tVB5To/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-tVB5To/report.jsonl test/review-release.test.mjs","exitCode":0,"tree":"75c2e3d6f98e18fa18daef9b8ba1bcbedd33a0029a673495217fbf718f7a0ad5","commit":"72448eba9010e6666b684fa7881a39aa95b21f86"} -->
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-107 CASE-265 start requirement-file preserves structured multiline content and source$' \u002d\u002dtest-reporter=./.tiller/local/verify-VjMKoa/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-VjMKoa/report.jsonl test/review-release.test.mjs","exitCode":0,"tree":"75c2e3d6f98e18fa18daef9b8ba1bcbedd33a0029a673495217fbf718f7a0ad5","commit":"dd9d2db9e2105fea1201b84ced6a97c96ea9023d"} -->
 - 条件：AC-3
 - 测试：test/review-release.test.mjs::CASE-107 CASE-265 start requirement-file preserves structured multiline content and source
 - 用例：CASE-107, CASE-265
 - 结果：passed
 - 来源：executed
 - 核实：已核实
-- 日志：.tiller/local/20261026-case-req-link/logs/run-4.log
-- 提交：72448eba9010
-- 时间：2026-10-26T12:55:56.088Z
+- 日志：.tiller/local/20261026-case-req-link/logs/run-18.log
+- 提交：dd9d2db9e210
+- 时间：2026-10-26T12:56:40.600Z
 
 ### run-5
-<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-266 historical task AC and empty criteria stay readable without hard blocking$' \u002d\u002dtest-reporter=./.tiller/local/verify-yr6VXl/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-yr6VXl/report.jsonl test/case-redesign.test.mjs","exitCode":0,"tree":"75c2e3d6f98e18fa18daef9b8ba1bcbedd33a0029a673495217fbf718f7a0ad5","commit":"72448eba9010e6666b684fa7881a39aa95b21f86"} -->
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-266 historical task AC and empty criteria stay readable without hard blocking$' \u002d\u002dtest-reporter=./.tiller/local/verify-GRDwCC/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-GRDwCC/report.jsonl test/case-redesign.test.mjs","exitCode":0,"tree":"75c2e3d6f98e18fa18daef9b8ba1bcbedd33a0029a673495217fbf718f7a0ad5","commit":"dd9d2db9e2105fea1201b84ced6a97c96ea9023d"} -->
 - 条件：AC-4
 - 测试：test/case-redesign.test.mjs::CASE-266 historical task AC and empty criteria stay readable without hard blocking
 - 用例：CASE-266
 - 结果：passed
 - 来源：executed
 - 核实：已核实
-- 日志：.tiller/local/20261026-case-req-link/logs/run-5.log
-- 提交：72448eba9010
-- 时间：2026-10-26T12:55:57.417Z
+- 日志：.tiller/local/20261026-case-req-link/logs/run-19.log
+- 提交：dd9d2db9e210
+- 时间：2026-10-26T12:56:41.984Z
 
 ### run-6
-<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-268 stable AC bodies live in specs and tasks link specs$' \u002d\u002dtest-reporter=./.tiller/local/verify-wtDjQ7/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-wtDjQ7/report.jsonl test/rules.test.mjs","exitCode":0,"tree":"75c2e3d6f98e18fa18daef9b8ba1bcbedd33a0029a673495217fbf718f7a0ad5","commit":"72448eba9010e6666b684fa7881a39aa95b21f86"} -->
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-268 stable AC bodies live in specs and tasks link specs$' \u002d\u002dtest-reporter=./.tiller/local/verify-Pdp7B7/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-Pdp7B7/report.jsonl test/rules.test.mjs","exitCode":0,"tree":"75c2e3d6f98e18fa18daef9b8ba1bcbedd33a0029a673495217fbf718f7a0ad5","commit":"dd9d2db9e2105fea1201b84ced6a97c96ea9023d"} -->
 - 条件：AC-5
 - 测试：test/rules.test.mjs::CASE-268 stable AC bodies live in specs and tasks link specs
 - 用例：CASE-268
 - 结果：passed
 - 来源：executed
 - 核实：已核实
-- 日志：.tiller/local/20261026-case-req-link/logs/run-6.log
-- 提交：72448eba9010
-- 时间：2026-10-26T12:55:58.066Z
+- 日志：.tiller/local/20261026-case-req-link/logs/run-20.log
+- 提交：dd9d2db9e210
+- 时间：2026-10-26T12:56:42.658Z
 
 ### run-7
-<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-269 requirement-file rejects local paths and keeps specs multiline source$' \u002d\u002dtest-reporter=./.tiller/local/verify-iwiP17/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-iwiP17/report.jsonl test/review-release.test.mjs","exitCode":0,"tree":"75c2e3d6f98e18fa18daef9b8ba1bcbedd33a0029a673495217fbf718f7a0ad5","commit":"72448eba9010e6666b684fa7881a39aa95b21f86"} -->
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-269 requirement-file rejects local paths and keeps specs multiline source$' \u002d\u002dtest-reporter=./.tiller/local/verify-bUkLZP/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-bUkLZP/report.jsonl test/review-release.test.mjs","exitCode":0,"tree":"75c2e3d6f98e18fa18daef9b8ba1bcbedd33a0029a673495217fbf718f7a0ad5","commit":"dd9d2db9e2105fea1201b84ced6a97c96ea9023d"} -->
 - 条件：AC-6
 - 测试：test/review-release.test.mjs::CASE-269 requirement-file rejects local paths and keeps specs multiline source
 - 用例：CASE-269
 - 结果：passed
 - 来源：executed
 - 核实：已核实
-- 日志：.tiller/local/20261026-case-req-link/logs/run-7.log
-- 提交：72448eba9010
-- 时间：2026-10-26T12:55:58.575Z
+- 日志：.tiller/local/20261026-case-req-link/logs/run-21.log
+- 提交：dd9d2db9e210
+- 时间：2026-10-26T12:56:43.191Z
 
 ## 自检
 
 - [x] 需求确认有效
-- [ ] 设计确认有效
-- [ ] 验收条件均有当前通过且绑定全局用例的测试引用
-- [ ] 每条验收条件均映射到本次验证引用的全局用例
-- [ ] 验收条件与用例通过 verify 的 AC→测试→CASE 记录关联
-- [ ] 验证命令已执行且测试输出已核实
+- [x] 设计确认有效
+- [x] 验收条件均有当前通过且绑定全局用例的测试引用
+- [x] 每条验收条件均映射到本次验证引用的全局用例
+- [x] 验收条件与用例通过 verify 的 AC→测试→CASE 记录关联
+- [x] 验证命令已执行且测试输出已核实
 - [x] 全局用例结构与引用有效
-- [ ] 改动未超出范围
+- [x] 改动未超出范围
 - [x] 未弱化仍存在的测试
 - [x] 评审无未清除阻塞项
 - [x] 记录不含密钥或本机绝对路径
-
-阻塞项：
-- 过程卫生：需求、设计确认提交 72448eba9010 后，工作区仍有未提交业务改动：resources/rules/activities/delivery.md、resources/rules/activities/design.md、resources/rules/activities/requirements.md、resources/rules/core.md、resources/rules/quality/verification.md、resources/usage.md、src/cases.ts、src/cli.ts 等 20 项。请先提交或移出本任务。
-- AC-1 尚无验证。
-- AC-2 尚无验证。
-- AC-3 尚无验证。
-- AC-4 尚无验证。
-- AC-5 尚无验证。
-- AC-6 尚无验证。
-- 改动超出范围：.tiller/project.json、.tiller/specs/modules/verification/requirements.md、.tiller/specs/modules/workflow/requirements.md、scripts/package-smoke.mjs、.tiller/specs/modules/verification/case-req-link.md
-- 交付范围存在未提交改动：.tiller/cases/modules/standards/interface.md、.tiller/cases/modules/verification/behavior.md、.tiller/cases/modules/verification/interface.md、.tiller/cases/modules/workflow/behavior.md、.tiller/cases/modules/workflow/interface.md、.tiller/rules/activities/delivery.md、.tiller/rules/activities/design.md、.tiller/rules/activities/requirements.md、.tiller/rules/core.md、.tiller/rules/quality/verification.md、.tiller/specs/decisions.md、.tiller/usage.md、resources/rules/activities/delivery.md、resources/rules/activities/design.md、resources/rules/activities/requirements.md、resources/rules/core.md、resources/rules/quality/verification.md、resources/usage.md、src/cases.ts、src/cli.ts、src/core.ts、src/flow.ts、test/case-redesign.test.mjs、test/first-batch.test.mjs、test/flow-hardening.test.mjs、test/gap-closure.test.mjs、test/merge.test.mjs、test/pr.test.mjs、test/review-release.test.mjs、test/rules.test.mjs、test/task-worktrees.test.mjs、test/verification-integrity.test.mjs
 
 提示：
 - 172 条历史用例仍以 <任务>#AC-n 记录关联 AC；这是可迁移的历史债，不阻断当前覆盖。
