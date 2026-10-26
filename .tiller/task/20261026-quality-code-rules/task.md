@@ -56,8 +56,72 @@
 
 ## 验证
 
-尚无验证。
+### run-1
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-246 code quality and security rules stay mirrored and managed$' \u002d\u002dtest-reporter=./.tiller/local/verify-mAjMxQ/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-mAjMxQ/report.jsonl test/rules.test.mjs","exitCode":0,"tree":"b96fbbf4bf3cd21c5544adbd7da17c36b3de4f2171c2f98920430a9a76f51d50","commit":"865a5cb41c48c1d9390ae91c4fa0d1261c7645b0"} -->
+- 条件：AC-1
+- 测试：test/rules.test.mjs::CASE-246 code quality and security rules stay mirrored and managed
+- 用例：CASE-246
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/20261026-quality-code-rules/logs/run-1.log
+- 提交：865a5cb41c48
+- 时间：2026-10-26T07:38:56.322Z
+
+### run-2
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-246 code quality and security rules stay mirrored and managed$' \u002d\u002dtest-reporter=./.tiller/local/verify-mAjMxQ/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-mAjMxQ/report.jsonl test/rules.test.mjs","exitCode":0,"tree":"b96fbbf4bf3cd21c5544adbd7da17c36b3de4f2171c2f98920430a9a76f51d50","commit":"865a5cb41c48c1d9390ae91c4fa0d1261c7645b0"} -->
+- 条件：AC-2
+- 测试：test/rules.test.mjs::CASE-246 code quality and security rules stay mirrored and managed
+- 用例：CASE-246
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/20261026-quality-code-rules/logs/run-1.log
+- 提交：865a5cb41c48
+- 时间：2026-10-26T07:38:56.322Z
+
+### run-3
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-246 code quality and security rules stay mirrored and managed$' \u002d\u002dtest-reporter=./.tiller/local/verify-mAjMxQ/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-mAjMxQ/report.jsonl test/rules.test.mjs","exitCode":0,"tree":"b96fbbf4bf3cd21c5544adbd7da17c36b3de4f2171c2f98920430a9a76f51d50","commit":"865a5cb41c48c1d9390ae91c4fa0d1261c7645b0"} -->
+- 条件：AC-3
+- 测试：test/rules.test.mjs::CASE-246 code quality and security rules stay mirrored and managed
+- 用例：CASE-246
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/20261026-quality-code-rules/logs/run-1.log
+- 提交：865a5cb41c48
+- 时间：2026-10-26T07:38:56.322Z
+
+### run-4
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-246 code quality and security rules stay mirrored and managed$' \u002d\u002dtest-reporter=./.tiller/local/verify-mAjMxQ/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-mAjMxQ/report.jsonl test/rules.test.mjs","exitCode":0,"tree":"b96fbbf4bf3cd21c5544adbd7da17c36b3de4f2171c2f98920430a9a76f51d50","commit":"865a5cb41c48c1d9390ae91c4fa0d1261c7645b0"} -->
+- 条件：AC-4
+- 测试：test/rules.test.mjs::CASE-246 code quality and security rules stay mirrored and managed
+- 用例：CASE-246
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/20261026-quality-code-rules/logs/run-1.log
+- 提交：865a5cb41c48
+- 时间：2026-10-26T07:38:56.322Z
 
 ## 自检
 
-交付前运行 check；验收后运行 accept。
+- [x] 需求确认有效
+- [x] 该任务无需设计确认
+- [x] 验收条件均有当前通过且绑定全局用例的测试引用
+- [x] 每条验收条件均映射到本次验证引用的全局用例
+- [x] 验收条件与用例来源 criteria 相互指向或由本任务新增/修改
+- [x] 验证命令已执行且测试输出已核实
+- [x] 全局用例结构与引用有效
+- [x] 改动未超出范围
+- [x] 未弱化仍存在的测试
+- [x] 评审无未清除阻塞项
+- [x] 记录不含密钥或本机绝对路径
+
+提示：
+- 90 条历史用例未绑定来源 AC；新用例请用 case add 写入 criteria。
+- 本次改动涉及模块 initialization：建议回归该模块 64 条用例及经过它的场景 CASE-055, CASE-001。
+- 本次改动涉及模块 standards：建议回归该模块 31 条用例及经过它的场景 CASE-055。
+- 本次改动涉及模块 verification：建议回归该模块 40 条用例及经过它的场景 CASE-055, CASE-001。
+- 本次改动涉及模块 workflow：建议回归该模块 109 条用例及经过它的场景 CASE-055, CASE-001。
+- 未检测到任务基线后的 `.tiller/specs/` 或 `.tiller/context/` 回写；如本次形成长期结论，建议回写：`.tiller/specs/modules/initialization/requirements.md`（“## <能力>” + 稳定行为/边界）；`.tiller/specs/modules/initialization/design.md`（“## <方案>” + 取舍与影响）；`.tiller/specs/modules/standards/requirements.md`（“## <能力>” + 稳定行为/边界）；`.tiller/specs/modules/standards/design.md`（“## <方案>” + 取舍与影响）。纯过程性变更可忽略。
