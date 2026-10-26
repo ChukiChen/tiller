@@ -55,6 +55,7 @@ const HELP = `tiller ${CLI_VERSION} — 默认工作流
 - review 记录独立评审发现；未解决阻塞项会阻断 check/accept。release 只做发布门禁，不发布包。check 汇总发布清单；已验收任务按验收提交读取代码树与测试，之后代码漂移不误报过期。
 - 阶段由 task.md 事实推导；accept 须在 pr 前；merge 通过 GitHub/GitLab REST API 以 squash 合入，成功后自动 close；merge/close 默认删除本地与远端任务分支，close init-id 同样清理 chore/tiller-init；--keep-branch 保留，删除失败只记 warning。token 从 GITHUB_TOKEN/GH_TOKEN 或 GITLAB_TOKEN/GL_TOKEN 读取；init 推送与 PR/MR 同走平台 API，GitLab 传输层可用 tokenized HTTPS git push，不依赖平台 CLI；网页合入后仍需手动 close；未验收终止用 --abandon，必要时 reopen。
 - start 对 pending 初始化基线先判祖先，再通过平台 API 查同分支已合入 PR/MR；确认后写回 merged 并放行，无 token、API 失败或无记录仍阻断，--skip-init-gate 例外。
+- specs 变更只走 start → 任务 worktree 修改 → 随任务 PR/MR 合入；禁止在 main/master 默认分支直改或直推。默认分支上相对任务基线触及 .tiller/specs/ 时，check 按过程卫生阻断；任务分支与已验收历史快照不触发。
 - check 对过薄文档给出可定位提示：空白或占位的 standard 设计、无有效条目的 .tiller/specs/decisions.md、空壳模块设计 design.md；需求“业务范围·做”中的交付路径给 warning；规格/背景未回写时列出路径与提纲。默认不单独阻断。verify 日志含显示命令、起止时间与退出码。当前分支未包含任务编号时 check 提示，分支名用“类型/任务编号[-描述]”。
 - 同一 AC 或 CASE 连续两次 verify 失败且无成功核实时，verify/check 要求停止自动重试并按 FLOW-05 报告证据与可选方案；成功核实清零。
 - case add 在测试之前登记测试设计（前置条件、步骤、输入、预期结果、类型、优先级、稳定 specs 需求），关联 AC 固定写“无”，不保存源码字段，自动分配 CASE 编号；测试名引用 CASE 编号形成反查。check 以 verify 的 AC→测试→CASE 记录核对当前验证，校验模块/场景结构并提示相关回归，同时检查范围、测试弱化、密钥和本机绝对路径。

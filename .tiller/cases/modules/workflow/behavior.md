@@ -1771,3 +1771,53 @@ check 返回可定位 warning 且不因此升级为阻塞项。
 ### 预期结果
 
 任务验收条件为同一套 AC-n 正文；可解析历史别名；无 LIB- 前缀与「对照」平行列表
+
+## CASE-276 默认分支改 specs 时 check 过程门禁
+
+- 类型：behavior
+- 优先级：high
+- 模块：workflow
+- 关联 AC：无
+- 需求：`.tiller/specs/modules/workflow/requirements.md`
+
+### 前置条件
+
+- 任务未验收；检出在 main 或 master；相对基线有 .tiller/specs/ 改动
+
+### 步骤
+
+1. 在默认分支工作区改动 .tiller/specs 下文件
+2. 运行 tiller check <任务>
+
+### 输入
+
+- 分支 main；变更路径 .tiller/specs/...
+
+### 预期结果
+
+check 在 main/master 且变更含 .tiller/specs/ 时返回含过程卫生/specs/worktree 提示的 issue，ready 为 false
+
+## CASE-277 任务分支改 specs 不触发默认分支门禁
+
+- 类型：behavior
+- 优先级：high
+- 模块：workflow
+- 关联 AC：无
+- 需求：`.tiller/specs/modules/workflow/requirements.md`
+
+### 前置条件
+
+- 检出在 feat/<任务编号> 等任务分支；有 specs 改动
+
+### 步骤
+
+1. 在任务 worktree/分支改 .tiller/specs
+2. 运行 tiller check
+
+### 输入
+
+- 分支 feat/20261026-specs-worktree-gate
+
+### 预期结果
+
+在含任务编号的任务分支上改 .tiller/specs/ 时，check 不因本 specs 默认分支门禁失败

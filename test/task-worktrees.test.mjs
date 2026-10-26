@@ -66,6 +66,7 @@ function acceptTask(root, id) {
   commit(root, `test: accept ${id}`);
   success(confirmTask(root, id, 'requirements'));
   success(cli(root, 'verify', id, '--criterion', 'AC-1', '--test', `${testFile}::${added.id} accepted task fixture`));
+  git(root, 'checkout', '--quiet', '-b', `fix/${id}-fixture`);
   success(cli(root, 'accept', id, '--by', 'Tiller Test'));
 }
 

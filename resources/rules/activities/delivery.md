@@ -42,4 +42,5 @@
 - `verify`/`check` 或 cases/specs 回写后，先提交验证记录，再 `accept` 并把含 acceptance 的本任务记录提交到任务分支，最后运行 `pr`。无有效验收默认以 `PR_NOT_ACCEPTED` 失败并提示先 `accept`；任务记录未提交以 `PR_TASK_RECORDS_DIRTY` 阻断并列出路径。只检查本任务 id 与 scope，其他任务 `.tiller/task/<other>/` 不阻断，tiller 不自动提交。无 Git 或无法读工作树时仅跳过记录门禁并提示，验收门禁仍生效。
 - 合入即交付完成；合入后 `close` 只清 local，不再 `accept`，也不改写共享 `task.md` 或另作收尾提交。未验收终止的 `abandon` 仍写共享记录。
 - `init --platform github|gitlab|both` 按平台安装对应模板，默认 GitHub；受管文件写好后在 `.tiller/local/<YYYYMMDD-tiller-init>/worktrees` 创建 `chore/tiller-init` 并提交，推送分支并创建同标题 PR/MR，失败保留本地与 token/API 下一步，但不自动合入。GitHub 推送优先 Git Data API；GitLab 公共 REST 不导入原始对象，传输层使用 tokenized HTTPS `git push`；PR/MR 创建走 REST API，均不调用平台 CLI。人工合入后方可 `start`；未合入默认以 `INIT_BASELINE_PENDING` 阻断，例外使用 `--skip-init-gate`。也可用 `merge <init-id>` 合入初始化 PR/MR，成功后标记 merged 并清理该 local；网页合入则手动 `close <init-id>`。`specs` 只在任务 worktree 修改并随任务分支合入。平台在初始化时选定，之后不能通过 CLI 切换，需手动修改 `project.json` 并补齐模板。`upgrade` 只补齐当前平台模板，不跨平台新增。
+- `specs` 变更先 `start`，在任务 worktree 修改，再随任务 PR/MR 合入；禁止在 `main`/`master` 默认分支直改或直推。默认分支上相对任务基线触及 `.tiller/specs/` 时，`check` 按过程卫生阻断；任务分支与已验收历史快照不触发。
 - `check` 对任务基线后的非合并提交主题和当前分支名给出提示，不阻塞；main/master 与 detached HEAD 跳过分支检查。
