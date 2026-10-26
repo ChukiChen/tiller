@@ -642,3 +642,54 @@ Maven/Gradle 工程 init 写入对应 junit runner，case add 输出匹配运行
 ### 预期结果
 
 init 生成的项目 requirements.md 与 design.md 及 modules/README.md 包含完整章节标题和简短写作提示，不覆盖已有文件且无长示例
+
+## CASE-228 init 创建初始化 worktree、提交并尝试开 PR
+
+- 类型：behavior
+- 优先级：high
+- 模块：initialization
+- 关联 AC：20261026-init-baseline#AC-1
+- 需求：`.tiller/specs/modules/initialization/requirements.md`
+- 源码：`src/core.ts`, `src/init-baseline.ts`, `test/init-baseline.test.mjs`
+
+### 前置条件
+
+- 工程有 Git 提交，托管 CLI 可调用
+
+### 步骤
+
+1. 运行 tiller init
+2. 检查 init-id worktree、分支、提交和 PR 调用
+
+### 输入
+
+- 已有 HEAD 的工程
+
+### 预期结果
+
+创建 .tiller/local/<YYYYMMDD-tiller-init>/worktrees，分支为 chore/tiller-init，提交受管初始化改动，并以固定标题尝试创建 PR/MR，不自动合入
+
+## CASE-229 init 开 PR 失败时保留本地并返回可复制命令
+
+- 类型：behavior
+- 优先级：high
+- 模块：initialization
+- 关联 AC：20261026-init-baseline#AC-2
+- 需求：`.tiller/specs/modules/initialization/requirements.md`
+- 源码：`src/init-baseline.ts`, `test/init-baseline.test.mjs`
+
+### 前置条件
+
+- 工程有 Git 提交，但推送或托管 CLI 失败
+
+### 步骤
+
+1. 运行 tiller init 并令 PR 创建失败
+
+### 输入
+
+- 无远程、gh/glab 不可用或返回失败
+
+### 预期结果
+
+初始化 worktree 和提交仍保留，结果给出 git push -u 与 PR/MR 创建命令及失败原因

@@ -975,3 +975,30 @@ package.json 与 README 版本为 0.5.0；定向 pr 测试与 package-smoke 覆�
 ### 预期结果
 
 package.json 与 README 版本保持 0.5.0，全量质量命令通过且测试引用冻结行为用例
+
+## CASE-231 start 初始化基线未合入时阻断并支持跳过
+
+- 类型：interface
+- 优先级：high
+- 模块：workflow
+- 关联 AC：20261026-init-baseline#AC-3
+- 需求：`.tiller/specs/modules/workflow/requirements.md`
+- 源码：`src/init-baseline.ts`, `src/flow.ts`, `src/cli.ts`, `test/init-baseline.test.mjs`
+
+### 前置条件
+
+- project.json 含未合入的 initBaseline
+
+### 步骤
+
+1. 默认运行 start
+2. 使用 --skip-init-gate 重试
+3. 将初始化提交合入 HEAD 后再次 start
+
+### 输入
+
+- 待合入、跳过和已合入三种状态
+
+### 预期结果
+
+未合入默认返回 INIT_BASELINE_PENDING；--skip-init-gate 放行并警告；commit 成为 HEAD 祖先或 status=merged 后放行

@@ -9,6 +9,7 @@
 | 部分 | 职责 |
 |---|---|
 | `src/core.ts` | 工程初始化、元信息、受管区段、状态检查 |
+| `src/init-baseline.ts` | 初始化 worktree、基线元信息、PR/MR 尝试与本地降级 |
 | `src/flow.ts` | task 的 start/resume/confirm/verify/review/check/accept/release/close/reopen 与阶段推导 |
 | `src/release.ts` | 只读发布门禁：验收提交、元数据、受管资源、README/版本和范围清洁度 |
 | `src/test-output.ts` | 测试运行适配器注册、node:test 命令构造与私有报告核实 |
@@ -68,13 +69,15 @@
 
 提交类型限定 `feat/fix/docs/refactor/test/chore`，主题格式为 `类型(模块): 中文摘要`；模块名必须来自 `.tiller/specs/modules/`，任务类型到提交类型由固定映射推导。检查范围是任务 `base` 到 `HEAD` 的非合并提交，只产生提示。
 
-分支建议为 `类型/任务编号[-简短描述]`；描述依次取 `--slug`、任务元数据、当前分支，且必须匹配当前任务编号。main/master 与 detached HEAD 跳过检查。PR/MR 标题为提交格式加 `[任务编号]`，摘要依次取 `pr --summary`、任务元数据、最早规范 feat/fix 提交摘要和任务标题，主模块取范围首个；正文固定五段，关联任务为纯文本，变更内容按提交时间正序，验证按 AC 用普通嵌套列表保留全部记录。`pr` 只输出草稿，不访问远端。
+分支建议为 `类型/任务编号[-简短描述]`；描述依次取 `--slug`、任务元数据、当前分支，且必须匹配当前任务编号。main/master 与 detached HEAD 跳过检查。PR/MR 标题为提交格式加 `[任务编号]`，摘要依次取 `pr --summary`、任务元数据、最早规范 feat/fix 提交摘要和任务标题，主模块取范围首个；正文固定五段，关联任务为纯文本，变更内容按提交时间正序，验证按 AC 用普通嵌套列表保留全部记录。`pr` 只输出草稿，不访问远端；初始化集成是唯一尝试创建 PR/MR 的例外。
 
 ## 8. 初始化与升级
 
 `init` 只补缺失骨架，维护 `AGENTS.md` 区段、`.gitignore` 本机排除、`.tiller/index.md` 导航和平台对应的合并请求模板；已存在且冲突的入口拒绝覆盖。空工程骨架至少包含 `.tiller/specs/requirements.md`、`design.md`、`decisions.md`、`modules/README.md`、`.tiller/context/project.md`、`.tiller/cases/index.md`、`cases/modules/`、`cases/scenarios/`、`plans/` 和入口规则。`--platform github|gitlab|both` 选择模板，缺省 github；GitHub 使用 `.github/pull_request_template.md`，GitLab 使用 `.gitlab/merge_request_templates/Default.md`，both 同时生成。检测到 pytest 配置或 Python 测试布局时写入 `verify.runner=pytest`。`project.json` 保存模式、可选平台、仓库映射和各受管文件的规范化摘要；平台切换需手动修改元信息并补齐模板。
 
 `upgrade --plan` 只读预览，`upgrade --apply <plan-id>` 应用；读取当前或兼容上一资源契约，按记录摘要判断受管文件是否被用户修改。未修改文件按分发资源或固定区段重建；修改、缺失和异常区段只报告冲突，并给出首个差异位置。`upgrade --adopt <受管文件>` 不重写文件，只把当前受管内容摘要写回元信息，供有意保留本地修改的工程消除漂移。`plan attach <task> --plan <id> --item <id>` 为已有任务补充规划归属；它只校验已确认规划与条目存在，不依赖条目的完成状态，也不改任务确认。预览摘要绑定输入、期望结果和元信息；应用时在锁内重新预览并原子写入，成功后更新摘要与 `resourceVersion`，保留 `verify` 等用户配置。事务失败保留恢复依据，可由 `recover` 恢复。
+
+有 Git HEAD 时，`init` 在受管文件落盘后调用 `src/init-baseline.ts`，从当时 HEAD 建 `chore/tiller-init` 和 `.tiller/local/<YYYYMMDD-tiller-init>/worktrees`。第一笔同标题提交承载受管改动并成为 `initBaseline.commit`，第二笔把引用该提交的元信息写入分支，避免自引用；随后尝试推送和 `gh pr create`/`glab mr create`。远端失败只告警并返回可复制命令，保留 worktree 与提交；本地建树或提交失败则回滚元信息并清理由本次创建的本机目录与分支。`start` 在初始化提交未成为 HEAD 祖先且未标记 merged 时阻断，`--skip-init-gate` 可显式跳过；存量工程没有标记时放行。init-id 的 `close` 只复用本机清理路径。
 
 ## 9. 错误与恢复
 

@@ -20,9 +20,11 @@
 
 ## 测试与验证资料
 
-需求确认后把编号 AC 转为全局用例：先写前置条件、步骤、输入、预期、类型、优先级、来源 AC，测试名或紧邻注释再引用 `CASE-NNN`，tiller 扫描建立 case→tests 反查；每项 AC 至少一个用例。`verify` 只声明 `--test` 或 `--case`，由 tiller 自主执行并从私有报告核实；stdout/stderr 不参与判定，报告缺失/损坏、匹配数不为 1、失败或跳过即阻断。`check` 在确认后要求 AC 有用例，验证/验收时要求用例有当前通过且已核实的测试。
+需求确认后把编号 AC 转为全局用例：写前置条件、步骤、输入、预期、类型、优先级和来源 AC，测试名或紧邻注释引用 `CASE-NNN` 并反查；每项 AC 至少一个用例。`verify` 只声明 `--test` 或 `--case`，由 tiller 自主执行并读私有报告；stdout/stderr 不参与判定，报告缺失/损坏、匹配数不为 1、失败或跳过即阻断。`check` 验证 AC 有用例且测试当前通过、已核实。
 
-外部报告用 `--reported` 写明命令、结果和理由，理由必填；`check`/`accept` 默认阻断，仅 `--allow-reported` 放行。bugfix 须用 `--expect-fail` 在任务基线留失败先行证据，并具备当前通过。standard 任务 `start` 必须给 `--target`，small 缺省 `.`。`start` 要求 Git 提交并创建 `.tiller/local/<id>/worktrees/` 任务 worktree；close/abandon 强拆该 worktree 并删除整棵 `.tiller/local/<id>/`，兼容旧布局。已验收 close 只清本机且不改共享 `task.md`；未验收 abandon 仍写共享放弃记录。`check` 拒绝缺失、错配、未核实或过期映射。已验收任务按验收提交核对树与测试，未验收仍查工作区；specs/context 未回写只提示。
+外部报告用 `--reported` 写明命令、结果和理由，默认阻断，放行用 `--allow-reported`；bugfix 用 `--expect-fail` 在基线留失败先行证据。standard 任务 `start` 必须给 `--target`，small 缺省 `.`。`start` 创建 `.tiller/local/<id>/worktrees/`；close/abandon 强拆并删除 local，已验收 close 不写共享记录。`check` 拒绝缺失、错配、未核实或过期映射；已验收按验收提交核对树与测试，specs/context 未回写只提示。
+
+首次接入 `init` → 初始化 PR/MR → 人工合入 → `start`；未合入默认阻断，`--skip-init-gate` 例外，`close init-id` 只清该 local。`specs` 在任务 worktree 修改并随任务分支合入。
 
 长期回归写入 `.tiller/cases/modules/<模块>/` 与 `scenarios/`；用例保存测试设计、来源 AC、源码与预期，无引用显示待实现。
 

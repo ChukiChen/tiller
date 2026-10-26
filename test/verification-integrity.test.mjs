@@ -421,7 +421,7 @@ test('CASE-089 CASE-094 bugfix verification requires baseline failure and curren
   assert.match(baseline.entries[0].baseline, /^[a-f0-9]{40,64}$/u);
   assert.match(read(root, '.tiller/local/baseline-prepared.txt'), /tiller-baseline-/u);
   const listedWorktrees = git(root, 'worktree', 'list', '--porcelain');
-  assert.equal(listedWorktrees.trim().split(/\n(?=worktree )/u).length, 2);
+  assert.equal(listedWorktrees.trim().split(/\n(?=worktree )/u).length, 3);
   assert.doesNotMatch(listedWorktrees, /tiller-baseline-/u);
 
   put(root, 'src/bug.mjs', 'export const add = (a, b) => a + b;\n');
@@ -451,7 +451,7 @@ test('CASE-089 CASE-094 bugfix verification requires baseline failure and curren
   const noFailure = failure(cli(root, 'verify', noFailureId, '--criterion', 'AC-1', '--test', testRef, '--expect-fail'));
   assert.equal(noFailure.error.code, 'EXPECTED_FAILURE_NOT_OBSERVED');
   const remainingWorktrees = git(root, 'worktree', 'list', '--porcelain');
-  assert.equal(remainingWorktrees.trim().split(/\n(?=worktree )/u).length, 4);
+  assert.equal(remainingWorktrees.trim().split(/\n(?=worktree )/u).length, 5);
   assert.doesNotMatch(remainingWorktrees, /tiller-baseline-/u);
 });
 
