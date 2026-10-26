@@ -47,9 +47,11 @@
 
 | 部分 | 确认人 | 时间 | 短提交 | 原话 |
 | --- | --- | --- | --- | --- |
-| 需求 | boon yu | 2026-10-26T14:00:24.630Z | adbd6f45f28b | 使用场景 |
+| 需求 | boon yu | 2026-10-26T14:01:23.015Z | bb9fa155b17b | 使用场景 |
+| 交付验收 | boon yu | 2026-10-26T14:01:28.551Z | bb9fa155b17b | 使用场景 |
 
-<!-- tiller-confirm:v1 {"gate":"requirements","object":"需求正文（目标、范围与验收条件）","subject":"f3af69aeed252a8312382168387e44b122434edfec19b78fba36e46c44f85e30","commit":"adbd6f45f28b3050c45e30be60a68e8a62fcfaa9","by":"boon yu","quote":"使用场景","at":"2026-10-26T14:00:24.630Z"} -->
+<!-- tiller-confirm:v1 {"gate":"requirements","object":"需求正文（目标、范围与验收条件）","subject":"f3af69aeed252a8312382168387e44b122434edfec19b78fba36e46c44f85e30","commit":"bb9fa155b17b4270a3708b35cc3ebe11bc0d926b","by":"boon yu","quote":"使用场景","at":"2026-10-26T14:01:23.015Z"} -->
+<!-- tiller-confirm:v1 {"gate":"acceptance","object":"当前交付（需求、设计、验证与提交）","subject":"00caff8a8d77bd4fa83a1026497d4970f30ecf5805ac65d4c5b1bb38a5e74f08","commit":"bb9fa155b17b4270a3708b35cc3ebe11bc0d926b","by":"boon yu","quote":"使用场景","at":"2026-10-26T14:01:28.551Z"} -->
 
 ## 验证
 
@@ -129,22 +131,15 @@
 
 - [x] 需求确认有效
 - [x] 该任务无需设计确认
-- [ ] 验收条件均有当前通过且绑定全局用例的测试引用
-- [ ] 每条验收条件均映射到本次验证引用的全局用例
-- [ ] 验收条件与用例通过 verify 的 AC→测试→CASE 记录关联
-- [ ] 验证命令已执行且测试输出已核实
+- [x] 验收条件均有当前通过且绑定全局用例的测试引用
+- [x] 每条验收条件均映射到本次验证引用的全局用例
+- [x] 验收条件与用例通过 verify 的 AC→测试→CASE 记录关联
+- [x] 验证命令已执行且测试输出已核实
 - [x] 全局用例结构与引用有效
 - [x] 改动未超出范围
 - [x] 未弱化仍存在的测试
 - [x] 评审无未清除阻塞项
 - [x] 记录不含密钥或本机绝对路径
-
-阻塞项：
-- 过程卫生：需求确认提交 adbd6f45f28b 后，工作区仍有未提交业务改动：resources/rules/activities/requirements.md、resources/rules/quality/documents.md、scripts/package-smoke.mjs、src/core.ts、src/flow.ts、test/case-redesign.test.mjs、test/doc-templates.test.mjs、test/flow-cli.test.mjs 等 11 项。请先提交或移出本任务。
-- AC-1 尚无验证。
-- AC-2 尚无验证。
-- AC-3 尚无验证。
-- 交付范围存在未提交改动：.tiller/cases/modules/standards/interface.md、.tiller/cases/modules/workflow/behavior.md、.tiller/cases/modules/workflow/interface.md、.tiller/project.json、.tiller/rules/activities/requirements.md、.tiller/rules/quality/documents.md、.tiller/specs/decisions.md、.tiller/specs/design.md、.tiller/specs/modules/initialization/design.md、.tiller/specs/modules/verification/case-req-link.md、.tiller/specs/modules/workflow/design.md、.tiller/specs/modules/workflow/req-scene-heading.md、.tiller/specs/modules/workflow/requirements.md、resources/rules/activities/requirements.md、resources/rules/quality/documents.md、scripts/package-smoke.mjs、src/core.ts、src/flow.ts、test/case-redesign.test.mjs、test/doc-templates.test.mjs、test/flow-cli.test.mjs、test/helpers.mjs、test/review-release.test.mjs、test/rules.test.mjs
 
 提示：
 - 172 条历史用例仍以 <任务>#AC-n 记录关联 AC；这是可迁移的历史债，不阻断当前覆盖。
