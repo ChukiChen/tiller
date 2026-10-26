@@ -22,6 +22,14 @@ export interface ProjectMetadata {
   createdAt: string;
   platform?: ProjectPlatform;
   verify?: VerifyConfig;
+  initBaseline?: InitBaseline;
+}
+
+export interface InitBaseline {
+  id: string;
+  branch: string;
+  commit: string;
+  status?: 'pending' | 'merged';
 }
 
 export interface ProjectInspection {

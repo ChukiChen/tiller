@@ -14,6 +14,7 @@ import {
   GITHUB_TEMPLATE, GITLAB_TEMPLATE, META, REQUIRED_MANAGED, RESOURCE_VERSION, SCHEMA_VERSION, SHARED_RESOURCES,
   managedFilesForPlatform, normalizePlatform, parseMetadata, templatePathsForPlatform,
 } from './project-metadata.js';
+import { createInitBaseline, type InitBaselineResult } from './init-baseline.js';
 import { assertSharedWritePaths } from './shared-paths.js';
 
 export {
@@ -27,6 +28,7 @@ export interface InitializeResult extends ProjectInspection {
   changed: boolean;
   warnings: string[];
   firstCommit: { message: string; paths: string[] };
+  initBaseline?: InitBaselineResult;
 }
 
 export const ENTRY_START = '<!-- tiller:entry:start -->';
@@ -533,9 +535,14 @@ export async function initialize(options: InitializeOptions): Promise<Initialize
       if (!effective.length) return { ...inspection, changed: false, warnings,
         firstCommit: firstCommitSuggestion(inspection.metadata!) };
       await applyChanges(root, effective);
-      const completed = await inspectProject(root);
+      let completed = await inspectProject(root);
       if (!completed.ready) throw new Error(`补齐项目骨架后检查未通过：${completed.issues.join('\n')}`);
-      return { ...completed, changed: true, warnings, firstCommit: firstCommitSuggestion(completed.metadata!) };
+      const initialized = await createInitBaseline(root, completed.metadata!, effective, platform);
+      warnings.push(...initialized.warnings, ...(initialized.baseline?.warnings ?? []));
+      completed = await inspectProject(root);
+      if (!completed.ready) throw new Error(`初始化集成后检查未通过：${completed.issues.join('\n')}`);
+      return { ...completed, changed: true, warnings, firstCommit: firstCommitSuggestion(completed.metadata!),
+        ...(initialized.baseline ? { initBaseline: initialized.baseline } : {}) };
     }
     if (await hasPendingTransaction(root)) throw new Error('存在未完成事务，请先执行 tiller recover。');
     const changes: FileChange[] = await skeletonChanges(root);
@@ -576,10 +583,15 @@ export async function initialize(options: InitializeOptions): Promise<Initialize
     };
     changes.push({ path: META, before: null, after: `${JSON.stringify(metadata, null, 2)}\n` });
     await applyChanges(root, changes);
-    const inspection = await inspectProject(root);
+    let inspection = await inspectProject(root);
     if (!inspection.ready) throw new Error(`文件接入后检查未通过：${inspection.issues.join('\n')}`);
     const warnings = detected ? [`检测到 ${detected.file}，已写入 verify.runner=${detected.runner}。`] : [];
-    return { ...inspection, changed: true, warnings, firstCommit: firstCommitSuggestion(inspection.metadata!) };
+    const initialized = await createInitBaseline(root, inspection.metadata!, changes, platform);
+    warnings.push(...initialized.warnings, ...(initialized.baseline?.warnings ?? []));
+    inspection = await inspectProject(root);
+    if (!inspection.ready) throw new Error(`初始化集成后检查未通过：${inspection.issues.join('\n')}`);
+    return { ...inspection, changed: true, warnings, firstCommit: firstCommitSuggestion(inspection.metadata!),
+      ...(initialized.baseline ? { initBaseline: initialized.baseline } : {}) };
   });
 }
 

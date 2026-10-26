@@ -1,4 +1,4 @@
-import type { ProjectMetadata, ProjectPlatform } from './types.js';
+import type { InitBaseline, ProjectMetadata, ProjectPlatform } from './types.js';
 import { readRepositoryRecords, validateRepositoryMappings } from './repository-paths.js';
 import { normalizeVerifyConfig } from './test-output.js';
 
@@ -49,6 +49,24 @@ export function parseMetadata(text: string): ProjectMetadata {
   if (data.mode !== 'project' && data.mode !== 'workspace') throw new Error('工程管理方式无效。');
   const platform = normalizePlatform(data.platform);
   if (data.verify !== undefined) normalizeVerifyConfig(data.verify, '工程');
+  if (data.initBaseline !== undefined) {
+    if (!data.initBaseline || typeof data.initBaseline !== 'object' || Array.isArray(data.initBaseline)) {
+      throw new Error('初始化基线标记格式无效。');
+    }
+    const baseline = data.initBaseline as Record<string, unknown>;
+    if (typeof baseline.id !== 'string' || !/^[0-9]{8}-tiller-init$/u.test(baseline.id) ||
+        typeof baseline.branch !== 'string' || !baseline.branch.trim() || baseline.branch.length > 200 ||
+        typeof baseline.commit !== 'string' || !/^[a-f0-9]{7,64}$/u.test(baseline.commit) ||
+        (baseline.status !== undefined && baseline.status !== 'pending' && baseline.status !== 'merged')) {
+      throw new Error('初始化基线标记不完整或无效。');
+    }
+    data.initBaseline = {
+      id: baseline.id,
+      branch: baseline.branch,
+      commit: baseline.commit,
+      ...(baseline.status === undefined ? {} : { status: baseline.status }),
+    } satisfies InitBaseline;
+  }
   const repositories = readRepositoryRecords({
     repositories: data.repositories,
     repositoryPaths: (data as { repositoryPaths?: unknown }).repositoryPaths,

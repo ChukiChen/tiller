@@ -9,6 +9,7 @@ tiller 是一套开源的 AI 软件工程方法论与工具集，帮助开发者
 - 单次任务记录在 `.tiller/task/<id>/task.md`，包含结构化需求、设计、确认、验证和自检。确认记录对象、确认人、时间、基线和摘要，原话可选。
 - 任务阶段由记录事实推导。已验收即交付完成；`accept` 在 `pr` 前并随任务记录提交。合入后的 `close` 只清理本机 worktree 与 `.tiller/local/<id>/`，不改共享 `task.md`。未验收终止用 `close --abandon`，恢复使用 `reopen`。
 - `start` 在 `.tiller/local/<id>/worktrees/` 创建任务 worktree；workspace 另含 `management` 与各登记仓库路径。清单、开工前摘要和日志同为 `.tiller/local/<id>/` 的旁路。`close`/`--abandon` 强拆该任务 worktree，删除整棵任务本机目录，并兼容清理旧三棵树布局；已验收 close 只做本机清理，放弃仍写共享记录。
+- 有 Git HEAD 的 `init` 另建 `.tiller/local/<YYYYMMDD-tiller-init>/worktrees` 的 `chore/tiller-init` 基线并尝试 PR/MR；未合入时 `start` 默认阻断，可用 `--skip-init-gate`。基线只由人工合入，之后 `close <init-id>` 只清该本机目录。
 - `.tiller/plans/` 保存大功能规划、任务条目和依赖；依赖未验收时阻塞开工。
 - `.tiller/cases/` 保存跨任务测试设计，按模块和场景组织。新用例先写清前置条件、步骤、输入、预期结果和来源 AC，再由测试名引用稳定编号。
 - `verify` 自主执行声明的测试并从私有报告核实结论；工作区按测试所属仓库选择运行器，准备命令在该仓库根执行，不能唯一归属时拒绝。Java 可用 Maven 或 Gradle 运行器。无法本机执行时使用外部报告并写明理由，验收默认阻断，只有显式放行才可通过。缺陷修复保留基线失败先行和当前通过。
@@ -27,7 +28,7 @@ tiller 是一套开源的 AI 软件工程方法论与工具集，帮助开发者
 
 ## 目录
 
-- `src/`：CLI、默认流程、规划、全局用例、交付命名、初始化和升级实现。
+- `src/`：CLI、默认流程、规划、全局用例、交付命名、初始化基线、初始化和升级实现。
 - `resources/`：分发入口、使用指引、规则和启动器。
 - `test/`：规则、契约、性能、集成和端到端测试。
 - `.tiller/specs/`：当前总体与模块需求、设计和长期决定。

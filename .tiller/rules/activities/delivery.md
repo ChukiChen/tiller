@@ -39,5 +39,5 @@
 - `pr <task-id>` 只读 `task.md` 与 Git，先要求有效交付验收，再生成标题、五段说明和建议分支，列出每条 AC 的全部验证；关联任务用纯文本路径。标题摘要依次取 `pr --summary`、任务元数据、任务基线后最早的规范 feat/fix 提交摘要和任务标题；变更内容按提交时间正序。分支描述取 `--slug`、任务元数据或当前分支。`--json` 返回相同字段；它不调用托管平台、不联网。
 - `verify`/`check` 或 cases/specs 回写后，先提交验证记录，再 `accept` 并把含 acceptance 的本任务记录提交到任务分支，最后运行 `pr`。无有效验收默认以 `PR_NOT_ACCEPTED` 失败并提示先 `accept`；任务记录未提交以 `PR_TASK_RECORDS_DIRTY` 阻断并列出路径。只检查本任务 id 与 scope，其他任务 `.tiller/task/<other>/` 不阻断，tiller 不自动提交。无 Git 或无法读工作树时仅跳过记录门禁并提示，验收门禁仍生效。
 - 合入即交付完成；合入后 `close` 只清 local，不再 `accept`，也不改写共享 `task.md` 或另作收尾提交。未验收终止的 `abandon` 仍写共享记录。
-- `init --platform github|gitlab|both` 按平台安装对应模板，默认 GitHub；平台在初始化时选定，之后不能通过 CLI 切换，需手动修改 `project.json` 并补齐模板。`upgrade` 只补齐当前平台模板，不跨平台新增。
+- `init --platform github|gitlab|both` 按平台安装对应模板，默认 GitHub；受管文件写好后在 `.tiller/local/<YYYYMMDD-tiller-init>/worktrees` 创建 `chore/tiller-init` 并提交，自动尝试同标题 PR/MR，失败保留本地与推送/创建命令，但不自动合入。人工合入后方可 `start`；未合入默认以 `INIT_BASELINE_PENDING` 阻断，例外使用 `--skip-init-gate`。合入后 `close <init-id>` 只清该初始化 local。`specs` 只在任务 worktree 修改并随任务分支合入。平台在初始化时选定，之后不能通过 CLI 切换，需手动修改 `project.json` 并补齐模板。`upgrade` 只补齐当前平台模板，不跨平台新增。
 - `check` 对任务基线后的非合并提交主题和当前分支名给出提示，不阻塞；main/master 与 detached HEAD 跳过分支检查。

@@ -21,13 +21,13 @@ node .tiller/run.cjs pr <id>
 node .tiller/run.cjs close <id> --reason "已合入"
 ```
 
-`start` 生成需求与 worktree（standard 另生成设计）；`.tiller/local/<id>/`：project 用 `worktrees/`，workspace 含 `management`/登记路径。`--requirement`/`--requirement-file <路径>` 二选一；`--quote` 可选，`--by` 默认取 `git config user.name`。
+`start` 生成需求与 worktree（standard 另生成设计）；`.tiller/local/<id>/`：project 用 `worktrees/`，workspace 含 `management`/登记路径。`--requirement`/`--requirement-file <路径>` 二选一；`--quote` 可选，`--by` 默认取 `git config user.name`。首次接入 `init` → 初始化 PR/MR → 人工合入 → `start`；未合入默认阻断，`--skip-init-gate` 例外；`specs` 在任务 worktree 修改并随任务分支合入。
 
 `review` 阻塞 `check`/`accept`；`release` 与已验收任务钉在验收提交。未验收终止用 `close --abandon` 并写共享放弃记录；再次交付需 `reopen`，追加重开事件、重新推导阶段。
 
 standard 设计确认前 verify 或确认后业务改动未提交时，`check` 阻断 `accept`；`verify` 本身不要求设计确认。
 
-accept 必须在 pr 前。`verify`/`check` 或 cases/specs 回写后，先提交验证记录，再 `accept` 并提交任务记录（含 acceptance），最后 `pr`。无有效验收以 `PR_NOT_ACCEPTED` 阻断；记录未提交以 `PR_TASK_RECORDS_DIRTY` 阻断。合入即交付完成；合入后 `close` 只清 local（兼容清理旧布局）、不改共享 `task.md`，不再补 `accept` 或收尾提交。
+accept 须在 pr 前；回写后先提交验证记录，再 `accept` 并提交任务记录（含 acceptance），最后 `pr`。`PR_NOT_ACCEPTED` 与 `PR_TASK_RECORDS_DIRTY` 分别阻断；合入即交付完成；合入后 `close` 只清 local（兼容清理旧布局）、不改共享 `task.md`。
 
 `check` 对过薄设计、空壳 decisions/模块设计、分支未包含任务编号；规格/背景未回写列路径与提纲 warning。`verify` 日志含命令、起止和退出码。
 
@@ -59,4 +59,4 @@ node .tiller/run.cjs plan attach 20261023-closed-task --plan 20261023-batch --it
 
 ## 接入与升级
 
-`init [--platform github|gitlab|both]` 只补缺失骨架，不覆盖文件，按平台生成 PR/MR 模板；检测 pytest 配置或布局时选用。平台在初始化时选定，之后不能通过 CLI 切换，需手动修改 `.tiller/project.json` 并补齐对应模板。`upgrade` 只刷新未修改文件；`--adopt <受管文件>` 保留内容并更新摘要。兼容当前及上一资源契约，版本号仅正式发布修改。受管入口未入 Git 时，`check` 警告，`release` 阻断。
+`init [--platform github|gitlab|both]` 有 Git HEAD 时另建 `chore/tiller-init` worktree 并尝试 PR/MR，失败保留提交并给出命令。`project.json.initBaseline` 判定初始化合入，`close <init-id>` 只清该 local。平台在初始化时选定，之后不能通过 CLI 切换，需手动修改 `.tiller/project.json` 并补齐对应模板。`upgrade` 只刷新未修改文件，`--adopt` 更新摘要；兼容当前及上一资源契约。

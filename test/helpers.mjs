@@ -126,7 +126,13 @@ export function spawnCaptured(command, args, options = {}) {
 }
 
 export function cli(root, ...args) {
-  const result = spawnCaptured(process.execPath, [cliPath, ...args, '--json'], {
+  // Legacy fixtures focus on behaviors after initialization. Their freshly
+  // generated baseline PR is intentionally unmerged, so opt those calls out of
+  // the new gate. CASE-231 exercises the default gate through a raw CLI call.
+  const effectiveArgs = args[0] === 'start' && !args.includes('--skip-init-gate')
+    ? [args[0], '--skip-init-gate', ...args.slice(1)]
+    : args;
+  const result = spawnCaptured(process.execPath, [cliPath, ...effectiveArgs, '--json'], {
     // Git-backed delivery commands spawn several processes; allow bounded headroom
     // when the full suite runs concurrently on Windows.
     cwd: root, encoding: 'utf8', timeout: 60_000,

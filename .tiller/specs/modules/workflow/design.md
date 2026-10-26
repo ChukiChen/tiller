@@ -74,3 +74,9 @@
 建树前先校验任务容器、全部源仓和目标路径，任何一步失败都强制移除本次已建树，并清理本次产生的 worktree 容器、清单和开工前旁路；未知的本机文件保留，空任务目录一并移除，task.md 不落盘。成功后把相对路径与本机清单 `.tiller/local/<id>/worktrees.json` 写入；读取先新后旧，清单缺失或损坏时 close 回退 project/workspace 的新旧约定布局。所有目标都经安全路径校验并限制在新旧任务 worktree 容器内。
 
 已验收 close 不写共享关闭事实，直接按清单或约定布局执行 `git worktree remove --force` 与 prune；abandon 与历史已关闭任务先写共享记录再执行同一清理。路径已缺失记入 `missingWorktrees` 并继续。Git 移除失败时仅对该受管目录强制删除并返回 warning；随后删除整棵 `.tiller/local/<id>/`（含 logs 与旁路），并 best-effort 清理旧 `.tiller/local/worktrees|logs|tasks/<id>/`。清理失败不阻断本机清理结果或放弃记录，其他任务路径不动。所有本机路径保持工程相对形式，不写入共享 task.md。
+
+## 11. 初始化基线门禁
+
+`startFlow` 在读任务记录前调用 `assertInitBaselineReady`。无 `initBaseline` 视为存量工程并放行；`status=merged` 直接放行；其余状态执行 `git merge-base --is-ancestor <commit> HEAD`，成功即视为已合入，失败返回 `INIT_BASELINE_PENDING` 并提示合入或 `--skip-init-gate`。跳过选项只属于 `start`，进入时写入 warning。
+
+`initBaselineId` 识别 `<YYYYMMDD>-tiller-init`。`closeFlow` 对此类 id 不读取任务记录、不要求验收，也不允许 `--abandon`；直接复用 `cleanupTaskWorktrees` 清理该 id 的 worktree、日志与 local，保持其他任务目录不变。

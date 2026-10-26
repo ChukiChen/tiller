@@ -15,6 +15,7 @@ import { branchNameWarning, normalizeBranchSlug } from './branch-conventions.js'
 import { commitMessageWarnings } from './commit-conventions.js';
 import { readProjectMetadata } from './core.js';
 import { applyChanges, inspectSafePaths, readTextIfExists, validateRelativePath, withProjectLock, type ResolvedInputPath } from './files.js';
+import { assertInitBaselineReady, isInitBaselineId } from './init-baseline.js';
 import { planItemForAttachment, readPlanItem } from './plans.js';
 import { releaseChecklist, type ReleaseChecklist } from './release.js';
 import { taskIdWarnings, validateTaskId } from './task-id.js';
@@ -93,7 +94,7 @@ export interface TaskStage { stage: FlowStage; reason: string }
 
 export interface FlowStartInput {
   title: string; requirement?: string; requirementFile?: string; type?: string; size?: string; targets?: string[];
-  criteria: string[]; plan?: string; item?: string; slug?: string; summary?: string;
+  criteria: string[]; plan?: string; item?: string; slug?: string; summary?: string; skipInitGate?: boolean;
 }
 export interface FlowVerifyInput {
   criteria?: string[]; test?: string; case?: string; command?: string; result?: string;
@@ -823,6 +824,8 @@ export async function startFlow(rootInput: string, idInput: string, input: FlowS
   const relative = taskPath(idInput);
   return withProjectLock(root, async () => {
     const metadata = await readProjectMetadata(root);
+    if (input.skipInitGate) warnings.push('已通过 --skip-init-gate 跳过初始化基线门禁。');
+    else await assertInitBaselineReady(root, metadata);
     if (await readTextIfExists(root, relative) !== null) fail('TASK_EXISTS', `任务 ${idInput} 已存在，不能覆盖。`);
     let requirementFile: string | undefined;
     let requirement: string;
@@ -2014,8 +2017,16 @@ export async function closeFlow(rootInput: string, id: string, reasonInput: stri
   const root = path.resolve(rootInput);
   const reason = safeInput(text(reasonInput, '关闭原因', 4000), '关闭原因');
   return withProjectLock(root, async () => {
-    const task = await readTask(root, id);
     const metadata = await readProjectMetadata(root);
+    if (isInitBaselineId(id)) {
+      if (abandon) fail('INIT_BASELINE_CLOSE', '初始化基线不是任务，不能使用 --abandon；直接 close 只清理本机目录。');
+      const cleanup = await cleanupTaskWorktrees(root, id, metadata);
+      return { id, stage: '已关闭', stageReason: '初始化基线本机清理完成；共享记录未改写。', reason,
+        at: new Date().toISOString(), worktrees: cleanup.removedWorktrees, missingWorktrees: cleanup.missingWorktrees,
+        logsRemoved: cleanup.logsRemoved, ...(cleanup.warnings.length ? { warnings: cleanup.warnings } : {}),
+        next: '初始化基线本机目录已清理；共享 task 记录不受影响。' };
+    }
+    const task = await readTask(root, id);
     const ended = terminalStage(task);
     if (ended) fail('TASK_ENDED', `任务当前阶段为${ended.stage}；如需继续，先执行 reopen。`);
     const current = await taskStageForTask(root, id, task);

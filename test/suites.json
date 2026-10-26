@@ -28,6 +28,7 @@
     "pr.test.mjs",
     "verification-integrity.test.mjs",
     "case-redesign.test.mjs",
-    "review-release.test.mjs"
+    "review-release.test.mjs",
+    "init-baseline.test.mjs"
   ]
 }

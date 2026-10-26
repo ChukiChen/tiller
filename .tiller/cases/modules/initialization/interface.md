@@ -179,3 +179,52 @@
 
 新元信息只保留标识、路径和可选验证配置；旧清单仍可读取并在升级时写成对象；当前工程不登记仓库
 
+## CASE-230 close init-id 只清理该初始化 local
+
+- 类型：interface
+- 优先级：high
+- 模块：initialization
+- 关联 AC：20261026-init-baseline#AC-2
+- 需求：`.tiller/specs/modules/initialization/requirements.md`
+- 源码：`src/flow.ts`, `src/task-worktrees.ts`, `test/init-baseline.test.mjs`
+
+### 前置条件
+
+- 初始化 worktree 与其他任务 local 同时存在
+
+### 步骤
+
+1. 运行 tiller close <init-id> --reason
+
+### 输入
+
+- 初始化编号与普通任务编号
+
+### 预期结果
+
+删除 .tiller/local/<init-id>/ 及其 worktree 登记，不影响其他任务 local
+
+## CASE-232 接入文档写明初始化 PR 顺序与 specs 位置
+
+- 类型：interface
+- 优先级：medium
+- 模块：initialization
+- 关联 AC：20261026-init-baseline#AC-4
+- 需求：`.tiller/specs/modules/initialization/requirements.md`
+- 源码：`resources/usage.md`, `resources/rules/core.md`, `resources/rules/activities/delivery.md`, `test/init-baseline.test.mjs`
+
+### 前置条件
+
+- 受管 usage 和 delivery/core 文档已分发
+
+### 步骤
+
+1. 读取 resources 与项目内镜像
+
+### 输入
+
+- init → 初始化 PR → 人工合入 → start
+
+### 预期结果
+
+文档写明初始化 PR、人工合入、start 门禁、close init-id 清理，以及 specs 仅在任务 worktree 修改并随任务分支合入

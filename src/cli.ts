@@ -25,7 +25,7 @@ const HELP = `tiller ${CLI_VERSION} — 默认工作流
   tiller plan confirm <YYYYMMDD-plan-id> [--by <确认人>] [--quote "<可选原话>"] [--commit <oid>] [--path <root>]
   tiller plan status <YYYYMMDD-plan-id> [--path <root>]
   tiller plan attach <YYYYMMDD-task-id> --plan <YYYYMMDD-plan-id> --item <条目> [--path <root>]
-  tiller start <YYYYMMDD-task-id> --title <标题> (--requirement <需求正文> | --requirement-file <工程相对路径>) --criterion "AC-1=<验收条件>" [--criterion ...] [--type feature] [--size small|standard] [--target <相对路径> ...] [--summary <中文摘要>] [--slug <英文描述>] [--plan <YYYYMMDD-plan-id> --item <条目>] [--path <root>]
+  tiller start <YYYYMMDD-task-id> --title <标题> (--requirement <需求正文> | --requirement-file <工程相对路径>) --criterion "AC-1=<验收条件>" [--criterion ...] [--type feature] [--size small|standard] [--target <相对路径> ...] [--summary <中文摘要>] [--slug <英文描述>] [--plan <YYYYMMDD-plan-id> --item <条目>] [--skip-init-gate] [--path <root>]
   tiller resume [YYYYMMDD-task-id] [--path <root>]
   tiller confirm <YYYYMMDD-task-id> requirements|design|acceptance [--by <确认人>] [--quote "<可选原话>"] [--commit <oid>] [--path <root>]
   tiller case add <YYYYMMDD-task-id> --module <模块> --kind behavior|interface|performance|security --title <标题> --criterion AC-1 [--criterion ...] --expected "<预期结果>" [--precondition <条件> ...] [--step <步骤> ...] [--input <输入> ...] [--priority high|medium|low] [--spec <引用> ...] --source <源码路径> [--source ...] [--path <root>]
@@ -106,6 +106,7 @@ export async function runCli(rawArgs = process.argv.slice(2)): Promise<void> {
         input: { type: 'string', multiple: true }, priority: { type: 'string' }, case: { type: 'string' },
         finding: { type: 'string', multiple: true }, blocking: { type: 'string', multiple: true },
         resolve: { type: 'string', multiple: true }, apply: { type: 'string' }, abandon: { type: 'boolean' },
+        'skip-init-gate': { type: 'boolean' },
       },
     });
     const seenOptions = new Set<string>();
@@ -125,7 +126,7 @@ export async function runCli(rawArgs = process.argv.slice(2)): Promise<void> {
       const caseCommand = command === 'case';
       const prCommand = command === 'pr';
       const allowed = flowCommand
-        ? command === 'start' ? ['path', 'title', 'requirement', 'requirement-file', 'type', 'size', 'target', 'criterion', 'plan', 'item', 'slug', 'summary']
+        ? command === 'start' ? ['path', 'title', 'requirement', 'requirement-file', 'type', 'size', 'target', 'criterion', 'plan', 'item', 'slug', 'summary', 'skip-init-gate']
           : command === 'resume' ? ['path']
             : command === 'confirm' ? ['path', 'quote', 'by', 'commit', 'allow-reported']
               : command === 'verify' ? ['path', 'criterion', 'test', 'case', 'command', 'run', 'result', 'reported', 'reason', 'expect-fail', 'verbose']
@@ -166,6 +167,7 @@ export async function runCli(rawArgs = process.argv.slice(2)): Promise<void> {
             ...(values.target === undefined ? {} : { targets: values.target }), criteria: values.criterion,
             ...(values.slug === undefined ? {} : { slug: values.slug }),
             ...(values.summary === undefined ? {} : { summary: values.summary }),
+            ...(values['skip-init-gate'] === undefined ? {} : { skipInitGate: values['skip-init-gate'] }),
             ...(values.plan !== undefined && values.item ? { plan: values.plan, item: values.item[0]! } : {}) });
         } else if (command === 'resume') {
           if (positionals.length > 2) usage('resume 最多接受一个任务标识。');
