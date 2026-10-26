@@ -1,11 +1,14 @@
+import { execFile } from 'node:child_process';
 import { readdir } from 'node:fs/promises';
 import path from 'node:path';
+import { promisify } from 'node:util';
 import { branchDescriptionForTask, currentBranch, normalizeBranchSlug, suggestedBranchNameFor } from './branch-conventions.js';
 import { readCaseLibrary } from './cases.js';
 import { commitSubjectIssue, commitTypeForTaskType, taskCommits, type CommitType, type TaskCommit } from './commit-conventions.js';
 import { inspectFlow, readTask } from './flow.js';
 import type { FlowTask } from './flow.js';
 
+const execFileAsync = promisify(execFile);
 const TASK_HEADINGS = ['关联任务', '变更内容', '验收条件', '验证结果', '影响与风险'] as const;
 const IMPACT_PLACEHOLDER = '待补充：任务设计未单列“影响与风险”，请人工补充。';
 
@@ -57,6 +60,44 @@ function referencedModules(task: FlowTask, available: string[]): string[] {
 
 function scopeCovers(scope: string[], relative: string): boolean {
   return scope.some(value => value === '.' || relative === value || relative.startsWith(`${value}/`));
+}
+
+async function git(root: string, args: string[]): Promise<{ ok: boolean; stdout: string; stderr: string }> {
+  try {
+    const result = await execFileAsync('git', args, {
+      cwd: root, encoding: 'utf8', maxBuffer: 16 * 1024 * 1024,
+      env: { ...process.env, LC_ALL: 'C' },
+    });
+    return { ok: true, stdout: result.stdout, stderr: result.stderr };
+  } catch (error) {
+    const item = error as { stdout?: string; stderr?: string };
+    return { ok: false, stdout: item.stdout ?? '', stderr: item.stderr ?? (error as Error).message };
+  }
+}
+
+function taskRecordPath(relative: string, task: FlowTask): boolean {
+  const directory = `.tiller/task/${task.meta.id}`;
+  if (relative === directory || relative.startsWith(`${directory}/`)) return true;
+  if (!scopeCovers(task.meta.scope, relative)) return false;
+  return ['.tiller/cases', '.tiller/specs'].some(shared => relative === shared || relative.startsWith(`${shared}/`));
+}
+
+async function uncommittedTaskRecords(root: string, task: FlowTask): Promise<{ paths: string[]; warning?: string }> {
+  if (task.meta.base === 'no-git') return { paths: [] };
+  const repository = await git(root, ['rev-parse', '--is-inside-work-tree']);
+  if (!repository.ok || repository.stdout.trim() !== 'true') {
+    return { paths: [], warning: '无法读取任务记录的未提交改动，已跳过 pr 任务记录门禁。' };
+  }
+  const recordPaths = [`.tiller/task/${task.meta.id}`, '.tiller/cases', '.tiller/specs'];
+  const tracked = await git(root, ['diff', '--name-only', '-z', 'HEAD', '--', ...recordPaths]);
+  const untracked = await git(root, ['ls-files', '-z', '--others', '--exclude-standard', '--', ...recordPaths]);
+  if (!tracked.ok || !untracked.ok) {
+    return { paths: [], warning: '无法读取任务记录的未提交改动，已跳过 pr 任务记录门禁。' };
+  }
+  const paths = [...new Set([...tracked.stdout.split('\0'), ...untracked.stdout.split('\0')].filter(Boolean))]
+    .filter(relative => taskRecordPath(relative, task))
+    .sort();
+  return { paths };
 }
 
 function impactText(task: FlowTask): string {
@@ -126,6 +167,12 @@ export async function draftPullRequest(
   const task = await readTask(root, id);
   const type = commitTypeForTaskType(task.meta.type);
   if (!type) throw Object.assign(new Error(`无法从任务类型 ${task.meta.type} 推导提交类型。`), { code: 'PR_TYPE_UNKNOWN' });
+  const records = await uncommittedTaskRecords(root, task);
+  if (records.paths.length) {
+    throw Object.assign(new Error(`任务记录尚未提交，先提交后再运行 pr：${records.paths.join('、')}`), {
+      code: 'PR_TASK_RECORDS_DIRTY',
+    });
+  }
   const checked = await inspectFlow(root, id);
   const available = await specModules(root);
   const modules = new Set(referencedModules(task, available));
@@ -147,7 +194,7 @@ export async function draftPullRequest(
   const summary = options.summary !== undefined
     ? explicitSummary(options.summary)
     : task.meta.summary ?? earliestCommitSummary(commits.commits, available) ?? task.title;
-  const warnings: string[] = [];
+  const warnings: string[] = records.warning ? [records.warning] : [];
   if (resolvedModules.length > 1) warnings.push(`任务涉及多个模块（${resolvedModules.join(', ')}），PR/MR 标题使用首个主模块 ${module}，请人工确认。`);
   const title = `${type}${module ? `(${module})` : ''}: ${summary} [${task.meta.id}]`;
   const branch = suggestedBranchNameFor(type, task.meta.id, branchDescription);

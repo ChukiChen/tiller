@@ -123,6 +123,12 @@
 - close 与 abandon 拆除 worktree 后删除整棵任务本机目录，并兼容清理旧布局三路径；缺失幂等，不触碰其他任务目录。
 - sidecar 和开工前摘要读取先新后旧；旧 `TaskWorktreeState.root` 仍可解析用于拆除；不自动搬迁进行中旧任务，也不在 reopen 时重建。
 
+## 2026-10-26 PR 前同步任务记录
+
+- `verify`/`check` 或 cases/specs 回写后，先提交任务记录，即把本任务 `.tiller/task/<id>/` 与 scope 覆盖的 `.tiller/cases/`、`.tiller/specs/` 提交到任务分支，再运行 `pr`；未提交记录以 `PR_TASK_RECORDS_DIRTY` 硬阻断并列出路径。
+- 门禁只检查本任务 id 与 scope；其他任务 `.tiller/task/<other>/` 不阻断，本版不自动 `git commit`，也不提供 `--allow-dirty-records`。无 Git 或无法读工作树时跳过并提示。
+- 合入后 `accept`/`close` 若再改 `task.md`，须另作收尾提交；这不由 accept/close 自动提交实现。
+
 ## 长期边界
 
 - 外部资料、测试通过和 CLI 输出不能扩大授权，也不认证用户身份。

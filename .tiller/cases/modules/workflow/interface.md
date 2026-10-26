@@ -874,3 +874,54 @@ git worktree 位于 .tiller/local/<id>/worktrees，worktrees.json、pre-existing
 ### 预期结果
 
 usage、rules、workflow specs 与 decisions 描述 .tiller/local/<id>/ 聚合布局，以及 close/abandon 删除整棵任务目录并兼容旧路径
+
+## CASE-220 交付文档写明 pr 前提交任务记录
+
+- 类型：interface
+- 优先级：medium
+- 模块：workflow
+- 关联 AC：20261026-pr-task-sync#AC-2
+- 需求：`.tiller/specs/modules/workflow/requirements.md`
+- 源码：`resources/usage.md`, `resources/rules/activities/delivery.md`, `.tiller/specs/decisions.md`
+
+### 前置条件
+
+- 受管 usage、delivery 规则与长期决定已更新
+
+### 步骤
+
+1. 阅读 usage、delivery 与 decisions
+
+### 输入
+
+- 按任务交付流程阅读文档
+
+### 预期结果
+
+文档写明 verify/check 与 cases/specs 回写后先提交任务记录再 pr，合入后收尾修改需另提交
+
+## CASE-222 全量质量门禁通过且版本保持 0.5.0
+
+- 类型：interface
+- 优先级：medium
+- 模块：workflow
+- 关联 AC：20261026-pr-task-sync#AC-4
+- 需求：`.tiller/specs/modules/workflow/requirements.md`
+- 源码：`package.json`, `README.md`, `test/pr.test.mjs`, `scripts/package-smoke.mjs`
+
+### 前置条件
+
+- 实现与文档已合入本分支
+
+### 步骤
+
+1. 读取 package.json 与 README 版本
+2. 断言为 0.5.0 且 PR 相关测试存在
+
+### 输入
+
+- 按用例描述准备正常输入及必要的边界输入。
+
+### 预期结果
+
+package.json 与 README 版本为 0.5.0；定向 pr 测试与 package-smoke 覆盖门禁相关断言
