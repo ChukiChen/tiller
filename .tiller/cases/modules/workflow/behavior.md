@@ -1210,3 +1210,78 @@ worktree 缺失按幂等跳过，close/abandon 成功并删除既有日志目录
 ### 预期结果
 
 check 的 warnings 仍包含回归与回写提示；关单写入的 ## 自检 不堆这些长提示，只保留短检查项或运行指引
+
+## CASE-210 workspace 任务本机目录保留 management 与登记路径
+
+- 类型：behavior
+- 优先级：high
+- 模块：workflow
+- 关联 AC：20261026-local-task-layout#AC-2
+- 需求：`.tiller/specs/modules/workflow/requirements.md`
+- 源码：`src/task-worktrees.ts`
+
+### 前置条件
+
+- workspace 已登记多个业务仓
+
+### 步骤
+
+1. start 一个 workspace 任务
+
+### 输入
+
+- 任务编号为 20261026-layout-workspace
+
+### 预期结果
+
+management 和各 repository.path 均位于 .tiller/local/<id>/worktrees 下并使用同一任务分支
+
+## CASE-211 close 与 abandon 删除新布局整个任务目录
+
+- 类型：behavior
+- 优先级：high
+- 模块：workflow
+- 关联 AC：20261026-local-task-layout#AC-3
+- 需求：`.tiller/specs/modules/workflow/requirements.md`
+- 源码：`src/task-worktrees.ts`, `src/flow.ts`
+
+### 前置条件
+
+- 新布局任务已创建 worktree、日志和旁路
+
+### 步骤
+
+1. 分别执行 close 与 close --abandon
+
+### 输入
+
+- 已验收任务和未验收任务各一个
+
+### 预期结果
+
+任务 worktree 被拆除，整棵 .tiller/local/<id> 删除，其他任务目录保留
+
+## CASE-212 close 兼容清理旧布局旁路
+
+- 类型：behavior
+- 优先级：high
+- 模块：workflow
+- 关联 AC：20261026-local-task-layout#AC-3
+- 需求：`.tiller/specs/modules/workflow/requirements.md`
+- 源码：`src/task-worktrees.ts`
+
+### 前置条件
+
+- 进行中任务仍使用旧三棵树布局
+
+### 步骤
+
+1. 执行 close 或 close --abandon
+
+### 输入
+
+- 旧 worktree、logs 与 tasks 旁路，允许部分缺失
+
+### 预期结果
+
+旧 worktree 可拆除，旧 .tiller/local/worktrees|logs|tasks/<id> 均清理，缺失幂等且不删其他任务

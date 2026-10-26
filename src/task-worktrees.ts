@@ -1,5 +1,5 @@
 import { execFile } from 'node:child_process';
-import { lstat, mkdir, realpath, rm, writeFile } from 'node:fs/promises';
+import { lstat, mkdir, realpath, rmdir, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { promisify } from 'node:util';
 import { suggestedBranchNameFor } from './branch-conventions.js';
@@ -8,9 +8,10 @@ import { assertSafePath, readTextIfExists, validateRelativePath } from './files.
 import type { ProjectMetadata } from './types.js';
 
 const execFileAsync = promisify(execFile);
-const WORKTREE_DIRECTORY = '.tiller/local/worktrees';
-const SIDECAR_DIRECTORY = '.tiller/local/tasks';
-const LOG_DIRECTORY = '.tiller/local/logs';
+const LOCAL_DIRECTORY = '.tiller/local';
+const LEGACY_WORKTREE_DIRECTORY = '.tiller/local/worktrees';
+const LEGACY_SIDECAR_DIRECTORY = '.tiller/local/tasks';
+const LEGACY_LOG_DIRECTORY = '.tiller/local/logs';
 
 export interface TaskWorktreeEntry {
   repository: string;
@@ -46,12 +47,32 @@ function relativePath(...parts: string[]): string {
   return parts.join('/').replace(/\/+/gu, '/');
 }
 
+export function taskLocalRoot(id: string): string {
+  return relativePath(LOCAL_DIRECTORY, id);
+}
+
 function worktreeRoot(id: string): string {
-  return relativePath(WORKTREE_DIRECTORY, id);
+  return relativePath(taskLocalRoot(id), 'worktrees');
+}
+
+function legacyWorktreeRoot(id: string): string {
+  return relativePath(LEGACY_WORKTREE_DIRECTORY, id);
+}
+
+function logDirectory(id: string): string {
+  return relativePath(taskLocalRoot(id), 'logs');
+}
+
+function legacyLogDirectory(id: string): string {
+  return relativePath(LEGACY_LOG_DIRECTORY, id);
 }
 
 function sidecarPath(id: string): string {
-  return relativePath(SIDECAR_DIRECTORY, id, 'worktrees.json');
+  return relativePath(taskLocalRoot(id), 'worktrees.json');
+}
+
+function legacySidecarPath(id: string): string {
+  return relativePath(LEGACY_SIDECAR_DIRECTORY, id, 'worktrees.json');
 }
 
 function isWithin(relative: string, parent: string): boolean {
@@ -133,10 +154,34 @@ async function removeGitWorktree(worktree: CreatedWorktree): Promise<boolean> {
   return removed.ok;
 }
 
+async function removeRelative(root: string, relative: string, recursive: boolean, label: string,
+  warnings?: string[]): Promise<boolean> {
+  try {
+    const target = await assertSafePath(root, relative);
+    const stat = await lstat(target).catch(error => {
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') return null;
+      throw error;
+    });
+    if (stat === null) return false;
+    await rm(target, { recursive, force: true });
+    return true;
+  } catch (error) {
+    warnings?.push(`${label}清理失败：\`${relative}\`（${(error as Error).message}）。`);
+    return false;
+  }
+}
+
+async function discardTaskLocalArtifacts(root: string, id: string): Promise<void> {
+  await removeRelative(root, worktreeRoot(id), true, '任务 worktree 容器');
+  await removeRelative(root, sidecarPath(id), false, '任务 worktree 清单');
+  await removeRelative(root, relativePath(taskLocalRoot(id), 'pre-existing.json'), false, '开工前改动旁路');
+  try { await rmdir(await assertSafePath(root, taskLocalRoot(id))); }
+  catch { /* Unknown task-local content is left intact rather than deleted recursively. */ }
+}
+
 async function discardCreatedWorktrees(root: string, id: string, created: CreatedWorktree[]): Promise<void> {
   for (const worktree of [...created].reverse()) await removeGitWorktree(worktree);
-  try { await rm(await assertSafePath(root, worktreeRoot(id)), { recursive: true, force: true }); }
-  catch { /* Best-effort rollback after the original failure. */ }
+  await discardTaskLocalArtifacts(root, id);
 }
 
 export function taskBranchName(meta: { id: string; type: string; slug?: string }): string {
@@ -220,8 +265,6 @@ export async function rollbackTaskWorktrees(rootInput: string, state: TaskWorktr
     created.push({ source: sourceRelative, sourceRelative: entry.source, label: entry.repository, target, targetRelative: entry.path });
   }
   await discardCreatedWorktrees(root, state.id, created);
-  try { await rm(await assertSafePath(root, sidecarPath(state.id)), { force: true }); }
-  catch { /* The sidecar may not have been written yet. */ }
 }
 
 function parseState(text: string, id: string): TaskWorktreeState | null {
@@ -232,7 +275,7 @@ function parseState(text: string, id: string): TaskWorktreeState | null {
   const state = raw as Partial<TaskWorktreeState>;
   if (state.schemaVersion !== 1 || state.id !== id || typeof state.branch !== 'string' || typeof state.root !== 'string' ||
       !Array.isArray(state.worktrees)) return null;
-  if (state.root !== worktreeRoot(id)) return null;
+  if (state.root !== worktreeRoot(id) && state.root !== legacyWorktreeRoot(id)) return null;
   const entries: TaskWorktreeEntry[] = [];
   for (const value of state.worktrees) {
     if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
@@ -248,19 +291,22 @@ function parseState(text: string, id: string): TaskWorktreeState | null {
 }
 
 async function readState(root: string, id: string): Promise<{ state: TaskWorktreeState | null; warning?: string }> {
-  const relative = sidecarPath(id);
-  try {
-    const text = await readTextIfExists(root, relative);
-    if (text === null) return { state: null };
-    const state = parseState(text, id);
-    return state ? { state } : { state: null, warning: `任务 worktree 清单无效，已按约定布局清理：\`${relative}\`。` };
-  } catch (error) {
-    return { state: null, warning: `任务 worktree 清单不可读，已按约定布局清理：\`${relative}\`（${(error as Error).message}）。` };
+  const warnings: string[] = [];
+  for (const relative of [sidecarPath(id), legacySidecarPath(id)]) {
+    try {
+      const text = await readTextIfExists(root, relative);
+      if (text === null) continue;
+      const state = parseState(text, id);
+      if (state) return { state };
+      warnings.push(`任务 worktree 清单无效，已按约定布局清理：\`${relative}\`。`);
+    } catch (error) {
+      warnings.push(`任务 worktree 清单不可读，已按约定布局清理：\`${relative}\`（${(error as Error).message}）。`);
+    }
   }
+  return warnings.length ? { state: null, warning: warnings.join(' ') } : { state: null };
 }
 
-function fallbackState(metadata: ProjectMetadata, id: string): TaskWorktreeState {
-  const root = worktreeRoot(id);
+function fallbackStateAt(metadata: ProjectMetadata, id: string, root: string): TaskWorktreeState {
   if (metadata.mode === 'project') {
     return { schemaVersion: 1, id, branch: '', root, worktrees: [
       { repository: 'management', source: '.', path: root, branch: '' },
@@ -275,21 +321,11 @@ function fallbackState(metadata: ProjectMetadata, id: string): TaskWorktreeState
   ] };
 }
 
-async function removeLogs(root: string, id: string, warnings: string[]): Promise<boolean> {
-  const relative = relativePath(LOG_DIRECTORY, id);
-  try {
-    const target = await assertSafePath(root, relative);
-    const stat = await lstat(target).catch(error => {
-      if ((error as NodeJS.ErrnoException).code === 'ENOENT') return null;
-      throw error;
-    });
-    if (stat === null) return false;
-    await rm(target, { recursive: true, force: true });
-    return true;
-  } catch (error) {
-    warnings.push(`任务日志清理失败：\`${relative}\`（${(error as Error).message}）。`);
-    return false;
-  }
+function fallbackStates(metadata: ProjectMetadata, id: string): TaskWorktreeState[] {
+  return [
+    fallbackStateAt(metadata, id, worktreeRoot(id)),
+    fallbackStateAt(metadata, id, legacyWorktreeRoot(id)),
+  ];
 }
 
 export async function cleanupTaskWorktrees(rootInput: string, id: string, metadata: ProjectMetadata): Promise<TaskWorktreeCleanup> {
@@ -297,70 +333,63 @@ export async function cleanupTaskWorktrees(rootInput: string, id: string, metada
   const warnings: string[] = [];
   const loaded = await readState(root, id);
   if (loaded.warning) warnings.push(loaded.warning);
-  const state = loaded.state ?? fallbackState(metadata, id);
+  const states = loaded.state ? [loaded.state] : fallbackStates(metadata, id);
   const removedWorktrees: string[] = [];
   const missingWorktrees: string[] = [];
   const sources = new Set<string>();
   const seen = new Set<string>();
 
-  for (const entry of state.worktrees) {
-    if (seen.has(entry.path)) continue;
-    seen.add(entry.path);
-    if (!isWithin(entry.path, worktreeRoot(id))) {
-      warnings.push(`已跳过不在任务 worktree 目录内的路径：\`${entry.path}\`。`);
-      continue;
-    }
-    let target: string;
-    try { target = await assertSafePath(root, entry.path); }
-    catch (error) {
-      warnings.push(`任务 worktree 路径不安全，已跳过：\`${entry.path}\`（${(error as Error).message}）。`);
-      continue;
-    }
-    let stat: Awaited<ReturnType<typeof lstat>> | null;
-    try {
-      stat = await lstat(target).catch(error => {
-        if ((error as NodeJS.ErrnoException).code === 'ENOENT') return null;
-        throw error;
-      });
-    } catch (error) {
-      warnings.push(`任务 worktree 状态不可读，已跳过：\`${entry.path}\`（${(error as Error).message}）。`);
-      continue;
-    }
-    if (stat === null) {
-      missingWorktrees.push(entry.path);
-      continue;
-    }
-    const source = entry.source === '.' ? root : path.resolve(root, ...entry.source.split('/'));
-    sources.add(source);
-    const repository = { source, sourceRelative: entry.source, label: entry.repository, target, targetRelative: entry.path };
-    const removed = await removeGitWorktree(repository);
-    if (removed) removedWorktrees.push(entry.path);
-    else {
+  for (const state of states) {
+    for (const entry of state.worktrees) {
+      if (seen.has(entry.path)) continue;
+      seen.add(entry.path);
+      if (!isWithin(entry.path, worktreeRoot(id)) && !isWithin(entry.path, legacyWorktreeRoot(id))) {
+        warnings.push(`已跳过不在任务 worktree 目录内的路径：\`${entry.path}\`。`);
+        continue;
+      }
+      let target: string;
+      try { target = await assertSafePath(root, entry.path); }
+      catch (error) {
+        warnings.push(`任务 worktree 路径不安全，已跳过：\`${entry.path}\`（${(error as Error).message}）。`);
+        continue;
+      }
+      let stat: Awaited<ReturnType<typeof lstat>> | null;
       try {
-        await rm(target, { recursive: true, force: true });
-        removedWorktrees.push(entry.path);
-        warnings.push(`Git 未能移除任务 worktree，已强制删除目录：\`${entry.path}\`。`);
+        stat = await lstat(target).catch(error => {
+          if ((error as NodeJS.ErrnoException).code === 'ENOENT') return null;
+          throw error;
+        });
       } catch (error) {
-        warnings.push(`任务 worktree 拆除失败：\`${entry.path}\`（${(error as Error).message}）。`);
+        warnings.push(`任务 worktree 状态不可读，已跳过：\`${entry.path}\`（${(error as Error).message}）。`);
+        continue;
+      }
+      if (stat === null) {
+        missingWorktrees.push(entry.path);
+        continue;
+      }
+      const source = entry.source === '.' ? root : path.resolve(root, ...entry.source.split('/'));
+      sources.add(source);
+      const repository = { source, sourceRelative: entry.source, label: entry.repository, target, targetRelative: entry.path };
+      const removed = await removeGitWorktree(repository);
+      if (removed) removedWorktrees.push(entry.path);
+      else {
+        try {
+          await rm(target, { recursive: true, force: true });
+          removedWorktrees.push(entry.path);
+          warnings.push(`Git 未能移除任务 worktree，已强制删除目录：\`${entry.path}\`。`);
+        } catch (error) {
+          warnings.push(`任务 worktree 拆除失败：\`${entry.path}\`（${(error as Error).message}）。`);
+        }
       }
     }
   }
 
   for (const source of sources) await runGit(source, ['worktree', 'prune']);
-  const rootRelative = worktreeRoot(id);
-  try {
-    const rootTarget = await assertSafePath(root, rootRelative);
-    const stat = await lstat(rootTarget).catch(error => {
-      if ((error as NodeJS.ErrnoException).code === 'ENOENT') return null;
-      throw error;
-    });
-    if (stat !== null) await rm(rootTarget, { recursive: true, force: true });
-  } catch (error) {
-    warnings.push(`任务 worktree 容器清理失败：\`${rootRelative}\`（${(error as Error).message}）。`);
-  }
-
-  const logsRemoved = await removeLogs(root, id, warnings);
-  try { await rm(await assertSafePath(root, sidecarPath(id)), { force: true }); }
-  catch { /* A missing sidecar is already the desired end state. */ }
-  return { removedWorktrees, missingWorktrees, logsRemoved, warnings };
+  const logsRemoved = await removeRelative(root, logDirectory(id), true, '任务日志', warnings);
+  const legacyLogsRemoved = await removeRelative(root, legacyLogDirectory(id), true, '旧任务日志', warnings);
+  await removeRelative(root, worktreeRoot(id), true, '任务 worktree 容器', warnings);
+  await removeRelative(root, legacyWorktreeRoot(id), true, '旧任务 worktree 容器', warnings);
+  await removeRelative(root, taskLocalRoot(id), true, '任务本机目录', warnings);
+  await removeRelative(root, relativePath(LEGACY_SIDECAR_DIRECTORY, id), true, '旧任务旁路目录', warnings);
+  return { removedWorktrees, missingWorktrees, logsRemoved: logsRemoved || legacyLogsRemoved, warnings };
 }

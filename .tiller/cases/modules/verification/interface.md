@@ -259,3 +259,28 @@ tiller 扫描测试源建立 case→tests 反查；用例文件不含测试引�
 ### 预期结果
 
 init 探测 pytest 工程并写入 verify.runner=pytest；case add 生成 pytest 骨架；verify 构造 junitxml 命令并从私有 XML 核实结果
+
+## CASE-213 验证日志写入任务本机目录
+
+- 类型：interface
+- 优先级：medium
+- 模块：verification
+- 关联 AC：20261026-local-task-layout#AC-1
+- 需求：`.tiller/specs/modules/verification/requirements.md`
+- 源码：`src/flow.ts`, `test/verification-integrity.test.mjs`
+
+### 前置条件
+
+- 任务已创建且测试可执行
+
+### 步骤
+
+1. 运行 verify
+
+### 输入
+
+- 一个通过的 node:test 测试
+
+### 预期结果
+
+日志位于 .tiller/local/<id>/logs/run-N.log，任务正文记录同一路径

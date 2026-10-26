@@ -98,7 +98,7 @@ test('CASE-086 verify executes the recorded command, rejects legacy inputs and r
   const content = read(root, taskFile(id));
   assert.equal(verificationSidecars(content)[0].command, verified.entries[0].command);
   assert.doesNotMatch(content, /^- 命令：/mu);
-  assert.equal(verified.log, `.tiller/local/logs/${id}/run-1.log`);
+  assert.equal(verified.log, `.tiller/local/${id}/logs/run-1.log`);
   assert.ok(existsSync(join(root, verified.log)));
 
   const fileId = '20261022-file-level-report';
@@ -142,13 +142,13 @@ test('CASE-201 verification records keep a concise human summary and a complete 
   assert.match(human, /^- 结果：passed$/mu);
   assert.match(human, /^- 来源：executed$/mu);
   assert.match(human, /^- 核实：已核实$/mu);
-  assert.match(human, new RegExp(`^- 日志：\\.tiller/local/logs/${id}/run-1\\.log$`, 'mu'));
+  assert.match(human, new RegExp(`^- 日志：\\.tiller/local/${id}/logs/run-1\\.log$`, 'mu'));
   assert.match(human, new RegExp(`^- 提交：${verified.commit.slice(0, 12)}$`, 'mu'));
   assert.match(human, /^- 时间：\d{4}-\d{2}-\d{2}T/mu);
   assert.doesNotMatch(human, /^- (?:命令|退出码|代码树摘要)：/mu);
   assert.doesNotMatch(human, /--test-reporter=|verify-[^/]+\/reporter\.mjs/u);
   assert.ok(!human.includes(verified.commit));
-  assert.equal(verified.log, `.tiller/local/logs/${id}/run-1.log`);
+  assert.equal(verified.log, `.tiller/local/${id}/logs/run-1.log`);
   assert.ok(existsSync(join(root, verified.log)));
   assert.equal(success(cli(root, 'check', id)).ready, true);
 });
@@ -372,7 +372,7 @@ test('CASE-088 named node test output is verified for TAP, spec and nested speci
   assert.equal(verified.entries[0].result, 'passed');
   assert.match(verified.entries[0].command, /--test-name-pattern=\^parent case\$/u);
   assert.match(verified.entries[0].command, /test\/value\.test\.mjs$/u);
-  assert.equal(verified.log, `.tiller/local/logs/${id}/run-1.log`);
+  assert.equal(verified.log, `.tiller/local/${id}/logs/run-1.log`);
 
   const special = "import test from 'node:test';\n\ntest('literal [x] + (y) # hash', () => {});\n";
   const second = await project(t, special);
@@ -482,13 +482,13 @@ test('CASE-095 verify runner configuration and prepare are enforced', async t =>
   assert.deepEqual(JSON.parse(read(root, '.tiller/project.json')).verify, { prepare: ['node', 'prepare.mjs'] });
 });
 
-test('CASE-096 CASE-181 verify writes a readable command summary and verbose log', async t => {
+test('CASE-096 CASE-181 CASE-213 verify writes a readable command summary and verbose log in the task-local directory', async t => {
   const source = "import { writeSync } from 'node:fs';\nimport test from 'node:test';\nwriteSync(1, 'TILLER_LOG_MARKER\\n');\ntest('logging behavior', () => {});\n";
   const root = await project(t, source);
   const id = '20261022-verify-log';
   prepareTask(root, id);
   const quiet = success(cli(root, 'verify', id, '--criterion', 'AC-1', '--test', 'test/value.test.mjs::logging behavior'));
-  assert.equal(quiet.log, `.tiller/local/logs/${id}/run-1.log`);
+  assert.equal(quiet.log, `.tiller/local/${id}/logs/run-1.log`);
   const quietLog = read(root, quiet.log);
   assert.ok(quietLog.includes('TILLER_LOG_MARKER'), quietLog);
   assert.match(quietLog, /\[tiller\] command: node .*--test-name-pattern=/u);
@@ -503,7 +503,7 @@ test('CASE-096 CASE-181 verify writes a readable command summary and verbose log
 
   const verboseRun = cli(root, 'verify', id, '--criterion', 'AC-1', '--test', 'test/value.test.mjs::logging behavior', '--verbose');
   const verbose = success(verboseRun);
-  assert.equal(verbose.log, `.tiller/local/logs/${id}/run-2.log`);
+  assert.equal(verbose.log, `.tiller/local/${id}/logs/run-2.log`);
   assert.ok(verboseRun.stderr.includes('TILLER_LOG_MARKER'), verboseRun.stderr);
 });
 

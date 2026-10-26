@@ -66,7 +66,7 @@ test('CASE-190 new task marker omits preExisting and keeps the snapshot in the l
   const content = read(root, taskPath(id));
   const meta = marker(content);
   assert.equal(Object.hasOwn(meta, 'preExisting'), false);
-  const sidecarPath = `.tiller/local/tasks/${id}/pre-existing.json`;
+  const sidecarPath = `.tiller/local/${id}/pre-existing.json`;
   const sidecar = JSON.parse(read(root, sidecarPath));
   assert.equal(sidecar['docs/pre-existing.md'], hash('before the task\n'));
   assert.equal((await readTask(root, id)).meta.preExisting['docs/pre-existing.md'], hash('before the task\n'));
@@ -87,11 +87,30 @@ test('CASE-191 legacy marker preExisting is still loaded and does not report an 
   meta.preExisting = { 'docs/legacy-dirty.md': hash('legacy dirty file\n') };
   put(root, taskPath(id), content.replace(/<!-- tiller-task:v1 \{.*\} -->/u,
     `<!-- tiller-task:v1 ${JSON.stringify(meta)} -->`));
-  rmSync(join(root, `.tiller/local/tasks/${id}/pre-existing.json`), { force: true });
+  rmSync(join(root, `.tiller/local/${id}/pre-existing.json`), { force: true });
 
   assert.equal((await readTask(root, id)).meta.preExisting['docs/legacy-dirty.md'], hash('legacy dirty file\n'));
   const checked = failure(cli(root, 'check', id));
   assert.deepEqual(checked.changedOutsideScope, []);
+});
+
+test('CASE-214 pre-existing sidecars prefer the task-local layout and fall back to the legacy path', async t => {
+  const root = await project(t);
+  put(root, 'docs/legacy-sidecar.md', 'legacy sidecar\n');
+  const id = '20261026-pre-existing-fallback';
+  success(cli(root, 'start', id, '--title', '旁路回退', '--requirement', 'Read new and legacy sidecars.',
+    '--criterion', 'AC-1=Sidecars remain readable', '--size', 'small', '--target', 'src'));
+
+  const currentPath = `.tiller/local/${id}/pre-existing.json`;
+  const legacyPath = `.tiller/local/tasks/${id}/pre-existing.json`;
+  put(root, legacyPath, read(root, currentPath));
+  put(root, currentPath, `${JSON.stringify({ 'docs/new-preferred.md': hash('new value\n') }, null, 2)}\n`);
+  assert.equal((await readTask(root, id)).meta.preExisting['docs/new-preferred.md'], hash('new value\n'));
+  assert.equal((await readTask(root, id)).meta.preExisting['docs/legacy-sidecar.md'], undefined);
+
+  rmSync(join(root, currentPath), { force: true });
+  assert.equal((await readTask(root, id)).meta.preExisting['docs/legacy-sidecar.md'], hash('legacy sidecar\n'));
+  assert.equal((await readTask(root, id)).meta.preExisting['docs/new-preferred.md'], undefined);
 });
 
 test('CASE-192 structured requirements keep business scope separate from target paths', async t => {

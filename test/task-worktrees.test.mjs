@@ -3,6 +3,7 @@ import { existsSync, mkdirSync, readFileSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import test from 'node:test';
+import { cleanupTaskWorktrees } from '../dist/task-worktrees.js';
 import { cli, cliPath, confirmTask, failure, fixture, put, spawnCaptured, success } from './helpers.mjs';
 
 function git(root, ...args) {
@@ -70,12 +71,29 @@ function acceptTask(root, id) {
 }
 
 function worktreePath(id, relative = '') {
+  return taskLocalPath(id, ['worktrees', relative].filter(Boolean).join('/'));
+}
+
+function taskLocalPath(id, relative = '') {
+  return ['.tiller/local', id, relative].filter(Boolean).join('/');
+}
+
+function legacyWorktreePath(id, relative = '') {
   return ['.tiller/local/worktrees', id, relative].filter(Boolean).join('/');
 }
 
-test('CASE-196 project start creates a task worktree on the task branch and returns its path', async t => {
+function legacyLogPath(id, relative = '') {
+  return ['.tiller/local/logs', id, relative].filter(Boolean).join('/');
+}
+
+function legacySidecarPath(id, relative = '') {
+  return ['.tiller/local/tasks', id, relative].filter(Boolean).join('/');
+}
+
+test('CASE-196 CASE-209 project start creates a task-local worktree, sidecars and logs in one directory', async t => {
   const root = project(t);
   const id = '20261024-project-worktree';
+  put(root, 'docs/pre-start.md', 'before the task\n');
   const started = startTask(root, id, ['--type', 'bugfix', '--slug', 'Fix Exit']);
   const relative = worktreePath(id);
   assert.equal(started.worktreeRoot, relative);
@@ -85,9 +103,18 @@ test('CASE-196 project start creates a task worktree on the task branch and retu
   assert.match(git(root, 'worktree', 'list', '--porcelain'), new RegExp(relative.replace(/[.*+?^${}()|[\]\\]/gu, '\\$&'), 'u'));
   assert.ok(existsSync(join(root, `.tiller/task/${id}/task.md`)));
   assert.equal(existsSync(join(root, relative, `.tiller/task/${id}/task.md`)), false);
+  const state = JSON.parse(readFileSync(join(root, taskLocalPath(id, 'worktrees.json')), 'utf8'));
+  assert.equal(state.root, relative);
+  assert.deepEqual(state.worktrees.map(item => item.path), [relative]);
+  assert.ok(existsSync(join(root, taskLocalPath(id, 'pre-existing.json'))));
+  put(root, taskLocalPath(id, 'logs/run-1.log'), 'task log\n');
+  assert.ok(existsSync(join(root, taskLocalPath(id, 'logs/run-1.log'))));
+  assert.equal(existsSync(join(root, legacyWorktreePath(id))), false);
+  assert.equal(existsSync(join(root, legacySidecarPath(id))), false);
+  assert.equal(existsSync(join(root, legacyLogPath(id))), false);
 });
 
-test('CASE-197 workspace start mirrors management and registered repositories under one task branch', async t => {
+test('CASE-197 CASE-210 workspace start keeps management and registered repositories under the task worktree root', async t => {
   const root = workspace(t);
   const id = '20261024-workspace-worktree';
   const started = startTask(root, id, ['--type', 'feature', '--slug', 'workspace-layout']);
@@ -106,6 +133,12 @@ test('CASE-197 workspace start mirrors management and registered repositories un
   assert.ok(existsSync(join(root, `.tiller/task/${id}/task.md`)));
   assert.equal(existsSync(join(root, worktreePath(id, 'management'), `.tiller/task/${id}/task.md`)), false);
   assert.ok(existsSync(join(root, worktreePath(id, 'management'), '.tiller/project.json')));
+  const state = JSON.parse(readFileSync(join(root, taskLocalPath(id, 'worktrees.json')), 'utf8'));
+  assert.equal(state.root, worktreePath(id));
+  assert.deepEqual(state.worktrees.map(item => item.path).sort(), started.worktrees.map(item => item.path).sort());
+  assert.equal(existsSync(join(root, legacyWorktreePath(id, 'management'))), false);
+  assert.equal(existsSync(join(root, legacySidecarPath(id))), false);
+  assert.equal(existsSync(join(root, legacyLogPath(id))), false);
 });
 
 test('CASE-208 worktree branch and path use the task id once when slug is already its suffix', async t => {
@@ -118,7 +151,7 @@ test('CASE-208 worktree branch and path use the task id once when slug is alread
   assert.equal(git(join(root, worktreePath(id)), 'branch', '--show-current'), `feat/${id}`);
 });
 
-test('CASE-198 close and abandon force-remove every task worktree and only clear that task log', async t => {
+test('CASE-198 CASE-211 close and abandon remove the whole task-local directory and preserve other tasks', async t => {
   const root = project(t);
   const acceptedId = '20261024-close-worktree';
   const abandonedId = '20261024-abandon-worktree';
@@ -126,28 +159,26 @@ test('CASE-198 close and abandon force-remove every task worktree and only clear
   startTask(root, acceptedId);
   startTask(root, abandonedId);
   put(root, worktreePath(acceptedId, 'dirty.txt'), 'uncommitted\n');
-  put(root, `.tiller/local/logs/${abandonedId}/run-1.log`, 'abandoned log\n');
-  put(root, `.tiller/local/logs/${bystanderId}/run-1.log`, 'bystander log\n');
+  put(root, taskLocalPath(abandonedId, 'logs/run-1.log'), 'abandoned log\n');
+  put(root, taskLocalPath(bystanderId, 'logs/run-1.log'), 'bystander log\n');
   acceptTask(root, acceptedId);
 
   const closed = success(cli(root, 'close', acceptedId, '--reason', '交付完成'));
   assert.deepEqual(closed.worktrees, [worktreePath(acceptedId)]);
   assert.equal(closed.logsRemoved, true);
-  assert.equal(existsSync(join(root, worktreePath(acceptedId))), false);
-  assert.ok(existsSync(join(root, worktreePath(abandonedId))));
-  assert.equal(existsSync(join(root, `.tiller/local/logs/${acceptedId}`)), false);
-  assert.equal(existsSync(join(root, `.tiller/local/logs/${abandonedId}/run-1.log`)), true);
-  assert.equal(existsSync(join(root, `.tiller/local/logs/${bystanderId}/run-1.log`)), true);
+  assert.equal(existsSync(join(root, taskLocalPath(acceptedId))), false);
+  assert.ok(existsSync(join(root, taskLocalPath(abandonedId, 'worktrees'))));
+  assert.equal(existsSync(join(root, taskLocalPath(abandonedId, 'logs/run-1.log'))), true);
+  assert.equal(existsSync(join(root, taskLocalPath(bystanderId, 'logs/run-1.log'))), true);
 
   const abandoned = success(cli(root, 'close', abandonedId, '--reason', '需求取消', '--abandon'));
   assert.deepEqual(abandoned.worktrees, [worktreePath(abandonedId)]);
   assert.equal(abandoned.logsRemoved, true);
-  assert.equal(existsSync(join(root, worktreePath(abandonedId))), false);
-  assert.equal(existsSync(join(root, `.tiller/local/logs/${abandonedId}`)), false);
-  assert.equal(existsSync(join(root, `.tiller/local/logs/${bystanderId}/run-1.log`)), true);
+  assert.equal(existsSync(join(root, taskLocalPath(abandonedId))), false);
+  assert.equal(existsSync(join(root, taskLocalPath(bystanderId, 'logs/run-1.log'))), true);
 });
 
-test('CASE-199 old tasks without worktrees still close or abandon and clear their logs', async t => {
+test('CASE-199 tasks without worktrees still close or abandon and clear task-local logs', async t => {
   const root = project(t);
   const closedId = '20261024-old-close-worktree';
   const abandonedId = '20261024-old-abandon-worktree';
@@ -157,19 +188,75 @@ test('CASE-199 old tasks without worktrees still close or abandon and clear thei
   for (const id of [closedId, abandonedId]) {
     git(root, 'worktree', 'remove', '--force', join(root, worktreePath(id)));
     git(root, 'worktree', 'prune');
-    rmSync(join(root, '.tiller/local/tasks', id, 'worktrees.json'), { force: true });
-    put(root, `.tiller/local/logs/${id}/run-1.log`, `${id}\n`);
+    rmSync(join(root, taskLocalPath(id, 'worktrees.json')), { force: true });
+    put(root, taskLocalPath(id, 'logs/run-1.log'), `${id}\n`);
   }
 
   const closed = success(cli(root, 'close', closedId, '--reason', '旧任务收尾'));
-  assert.deepEqual(closed.missingWorktrees, [worktreePath(closedId)]);
+  assert.ok(closed.missingWorktrees.includes(worktreePath(closedId)));
   assert.equal(closed.logsRemoved, true);
-  assert.equal(existsSync(join(root, `.tiller/local/logs/${closedId}`)), false);
+  assert.equal(existsSync(join(root, taskLocalPath(closedId))), false);
 
   const abandoned = success(cli(root, 'close', abandonedId, '--reason', '旧任务放弃', '--abandon'));
-  assert.deepEqual(abandoned.missingWorktrees, [worktreePath(abandonedId)]);
+  assert.ok(abandoned.missingWorktrees.includes(worktreePath(abandonedId)));
   assert.equal(abandoned.logsRemoved, true);
-  assert.equal(existsSync(join(root, `.tiller/local/logs/${abandonedId}`)), false);
+  assert.equal(existsSync(join(root, taskLocalPath(abandonedId))), false);
+});
+
+test('CASE-212 close cleans legacy worktrees, logs and sidecars without touching other task paths', async t => {
+  const root = project(t);
+  const acceptedId = '20261024-legacy-close-layout';
+  const abandonedId = '20261024-legacy-abandon-layout';
+  const bystanderId = '20261024-legacy-bystander';
+  startTask(root, acceptedId);
+  startTask(root, abandonedId);
+  acceptTask(root, acceptedId);
+
+  const legacyPaths = (id) => {
+    const current = worktreePath(id);
+    const legacy = legacyWorktreePath(id);
+    const branch = `feat/${id}`;
+    git(root, 'worktree', 'remove', '--force', join(root, current));
+    git(root, 'worktree', 'prune');
+    mkdirSync(join(root, '.tiller/local/worktrees'), { recursive: true });
+    git(root, 'worktree', 'add', join(root, legacy), branch);
+    put(root, legacySidecarPath(id, 'worktrees.json'), `${JSON.stringify({
+      schemaVersion: 1, id, branch, root: legacy,
+      worktrees: [{ repository: 'management', source: '.', path: legacy, branch }],
+    }, null, 2)}\n`);
+    put(root, legacySidecarPath(id, 'pre-existing.json'), '{}\n');
+    put(root, legacyLogPath(id, 'run-1.log'), `${id}\n`);
+    rmSync(join(root, taskLocalPath(id)), { recursive: true, force: true });
+    return legacy;
+  };
+  const acceptedLegacy = legacyPaths(acceptedId);
+  const abandonedLegacy = legacyPaths(abandonedId);
+  put(root, legacyWorktreePath(bystanderId, 'sentinel.txt'), 'keep\n');
+  put(root, legacySidecarPath(bystanderId, 'pre-existing.json'), '{}\n');
+  put(root, legacyLogPath(bystanderId, 'run-1.log'), 'keep\n');
+
+  const closed = success(cli(root, 'close', acceptedId, '--reason', '旧任务收尾'));
+  assert.deepEqual(closed.worktrees, [acceptedLegacy]);
+  assert.equal(closed.logsRemoved, true);
+  for (const path of [acceptedLegacy, legacyLogPath(acceptedId), legacySidecarPath(acceptedId), taskLocalPath(acceptedId)]) {
+    assert.equal(existsSync(join(root, path)), false, path);
+  }
+  assert.ok(existsSync(join(root, legacyWorktreePath(bystanderId, 'sentinel.txt'))));
+  assert.ok(existsSync(join(root, legacySidecarPath(bystanderId, 'pre-existing.json'))));
+  assert.ok(existsSync(join(root, legacyLogPath(bystanderId, 'run-1.log'))));
+
+  const metadata = JSON.parse(readFileSync(join(root, '.tiller/project.json'), 'utf8'));
+  const repeated = await cleanupTaskWorktrees(root, acceptedId, metadata);
+  assert.deepEqual(repeated.removedWorktrees, []);
+  assert.equal(repeated.logsRemoved, false);
+
+  const abandoned = success(cli(root, 'close', abandonedId, '--reason', '旧任务放弃', '--abandon'));
+  assert.deepEqual(abandoned.worktrees, [abandonedLegacy]);
+  assert.equal(abandoned.logsRemoved, true);
+  for (const path of [abandonedLegacy, legacyLogPath(abandonedId), legacySidecarPath(abandonedId), taskLocalPath(abandonedId)]) {
+    assert.equal(existsSync(join(root, path)), false, path);
+  }
+  assert.ok(existsSync(join(root, legacyWorktreePath(bystanderId, 'sentinel.txt'))));
 });
 
 test('CASE-200 start failures leave no task record or partially created worktree', async t => {
