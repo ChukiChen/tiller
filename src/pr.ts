@@ -9,9 +9,8 @@ import { readProjectMetadata } from './core.js';
 import { closeFlow, inspectFlow, readTask, taskStage } from './flow.js';
 import type { FlowTask } from './flow.js';
 import { isInitBaselineId, markInitBaselineMerged } from './init-baseline.js';
-import { platformCliUnavailable, resolvePlatformCli, type PlatformCliName } from './platform-cli.js';
+import { mergeMergeRequest, mergePullRequest, platformToken, resolvePlatformRepository, tokenGuidance } from './platform-api.js';
 import { taskBranchName } from './task-worktrees.js';
-import type { ProjectPlatform } from './types.js';
 
 const execFileAsync = promisify(execFile);
 const TASK_HEADINGS = ['关联任务', '变更内容', '验收条件', '验证结果', '影响与风险'] as const;
@@ -28,8 +27,6 @@ export interface PullRequestDraft {
   warnings: string[];
 }
 
-interface MergeCommandResult { stdout: string; stderr: string }
-
 export interface MergeResult {
   id: string;
   platform: 'github' | 'gitlab';
@@ -43,40 +40,6 @@ export interface MergeResult {
 
 function fail(code: string, message: string): never {
   throw Object.assign(new Error(message), { code });
-}
-
-function commandDetail(result: { stdout?: string; stderr?: string }, fallback: string): string {
-  return (result.stderr?.trim() || result.stdout?.trim() || fallback).split(/\r?\n/u).slice(0, 3).join(' ');
-}
-
-async function concretePlatform(root: string, configured: ProjectPlatform): Promise<'github' | 'gitlab'> {
-  if (configured === 'github' || configured === 'gitlab') return configured;
-  const remote = await git(root, ['remote', 'get-url', 'origin']);
-  if (!remote.ok || !remote.stdout.trim()) {
-    fail('MERGE_PLATFORM_UNKNOWN', '工程平台配置为 both，但无法读取 origin，不能确定应使用 github 还是 gitlab。');
-  }
-  const url = remote.stdout.trim();
-  if (/gitlab/iu.test(url)) return 'gitlab';
-  if (/github/iu.test(url)) return 'github';
-  fail('MERGE_PLATFORM_UNKNOWN', `工程平台配置为 both，无法从 origin 判断平台：${url}；请把 project.json 的 platform 改为 github 或 gitlab。`);
-}
-
-async function runMergeTool(tool: PlatformCliName, args: string[], root: string): Promise<MergeCommandResult> {
-  const resolved = await resolvePlatformCli(tool);
-  if (!resolved) fail('MERGE_TOOL_UNAVAILABLE', platformCliUnavailable(tool));
-  try {
-    const result = await execFileAsync(resolved.executable, args, {
-      cwd: root, encoding: 'utf8', maxBuffer: 16 * 1024 * 1024,
-      env: { ...process.env, LC_ALL: 'C', GIT_TERMINAL_PROMPT: '0' },
-    });
-    return { stdout: result.stdout, stderr: result.stderr };
-  } catch (error) {
-    const item = error as { stdout?: string; stderr?: string; code?: string | number | null };
-    if (item.code === 'ENOENT') fail('MERGE_TOOL_UNAVAILABLE', platformCliUnavailable(tool));
-    fail('MERGE_FAILED', `${tool} 合入失败：${commandDetail(item, `${tool} 返回非零退出码`)}`);
-  } finally {
-    await resolved.cleanup();
-  }
 }
 
 async function mergeTarget(root: string, id: string): Promise<{ branch: string; init: boolean }> {
@@ -286,13 +249,25 @@ export async function draftPullRequest(
 export async function mergeFlow(rootInput: string, id: string): Promise<MergeResult> {
   const root = path.resolve(rootInput);
   const metadata = await readProjectMetadata(root);
-  const platform = await concretePlatform(root, metadata.platform ?? 'github');
+  let repository;
+  try {
+    repository = await resolvePlatformRepository(root, metadata.platform ?? 'github');
+  } catch (error) {
+    fail('MERGE_PLATFORM_UNKNOWN', (error as Error).message);
+  }
+  const platform = repository.platform;
+  const token = platformToken(platform);
+  if (!token) fail('MERGE_TOKEN_MISSING', tokenGuidance(platform, repository.apiBase));
   const target = await mergeTarget(root, id);
-  const tool = platform;
-  const args = platform === 'github'
-    ? ['pr', 'merge', target.branch, '--squash']
-    : ['mr', 'merge', target.branch, '--squash', '--yes'];
-  await runMergeTool(tool, args, root);
+  let merged;
+  try {
+    merged = platform === 'github'
+      ? await mergePullRequest(repository, token, target.branch)
+      : await mergeMergeRequest(repository, token, target.branch);
+  } catch (error) {
+    const label = platform === 'github' ? 'GitHub' : 'GitLab';
+    fail('MERGE_FAILED', `${label} REST API squash 合入失败：${(error as Error).message}`);
+  }
 
   let metadataError: Error | null = null;
   if (target.init) {
@@ -312,7 +287,7 @@ export async function mergeFlow(rootInput: string, id: string): Promise<MergeRes
   }
   return {
     id, platform, branch: target.branch, merged: true,
-    command: `${tool} ${args.join(' ')}`, close: closed,
-    next: '已通过 CLI 合入并清理本机；如从网页合入，仍需手动运行 tiller close。',
+    command: merged.command, close: closed,
+    next: `已通过 ${platform === 'github' ? 'GitHub' : 'GitLab'} REST API squash 合入并清理本机；如从网页合入，仍需手动运行 tiller close。`,
   };
 }

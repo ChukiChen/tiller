@@ -1,6 +1,6 @@
 # tiller 使用指引
 
-运行 `node .tiller/run.cjs --help`；恢复 `node .tiller/run.cjs resume`。编号用 `YYYYMMDD-` 前缀，缺少时只提示。
+运行 `node .tiller/run.cjs --help`；恢复 `node .tiller/run.cjs resume`。编号用 `YYYYMMDD-` 前缀（如 `20261023-fix`），缺少时只提示。
 
 ## 默认工作流
 
@@ -28,7 +28,7 @@ node .tiller/run.cjs close <id> --reason "已合入"
 
 standard 设计确认前 verify 或确认后业务改动未提交时，`check` 阻断 `accept`；`verify` 本身不要求设计确认。
 
-accept 须在 pr 前；回写后先提交验证记录，再 `accept` 并提交任务记录（含 acceptance），最后 `pr`。`PR_NOT_ACCEPTED` 与 `PR_TASK_RECORDS_DIRTY` 分别阻断；合入即交付完成。`merge <id>` 调用 `github pr merge` 或 `gitlab mr merge`，以 squash 合入，成功后自动 `close`；合入后 `close` 只清 local（兼容清理旧布局）、不改 `task.md`，失败不清理，网页合入仍需手动 `close`。合入统一使用 `github`/`gitlab`。
+accept 须在 pr 前；回写后先提交验证记录，再 `accept` 并提交任务记录（含 acceptance），最后 `pr`。`PR_NOT_ACCEPTED` 与 `PR_TASK_RECORDS_DIRTY` 分别阻断；合入即交付完成。`merge <id>` 通过 GitHub/GitLab REST API 以 squash 合入，成功后自动 `close`；合入后 `close` 只清 local（兼容清理旧布局）、不改 `task.md`，失败不清理，网页合入仍需手动 `close`。
 
 `check` 对过薄设计、空壳 decisions/模块设计、分支未包含任务编号；规格/背景未回写列路径与提纲。`verify` 日志含命令、起止、退出码。
 
@@ -46,17 +46,10 @@ accept 须在 pr 前；回写后先提交验证记录，再 `accept` 并提交�
 
 ## 规划与用例
 
-```sh
-node .tiller/run.cjs plan start 20261023-batch --title "第一批" --goal "接入" \
-  --spec .tiller/specs/requirements.md#默认工作流 \
-  --item "P-1=接入;size=small;deps=-"
-node .tiller/run.cjs plan attach 20261023-closed-task --plan 20261023-batch --item P-1
-```
-
-`plan confirm/status` 确认拆分并阻塞未验收依赖；`plan attach` 补挂任务。用例写 `.tiller/cases/modules/<模块>/`，场景写 `scenarios/`。
+规划用 `plan start/confirm/status`；已有任务用 `plan attach` 补挂。参数见 `node .tiller/run.cjs --help`。用例写 `.tiller/cases/modules/<模块>/`，场景写 `scenarios/`。
 
 `case add` 写清前置、步骤、输入、预期、类型、优先级与来源；测试名或紧邻注释引用 `CASE-NNN`，无引用待实现，`verify --case` 执行覆盖。单任务只有 `.tiller/task/<id>/task.md`；外部仓 `.tiller/work/` 只读遗留；输出写 local logs，不提交全文快照或日志。
 
 ## 接入与升级
 
-`init [--platform github|gitlab|both]` 有 HEAD 时另建 `chore/tiller-init` worktree 并尝试 PR/MR，失败保留提交与命令。`initBaseline` 判定合入；`merge <init-id>` 成功后标记 merged 并清理该 local，网页合入则需手动 `close <init-id>`。平台在初始化时选定，之后不能通过 CLI 切换，需手动修改 `.tiller/project.json` 并补齐对应模板。`upgrade` 只刷新未改项，`--adopt` 更新摘要；兼容当前及上一资源契约。
+`init [--platform github|gitlab|both]` 有 HEAD 时另建 `chore/tiller-init` worktree，经平台 API 与 token 推送并创建 PR/MR，创建走 REST API；失败保留本机与 token/API 下一步。Token 读自 `GITHUB_TOKEN`/`GH_TOKEN` 或 `GITLAB_TOKEN`/`GL_TOKEN`，不写记录。`initBaseline` 判定合入；`merge <init-id>` 成功后标记 merged 并清理该 local，网页合入则需手动 `close <init-id>`。平台在初始化时选定，之后不能通过 CLI 切换，需手动修改 `.tiller/project.json` 并补齐对应模板。`upgrade` 只刷新未改项，`--adopt` 更新摘要；兼容当前及上一资源契约。

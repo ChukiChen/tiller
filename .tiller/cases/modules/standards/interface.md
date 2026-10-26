@@ -102,7 +102,7 @@ upgrade --adopt 写入当前受管内容摘要并消除漂移；plan attach 为�
 
 版本均为 0.5.0，CASE-234 至 CASE-241 在 merge 测试中有命名引用
 
-## CASE-242 README 以 AI 执行为主并使用 github/gitlab 名称
+## CASE-242 README 以 AI 执行为主并使用 REST API 与 token
 
 - 类型：interface
 - 优先级：high
@@ -118,7 +118,7 @@ upgrade --adopt 写入当前受管内容摘要并消除漂移；plan attach 为�
 ### 步骤
 
 1. 读取 README 的介绍与快速开始
-2. 检索 AI 工作流、用户确认节点与命令名
+2. 检索 AI 工作流、用户确认节点、REST API 与 token 名称
 
 ### 输入
 
@@ -126,9 +126,9 @@ upgrade --adopt 写入当前受管内容摘要并消除漂移；plan attach 为�
 
 ### 预期结果
 
-README 仍只含介绍与快速开始；AI 按 start →（设计确认）→ 实现 → verify → pr → merge/close 推进，用户只确认需求、设计与交付验收；合入与本机清理一句带过，不展开 squash/网页 close/平台 CLI；pr/merge/close 不写成人类逐步必跑的命令块；无裸 gh/glab
+README 仍只含介绍与快速开始；AI 按 start →（设计确认）→ 实现 → verify → pr → merge/close 推进，用户只确认需求、设计与交付验收；合入与本机清理一句带过，不展开 squash 或平台 CLI；pr/merge/close 不写成人类逐步必跑的命令块；初始化说明 REST API 与 token，无裸 gh/glab
 
-## CASE-243 受管文档与 CLI help 使用 github/gitlab 并保持镜像一致
+## CASE-243 受管文档与 CLI help 使用 REST API 并保持镜像一致
 
 - 类型：interface
 - 优先级：high
@@ -152,35 +152,35 @@ README 仍只含介绍与快速开始；AI 按 start →（设计确认）→ �
 
 ### 预期结果
 
-usage、core、delivery 与 CLI help 均使用 github/gitlab 命令名，不再出现裸 gh/glab；resources 与 .tiller 对应镜像内容一致
+usage、core、delivery 与 CLI help 均说明 GitHub/GitLab REST API 与 token 环境变量，不再出现裸 gh/glab；resources 与 .tiller 对应镜像内容一致
 
-## CASE-244 运行时以 github/gitlab 调用并支持官方二进制回退
+## CASE-244 运行时只调用 REST API 与 tokenized git transport
 
 - 类型：interface
 - 优先级：medium
 - 模块：standards
-- 关联 AC：20261026-docs-cli-names#AC-4
+- 关联 AC：20261026-api-remote-ops#AC-1
 - 需求：`.tiller/specs/modules/standards/requirements.md`
-- 源码：`src/platform-cli.ts`, `src/init-baseline.ts`, `src/pr.ts`, `test/merge.test.mjs`, `test/init-baseline.test.mjs`
+- 源码：`src/platform-api.ts`, `src/init-baseline.ts`, `src/pr.ts`, `test/merge.test.mjs`, `test/init-baseline.test.mjs`
 
 ### 前置条件
 
-- PATH 中提供 github/gitlab 假二进制，或只提供官方 gh/glab 假二进制
+- 工程 origin 可解析、token 已设置；PATH 不提供任何平台 CLI
 
 ### 步骤
 
 1. 分别执行 init 与 merge
-2. 记录子进程 argv0 与参数
+2. 检查 HTTP 请求、token header 与源码调用
 
 ### 输入
 
-- 假 github/gitlab 与假 gh/glab；初始化及已验收任务
+- mock HTTP、tokenized git push 与已验收任务
 
 ### 预期结果
 
-PATH 优先 github/gitlab；只提供官方 gh/glab 时，tiller 以同名 shim 使 argv0、spawn 显示名与可复制命令仍为 github/gitlab；两者都无时明确报错。官方二进制名仍为 gh/glab，tiller 不重新打包
+init 推送、PR/MR 创建与 squash 合入均走平台 REST API；GitHub 优先 Git Data API，GitLab 传输层使用 tokenized HTTPS git push；生产源码不再引用平台 CLI 或平台 shim
 
-## CASE-245 全局用例同步且文档 CLI 名称任务保持 0.5.0
+## CASE-245 全局用例同步且 API 远端操作任务保持 0.5.0
 
 - 类型：interface
 - 优先级：high
@@ -204,7 +204,7 @@ PATH 优先 github/gitlab；只提供官方 gh/glab 时，tiller 以同名 shim 
 
 ### 预期结果
 
-package、project 与 CLI 版本均为 0.5.0；CASE-242 至 CASE-245 均有命名测试引用；CASE-048 的 total 为 246、standards/interface 为 9；build、lint、typecheck、test 与 test:package 全部通过
+package、project 与 CLI 版本均为 0.5.0；CASE-242 至 CASE-245 均有命名测试引用；CASE-048 的 total 为 252、standards/interface 为 9；build、lint、typecheck、test 与 test:package 全部通过
 
 ## CASE-246 代码质量与安全通用规则纳入受管资源
 
@@ -231,4 +231,4 @@ package、project 与 CLI 版本均为 0.5.0；CASE-242 至 CASE-245 均有命�
 
 ### 预期结果
 
-quality/code.md 在双份镜像中包含命名、结构、扩展性、反过度设计、可读性、边界校验一次、保持简单、假想风险与注释约束；documents.md 双份保留密钥和绝对路径限制并补充记录凭据、输入校验与授权边界、可信依赖、危险操作确认和无具体威胁不过度加固；implementation、delivery 与 rules/index 双份形成质量/安全交叉引用；RULES 含 rules/quality/code.md，project.json 摘要覆盖新文件及被改文件；CASE-048 的 total 为 246、standards/interface 为 9；版本保持 0.5.0，资源镜像一致且规则测试通过
+quality/code.md 在双份镜像中包含命名、结构、扩展性、反过度设计、可读性、边界校验一次、保持简单、假想风险与注释约束；documents.md 双份保留密钥和绝对路径限制并补充记录凭据、输入校验与授权边界、可信依赖、危险操作确认和无具体威胁不过度加固；implementation、delivery 与 rules/index 双份形成质量/安全交叉引用；RULES 含 rules/quality/code.md，project.json 摘要覆盖新文件及被改文件；CASE-048 的 total 为 252、standards/interface 为 9；版本保持 0.5.0，资源镜像一致且规则测试通过

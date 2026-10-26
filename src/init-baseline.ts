@@ -3,7 +3,10 @@ import { mkdir, readFile, realpath, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { promisify } from 'node:util';
 import { assertSafePath } from './files.js';
-import { platformCliUnavailable, resolvePlatformCli } from './platform-cli.js';
+import {
+  apiCurlForRequest, createMergeRequest, createPullRequest, platformToken, pushBranch,
+  resolvePlatformRepository, tokenGuidance, type PlatformRepository, type PlatformToken,
+} from './platform-api.js';
 import { META, parseMetadata } from './project-metadata.js';
 import type { FileChange, InitBaseline, ProjectMetadata, ProjectPlatform } from './types.js';
 
@@ -12,6 +15,7 @@ const INIT_SUFFIX = 'tiller-init';
 const INIT_BRANCH = 'chore/tiller-init';
 const INIT_COMMIT_MESSAGE = 'chore(tiller): 完成工程初始化';
 const INIT_PR_TITLE = INIT_COMMIT_MESSAGE;
+const INIT_PR_BODY = '初始化 tiller 工程结构。';
 const INIT_ID = /^[0-9]{8}-tiller-init$/u;
 
 interface CommandResult { ok: boolean; stdout: string; stderr: string; unavailable: boolean }
@@ -92,54 +96,61 @@ async function createCommit(root: string, message: string): Promise<string> {
   return head;
 }
 
-function shellQuote(value: string): string {
-  return `'${value.replaceAll("'", `'\\''`)}'`;
+interface RemoteAttempt {
+  prUrl?: string;
+  next: string[];
 }
 
-function commandSteps(worktree: string, platform: ProjectPlatform): string[] {
-  const commands = [`git -C ${shellQuote(worktree)} push -u origin ${INIT_BRANCH}`];
-  const body = '初始化 tiller 工程结构。';
-  if (platform === 'github' || platform === 'both') {
-    commands.push(`cd ${shellQuote(worktree)} && github pr create --head ${INIT_BRANCH} --title ${shellQuote(INIT_PR_TITLE)} --body ${shellQuote(body)}`);
-  }
-  if (platform === 'gitlab' || platform === 'both') {
-    commands.push(`cd ${shellQuote(worktree)} && gitlab mr create --source-branch ${INIT_BRANCH} --title ${shellQuote(INIT_PR_TITLE)} --description ${shellQuote(body)} --yes`);
-  }
-  return commands;
+function tokenExport(token: PlatformToken | PlatformRepository): string {
+  return token.platform === 'github' ? 'export GITHUB_TOKEN=<token>' : 'export GITLAB_TOKEN=<token>';
 }
 
-function findUrl(text: string): string | undefined {
-  return /https?:\/\/[^\s]+/u.exec(text)?.[0];
+function pendingNext(id: string, repository?: PlatformRepository): string[] {
+  const close = `创建/合入 PR/MR 后运行：tiller close ${id} --reason "初始化基线已合入"`;
+  if (!repository) {
+    return [
+      '检查 origin 是否为可解析的 GitHub/GitLab HTTPS 或 SSH 仓库地址，并设置对应 token 后重试。',
+      close,
+    ];
+  }
+  return [
+    tokenExport(repository),
+    `用平台 API 或 tokenized HTTPS git 推送 ${INIT_BRANCH}，再用 ${repository.platform === 'github' ? 'GitHub' : 'GitLab'} REST API 创建 PR/MR：${apiCurlForRequest(repository)}`,
+    close,
+  ];
 }
 
-async function attemptRemote(worktree: string, platform: ProjectPlatform,
-  warnings: string[]): Promise<string | undefined> {
-  const pushed = await git(worktree, ['push', '-u', 'origin', INIT_BRANCH]);
-  if (!pushed.ok) warnings.push(`初始化分支尚未推送：${commandError(pushed, 'git push 失败')}`);
-  const body = '初始化 tiller 工程结构。';
-  const failures: string[] = [];
-  if (platform === 'github' || platform === 'both') {
-    const resolved = await resolvePlatformCli('github');
-    if (!resolved) failures.push(platformCliUnavailable('github'));
-    else try {
-      const created = await run(worktree, resolved.executable,
-        ['pr', 'create', '--head', INIT_BRANCH, '--title', INIT_PR_TITLE, '--body', body]);
-      if (created.ok) return findUrl(`${created.stdout}\n${created.stderr}`) ?? 'PR 已创建';
-      failures.push(commandError(created, 'github pr create 失败'));
-    } finally { await resolved.cleanup(); }
+async function attemptRemote(id: string, worktree: string, platform: ProjectPlatform,
+  warnings: string[]): Promise<RemoteAttempt> {
+  let repository: PlatformRepository;
+  try {
+    repository = await resolvePlatformRepository(worktree, platform);
+  } catch (error) {
+    warnings.push(`无法解析远端仓库：${(error as Error).message}`);
+    return { next: pendingNext(id) };
   }
-  if (platform === 'gitlab' || platform === 'both') {
-    const resolved = await resolvePlatformCli('gitlab');
-    if (!resolved) failures.push(platformCliUnavailable('gitlab'));
-    else try {
-      const created = await run(worktree, resolved.executable, ['mr', 'create', '--source-branch', INIT_BRANCH,
-        '--title', INIT_PR_TITLE, '--description', body, '--yes']);
-      if (created.ok) return findUrl(`${created.stdout}\n${created.stderr}`) ?? 'MR 已创建';
-      failures.push(commandError(created, 'gitlab mr create 失败'));
-    } finally { await resolved.cleanup(); }
+
+  const token = platformToken(repository.platform);
+  if (!token) {
+    const guidance = tokenGuidance(repository.platform, repository.apiBase);
+    warnings.push(guidance);
+    return { next: [guidance, ...pendingNext(id, repository)] };
   }
-  if (failures.length) warnings.push(`自动创建初始化 PR/MR 失败：${failures.join('；')}`);
-  return undefined;
+
+  try {
+    const pushed = await pushBranch(worktree, repository, token, INIT_BRANCH);
+    warnings.push(...pushed.warnings);
+    const created = repository.platform === 'github'
+      ? await createPullRequest(repository, token, { branch: INIT_BRANCH, title: INIT_PR_TITLE, body: INIT_PR_BODY })
+      : await createMergeRequest(repository, token, { branch: INIT_BRANCH, title: INIT_PR_TITLE, body: INIT_PR_BODY });
+    return {
+      prUrl: created.url,
+      next: [`人工合入 ${INIT_BRANCH} 后运行：tiller close ${id} --reason "初始化基线已合入"`],
+    };
+  } catch (error) {
+    warnings.push(`初始化分支推送或 PR/MR 创建失败：${(error as Error).message}`);
+    return { next: pendingNext(id, repository) };
+  }
 }
 
 async function cleanupCreated(root: string, worktreeRelative: string): Promise<void> {
@@ -244,14 +255,14 @@ export async function createInitBaseline(rootInput: string, metadata: ProjectMet
     await writeFile(worktreeMetadata, metadataText, 'utf8');
     const worktreeHead = await createCommit(target, INIT_COMMIT_MESSAGE);
     const warnings: string[] = [];
-    const prUrl = await attemptRemote(target, platform, warnings);
-    const next = prUrl
+    const remote = await attemptRemote(id, target, platform, warnings);
+    const next = remote.prUrl
       ? [`人工合入 ${INIT_BRANCH} 后运行：tiller close ${id} --reason "初始化基线已合入"`]
-      : [...commandSteps(worktree, platform), `创建/合入 PR/MR 后运行：tiller close ${id} --reason "初始化基线已合入"`];
+      : remote.next;
     return {
       baseline: {
         id, branch: INIT_BRANCH, commit, head: worktreeHead, worktree, status: 'pending',
-        ...(prUrl ? { prUrl } : {}), warnings, next,
+        ...(remote.prUrl ? { prUrl: remote.prUrl } : {}), warnings, next,
       },
       metadata: nextMetadata,
       warnings: [],

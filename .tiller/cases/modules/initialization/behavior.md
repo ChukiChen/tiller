@@ -669,7 +669,7 @@ init 生成的项目 requirements.md 与 design.md 及 modules/README.md 包含�
 
 创建 .tiller/local/<YYYYMMDD-tiller-init>/worktrees，分支为 chore/tiller-init，提交受管初始化改动，并以固定标题尝试创建 PR/MR，不自动合入
 
-## CASE-229 init 开 PR 失败时保留本地并返回可复制命令
+## CASE-229 init 开 PR 失败时保留本地并返回 token/API 下一步
 
 - 类型：behavior
 - 优先级：high
@@ -680,7 +680,7 @@ init 生成的项目 requirements.md 与 design.md 及 modules/README.md 包含�
 
 ### 前置条件
 
-- 工程有 Git 提交，但推送或托管 CLI 失败
+- 工程有 Git 提交，但 REST API 推送或 PR/MR 创建失败
 
 ### 步骤
 
@@ -688,11 +688,11 @@ init 生成的项目 requirements.md 与 design.md 及 modules/README.md 包含�
 
 ### 输入
 
-- 无远程、gh/glab 不可用或返回失败
+- 无远程、token 缺失或 mock API 返回失败
 
 ### 预期结果
 
-初始化 worktree 和提交仍保留，结果给出 git push -u 与 PR/MR 创建命令及失败原因
+初始化 worktree 和提交仍保留，结果给出 token 环境变量、REST API 下一步及失败原因
 
 ## CASE-239 init-id merge 合入初始化分支并清理 local
 
@@ -705,7 +705,7 @@ init 生成的项目 requirements.md 与 design.md 及 modules/README.md 包含�
 
 ### 前置条件
 
-- 初始化基线待合入，存在 chore/tiller-init 的本机 worktree，gh 模拟合入成功
+- 初始化基线待合入，存在 chore/tiller-init 的本机 worktree，mock REST API 合入成功
 
 ### 步骤
 
@@ -713,8 +713,8 @@ init 生成的项目 requirements.md 与 design.md 及 modules/README.md 包含�
 
 ### 输入
 
-- 初始化任务编号与模拟成功的 gh
+- 初始化任务编号与模拟成功的 GitHub API
 
 ### 预期结果
 
-调用 gh pr merge chore/tiller-init --squash；成功后 initBaseline 标为 merged、删除该 init local，后续 start 不再被初始化门禁阻断
+调用 GitHub REST API 以 squash 合入 chore/tiller-init；成功后 initBaseline 标为 merged、删除该 init local，后续 start 不再被初始化门禁阻断

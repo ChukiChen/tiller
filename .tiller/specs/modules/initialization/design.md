@@ -30,6 +30,6 @@
 
 `src/init-baseline.ts` 在受管文件落盘后运行。工程根须同时是 Git 工作副本根且有 HEAD；否则不阻断现有初始化，只返回跳过提示。初始化从当时 HEAD 新建 `chore/tiller-init`，复用受管变更集写入 `.tiller/local/<YYYYMMDD-tiller-init>/worktrees`，并由 `initBaseline` 记录 `id`、`branch`、`commit`、`status`。
 
-由于元信息不能写入自身最终提交号，初始化在同一分支生成两个同标题提交：第一个提交承载受管改动并成为 `initBaseline.commit`，第二个提交把引用该提交的元信息写入 worktree。门禁只以第一个提交作祖先判断，因此合入前后语义稳定。随后尝试推送并按平台调用 `gh pr create` 或 `glab mr create`；失败只追加警告和推送/创建命令，不回滚 worktree、提交或主工作树元信息。分支/工作树创建或提交失败时回滚主工作树元信息并清理本次 init-id、分支与 Git worktree 登记。
+由于元信息不能写入自身最终提交号，初始化在同一分支生成两个同标题提交：第一个提交承载受管改动并成为 `initBaseline.commit`，第二个提交把引用该提交的元信息写入 worktree。门禁只以第一个提交作祖先判断，因此合入前后语义稳定。随后由 `src/platform-api.ts` 推送并创建 PR/MR：GitHub 优先 Git Data API，GitLab 传输层使用 tokenized HTTPS `git push`；PR/MR 与 squash 合入均走平台 REST API。失败只追加 token/API 下一步，不回滚 worktree、提交或主工作树元信息。分支/工作树创建或提交失败时回滚主工作树元信息并清理本次 init-id、分支与 Git worktree 登记。
 
 已有 `initBaseline` 的重复初始化只提示在原分支核对，不新建冲突分支。`close <init-id>` 复用任务 local 的受控清理逻辑，按 id 移除 worktree 登记与整棵本机目录。

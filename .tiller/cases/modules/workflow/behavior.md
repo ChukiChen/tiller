@@ -1498,7 +1498,7 @@ close 删除本机任务目录和工作树，task.md 内容与哈希不变，重
 
 ### 前置条件
 
-- 已验收任务拥有本机 worktree，project.platform 为 github，gh 模拟合入成功
+- 已验收任务拥有本机 worktree，project.platform 为 github，mock REST API 合入成功
 
 ### 步骤
 
@@ -1506,11 +1506,11 @@ close 删除本机任务目录和工作树，task.md 内容与哈希不变，重
 
 ### 输入
 
-- 已验收任务编号与模拟成功的 gh
+- 已验收任务编号与模拟成功的 GitHub REST API
 
 ### 预期结果
 
-调用 gh pr merge <任务分支> --squash，成功后 close 该任务并删除 .tiller/local/<task-id>
+调用 GitHub REST API 以 squash 合入 <任务分支>，成功后 close 该任务并删除 .tiller/local/<task-id>
 
 ## CASE-236 GitHub merge 失败时保留下本机任务
 
@@ -1523,7 +1523,7 @@ close 删除本机任务目录和工作树，task.md 内容与哈希不变，重
 
 ### 前置条件
 
-- 已验收任务拥有本机 worktree，project.platform 为 github，gh 模拟合入失败
+- 已验收任务拥有本机 worktree，project.platform 为 github，mock REST API 合入失败
 
 ### 步骤
 
@@ -1531,7 +1531,7 @@ close 删除本机任务目录和工作树，task.md 内容与哈希不变，重
 
 ### 输入
 
-- 已验收任务编号与模拟失败的 gh
+- 已验收任务编号与模拟失败的 GitHub REST API
 
 ### 预期结果
 
@@ -1548,7 +1548,7 @@ close 删除本机任务目录和工作树，task.md 内容与哈希不变，重
 
 ### 前置条件
 
-- 已验收任务拥有本机 worktree，project.platform 为 gitlab，glab 模拟合入成功
+- 已验收任务拥有本机 worktree，project.platform 为 gitlab，mock REST API 合入成功
 
 ### 步骤
 
@@ -1556,11 +1556,11 @@ close 删除本机任务目录和工作树，task.md 内容与哈希不变，重
 
 ### 输入
 
-- 已验收任务编号与模拟成功的 glab
+- 已验收任务编号与模拟成功的 GitLab REST API
 
 ### 预期结果
 
-调用 glab mr merge <任务分支> 的 squash 等价参数，成功后 close 该任务并删除 .tiller/local/<task-id>
+调用 GitLab REST API 以 squash 合入 <任务分支>，成功后 close 该任务并删除 .tiller/local/<task-id>
 
 ## CASE-238 GitLab merge 失败时保留下本机任务
 
@@ -1573,7 +1573,7 @@ close 删除本机任务目录和工作树，task.md 内容与哈希不变，重
 
 ### 前置条件
 
-- 已验收任务拥有本机 worktree，project.platform 为 gitlab，glab 模拟合入失败
+- 已验收任务拥有本机 worktree，project.platform 为 gitlab，mock REST API 合入失败
 
 ### 步骤
 
@@ -1581,8 +1581,112 @@ close 删除本机任务目录和工作树，task.md 内容与哈希不变，重
 
 ### 输入
 
-- 已验收任务编号与模拟失败的 glab
+- 已验收任务编号与模拟失败的 GitLab REST API
 
 ### 预期结果
 
 命令非零退出并报告合入失败，不调用 close，任务 local 与 worktree 仍在
+
+## CASE-247 init 无平台 CLI 时经 GitHub API 推送并创建 PR
+
+- 类型：behavior
+- 优先级：high
+- 模块：workflow
+- 关联 AC：20261026-api-remote-ops#AC-2, 20261026-api-remote-ops#AC-1
+- 需求：`.tiller/specs/modules/workflow/requirements.md`
+- 源码：`src/platform-api.ts`, `src/init-baseline.ts`, `test/init-baseline.test.mjs`
+
+### 前置条件
+
+- Git 工程有 HEAD、origin 指向 GitHub、PATH 无平台 CLI
+
+### 步骤
+
+1. 以 mock fetch 运行 init --platform github
+2. 检查 mock HTTP 请求、initBaseline 与 PR URL
+
+### 输入
+
+- 设置测试用 GITHUB_TOKEN 与 GitHub origin
+
+### 预期结果
+
+仅设置 GITHUB_TOKEN 且 PATH 无 github/gh 时，init 通过 mock HTTP 调用 Git Data API 推送 chore/tiller-init，并调用 pulls API 创建初始化 PR
+
+## CASE-248 init 缺 token 时保留本地并给出 API token 中文下一步
+
+- 类型：behavior
+- 优先级：high
+- 模块：workflow
+- 关联 AC：20261026-api-remote-ops#AC-2, 20261026-api-remote-ops#AC-1
+- 需求：`.tiller/specs/modules/workflow/requirements.md`
+- 源码：`src/platform-api.ts`, `src/init-baseline.ts`, `test/init-baseline.test.mjs`
+
+### 前置条件
+
+- Git 工程有 HEAD、origin 可解析、环境没有平台 token
+
+### 步骤
+
+1. 运行 init
+2. 检查 initBaseline、warnings 与 next
+
+### 输入
+
+- 无平台 token 的 GitHub 与 GitLab 工程
+
+### 预期结果
+
+缺少 GITHUB_TOKEN/GH_TOKEN 或 GITLAB_TOKEN/GL_TOKEN 时 init 保留 worktree 与提交，警告和 next 提示设置 token/API，不以安装 github/gh/gitlab/glab 为主路径
+
+## CASE-249 merge 经平台 API squash 合入成功后自动 close
+
+- 类型：behavior
+- 优先级：high
+- 模块：workflow
+- 关联 AC：20261026-api-remote-ops#AC-3, 20261026-api-remote-ops#AC-1
+- 需求：`.tiller/specs/modules/workflow/requirements.md`
+- 源码：`src/platform-api.ts`, `src/pr.ts`, `test/merge.test.mjs`
+
+### 前置条件
+
+- 已验收任务、对应 token、origin 可解析且 mock API 返回合入成功
+
+### 步骤
+
+1. 运行 tiller merge <task-id>
+2. 检查 squash 请求、返回 command 与 local 清理
+
+### 输入
+
+- GitHub 与 GitLab 的 mock HTTP 成功响应
+
+### 预期结果
+
+已验收任务的 GitHub PR 或 GitLab MR 由 REST API squash 合入，成功后自动 close 并清理任务 local
+
+## CASE-250 merge API 失败时保留 local 和 worktree
+
+- 类型：behavior
+- 优先级：high
+- 模块：workflow
+- 关联 AC：20261026-api-remote-ops#AC-3
+- 需求：`.tiller/specs/modules/workflow/requirements.md`
+- 源码：`src/platform-api.ts`, `src/pr.ts`, `test/merge.test.mjs`
+
+### 前置条件
+
+- 已验收任务、对应 token、mock API 返回合入失败
+
+### 步骤
+
+1. 运行 tiller merge <task-id>
+2. 检查错误码、工作树和 local 目录
+
+### 输入
+
+- GitHub 与 GitLab 的 mock HTTP 失败响应
+
+### 预期结果
+
+平台 API 非 2xx 或返回不可合入时 tiller merge 非零退出，报告截断后的平台错误且不 close、不删除本机任务
