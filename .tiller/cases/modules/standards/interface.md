@@ -204,4 +204,31 @@ PATH 优先 github/gitlab；只提供官方 gh/glab 时，tiller 以同名 shim 
 
 ### 预期结果
 
-package、project 与 CLI 版本均为 0.5.0；CASE-242 至 CASE-245 均有命名测试引用；CASE-048 的 total 为 245、standards/interface 为 8；build、lint、typecheck、test 与 test:package 全部通过
+package、project 与 CLI 版本均为 0.5.0；CASE-242 至 CASE-245 均有命名测试引用；CASE-048 的 total 为 246、standards/interface 为 9；build、lint、typecheck、test 与 test:package 全部通过
+
+## CASE-246 代码质量与安全通用规则纳入受管资源
+
+- 类型：interface
+- 优先级：high
+- 模块：standards
+- 关联 AC：20261026-quality-code-rules#AC-1, 20261026-quality-code-rules#AC-2, 20261026-quality-code-rules#AC-3, 20261026-quality-code-rules#AC-4
+- 需求：`.tiller/specs/modules/standards/requirements.md`
+- 源码：`resources/rules/quality/code.md`, `.tiller/rules/quality/code.md`, `resources/rules/quality/documents.md`, `.tiller/rules/quality/documents.md`, `resources/rules/index.md`, `resources/rules/activities/implementation.md`, `resources/rules/activities/delivery.md`, `src/project-metadata.ts`, `test/rules.test.mjs`
+
+### 前置条件
+
+- 需求已确认，resources 与 .tiller/rules 镜像可读取
+
+### 步骤
+
+1. 读取双份 code.md、documents.md、活动规则与规则索引
+2. 核对 RULES、project.json 受管摘要与全局用例计数
+3. 运行覆盖本用例的规则测试
+
+### 输入
+
+- resources/ 与 .tiller/rules/ 当前规则、src/project-metadata.ts、test/rules.test.mjs
+
+### 预期结果
+
+quality/code.md 在双份镜像中包含命名、结构、扩展性、反过度设计、可读性、边界校验一次、保持简单、假想风险与注释约束；documents.md 双份保留密钥和绝对路径限制并补充记录凭据、输入校验与授权边界、可信依赖、危险操作确认和无具体威胁不过度加固；implementation、delivery 与 rules/index 双份形成质量/安全交叉引用；RULES 含 rules/quality/code.md，project.json 摘要覆盖新文件及被改文件；CASE-048 的 total 为 246、standards/interface 为 9；版本保持 0.5.0，资源镜像一致且规则测试通过

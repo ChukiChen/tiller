@@ -13,7 +13,7 @@ export const RULES = [
   'rules/index.md', 'rules/core.md',
   'rules/activities/requirements.md', 'rules/activities/design.md',
   'rules/activities/implementation.md', 'rules/activities/delivery.md',
-  'rules/quality/documents.md', 'rules/quality/verification.md',
+  'rules/quality/documents.md', 'rules/quality/code.md', 'rules/quality/verification.md',
 ] as const;
 export const SHARED_RESOURCES = [...RULES, 'usage.md', 'run.cjs'] as const;
 export const PREVIOUS_MANAGED = ['AGENTS.md', '.gitignore', '.tiller/index.md', ...SHARED_RESOURCES.map(name => `.tiller/${name}`)];
