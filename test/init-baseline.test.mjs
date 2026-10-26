@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { spawn, spawnSync } from 'node:child_process';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
-import { cliPath, fixture, put, success } from './helpers.mjs';
+import { cliPath, failure, fixture, put, success } from './helpers.mjs';
 import { fakeGitForTokenizedPush, realGitPath, startPlatformMock } from './platform-api-mock.mjs';
 
 const repository = fileURLToPath(new URL('../', import.meta.url));
@@ -157,6 +157,58 @@ test('CASE-248 init without token keeps local state and gives API/token guidance
     assert.match(next, /REST API|curl/u);
     assert.doesNotMatch(next, /github pr create|gitlab mr create|\bgh\b|\bglab\b/u);
   }
+});
+
+test('CASE-253 init baseline merged through the platform API unlocks start and records merged', async t => {
+  for (const platform of ['github', 'gitlab']) {
+    const initialized = await initialize(t, { platform });
+    if (!initialized) continue;
+    const { root, environment, result, mock } = initialized;
+    const baseline = success(result).initBaseline;
+    assert.notEqual(git(root, 'merge-base', '--is-ancestor', baseline.commit, 'HEAD').status, 0,
+      'the rewritten platform merge must not be treated as an ancestor');
+
+    mock.state.mergedBranches.add(baseline.branch);
+    mock.resetRequests();
+    const id = `20261026-${platform}-api-merged`;
+    success(await cliAt(root, environment, 'start', id, '--title', 'API merged baseline',
+      '--requirement', 'A platform-merged initialization can start work.', '--criterion', 'AC-1=Start succeeds',
+      '--size', 'small', '--target', '.'));
+
+    const metadata = JSON.parse(read(root, '.tiller/project.json'));
+    assert.equal(metadata.initBaseline.status, 'merged');
+    const query = mock.state.requests.find(item => item.method === 'GET' && item.search.includes('state=all'));
+    assert.ok(query, `${platform} should query merged integrations`);
+    assert.match(query.search, platform === 'github'
+      ? /head=owner%3Achore%2Ftiller-init/u
+      : /source_branch=chore%2Ftiller-init/u);
+    assert.ok(mock.state.requests.every(item => item.hasAuthorization || item.hasPrivateToken));
+  }
+});
+
+test('CASE-254 missing token or platform API failure keeps the init gate closed', async t => {
+  const initialized = await initialize(t, { platform: 'github' });
+  if (!initialized) return;
+  const { root, environment, result, mock } = initialized;
+  const baseline = success(result).initBaseline;
+  const common = ['--title', 'Gate remains closed', '--requirement', 'Do not bypass initialization without evidence.',
+    '--criterion', 'AC-1=Start requires merge evidence', '--size', 'small', '--target', '.'];
+
+  mock.resetRequests();
+  const noToken = failure(await cliAt(root, emptyTokens, 'start', '20261026-init-no-token', ...common));
+  assert.equal(noToken.error.code, 'INIT_BASELINE_PENDING');
+  assert.match(noToken.error.message, /GITHUB_TOKEN|GH_TOKEN/u);
+  assert.match(noToken.error.message, /--skip-init-gate/u);
+  assert.equal(mock.state.requests.length, 0);
+
+  mock.setMode('query-failure');
+  const queryFailure = failure(await cliAt(root, environment, 'start', '20261026-init-query-failure', ...common));
+  assert.equal(queryFailure.error.code, 'INIT_BASELINE_PENDING');
+  assert.match(queryFailure.error.message, /平台合入状态查询失败|query rejected/u);
+  assert.ok(mock.state.requests.some(item => item.method === 'GET' && item.search.includes('state=all')));
+  assert.equal(JSON.parse(read(root, '.tiller/project.json')).initBaseline.status, 'pending');
+  assert.equal(existsSync(join(root, '.tiller/task/20261026-init-query-failure/task.md')), false);
+  assert.equal(baseline.status, 'pending');
 });
 
 test('CASE-230 close init-id only clears that initialization local and preserves task locals', async t => {

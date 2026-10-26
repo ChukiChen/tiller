@@ -7,7 +7,6 @@
 - 模块：standards
 - 关联 AC：无
 - 需求：`.tiller/rules/index.md`, `.tiller/rules/core.md`
-- 源码：`resources/entry.md`, `resources/usage.md`, `resources/rules/index.md`, `resources/rules/core.md`
 
 ### 前置条件
 
@@ -33,7 +32,6 @@
 - 模块：standards
 - 关联 AC：20261022-round8#AC-1, 20261022-round8#AC-5
 - 需求：`.tiller/specs/modules/standards/requirements.md#2-必读与按需读取`
-- 源码：`test/first-batch.test.mjs`, `README.md`
 
 ### 前置条件
 
@@ -59,7 +57,6 @@
 - 模块：standards
 - 关联 AC：20261022-round9#AC-5
 - 需求：`.tiller/specs/modules/standards/requirements.md#3-执行规则`
-- 源码：`src/cli.ts`, `resources/usage.md`
 
 ### 前置条件
 
@@ -85,7 +82,6 @@
 - 模块：standards
 - 关联 AC：20261022-round11#AC-5
 - 需求：`.tiller/specs/modules/standards/requirements.md`
-- 源码：`resources/rules/activities/delivery.md`, `resources/usage.md`
 
 ### 前置条件
 
@@ -111,7 +107,6 @@
 - 模块：standards
 - 关联 AC：20261022-round13#AC-4
 - 需求：`.tiller/specs/modules/standards/requirements.md#2-必读与按需读取`
-- 源码：`resources/usage.md`, `resources/rules/core.md`, `resources/entry.md`
 
 ### 前置条件
 
@@ -137,7 +132,6 @@
 - 模块：standards
 - 关联 AC：20261022-round13#AC-5
 - 需求：`.tiller/specs/modules/standards/requirements.md#2-必读与按需读取`
-- 源码：`test/rules.test.mjs`, `.tiller/specs/modules/standards/requirements.md`
 
 ### 前置条件
 
@@ -163,7 +157,6 @@
 - 模块：standards
 - 关联 AC：20261022-round14#AC-6
 - 需求：`.tiller/specs/modules/standards/requirements.md#2-必读与按需读取`
-- 源码：`resources/usage.md`, `resources/rules/core.md`, `.tiller/specs/modules/workflow/requirements.md`
 
 ### 前置条件
 
@@ -189,7 +182,6 @@
 - 模块：standards
 - 关联 AC：20261022-round15#AC-6
 - 需求：`.tiller/specs/modules/standards/requirements.md`
-- 源码：`resources/rules/core.md`, `resources/usage.md`
 
 ### 前置条件
 
@@ -215,7 +207,6 @@
 - 模块：standards
 - 关联 AC：20261022-round16#AC-6
 - 需求：`.tiller/specs/modules/standards/requirements.md`
-- 源码：`.tiller/cases/index.md`, `test/rules.test.mjs`
 
 ### 前置条件
 
@@ -241,7 +232,6 @@
 - 模块：standards
 - 关联 AC：20261022-round17#AC-6
 - 需求：`.tiller/specs/modules/standards/requirements.md`
-- 源码：`README.md`, `resources/usage.md`, `.tiller/specs/decisions.md`
 
 ### 前置条件
 
@@ -266,7 +256,6 @@
 - 模块：standards
 - 关联 AC：20261023-migrate-work#AC-4
 - 需求：`.tiller/specs/modules/standards/requirements.md#2-必读与按需读取`
-- 源码：`test/work-migration.test.mjs`
 
 ### 前置条件
 
@@ -291,7 +280,6 @@
 - 模块：standards
 - 关联 AC：无
 - 需求：`.tiller/specs/modules/standards/requirements.md`
-- 源码：`resources/rules/activities/requirements.md`, `resources/rules/activities/design.md`, `resources/rules/activities/implementation.md`, `resources/rules/activities/delivery.md`, `test/rules.test.mjs`
 
 ### 前置条件
 
@@ -316,7 +304,6 @@
 - 模块：standards
 - 关联 AC：20261023-case-backfill#AC-3
 - 需求：`.tiller/specs/modules/standards/requirements.md`
-- 源码：`test/work-migration.test.mjs`, `package.json`
 
 ### 前置条件
 
@@ -341,7 +328,6 @@ package.json、CLI 与资源版本仍为 0.5.0；test 与 test:package 脚本入
 - 模块：standards
 - 关联 AC：20261023-specs-pure-req#AC-1
 - 需求：`.tiller/specs/requirements.md`
-- 源码：`test/rules.test.mjs`
 
 ### 前置条件
 
@@ -366,7 +352,6 @@ package.json、CLI 与资源版本仍为 0.5.0；test 与 test:package 脚本入
 - 模块：standards
 - 关联 AC：20261023-specs-pure-req#AC-2
 - 需求：`.tiller/specs/requirements.md`
-- 源码：`test/rules.test.mjs`
 
 ### 前置条件
 
@@ -391,7 +376,6 @@ CLI 参数、实现路径、测试执行细节、源码模块、提交与分支�
 - 模块：standards
 - 关联 AC：20261023-specs-pure-req#AC-3
 - 需求：`.tiller/specs/modules/standards/requirements.md`
-- 源码：`.tiller/cases/index.md`, `test/rules.test.mjs`
 
 ### 前置条件
 
@@ -416,7 +400,6 @@ CLI 参数、实现路径、测试执行细节、源码模块、提交与分支�
 - 模块：standards
 - 关联 AC：20261023-specs-pure-req#AC-4
 - 需求：`.tiller/specs/modules/standards/requirements.md`
-- 源码：`package.json`, `test/rules.test.mjs`
 
 ### 前置条件
 
@@ -441,7 +424,6 @@ CLI 参数、实现路径、测试执行细节、源码模块、提交与分支�
 - 模块：standards
 - 关联 AC：20261023-hygiene-p1p2#AC-2
 - 需求：`.tiller/specs/modules/standards/requirements.md#3-执行规则`
-- 源码：`.tiller/specs/decisions.md`, `test/rules.test.mjs`
 
 ### 前置条件
 
@@ -466,7 +448,6 @@ CLI 参数、实现路径、测试执行细节、源码模块、提交与分支�
 - 模块：standards
 - 关联 AC：20261023-hygiene-p1p2#AC-3
 - 需求：`.tiller/specs/modules/standards/requirements.md#2-必读与按需读取`
-- 源码：`.tiller/rules/project.md`, `.tiller/context/project.md`, `test/rules.test.mjs`
 
 ### 前置条件
 
@@ -491,7 +472,6 @@ CLI 参数、实现路径、测试执行细节、源码模块、提交与分支�
 - 模块：standards
 - 关联 AC：20261023-hygiene-p1p2#AC-5
 - 需求：`.tiller/specs/requirements.md#3-默认工作流`
-- 源码：`README.md`, `test/rules.test.mjs`
 
 ### 前置条件
 
@@ -516,7 +496,6 @@ CLI 参数、实现路径、测试执行细节、源码模块、提交与分支�
 - 模块：standards
 - 关联 AC：20261023-multi-repo-verify#AC-4
 - 需求：`.tiller/specs/decisions.md#2026-10-23-多仓库验证与-java-运行器`
-- 源码：`.tiller/specs/decisions.md`, `.tiller/specs/modules/verification/design.md`, `resources/usage.md`, `test/java-runners.test.mjs`
 
 ### 前置条件
 
@@ -541,7 +520,6 @@ Maven 与 Gradle 运行器已写入决定和设计；使用说明点名这两种
 - 模块：standards
 - 关联 AC：20261023-flow-hardening-wave1#AC-4
 - 需求：`.tiller/specs/modules/standards/requirements.md`
-- 源码：`src/release.ts`, `src/core.ts`
 
 ### 前置条件
 

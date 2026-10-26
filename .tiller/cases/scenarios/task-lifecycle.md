@@ -7,7 +7,6 @@
 - 模块：workflow, verification, initialization
 - 关联 AC：无
 - 需求：`.tiller/specs/modules/workflow/requirements.md#flow-03-选择必要工作与验证安排`, `.tiller/specs/modules/workflow/requirements.md#flow-24-在各环节形成测试依据并保存执行事实`
-- 源码：`src/flow.ts`, `src/cases.ts`, `src/core.ts`
 
 ### 前置条件
 

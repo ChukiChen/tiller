@@ -21,7 +21,7 @@
 
 模块用例位于 `.tiller/cases/modules/<模块>/{behavior,interface,performance,security}.md`，模块名须与 `.tiller/specs/modules/` 一致；跨模块端到端路径位于 `.tiller/cases/scenarios/`，每条声明经过的 `modules`。类型文件按需建立，不建空文件。
 
-每个用例至少包含稳定编号、标题、前置条件、步骤、输入、预期结果、类型、优先级、需求/模块引用、源码路径和来源 `criteria`。用例不保存测试引用字段；tiller 扫描测试名或紧邻注释中的 `CASE-NNN` 建立反查。无引用显示待实现，编号跨文件和场景唯一。
+每个用例至少包含稳定编号、标题、前置条件、步骤、输入、预期结果、类型、优先级、需求/模块引用和来源 `criteria`。用例不保存源码路径或测试引用字段；关联只靠 tiller 扫描测试名或紧邻注释中的 `CASE-NNN` 建立反查。无引用显示待实现，编号跨文件和场景唯一。
 
 ## 记录方式
 

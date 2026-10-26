@@ -7,7 +7,6 @@
 - 模块：initialization
 - 关联 AC：无
 - 需求：`.tiller/rules/core.md#任务记录约定`, `.tiller/rules/core.md#兼容与升级`
-- 源码：`src/flow.ts`, `src/core.ts`
 
 ### 前置条件
 
@@ -33,7 +32,6 @@
 - 模块：initialization
 - 关联 AC：20261022-first-batch#AC-1, 20261022-first-batch#AC-6
 - 需求：`.tiller/specs/modules/initialization/requirements.md#2-初始化`
-- 源码：`src/core.ts`
 
 ### 前置条件
 
@@ -59,7 +57,6 @@
 - 模块：initialization
 - 关联 AC：20261022-first-batch#AC-5
 - 需求：`.tiller/specs/modules/initialization/requirements.md#4-升级`
-- 源码：`src/upgrade.ts`
 
 ### 前置条件
 
@@ -85,7 +82,6 @@
 - 模块：initialization
 - 关联 AC：20261022-round11#AC-4
 - 需求：`.tiller/specs/modules/initialization/requirements.md#2-初始化`
-- 源码：`src/core.ts`, `resources/pull_request_template.md`
 
 ### 前置条件
 
@@ -111,7 +107,6 @@
 - 模块：initialization
 - 关联 AC：20261022-round11#AC-4
 - 需求：`.tiller/specs/modules/initialization/requirements.md#3-受管资源`
-- 源码：`src/upgrade.ts`
 
 ### 前置条件
 
@@ -137,7 +132,6 @@
 - 模块：initialization
 - 关联 AC：20261022-round12#AC-4
 - 需求：`.tiller/specs/modules/initialization/requirements.md#2-初始化`
-- 源码：`src/core.ts`, `src/project-metadata.ts`
 
 ### 前置条件
 
@@ -163,7 +157,6 @@
 - 模块：initialization
 - 关联 AC：20261022-round12#AC-4
 - 需求：`.tiller/specs/modules/initialization/requirements.md#4-升级`
-- 源码：`src/upgrade.ts`
 
 ### 前置条件
 
@@ -189,7 +182,6 @@
 - 模块：initialization
 - 关联 AC：20261022-round15#AC-4
 - 需求：`.tiller/specs/modules/initialization/requirements.md`
-- 源码：`src/project-metadata.ts`, `src/flow.ts`
 
 ### 前置条件
 
@@ -215,7 +207,6 @@
 - 模块：initialization
 - 关联 AC：无
 - 需求：`.tiller/specs/modules/initialization/requirements.md`
-- 源码：`src/core.ts`, `test/core.test.mjs`
 
 ### 前置条件
 
@@ -241,7 +232,6 @@
 - 模块：initialization
 - 关联 AC：无
 - 需求：`.tiller/specs/modules/initialization/requirements.md`
-- 源码：`src/core.ts`, `test/core.test.mjs`
 
 ### 前置条件
 
@@ -267,7 +257,6 @@
 - 模块：initialization
 - 关联 AC：无
 - 需求：`.tiller/specs/modules/initialization/requirements.md`
-- 源码：`src/core.ts`, `src/repository-paths.ts`, `test/core.test.mjs`
 
 ### 前置条件
 
@@ -292,7 +281,6 @@
 - 模块：initialization
 - 关联 AC：无
 - 需求：`.tiller/specs/modules/initialization/requirements.md`
-- 源码：`src/core.ts`, `test/core.test.mjs`
 
 ### 前置条件
 
@@ -317,7 +305,6 @@
 - 模块：initialization
 - 关联 AC：无
 - 需求：`.tiller/specs/modules/initialization/requirements.md`
-- 源码：`src/core.ts`, `src/files.ts`, `test/core.test.mjs`
 
 ### 前置条件
 
@@ -343,7 +330,6 @@
 - 模块：initialization
 - 关联 AC：无
 - 需求：`.tiller/specs/modules/initialization/requirements.md`
-- 源码：`src/files.ts`, `test/core.test.mjs`
 
 ### 前置条件
 
@@ -370,7 +356,6 @@
 - 模块：initialization
 - 关联 AC：无
 - 需求：`.tiller/specs/modules/initialization/requirements.md`
-- 源码：`src/core.ts`, `test/core.test.mjs`
 
 ### 前置条件
 
@@ -396,7 +381,6 @@
 - 模块：initialization
 - 关联 AC：无
 - 需求：`.tiller/specs/modules/initialization/requirements.md`
-- 源码：`src/runtime.ts`, `test/runtime.test.mjs`
 
 ### 前置条件
 
@@ -422,7 +406,6 @@
 - 模块：initialization
 - 关联 AC：无
 - 需求：`.tiller/specs/modules/initialization/requirements.md`
-- 源码：`src/upgrade.ts`, `src/core.ts`, `test/usage-resources.test.mjs`
 
 ### 前置条件
 
@@ -447,7 +430,6 @@
 - 模块：initialization
 - 关联 AC：无
 - 需求：`.tiller/specs/modules/initialization/requirements.md`
-- 源码：`src/upgrade.ts`, `test/usage-resources.test.mjs`
 
 ### 前置条件
 
@@ -473,7 +455,6 @@
 - 模块：initialization
 - 关联 AC：无
 - 需求：`.tiller/specs/modules/initialization/requirements.md`
-- 源码：`src/core.ts`, `test/usage-resources.test.mjs`
 
 ### 前置条件
 
@@ -498,7 +479,6 @@
 - 模块：initialization
 - 关联 AC：无
 - 需求：`.tiller/specs/modules/initialization/requirements.md`
-- 源码：`src/core.ts`, `test/usage-resources.test.mjs`
 
 ### 前置条件
 
@@ -523,7 +503,6 @@
 - 模块：initialization
 - 关联 AC：无
 - 需求：`.tiller/specs/modules/initialization/requirements.md`
-- 源码：`src/core.ts`, `src/upgrade.ts`, `test/usage-resources.test.mjs`
 
 ### 前置条件
 
@@ -549,7 +528,6 @@
 - 模块：initialization
 - 关联 AC：无
 - 需求：`.tiller/specs/modules/initialization/requirements.md`
-- 源码：`src/upgrade.ts`, `src/core.ts`, `test/upgrade.test.mjs`
 
 ### 前置条件
 
@@ -574,7 +552,6 @@
 - 模块：initialization
 - 关联 AC：无
 - 需求：`.tiller/specs/modules/initialization/requirements.md`
-- 源码：`src/core.ts`, `src/upgrade.ts`, `test/upgrade.test.mjs`
 
 ### 前置条件
 
@@ -599,7 +576,6 @@
 - 模块：initialization
 - 关联 AC：20261023-flow-hardening-wave1#AC-3
 - 需求：`.tiller/specs/modules/initialization/requirements.md`
-- 源码：`src/core.ts`, `src/cases.ts`
 
 ### 前置条件
 
@@ -624,7 +600,6 @@ Maven/Gradle 工程 init 写入对应 junit runner，case add 输出匹配运行
 - 模块：initialization
 - 关联 AC：20261024-doc-templates#AC-4
 - 需求：`.tiller/specs/modules/initialization/requirements.md`
-- 源码：`src/core.ts`, `test/doc-templates.test.mjs`, `resources/rules/activities/requirements.md`
 
 ### 前置条件
 
@@ -650,7 +625,6 @@ init 生成的项目 requirements.md 与 design.md 及 modules/README.md 包含�
 - 模块：initialization
 - 关联 AC：20261026-init-baseline#AC-1
 - 需求：`.tiller/specs/modules/initialization/requirements.md`
-- 源码：`src/core.ts`, `src/init-baseline.ts`, `test/init-baseline.test.mjs`
 
 ### 前置条件
 
@@ -676,7 +650,6 @@ init 生成的项目 requirements.md 与 design.md 及 modules/README.md 包含�
 - 模块：initialization
 - 关联 AC：20261026-init-baseline#AC-2
 - 需求：`.tiller/specs/modules/initialization/requirements.md`
-- 源码：`src/init-baseline.ts`, `test/init-baseline.test.mjs`
 
 ### 前置条件
 
@@ -701,7 +674,6 @@ init 生成的项目 requirements.md 与 design.md 及 modules/README.md 包含�
 - 模块：initialization
 - 关联 AC：20261026-readme-merge-close#AC-4
 - 需求：`.tiller/specs/modules/initialization/requirements.md`
-- 源码：`src/pr.ts`, `src/init-baseline.ts`, `src/cli.ts`
 
 ### 前置条件
 
@@ -718,3 +690,51 @@ init 生成的项目 requirements.md 与 design.md 及 modules/README.md 包含�
 ### 预期结果
 
 调用 GitHub REST API 以 squash 合入 chore/tiller-init；成功后 initBaseline 标为 merged、删除该 init local，后续 start 不再被初始化门禁阻断
+
+## CASE-253 init 基线经平台 API 确认已合入后放行 start
+
+- 类型：behavior
+- 优先级：medium
+- 模块：initialization
+- 关联 AC：20261026-flow-stability#AC-1
+- 需求：`.tiller/specs/modules/initialization/requirements.md`
+
+### 前置条件
+
+- 初始化基线为 pending，平台 API 可查到同分支已合入 PR/MR。
+
+### 步骤
+
+1. 运行 start 且未使用 --skip-init-gate。
+
+### 输入
+
+- 旧基线提交不是当前 HEAD 祖先，但平台记录已合入。
+
+### 预期结果
+
+start 放行，project.json 基线状态更新为 merged。
+
+## CASE-256 close init-id 后默认删除初始化本地与远端分支
+
+- 类型：behavior
+- 优先级：medium
+- 模块：initialization
+- 关联 AC：20261026-flow-stability#AC-2
+- 需求：`.tiller/specs/modules/initialization/requirements.md`
+
+### 前置条件
+
+- 初始化基线的 chore/tiller-init 分支存在本地与远端。
+
+### 步骤
+
+1. 运行 close <init-id>。
+
+### 输入
+
+- 关闭已完成且未使用 --keep-branch。
+
+### 预期结果
+
+初始化本机目录与 chore/tiller-init 本地、远端分支均被删除。

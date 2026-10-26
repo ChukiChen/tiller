@@ -263,15 +263,15 @@ test('CASE-048 global cases use module kinds and scenarios with resolvable named
   const kinds = ['behavior', 'interface', 'performance', 'security'];
   const library = await readCaseLibrary(repository);
   assert.deepEqual(library.issues, []);
-  assert.equal(library.cases.length, 252);
+  assert.equal(library.cases.length, 262);
   assert.deepEqual(library.cases.map(item => item.id).sort(),
-    Array.from({ length: 252 }, (_, index) => `CASE-${String(index + 1).padStart(3, '0')}`));
+    Array.from({ length: 262 }, (_, index) => `CASE-${String(index + 1).padStart(3, '0')}`));
   assert.deepEqual(library.modules.map(item => ({ module: item.module, behavior: item.behavior, interface: item.interface,
     performance: item.performance, security: item.security })), [
-    { module: 'initialization', behavior: 28, interface: 9, performance: 11, security: 16 },
-    { module: 'standards', behavior: 22, interface: 9, performance: 0, security: 0 },
-    { module: 'verification', behavior: 10, interface: 11, performance: 15, security: 4 },
-    { module: 'workflow', behavior: 66, interface: 42, performance: 0, security: 7 },
+    { module: 'initialization', behavior: 30, interface: 9, performance: 11, security: 17 },
+    { module: 'standards', behavior: 22, interface: 10, performance: 0, security: 0 },
+    { module: 'verification', behavior: 11, interface: 12, performance: 15, security: 4 },
+    { module: 'workflow', behavior: 69, interface: 43, performance: 0, security: 7 },
   ]);
   assert.equal(library.scenarios.length, 2);
   for (const item of library.scenarios) assert.ok(item.modules.length > 0 && item.modules.every(module => specs.includes(module)));
@@ -284,10 +284,10 @@ test('CASE-048 global cases use module kinds and scenarios with resolvable named
   }
   const slug = value => value.toLowerCase().trim().replace(/[^\p{L}\p{N}\s-]/gu, '').replace(/\s+/gu, '-');
   for (const item of library.cases) {
-    assert.ok(item.requirements.length > 0 && item.source.length > 0, `${item.id}: references`);
+    assert.ok(item.requirements.length > 0, `${item.id}: references`);
     assert.ok(item.preconditions.length && item.steps.length && item.inputs.length && item.expected, `${item.id}: design fields`);
     // CASE>=50 may use 关联 AC：无 for inventory-only backfill; representative AC cases keep criteria.
-    for (const reference of [...item.requirements, ...item.source]) {
+    for (const reference of item.requirements) {
       const [file, anchor] = reference.split('#');
       const target = join(repository, file);
       assert.ok(existsSync(target), `${item.id}: missing ${reference}`);
@@ -311,13 +311,13 @@ test('CASE-048 global cases use module kinds and scenarios with resolvable named
 test('CASE-245 全局用例库同步文档 CLI 名称与版本', async () => {
   const library = await readCaseLibrary(repository);
   assert.deepEqual(library.issues, []);
-  assert.equal(library.cases.length, 252);
+  assert.equal(library.cases.length, 262);
   const added = library.cases.filter(item => Number(item.id.slice(5)) >= 242 && Number(item.id.slice(5)) <= 245);
   assert.deepEqual(added.map(item => item.id), ['CASE-242', 'CASE-243', 'CASE-244', 'CASE-245']);
   const standards = library.modules.find(item => item.module === 'standards');
   assert.deepEqual({ behavior: standards?.behavior, interface: standards?.interface,
     performance: standards?.performance, security: standards?.security },
-  { behavior: 22, interface: 9, performance: 0, security: 0 });
+  { behavior: 22, interface: 10, performance: 0, security: 0 });
   for (const item of added) assert.ok(item.tests.some(reference => reference.name?.includes(item.id)));
   assert.equal(JSON.parse(readFileSync(join(repository, 'package.json'), 'utf8')).version, '0.5.0');
   assert.equal(JSON.parse(readFileSync(join(repository, '.tiller/project.json'), 'utf8')).resourceVersion, '0.5.0');

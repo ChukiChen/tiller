@@ -7,7 +7,6 @@
 - 模块：verification
 - 关联 AC：20261022-round16#AC-3
 - 需求：`.tiller/specs/modules/verification/requirements.md`
-- 源码：`src/cases.ts`, `src/flow.ts`
 
 ### 前置条件
 
@@ -33,7 +32,6 @@
 - 模块：verification
 - 关联 AC：无
 - 需求：`.tiller/specs/modules/verification/requirements.md`
-- 源码：`src/shared-paths.ts`, `test/core.test.mjs`
 
 ### 前置条件
 
@@ -59,7 +57,6 @@
 - 模块：verification
 - 关联 AC：无
 - 需求：`.tiller/specs/modules/verification/requirements.md`
-- 源码：`src/shared-paths.ts`, `test/core.test.mjs`
 
 ### 前置条件
 
@@ -85,7 +82,6 @@
 - 模块：verification
 - 关联 AC：20261023-multi-repo-verify#AC-6
 - 需求：`.tiller/specs/modules/verification/requirements.md#3-用例先行`
-- 源码：`src/test-output.ts`, `src/repository-paths.ts`, `test/java-runners.test.mjs`
 
 ### 前置条件
 

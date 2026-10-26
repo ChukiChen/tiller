@@ -7,7 +7,6 @@
 - 模块：verification
 - 关联 AC：无
 - 需求：`.tiller/specs/modules/workflow/requirements.md#flow-24-在各环节形成测试依据并保存执行事实`
-- 源码：`src/cases.ts`, `src/flow.ts`
 
 ### 前置条件
 
@@ -33,7 +32,6 @@
 - 模块：verification
 - 关联 AC：无
 - 需求：`.tiller/rules/quality/verification.md#记录方式`
-- 源码：`src/flow.ts`
 
 ### 前置条件
 
@@ -59,7 +57,6 @@
 - 模块：verification
 - 关联 AC：无
 - 需求：`.tiller/specs/modules/verification/requirements.md#5-当前轻量验证边界2026-10-22`
-- 源码：`src/cases.ts`
 
 ### 前置条件
 
@@ -85,7 +82,6 @@
 - 模块：verification
 - 关联 AC：无
 - 需求：`.tiller/cases/index.md`, `.tiller/specs/modules/verification/requirements.md#5-当前轻量验证边界2026-10-22`
-- 源码：`.tiller/cases/index.md`, `src/cases.ts`
 
 ### 前置条件
 
@@ -111,7 +107,6 @@
 - 模块：verification
 - 关联 AC：20261022-first-batch#AC-3
 - 需求：`.tiller/specs/modules/verification/requirements.md#2-全局用例`
-- 源码：`src/cases.ts`, `src/cli.ts`
 
 ### 前置条件
 
@@ -137,7 +132,6 @@
 - 模块：verification
 - 关联 AC：20261022-round16#AC-2
 - 需求：`.tiller/specs/modules/verification/requirements.md`
-- 源码：`src/cases.ts`
 
 ### 前置条件
 
@@ -163,7 +157,6 @@ tiller 扫描测试源建立 case→tests 反查；用例文件不含测试引�
 - 模块：verification
 - 关联 AC：20261023-case-backfill#AC-1
 - 需求：`.tiller/specs/modules/verification/requirements.md`
-- 源码：`src/flow.ts`, `src/cases.ts`, `test/flow-cli.test.mjs`
 
 ### 前置条件
 
@@ -188,7 +181,6 @@ tiller 扫描测试源建立 case→tests 反查；用例文件不含测试引�
 - 模块：verification
 - 关联 AC：20261023-multi-repo-verify#AC-3
 - 需求：`.tiller/specs/modules/verification/requirements.md#3-用例先行`
-- 源码：`src/test-output.ts`, `test/java-runners.test.mjs`
 
 ### 前置条件
 
@@ -214,7 +206,6 @@ tiller 扫描测试源建立 case→tests 反查；用例文件不含测试引�
 - 模块：verification
 - 关联 AC：20261023-multi-repo-verify#AC-5
 - 需求：`.tiller/specs/modules/verification/requirements.md#3-用例先行`
-- 源码：`src/test-output.ts`, `test/java-runners.test.mjs`
 
 ### 前置条件
 
@@ -240,7 +231,6 @@ tiller 扫描测试源建立 case→tests 反查；用例文件不含测试引�
 - 模块：verification
 - 关联 AC：20261024-gap-closure#AC-3
 - 需求：`.tiller/specs/modules/verification/requirements.md`
-- 源码：`src/test-output.ts`, `src/core.ts`, `src/cases.ts`
 
 ### 前置条件
 
@@ -267,7 +257,6 @@ init 探测 pytest 工程并写入 verify.runner=pytest；case add 生成 pytest
 - 模块：verification
 - 关联 AC：20261026-local-task-layout#AC-1
 - 需求：`.tiller/specs/modules/verification/requirements.md`
-- 源码：`src/flow.ts`, `test/verification-integrity.test.mjs`
 
 ### 前置条件
 
@@ -284,3 +273,27 @@ init 探测 pytest 工程并写入 verify.runner=pytest；case add 生成 pytest
 ### 预期结果
 
 日志位于 .tiller/local/<id>/logs/run-N.log，任务正文记录同一路径
+
+## CASE-258 case add 不再要求或接受源码参数
+
+- 类型：interface
+- 优先级：medium
+- 模块：verification
+- 关联 AC：20261026-flow-stability#AC-3
+- 需求：`.tiller/specs/modules/verification/requirements.md`
+
+### 前置条件
+
+- 任务与模块规范已存在。
+
+### 步骤
+
+1. 不带源码参数登记用例，再尝试传入 --source。
+
+### 输入
+
+- 正常测试设计输入；另一次输入旧参数。
+
+### 预期结果
+
+无源码登记成功且模板无源码行；--source 作为未知选项失败。

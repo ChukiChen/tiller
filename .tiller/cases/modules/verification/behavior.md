@@ -7,7 +7,6 @@
 - 模块：verification
 - 关联 AC：无
 - 需求：`.tiller/specs/modules/workflow/requirements.md#flow-06-处理要求和方案变化`, `.tiller/specs/modules/workflow/requirements.md#flow-09-依据验证结果判断交付`
-- 源码：`src/flow.ts`
 
 ### 前置条件
 
@@ -33,7 +32,6 @@
 - 模块：verification
 - 关联 AC：无
 - 需求：`.tiller/specs/modules/workflow/requirements.md#flow-24-在各环节形成测试依据并保存执行事实`
-- 源码：`src/flow.ts`
 
 ### 前置条件
 
@@ -59,7 +57,6 @@
 - 模块：verification
 - 关联 AC：无
 - 需求：`.tiller/specs/modules/workflow/requirements.md#flow-05-处理失败与阻碍`, `.tiller/specs/modules/workflow/requirements.md#flow-24-在各环节形成测试依据并保存执行事实`
-- 源码：`src/flow.ts`
 
 ### 前置条件
 
@@ -85,7 +82,6 @@
 - 模块：verification
 - 关联 AC：20261022-first-batch#AC-4
 - 需求：`.tiller/specs/modules/verification/requirements.md#4-检查`
-- 源码：`src/flow.ts`
 
 ### 前置条件
 
@@ -111,7 +107,6 @@
 - 模块：verification
 - 关联 AC：20261022-round17#AC-3
 - 需求：`.tiller/specs/modules/verification/requirements.md`
-- 源码：`src/flow.ts`
 
 ### 前置条件
 
@@ -136,7 +131,6 @@ check 给出 specs 回写告警，但不新增阻断。
 - 模块：verification
 - 关联 AC：20261022-round17#AC-5
 - 需求：`.tiller/specs/modules/verification/requirements.md`
-- 源码：`src/flow.ts`, `src/test-output.ts`
 
 ### 前置条件
 
@@ -161,7 +155,6 @@ check 给出 specs 回写告警，但不新增阻断。
 - 模块：verification
 - 关联 AC：20261023-case-backfill#AC-2
 - 需求：`.tiller/specs/modules/verification/requirements.md`
-- 源码：`test/case-redesign.test.mjs`, `src/cases.ts`
 
 ### 前置条件
 
@@ -186,7 +179,6 @@ check 给出 specs 回写告警，但不新增阻断。
 - 模块：verification
 - 关联 AC：20261023-multi-repo-verify#AC-2
 - 需求：`.tiller/specs/modules/verification/requirements.md#3-用例先行`
-- 源码：`src/flow.ts`, `src/test-output.ts`, `test/java-runners.test.mjs`
 
 ### 前置条件
 
@@ -212,7 +204,6 @@ check 给出 specs 回写告警，但不新增阻断。
 - 模块：verification
 - 关联 AC：20261023-flow-hardening-wave2#AC-2
 - 需求：`.tiller/specs/modules/verification/requirements.md`
-- 源码：`src/flow.ts`, `test/verification-integrity.test.mjs`
 
 ### 前置条件
 
@@ -237,7 +228,6 @@ check 给出 specs 回写告警，但不新增阻断。
 - 模块：verification
 - 关联 AC：20261023-flow-hardening-wave2#AC-2
 - 需求：`.tiller/specs/modules/verification/requirements.md`
-- 源码：`src/flow.ts`, `test/flow-hardening.test.mjs`
 
 ### 前置条件
 
@@ -254,3 +244,27 @@ check 给出 specs 回写告警，但不新增阻断。
 ### 预期结果
 
 范围内代码变化后，check issue 和 resume stageReason 均使用验证已过期类文案
+
+## CASE-259 历史用例无源码字段仍可解析并完成迁移
+
+- 类型：behavior
+- 优先级：medium
+- 模块：verification
+- 关联 AC：20261026-flow-stability#AC-3
+- 需求：`.tiller/specs/modules/verification/requirements.md`
+
+### 前置条件
+
+- 用例文件没有源码字段，或残留旧源码行。
+
+### 步骤
+
+1. 扫描全局用例库。
+
+### 输入
+
+- 既有用例按新模板迁移。
+
+### 预期结果
+
+解析不要求源码字段，旧源码行被忽略，仓库用例结构与引用有效。

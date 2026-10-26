@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
-import { readCaseLibrary } from '../dist/cases.js';
+import { parseCaseMarkdown, readCaseLibrary } from '../dist/cases.js';
 import { cli, completeDesign, confirmTask, failure, fixture, put, success } from './helpers.mjs';
 
 const repository = fileURLToPath(new URL('../', import.meta.url));
@@ -48,8 +48,7 @@ function addCase(root, id, extra = {}) {
   const args = ['case', 'add', id, '--module', extra.module ?? 'workflow', '--kind', extra.kind ?? 'behavior',
     '--title', extra.title ?? '用例设计可先于测试登记', '--criterion', extra.criterion ?? 'AC-1',
     '--precondition', '任务与模块规范存在。', '--step', '登记用例，然后由测试名称引用编号。',
-    '--input', '正常输入与必要边界。', '--expected', '用例可被引用它的具名测试定位。',
-    '--source', 'src/value.txt'];
+    '--input', '正常输入与必要边界。', '--expected', '用例可被引用它的具名测试定位。'];
   if (extra.scenario) args.push('--scenario', extra.scenario);
   return success(cli(root, ...args));
 }
@@ -66,7 +65,6 @@ function caseMarkdown(id, title, options = {}) {
 - 模块：${module}
 - 关联 AC：无
 - 需求：\`.tiller/specs/modules/${module}/requirements.md\`
-- 源码：\`src/value.txt\`
 
 ### 前置条件
 
@@ -109,6 +107,41 @@ test('CASE-098 case add registers a complete test design before any test exists'
   put(root, path, `${content.trimEnd()}\n\n<!-- 手工示例引用 CASE-999 不应占用编号。 -->\n`);
   const second = addCase(root, taskId, { title: '第二条用例', criterion: 'AC-1' });
   assert.equal(second.id, 'CASE-002');
+});
+
+test('CASE-258 case add writes no source field and rejects the removed --source option', async t => {
+  const root = await project(t);
+  start(root, taskId);
+  const added = success(cli(root, 'case', 'add', taskId, '--module', 'workflow', '--kind', 'behavior',
+    '--title', '无源码字段的用例', '--criterion', 'AC-1', '--expected', '用例设计只关联测试与 CASE 编号。'));
+  const content = read(root, added.path);
+  assert.doesNotMatch(content, /^- 源码：|--source/mu);
+  assert.match(content, new RegExp(`^## ${added.id} `, 'mu'));
+
+  const rejected = failure(cli(root, 'case', 'add', taskId, '--module', 'workflow', '--kind', 'behavior',
+    '--title', '旧参数应失败', '--criterion', 'AC-1', '--expected', '旧参数被拒绝。', '--source', 'src/value.txt'));
+  assert.match(rejected.error.message, /Unknown option '--source'|--source.*不适用|--source.*未知/u);
+  assert.doesNotMatch(read(root, added.path), /旧参数应失败/u);
+});
+
+test('CASE-259 historical cases parse without a source field and ignore residual source lines', async t => {
+  const library = await readCaseLibrary(repository);
+  assert.deepEqual(library.issues, []);
+  assert.ok(library.cases.length > 0);
+  assert.ok(library.cases.every(item => !Object.hasOwn(item, 'source')));
+
+  const relative = '.tiller/cases/modules/workflow/behavior.md';
+  const withoutSource = parseCaseMarkdown(caseMarkdown('CASE-990', '无源码字段仍可解析'), relative, 'behavior', 'workflow');
+  assert.deepEqual(withoutSource.issues, []);
+  assert.equal(withoutSource.cases.length, 1);
+  assert.equal(Object.hasOwn(withoutSource.cases[0], 'source'), false);
+
+  const legacy = caseMarkdown('CASE-991', '旧源码行被忽略').replace(
+    '- 需求：', '- 源码：`src/legacy-path-that-is-no-longer-required.ts`\n- 需求：');
+  const parsed = parseCaseMarkdown(legacy, relative, 'behavior', 'workflow');
+  assert.deepEqual(parsed.issues, []);
+  assert.equal(parsed.cases.length, 1);
+  assert.equal(Object.hasOwn(parsed.cases[0], 'source'), false);
 });
 
 test('CASE-099 test scan derives case to test links without stored test refs', async t => {
@@ -217,7 +250,7 @@ ${sourceTest('staged coverage without a case id', 'undefined')}
 test('CASE-103 CASE-156 repository history and docs use the new case model', async () => {
   const library = await readCaseLibrary(repository);
   assert.deepEqual(library.issues, []);
-  assert.equal(library.cases.length, 252);
+  assert.equal(library.cases.length, 262);
   assert.ok(library.cases.every(item => item.preconditions.length && item.steps.length && item.inputs.length && item.expected));
   assert.ok(library.cases.every(item => item.tests.length > 0), 'every case should be referenced by a test');
   assert.ok(library.cases.every(item => item.tests.every(reference => reference.name?.includes(item.id))));

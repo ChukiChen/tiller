@@ -4,8 +4,8 @@ import path from 'node:path';
 import { promisify } from 'node:util';
 import { assertSafePath } from './files.js';
 import {
-  apiCurlForRequest, createMergeRequest, createPullRequest, platformToken, pushBranch,
-  resolvePlatformRepository, tokenGuidance, type PlatformRepository, type PlatformToken,
+  apiCurlForRequest, createMergeRequest, createPullRequest, findMergedIntegration, platformToken, pushBranch,
+  resolvePlatformRepository, tokenGuidance, type FetchLike, type PlatformRepository, type PlatformToken,
 } from './platform-api.js';
 import { META, parseMetadata } from './project-metadata.js';
 import type { FileChange, InitBaseline, ProjectMetadata, ProjectPlatform } from './types.js';
@@ -200,7 +200,8 @@ export async function markInitBaselineMerged(rootInput: string, id: string): Pro
   return merged;
 }
 
-export async function assertInitBaselineReady(rootInput: string, metadata: ProjectMetadata): Promise<void> {
+export async function assertInitBaselineReady(rootInput: string, metadata: ProjectMetadata,
+  fetchImpl: FetchLike = globalThis.fetch): Promise<void> {
   const baseline = metadata.initBaseline;
   if (!initBaselinePending(baseline)) return;
   const root = path.resolve(rootInput);
@@ -211,7 +212,24 @@ export async function assertInitBaselineReady(rootInput: string, metadata: Proje
     const ancestor = await git(root, ['merge-base', '--is-ancestor', baseline!.commit, head]);
     if (ancestor.ok) return;
   }
-  fail('INIT_BASELINE_PENDING', `初始化基线 ${baseline!.id} 尚未合入当前 HEAD。先合入 ${baseline!.branch} 的 PR/MR 并更新主干；确需跳过时使用 --skip-init-gate。`);
+  let detail = '平台未找到该分支已合入的 PR/MR';
+  try {
+    const configured = metadata.platform ?? 'github';
+    const repository = await resolvePlatformRepository(root, configured);
+    const token = platformToken(repository.platform);
+    if (!token) {
+      detail = `缺少 ${repository.platform === 'github' ? 'GITHUB_TOKEN/GH_TOKEN' : 'GITLAB_TOKEN/GL_TOKEN'}，无法确认平台合入状态`;
+    } else {
+      const merged = await findMergedIntegration(repository, token, baseline!.branch, fetchImpl);
+      if (merged) {
+        await markInitBaselineMerged(root, baseline!.id);
+        return;
+      }
+    }
+  } catch (error) {
+    detail = `平台合入状态查询失败：${(error as Error).message}`;
+  }
+  fail('INIT_BASELINE_PENDING', `初始化基线 ${baseline!.id} 不是当前 HEAD 祖先，且${detail}。先合入 ${baseline!.branch} 的 PR/MR 并更新主干；确需跳过时使用 --skip-init-gate。`);
 }
 
 export async function createInitBaseline(rootInput: string, metadata: ProjectMetadata,

@@ -26,6 +26,11 @@ function json(response, status, body) {
   response.end(JSON.stringify(body));
 }
 
+function empty(response, status = 204) {
+  response.writeHead(status);
+  response.end();
+}
+
 export async function startPlatformMock(t, options = {}) {
   const platform = options.platform ?? 'github';
   const objectStore = mkdtempSync(join(tmpdir(), 'tiller-api-objects-'));
@@ -37,6 +42,8 @@ export async function startPlatformMock(t, options = {}) {
     errors: [],
     remoteCommits: new Set(options.remoteHead ? [options.remoteHead] : []),
     refs: new Map(),
+    mergedBranches: new Set(options.mergedBranches ?? []),
+    branchDeletes: [],
   };
 
   const server = createServer(async (request, response) => {
@@ -63,6 +70,16 @@ export async function startPlatformMock(t, options = {}) {
           return json(response, 201, { number: 1, html_url: 'https://example.invalid/tiller/pr/1' });
         }
         if (request.method === 'GET' && rest === 'pulls') {
+          if (state.mode === 'query-failure' && url.searchParams.get('state') === 'all') {
+            return json(response, 500, { message: `query rejected ${request.headers.authorization ?? ''}` });
+          }
+          if (url.searchParams.get('state') === 'all') {
+            const head = url.searchParams.get('head') ?? '';
+            const branch = head.includes(':') ? head.slice(head.indexOf(':') + 1) : head;
+            return json(response, 200, state.mergedBranches.has(branch)
+              ? [{ number: 1, state: 'closed', merged: true, merged_at: '2026-10-26T00:00:00Z', head: { ref: branch } }]
+              : []);
+          }
           return json(response, 200, [{ number: 1 }]);
         }
         if (request.method === 'PUT' && rest === 'pulls/1/merge') {
@@ -123,6 +140,15 @@ export async function startPlatformMock(t, options = {}) {
           state.refs.set(ref, value.sha);
           return json(response, 200, { ref, object: { sha: value.sha } });
         }
+        if (request.method === 'DELETE' && rest.startsWith('git/refs/heads/')) {
+          if (state.mode === 'branch-delete-failure') {
+            return json(response, 500, { message: `branch delete rejected ${request.headers.authorization ?? ''}` });
+          }
+          const branch = decodeURIComponent(rest.slice('git/refs/heads/'.length));
+          state.refs.delete(`refs/heads/${branch}`);
+          state.branchDeletes.push(branch);
+          return empty(response);
+        }
       } else {
         const project = /^\/api\/v4\/projects\/group%2Fproject(?:\/(.*))?$/u.exec(url.pathname);
         assert.ok(project, `unexpected GitLab path: ${request.method} ${url.pathname}`);
@@ -134,12 +160,32 @@ export async function startPlatformMock(t, options = {}) {
           }
           return json(response, 201, { iid: 7, web_url: 'https://example.invalid/tiller/mr/7' });
         }
-        if (request.method === 'GET' && rest === 'merge_requests') return json(response, 200, [{ iid: 7 }]);
+        if (request.method === 'GET' && rest === 'merge_requests') {
+          if (state.mode === 'query-failure' && url.searchParams.get('state') === 'all') {
+            return json(response, 500, { message: `query rejected ${request.headers['private-token'] ?? ''}` });
+          }
+          if (url.searchParams.get('state') === 'all') {
+            const branch = url.searchParams.get('source_branch') ?? '';
+            return json(response, 200, state.mergedBranches.has(branch)
+              ? [{ iid: 7, state: 'merged', merged_at: '2026-10-26T00:00:00Z', source_branch: branch }]
+              : []);
+          }
+          return json(response, 200, [{ iid: 7 }]);
+        }
         if (request.method === 'PUT' && rest === 'merge_requests/7/merge') {
           if (state.mode === 'failure') {
             return json(response, 406, { message: `merge rejected ${request.headers['private-token'] ?? ''}` });
           }
           return json(response, 200, { state: 'merged' });
+        }
+        if (request.method === 'DELETE' && rest.startsWith('repository/branches/')) {
+          if (state.mode === 'branch-delete-failure') {
+            return json(response, 500, { message: `branch delete rejected ${request.headers['private-token'] ?? ''}` });
+          }
+          const branch = decodeURIComponent(rest.slice('repository/branches/'.length));
+          state.refs.delete(`refs/heads/${branch}`);
+          state.branchDeletes.push(branch);
+          return empty(response);
         }
       }
       return json(response, 404, { message: `Unhandled ${request.method} ${url.pathname}` });

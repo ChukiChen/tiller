@@ -48,7 +48,6 @@ async function project(t, releaseReady = false) {
 - 模块：workflow
 - 关联 AC：无
 - 需求：\`.tiller/specs/modules/workflow/requirements.md#baseline-behavior\`
-- 源码：\`src/value.txt\`
 
 ### 前置条件
 
@@ -78,17 +77,20 @@ async function project(t, releaseReady = false) {
   return root;
 }
 
-async function verifiedTask(root, id = '20261022-fixture') {
+async function verifiedTask(root, id = '20261022-fixture', options = {}) {
   success(cli(root, 'start', id, '--title', 'Fixture task', '--requirement', 'Keep the fixture behavior stable.',
     '--criterion', 'AC-1=Fixture behavior is verified', '--size', 'small', '--target', 'src', '--target', 'test', '--target', '.tiller'));
   success(confirmTask(root, id, 'requirements', '--by', 'Tiller Test'));
   put(root, 'src/value.txt', 'two\n');
+  if (options.touchModuleTest) {
+    put(root, 'test/baseline.test.mjs', `${read(root, 'test/baseline.test.mjs').trimEnd()}\n// CASE-001 module regression fixture.\n`);
+  }
   success(cli(root, 'verify', id, '--criterion', 'AC-1', '--test', 'test/baseline.test.mjs::CASE-001 baseline'));
   return commit(root, 'feat(workflow): 更新夹具行为');
 }
 
-async function acceptedTask(root, id = '20261022-fixture') {
-  const acceptanceCommit = await verifiedTask(root, id);
+async function acceptedTask(root, id = '20261022-fixture', options = {}) {
+  const acceptanceCommit = await verifiedTask(root, id, options);
   success(cli(root, 'check', id));
   success(cli(root, 'accept', id, '--by', 'Tiller Test'));
   return acceptanceCommit;
@@ -155,7 +157,7 @@ test('CASE-106 check warns when specs were not written back', async t => {
 test('CASE-206 accepted close preserves the shared self-check while check still reports hints', async t => {
   const root = await project(t);
   const id = '20261024-closed-self-check';
-  await acceptedTask(root, id);
+  await acceptedTask(root, id, { touchModuleTest: true });
   const beforeClose = read(root, taskPath(id));
   success(cli(root, 'close', id, '--reason', '交付完成'));
   assert.equal(read(root, taskPath(id)), beforeClose);
@@ -310,7 +312,7 @@ test('CASE-109 repository docs and suite include review release and pinned check
   assert.ok(suite.e2e.includes('review-release.test.mjs'));
   const library = await readCaseLibrary(repository);
   assert.deepEqual(library.issues, []);
-  assert.equal(library.cases.length, 252);
+  assert.equal(library.cases.length, 262);
   for (const id of ['CASE-104', 'CASE-105', 'CASE-106', 'CASE-107', 'CASE-108', 'CASE-109']) {
     assert.ok(library.cases.find(item => item.id === id)?.tests.length, id);
   }

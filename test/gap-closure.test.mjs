@@ -100,7 +100,7 @@ test('CASE-187 repeated failures stop retries only for the same AC or CASE and a
   git(root, 'commit', '--quiet', '-m', 'add case failure');
   const added = success(cli(root, 'case', 'add', id, '--module', 'workflow', '--kind', 'behavior',
     '--title', 'Case retry stop', '--expected', 'The same case stops after two failures.',
-    '--criterion', 'AC-1', '--source', 'src/value.mjs'));
+    '--criterion', 'AC-1'));
   cli(root, 'verify', id, '--criterion', 'AC-1', '--case', added.id);
   const caseSecond = cli(root, 'verify', id, '--criterion', 'AC-1', '--case', added.id);
   assert.equal(caseSecond.status, 1);
@@ -137,7 +137,7 @@ test('CASE-188 pytest detection, skeleton, command construction and private XML 
   success(confirmTask(root, id, 'requirements'));
   const added = success(cli(root, 'case', 'add', id, '--module', 'verification', '--kind', 'interface',
     '--title', 'pytest XML evidence', '--expected', 'Private XML proves the named pytest result.',
-    '--criterion', 'AC-1', '--source', 'src/app.py'));
+    '--criterion', 'AC-1'));
   assert.equal(added.runner, 'pytest');
   assert.match(added.skeleton, new RegExp(`# ${added.id}`, 'u'));
   assert.match(added.skeleton, new RegExp(`def test_case_${added.id.replace(/[^0-9]/gu, '')}\\(`, 'u'));

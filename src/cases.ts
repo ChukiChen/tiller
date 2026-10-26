@@ -20,7 +20,6 @@ export interface GlobalCase {
   title: string;
   requirements: string[];
   modules: string[];
-  source: string[];
   criteria: string[];
   kind: CaseScope;
   priority: CasePriority;
@@ -38,7 +37,6 @@ export interface AddCaseInput {
   title: string;
   criteria: string[];
   requirements: string[];
-  source: string[];
   preconditions: string[];
   steps: string[];
   inputs: string[];
@@ -141,13 +139,13 @@ export function regressionWarnings(library: CaseLibrary, changed: string[]): str
     const scenarios = library.scenarios.filter(item => item.modules.includes(summary.module));
     const scenarioCases = library.cases.filter(item => item.kind === 'scenario' && item.modules.includes(summary.module));
     const evidence = [...moduleCases, ...scenarioCases];
-    const sources = evidence.flatMap(item => item.source);
     const tests = evidence.flatMap(item => item.tests.map(test => test.path));
+    const requirements = evidence.flatMap(item => item.requirements);
     const touched = changed.some(relative => relative === `.tiller/specs/modules/${summary.module}`
       || relative.startsWith(`.tiller/specs/modules/${summary.module}/`)
       || relative.startsWith(`${CASE_ROOT}/modules/${summary.module}/`)
       || tests.includes(relative)
-      || sources.some(source => relative === source || relative.startsWith(`${source.replace(/\/+$/u, '')}/`)));
+      || requirements.some(reference => relative === reference || relative.startsWith(`${reference.replace(/\/+$/u, '')}/`)));
     if (!touched) continue;
     const scenarioIds = scenarios.map(item => item.id);
     warnings.push(`本次改动涉及模块 ${summary.module}：建议回归该模块 ${summary.total} 条用例${scenarioIds.length ? `及经过它的场景 ${scenarioIds.join(', ')}` : '；暂无场景覆盖该模块'}。`);
@@ -224,7 +222,6 @@ export function parseCaseMarkdown(content: string, relative: string, kind: CaseS
     const priority = field(body, '优先级') as CasePriority;
     const modules = inlineValues(field(body, '模块'));
     const requirements = inlineValues(field(body, '需求'));
-    const source = inlineValues(field(body, '源码'));
     const criterionText = field(body, '关联 AC');
     const criteria = !criterionText || criterionText === '无' ? [] : inlineValues(criterionText);
     const preconditions = markdownList(subsection(body, '前置条件'));
@@ -236,11 +233,9 @@ export function parseCaseMarkdown(content: string, relative: string, kind: CaseS
     if (!CASE_PRIORITIES.includes(priority)) issues.push(`${subject} 的优先级必须是 high、medium 或 low。`);
     const checkedModules = references(modules, true);
     const checkedRequirements = references(requirements);
-    const checkedSource = references(source);
     const checkedCriteria = caseCriteria(criteria);
     if (!checkedModules) issues.push(`${subject} 的模块列表无效。`);
     if (!checkedRequirements) issues.push(`${subject} 的需求引用无效。`);
-    if (!checkedSource) issues.push(`${subject} 的源码路径无效。`);
     if (checkedCriteria === null) issues.push(`${subject} 的关联 AC 必须是 <任务>#AC-<编号> 列表。`);
     if (!preconditions.length) issues.push(`${subject} 缺少前置条件。`);
     if (!steps.length) issues.push(`${subject} 缺少步骤。`);
@@ -248,8 +243,8 @@ export function parseCaseMarkdown(content: string, relative: string, kind: CaseS
     if (!expected) issues.push(`${subject} 缺少预期结果。`);
     if (owner && checkedModules && !checkedModules.includes(owner)) issues.push(`${subject} 的模块必须包含所属模块 ${owner}。`);
     if (type === kind && CASE_PRIORITIES.includes(priority) && checkedModules && checkedRequirements
-      && checkedSource && checkedCriteria !== null && preconditions.length && steps.length && inputs.length && expected) {
-      cases.push({ id, title, modules: checkedModules, requirements: checkedRequirements, source: checkedSource,
+      && checkedCriteria !== null && preconditions.length && steps.length && inputs.length && expected) {
+      cases.push({ id, title, modules: checkedModules, requirements: checkedRequirements,
         criteria: checkedCriteria, kind, priority, preconditions, steps, inputs, expected, file: relative });
     }
   }
@@ -349,10 +344,10 @@ export async function readCaseLibrary(root: string): Promise<CaseLibrary> {
       if (ids.has(item.id)) issues.push(`全局用例 ${item.id} 与 ${ids.get(item.id)} 的 id 重复。`);
       else ids.set(item.id, relative);
       for (const module of item.modules) if (!specSet.has(module)) issues.push(`全局用例 ${item.id} 的模块不存在：${module}`);
-      for (const [name, values] of [['需求', item.requirements], ['源码', item.source]] as const) {
+      for (const values of [item.requirements]) {
         for (const reference of values) {
           const relativePath = referencePath(reference);
-          if (relativePath && !(await fileExists(root, relativePath))) issues.push(`全局用例 ${item.id} 的${name}文件不存在：${relativePath}`);
+          if (relativePath && !(await fileExists(root, relativePath))) issues.push(`全局用例 ${item.id} 的需求文件不存在：${relativePath}`);
         }
       }
       if (!item.criteria.length) historicalCases++;
@@ -495,7 +490,7 @@ function outputList(values: string[], fallback: string[]): string[] {
 
 function renderCase(input: {
   id: string; title: string; kind: CaseScope; priority: CasePriority; modules: string[]; criteria: string[];
-  requirements: string[]; source: string[]; preconditions: string[]; steps: string[]; inputs: string[]; expected: string;
+  requirements: string[]; preconditions: string[]; steps: string[]; inputs: string[]; expected: string;
 }): string {
   return [
     `## ${input.id} ${input.title}`,
@@ -505,7 +500,6 @@ function renderCase(input: {
     `- 模块：${input.modules.join(', ')}`,
     `- 关联 AC：${input.criteria.length ? input.criteria.join(', ') : '无'}`,
     `- 需求：${input.requirements.map(value => `\`${value}\``).join(', ')}`,
-    `- 源码：${input.source.map(value => `\`${value}\``).join(', ')}`,
     '',
     '### 前置条件',
     '',
@@ -580,8 +574,6 @@ export async function addGlobalCase(rootInput: string, input: AddCaseInput) {
     if (!relative) throw Object.assign(new Error(`需求引用无效：${reference}`), { code: 'INVALID_CASE_INPUT' });
     if (!(await fileExists(root, relative))) throw Object.assign(new Error(`需求引用文件不存在：${relative}`), { code: 'CASE_REFERENCE_NOT_FOUND' });
   }
-  const source = references(input.source);
-  if (!source) throw Object.assign(new Error('至少提供一个 --source，指向实现该用例的源码路径。'), { code: 'INVALID_CASE_INPUT' });
   const preconditions = outputList(input.preconditions, ['对应模块与运行环境可用。']);
   const steps = outputList(input.steps, ['执行覆盖本用例的测试。', '核对实际结果与预期结果一致。']);
   const inputs = outputList(input.inputs, ['按用例描述准备正常输入及必要的边界输入。']);
@@ -593,7 +585,7 @@ export async function addGlobalCase(rootInput: string, input: AddCaseInput) {
     const before = await readTextIfExists(root, relative);
     const header = scenario ? `# 场景：${scenario}\n\n` : `# ${modules[0]} / ${kind}\n\n`;
     const after = `${before === null ? header : `${before.trimEnd()}\n\n`}${renderCase({ id, title, kind, priority, modules, criteria, requirements,
-      source, preconditions, steps, inputs, expected })}`;
+      preconditions, steps, inputs, expected })}`;
     await applyChanges(root, [{ path: relative, before, after }]);
     return {
       id, title, path: relative, kind, priority, modules, criteria, status: 'pending', runner,

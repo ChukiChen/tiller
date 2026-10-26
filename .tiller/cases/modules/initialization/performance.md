@@ -7,7 +7,6 @@
 - 模块：initialization
 - 关联 AC：无
 - 需求：`.tiller/specs/modules/initialization/requirements.md`
-- 源码：`src/runtime.ts`, `src/cli.ts`
 
 ### 前置条件
 
@@ -33,7 +32,6 @@
 - 模块：initialization
 - 关联 AC：无
 - 需求：`.tiller/specs/modules/initialization/requirements.md`
-- 源码：`src/cli.ts`
 
 ### 前置条件
 
@@ -59,7 +57,6 @@
 - 模块：initialization
 - 关联 AC：无
 - 需求：`.tiller/specs/modules/initialization/requirements.md`
-- 源码：`src/cli.ts`
 
 ### 前置条件
 
@@ -85,7 +82,6 @@
 - 模块：initialization
 - 关联 AC：无
 - 需求：`.tiller/specs/modules/initialization/requirements.md`
-- 源码：`src/runtime.ts`
 
 ### 前置条件
 
@@ -111,7 +107,6 @@
 - 模块：initialization
 - 关联 AC：无
 - 需求：`.tiller/specs/modules/initialization/requirements.md`
-- 源码：`src/runtime.ts`
 
 ### 前置条件
 
@@ -137,7 +132,6 @@
 - 模块：initialization
 - 关联 AC：无
 - 需求：`.tiller/specs/modules/initialization/requirements.md`
-- 源码：`src/runtime.ts`
 
 ### 前置条件
 
@@ -163,7 +157,6 @@
 - 模块：initialization
 - 关联 AC：无
 - 需求：`.tiller/specs/modules/initialization/requirements.md`
-- 源码：`src/core.ts`, `src/project-metadata.ts`
 
 ### 前置条件
 
@@ -189,7 +182,6 @@
 - 模块：initialization
 - 关联 AC：无
 - 需求：`.tiller/specs/modules/initialization/requirements.md`
-- 源码：`src/core.ts`, `src/project-metadata.ts`
 
 ### 前置条件
 
@@ -215,7 +207,6 @@
 - 模块：initialization
 - 关联 AC：无
 - 需求：`.tiller/specs/modules/initialization/requirements.md`
-- 源码：`src/core.ts`, `src/project-metadata.ts`
 
 ### 前置条件
 
@@ -241,7 +232,6 @@
 - 模块：initialization
 - 关联 AC：无
 - 需求：`.tiller/specs/modules/initialization/requirements.md`
-- 源码：`src/core.ts`
 
 ### 前置条件
 
@@ -267,7 +257,6 @@
 - 模块：initialization
 - 关联 AC：无
 - 需求：`.tiller/specs/modules/initialization/requirements.md`
-- 源码：`src/files.ts`, `src/repository-paths.ts`
 
 ### 前置条件
 

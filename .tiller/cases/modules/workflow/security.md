@@ -7,7 +7,6 @@
 - 模块：workflow
 - 关联 AC：无
 - 需求：`.tiller/specs/modules/workflow/requirements.md#flow-04-在授权边界内持续推进`
-- 源码：`src/flow.ts`
 
 ### 前置条件
 
@@ -33,7 +32,6 @@
 - 模块：workflow
 - 关联 AC：无
 - 需求：`.tiller/specs/modules/workflow/requirements.md#flow-04-在授权边界内持续推进`
-- 源码：`src/flow.ts`
 
 ### 前置条件
 
@@ -59,7 +57,6 @@
 - 模块：workflow
 - 关联 AC：无
 - 需求：`.tiller/rules/core.md#任务记录约定`
-- 源码：`src/flow.ts`
 
 ### 前置条件
 
@@ -85,7 +82,6 @@
 - 模块：workflow
 - 关联 AC：20261022-round14#AC-2
 - 需求：`.tiller/specs/modules/workflow/requirements.md#flow-09-依据验证结果判断交付`
-- 源码：`src/flow.ts`, `src/pr.ts`, `src/cli.ts`
 
 ### 前置条件
 
@@ -111,7 +107,6 @@
 - 模块：workflow
 - 关联 AC：20261022-round14#AC-4, 20261022-round15#AC-3
 - 需求：`.tiller/specs/modules/workflow/requirements.md#flow-24-在各环节形成测试依据并保存执行事实`
-- 源码：`src/flow.ts`
 
 ### 前置条件
 
@@ -137,7 +132,6 @@
 - 模块：workflow
 - 关联 AC：20261022-round15#AC-2
 - 需求：`.tiller/specs/modules/workflow/requirements.md`
-- 源码：`src/flow.ts`, `src/test-output.ts`
 
 ### 前置条件
 
@@ -163,7 +157,6 @@
 - 模块：workflow
 - 关联 AC：20261024-slim-verify-render#AC-2
 - 需求：`.tiller/specs/modules/workflow/requirements.md`
-- 源码：`src/flow.ts`, `test/verification-integrity.test.mjs`
 
 ### 前置条件
 

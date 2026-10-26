@@ -7,7 +7,6 @@
 - 模块：initialization
 - 关联 AC：无
 - 需求：`.tiller/specs/modules/initialization/requirements.md`
-- 源码：`src/runtime.ts`, `test/runtime.test.mjs`
 
 ### 前置条件
 
@@ -32,7 +31,6 @@
 - 模块：initialization
 - 关联 AC：无
 - 需求：`.tiller/specs/modules/initialization/requirements.md`
-- 源码：`src/runtime.ts`, `test/runtime.test.mjs`
 
 ### 前置条件
 
@@ -58,7 +56,6 @@
 - 模块：initialization
 - 关联 AC：无
 - 需求：`.tiller/specs/modules/initialization/requirements.md`
-- 源码：`src/runtime.ts`, `test/runtime.test.mjs`
 
 ### 前置条件
 
@@ -83,7 +80,6 @@
 - 模块：initialization
 - 关联 AC：无
 - 需求：`.tiller/specs/modules/initialization/requirements.md`
-- 源码：`src/runtime.ts`, `test/runtime.test.mjs`
 
 ### 前置条件
 
@@ -109,7 +105,6 @@
 - 模块：initialization
 - 关联 AC：无
 - 需求：`.tiller/specs/modules/initialization/requirements.md`
-- 源码：`src/runtime.ts`, `test/runtime.test.mjs`
 
 ### 前置条件
 
@@ -134,7 +129,6 @@
 - 模块：initialization
 - 关联 AC：无
 - 需求：`.tiller/specs/modules/initialization/requirements.md`
-- 源码：`src/repository-paths.ts`, `test/repository-paths.test.mjs`
 
 ### 前置条件
 
@@ -160,7 +154,6 @@
 - 模块：initialization
 - 关联 AC：20261023-multi-repo-verify#AC-1
 - 需求：`.tiller/specs/modules/initialization/requirements.md#3-受管资源`
-- 源码：`src/repository-paths.ts`, `src/project-metadata.ts`, `src/upgrade.ts`, `test/java-runners.test.mjs`
 
 ### 前置条件
 
@@ -186,7 +179,6 @@
 - 模块：initialization
 - 关联 AC：20261026-init-baseline#AC-2
 - 需求：`.tiller/specs/modules/initialization/requirements.md`
-- 源码：`src/flow.ts`, `src/task-worktrees.ts`, `test/init-baseline.test.mjs`
 
 ### 前置条件
 
@@ -211,7 +203,6 @@
 - 模块：initialization
 - 关联 AC：20261026-init-baseline#AC-4
 - 需求：`.tiller/specs/modules/initialization/requirements.md`
-- 源码：`resources/usage.md`, `resources/rules/core.md`, `resources/rules/activities/delivery.md`, `test/init-baseline.test.mjs`
 
 ### 前置条件
 

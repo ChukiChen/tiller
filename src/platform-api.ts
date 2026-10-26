@@ -49,6 +49,17 @@ export interface PushResult {
   warnings: string[];
 }
 
+export interface MergedIntegration {
+  number: number;
+  command: string;
+}
+
+export interface BranchDeleteResult {
+  deleted: boolean;
+  command: string;
+  method: 'platform-api' | 'tokenized-git';
+}
+
 interface GitTreeEntry { path: string; mode: string; type: string; sha: string | null }
 interface GitCommitMetadata {
   author: { name: string; email: string; date: string };
@@ -314,6 +325,74 @@ export async function mergeMergeRequest(
   const merged = await api<{ state?: string }>(repository, token, fetchImpl, 'PUT', endpoint, { squash: true });
   if (merged?.state !== 'merged') fail('MERGE_REJECTED', `GitLab 未合入 MR !${iid}：state=${merged?.state ?? '空'}`);
   return { number: iid, command: `gitlab-api PUT ${endpoint} (squash)` };
+}
+
+export async function findMergedIntegration(
+  repository: PlatformRepository,
+  token: PlatformToken,
+  branch: string,
+  fetchImpl: FetchLike = globalThis.fetch,
+): Promise<MergedIntegration | null> {
+  if (repository.platform === 'github') {
+    const endpoint = `${githubRepoPath(repository)}/pulls?state=all&head=${encodeURIComponent(`${repository.owner}:${branch}`)}`;
+    const pulls = await api<Array<{
+      number?: number; state?: string; merged?: boolean; merged_at?: string | null; head?: { ref?: string };
+    }>>(repository, token, fetchImpl, 'GET', endpoint);
+    const merged = pulls?.find(item => typeof item.number === 'number'
+      && (item.merged === true || (item.state === 'closed' && Boolean(item.merged_at))));
+    return merged ? { number: merged.number!, command: `github-api GET ${endpoint}` } : null;
+  }
+
+  const endpoint = `/projects/${gitlabProjectPath(repository)}/merge_requests?state=all&source_branch=${encodeURIComponent(branch)}`;
+  const mergeRequests = await api<Array<{ iid?: number; state?: string; merged_at?: string | null }>>(
+    repository, token, fetchImpl, 'GET', endpoint);
+  const merged = mergeRequests?.find(item => typeof item.iid === 'number'
+    && (item.state === 'merged' || Boolean(item.merged_at)));
+  return merged ? { number: merged.iid!, command: `gitlab-api GET ${endpoint}` } : null;
+}
+
+function tokenizedGitEnvironment(repository: PlatformRepository, token: PlatformToken): NodeJS.ProcessEnv {
+  const username = repository.platform === 'github' ? 'x-access-token' : 'oauth2';
+  const authorization = `Basic ${Buffer.from(`${username}:${token.value}`).toString('base64')}`;
+  const environment: NodeJS.ProcessEnv = { ...process.env, LC_ALL: 'C', GIT_TERMINAL_PROMPT: '0' };
+  const count = Number.parseInt(environment.GIT_CONFIG_COUNT ?? '0', 10) || 0;
+  environment.GIT_CONFIG_COUNT = String(count + 1);
+  environment[`GIT_CONFIG_KEY_${count}`] = 'http.extraHeader';
+  environment[`GIT_CONFIG_VALUE_${count}`] = `Authorization: ${authorization}`;
+  return environment;
+}
+
+export async function deleteRemoteBranch(
+  root: string,
+  repository: PlatformRepository,
+  token: PlatformToken,
+  branch: string,
+  fetchImpl: FetchLike = globalThis.fetch,
+): Promise<BranchDeleteResult> {
+  const endpoint = repository.platform === 'github'
+    ? `${githubRepoPath(repository)}/git/refs/heads/${branch.split('/').map(encodeURIComponent).join('/')}`
+    : `/projects/${gitlabProjectPath(repository)}/repository/branches/${encodeURIComponent(branch)}`;
+  try {
+    const result = await api<unknown>(repository, token, fetchImpl, 'DELETE', endpoint, undefined, true);
+    return {
+      deleted: result !== null,
+      command: `${repository.platform === 'github' ? 'github-api' : 'gitlab-api'} DELETE ${endpoint}`,
+      method: 'platform-api',
+    };
+  } catch (error) {
+    if ((error as { code?: string }).code !== 'PLATFORM_API_UNREACHABLE') throw error;
+    const remote = `${repository.webBase}/${repository.projectPath}.git`;
+    try {
+      await execFileAsync('git', ['push', '--porcelain', remote, '--delete', branch], {
+        cwd: root, encoding: 'utf8', maxBuffer: 16 * 1024 * 1024, env: tokenizedGitEnvironment(repository, token),
+      });
+    } catch (pushError) {
+      const item = pushError as { stdout?: string; stderr?: string };
+      const detail = item.stderr?.trim() || item.stdout?.trim() || (pushError as Error).message;
+      fail('PLATFORM_BRANCH_DELETE_FAILED', `tokenized HTTPS git push 删除分支失败：${redact(detail, token.value)}`);
+    }
+    return { deleted: true, command: `git push ${remote} --delete ${branch}`, method: 'tokenized-git' };
+  }
 }
 
 function parseTreeEntries(output: string): Array<{ mode: string; type: string; sha: string; name: string }> {

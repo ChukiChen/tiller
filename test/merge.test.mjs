@@ -24,6 +24,12 @@ function configure(root) {
   git(root, 'config', 'user.email', 'tiller@example.invalid');
 }
 
+function branchExists(root, branch) {
+  return spawnSync('git', ['show-ref', '--verify', '--quiet', `refs/heads/${branch}`], {
+    cwd: root, encoding: 'utf8', timeout: 20_000,
+  }).status === 0;
+}
+
 async function cliAt(root, environment, ...args) {
   return await new Promise((resolve, reject) => {
     const child = spawn(process.execPath, [cliPath, ...args, '--json'], {
@@ -70,8 +76,7 @@ async function acceptTask(root, id) {
     '--criterion', 'AC-1=Merge behavior is observable', '--size', 'small', '--target', '.'));
   success(confirmTask(root, id, 'requirements', '--by', 'Tiller Test'));
   const added = success(cli(root, 'case', 'add', id, '--module', 'workflow', '--kind', 'behavior',
-    '--title', 'Merge fixture', '--expected', 'The accepted task can be merged.', '--criterion', 'AC-1',
-    '--source', 'src/merge-fixture.ts'));
+    '--title', 'Merge fixture', '--expected', 'The accepted task can be merged.', '--criterion', 'AC-1'));
   const testPath = `test/${id}.test.mjs`;
   const testName = `${added.id} merge fixture`;
   put(root, testPath, `import test from 'node:test';\n\ntest('${testName}', () => {});\n`);
@@ -131,6 +136,7 @@ test('CASE-235 CASE-249 GitHub merge 经 REST API squash 成功后自动清理�
   assert.deepEqual(mock.state.requests.map(item => `${item.method} ${item.path}`), [
     'GET /api/v3/repos/owner/repo/pulls',
     'PUT /api/v3/repos/owner/repo/pulls/1/merge',
+    `DELETE /api/v3/repos/owner/repo/git/refs/heads/feat/${id}`,
   ]);
   assert.ok(mock.state.requests.every(item => item.hasAuthorization));
   assert.deepEqual(JSON.parse(mock.state.requests[1].body), { merge_method: 'squash' });
@@ -171,6 +177,7 @@ test('CASE-237 GitLab merge 经 REST API squash 成功后自动清理本机任�
   assert.deepEqual(mock.state.requests.map(item => `${item.method} ${item.path}`), [
     'GET /api/v4/projects/group%2Fproject/merge_requests',
     'PUT /api/v4/projects/group%2Fproject/merge_requests/7/merge',
+    `DELETE /api/v4/projects/group%2Fproject/repository/branches/feat%2F${id}`,
   ]);
   assert.ok(mock.state.requests.every(item => item.hasPrivateToken));
   assert.deepEqual(JSON.parse(mock.state.requests[1].body), { squash: true });
@@ -214,6 +221,90 @@ test('CASE-239 init-id merge 通过 REST API 合入初始化分支并清理 loca
     '--requirement', 'The merged initialization does not block tasks.', '--criterion', 'AC-1=Start succeeds',
     '--size', 'small', '--target', '.'));
   assert.equal(started.id, '20261026-after-init-merge');
+});
+
+test('CASE-255 merge deletes the feat branch locally and remotely by default', async t => {
+  for (const platform of ['github', 'gitlab']) {
+    const initialized = await initialize(t, platform);
+    if (!initialized) continue;
+    const { root, environment, mock } = initialized;
+    const id = `20261026-${platform}-delete-feat`;
+    await acceptTask(root, id);
+    const branch = `feat/${id}`;
+    mock.state.refs.set(`refs/heads/${branch}`, git(root, 'rev-parse', branch));
+
+    mock.resetRequests();
+    const merged = success(await cliAt(root, environment, 'merge', id));
+    assert.equal(branchExists(root, branch), false, `${platform} local branch should be deleted`);
+    assert.equal(mock.state.refs.has(`refs/heads/${branch}`), false, `${platform} remote branch should be deleted`);
+    assert.ok(mock.state.branchDeletes.includes(branch));
+    assert.ok(merged.close.branch.localDeleted.includes(`工程根:${branch}`));
+    assert.ok(merged.close.branch.remoteDeleted.includes(`工程根:${branch}`));
+    assert.ok(mock.state.requests.some(item => item.method === 'DELETE' && item.path.includes(branch.replace('/', platform === 'gitlab' ? '%2F' : '/'))));
+  }
+});
+
+test('CASE-256 close init-id deletes the initialization branch locally and remotely by default', async t => {
+  const initialized = await initialize(t, 'github');
+  if (!initialized) return;
+  const { root, environment, mock, baseline } = initialized;
+  assert.equal(branchExists(root, baseline.branch), true);
+  assert.equal(mock.state.refs.has(`refs/heads/${baseline.branch}`), true);
+
+  mock.resetRequests();
+  const closed = success(await cliAt(root, environment, 'close', baseline.id, '--reason', '初始化基线已合入'));
+  assert.equal(existsSync(join(root, '.tiller/local', baseline.id)), false);
+  assert.equal(branchExists(root, baseline.branch), false);
+  assert.equal(mock.state.refs.has(`refs/heads/${baseline.branch}`), false);
+  assert.ok(closed.branch.localDeleted.includes(`工程根:${baseline.branch}`));
+  assert.ok(closed.branch.remoteDeleted.includes(`工程根:${baseline.branch}`));
+  assert.ok(mock.state.branchDeletes.includes(baseline.branch));
+});
+
+test('CASE-257 merge and close keep branches when --keep-branch is explicit', async t => {
+  const initialized = await initialize(t, 'github');
+  if (!initialized) return;
+  const { root, environment, mock } = initialized;
+  const mergeId = '20261026-keep-merge-branch';
+  const closeId = '20261026-keep-close-branch';
+  await acceptTask(root, mergeId);
+  await acceptTask(root, closeId);
+  for (const id of [mergeId, closeId]) {
+    mock.state.refs.set(`refs/heads/feat/${id}`, git(root, 'rev-parse', `feat/${id}`));
+  }
+
+  mock.resetRequests();
+  const merged = success(await cliAt(root, environment, 'merge', mergeId, '--keep-branch'));
+  assert.equal(merged.close.branch.kept, true);
+  assert.equal(branchExists(root, `feat/${mergeId}`), true);
+  assert.equal(mock.state.refs.has(`refs/heads/feat/${mergeId}`), true);
+
+  const closed = success(await cliAt(root, environment, 'close', closeId, '--reason', '已合入', '--keep-branch'));
+  assert.equal(closed.branch.kept, true);
+  assert.equal(branchExists(root, `feat/${closeId}`), true);
+  assert.equal(mock.state.refs.has(`refs/heads/feat/${closeId}`), true);
+  assert.equal(mock.state.branchDeletes.length, 0);
+  assert.ok(mock.state.requests.every(item => item.method !== 'DELETE'));
+});
+
+test('CASE-262 branch deletion failure is reported as a warning without failing merge cleanup', async t => {
+  const initialized = await initialize(t, 'github');
+  if (!initialized) return;
+  const { root, environment, mock } = initialized;
+  const id = '20261026-branch-delete-warning';
+  await acceptTask(root, id);
+  const branch = `feat/${id}`;
+  mock.state.refs.set(`refs/heads/${branch}`, git(root, 'rev-parse', branch));
+  mock.setMode('branch-delete-failure');
+  mock.resetRequests();
+
+  const merged = success(await cliAt(root, environment, 'merge', id));
+  assert.equal(merged.merged, true);
+  assert.equal(existsSync(join(root, '.tiller/local', id)), false);
+  assert.equal(branchExists(root, branch), false);
+  assert.equal(mock.state.refs.has(`refs/heads/${branch}`), true);
+  assert.ok(merged.warnings.some(warning => warning.includes('删除远端分支') && warning.includes('branch delete rejected')),
+    merged.warnings.join('\n'));
 });
 
 test('CASE-244 远端操作只调用平台 REST API 与 tokenized git transport', () => {
@@ -270,6 +361,43 @@ test('CASE-251 文档以 token/API 为主且 decisions 记录 push 选择', () =
   assert.match(decisions, /Git Data API/u);
   assert.match(decisions, /tokenized HTTPS `git push`/u);
   assert.match(decisions, /平台 CLI/u);
+});
+
+test('CASE-261 help and managed docs describe API baseline, branch cleanup, no source field and scope path warnings', () => {
+  for (const pair of [
+    ['resources/usage.md', '.tiller/usage.md'],
+    ['resources/rules/core.md', '.tiller/rules/core.md'],
+    ['resources/rules/activities/delivery.md', '.tiller/rules/activities/delivery.md'],
+    ['resources/rules/quality/verification.md', '.tiller/rules/quality/verification.md'],
+  ]) assert.equal(read(repository, pair[0]), read(repository, pair[1]), pair.join(' == '));
+
+  const help = success(cli(repository, '--help')).help;
+  const managed = ['resources/usage.md', 'resources/rules/core.md', 'resources/rules/activities/delivery.md'];
+  for (const relative of managed) {
+    const content = read(repository, relative);
+    assert.match(content, /平台 API[^\n]*(?:确认|查)[^\n]*合入/u, relative);
+    assert.match(content, /--keep-branch/u, relative);
+    assert.match(content, /默认[^\n]*(?:删|清)[^\n]*本地[^\n]*远端/u, relative);
+    assert.match(content, /删[^\n]*失败[^\n]*(?:warning|提示)|删除失败[^\n]*(?:warning|提示)/u, relative);
+    assert.doesNotMatch(content, /--source/u, relative);
+  }
+  assert.match(read(repository, 'resources/usage.md'), /业务范围·做[^\n]*交付路径[^\n]*warning/u);
+  assert.match(help, /平台 API[^\n]*(?:确认|查)[^\n]*合入/u);
+  assert.match(help, /--keep-branch/u);
+  assert.match(help, /默认删除本地与远端/u);
+  assert.match(help, /业务范围·做[^\n]*交付路径[^\n]*warning/u);
+  assert.match(help, /不保存源码字段/u);
+  assert.doesNotMatch(help, /--source/u);
+
+  for (const relative of ['resources/entry.md', 'AGENTS.md', '.tiller/cases/index.md',
+    '.tiller/specs/design.md', '.tiller/specs/modules/verification/design.md']) {
+    const content = read(repository, relative);
+    assert.doesNotMatch(content, /--source|^- 源码：/mu, relative);
+  }
+  const decisions = read(repository, '.tiller/specs/decisions.md');
+  for (const pattern of [/平台 API/u, /--keep-branch/u, /业务范围·做/u, /移除“源码”字段/u]) {
+    assert.match(decisions, pattern);
+  }
 });
 
 test('CASE-241 CASE-245 CASE-252 API 远端操作保持 0.5.0 且打包模块同步', () => {

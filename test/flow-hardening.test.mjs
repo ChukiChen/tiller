@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
-import { cli, completeDesign, confirmTask, failure, fixture, put, success } from './helpers.mjs';
+import { cli, completeDesign, completeRequirement, confirmTask, failure, fixture, put, success } from './helpers.mjs';
 
 const repository = fileURLToPath(new URL('../', import.meta.url));
 const read = (root, relative) => readFileSync(join(root, relative), 'utf8');
@@ -31,7 +31,6 @@ function baseline(root) {
 - 模块：workflow
 - 关联 AC：无
 - 需求：\`.tiller/specs/modules/workflow/requirements.md#baseline-behavior\`
-- 源码：\`src/value.txt\`
 
 ### 前置条件
 
@@ -136,7 +135,7 @@ async function assertRunnerCase(t, buildFile, runner, marker) {
     '--criterion', 'AC-1=Skeleton matches runner', '--size', 'small', '--target', 'src'));
   success(confirmTask(root, id, 'requirements'));
   const added = success(cli(root, 'case', 'add', id, '--module', 'workflow', '--kind', 'behavior', '--title', 'Runner skeleton',
-    '--expected', 'Skeleton uses the configured runner', '--criterion', 'AC-1', '--source', buildFile ?? 'src/app.mjs'));
+    '--expected', 'Skeleton uses the configured runner', '--criterion', 'AC-1'));
   assert.equal(added.runner, runner);
   assert.match(added.skeleton, new RegExp(marker.replace(/[.*+?^${}()|[\]\\]/gu, '\\$&'), 'u'));
   assert.equal(added.skeleton.includes('node:test'), runner === 'node-test');
@@ -279,6 +278,29 @@ test('CASE-183 check explains a branch name missing the task id', async t => {
   const checked = failure(cli(root, 'check', id));
   assert.ok(checked.warnings.some(warning => warning.includes('feat/flow-hardening')
     && warning.includes(`未包含当前任务编号 ${id}`) && warning.includes(`类型/${id}`)), checked.warnings.join('\n'));
+});
+
+test('CASE-260 check warns about delivery paths inside the business scope do list', async t => {
+  const root = fixture(t);
+  success(cli(root, 'init'));
+  baseline(root);
+  const id = '20261026-scope-delivery-path';
+  success(cli(root, 'start', id, '--title', 'Scope path warning', '--requirement', 'Keep scope constraints separate.',
+    '--criterion', 'AC-1=The warning is visible', '--size', 'small', '--target', 'src', '--target', 'test'));
+
+  const relative = `.tiller/task/${id}/task.md`;
+  completeRequirement(root, id);
+  const content = read(root, relative);
+  const scope = `### 业务范围\n\n- 做：实现 \`src/flow.ts\` 与测试 \`test/flow-hardening.test.mjs\`。\n- 不做：修改范围外文件。\n- 假设与待确认：无。\n\n### 关键行为`;
+  put(root, relative, content.replace(/### 业务范围[\s\S]*?### 关键行为/u, scope));
+  success(cli(root, 'confirm', id, 'requirements'));
+
+  const checked = failure(cli(root, 'check', id));
+  const warnings = checked.warnings.join('\n');
+  assert.match(warnings, /业务范围·做.*src\/flow\.ts/u);
+  assert.match(warnings, /业务范围·做.*test\/flow-hardening\.test\.mjs/u);
+  assert.match(warnings, new RegExp(relative.replace(/[.*+?^${}()|[\]\\]/gu, '\\$&'), 'u'));
+  assert.ok(!checked.issues.some(issue => issue.includes('业务范围') && issue.includes('交付路径')), checked.issues.join('\n'));
 });
 
 test('CASE-184 help, usage and AGENTS explain thin checks, readable logs and branch naming', async t => {

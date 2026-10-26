@@ -52,7 +52,7 @@ function prepareTask(root, id, target) {
 
 function addCase(root, id, _testRef, name = 'value behavior') {
   return success(cli(root, 'case', 'add', id, '--module', 'workflow', '--kind', 'behavior', '--title', name,
-    '--expected', `${name} 通过测试`, '--criterion', 'AC-1', '--source', 'src/value.mjs'));
+    '--expected', `${name} 通过测试`, '--criterion', 'AC-1'));
 }
 
 function commitAll(root, message) {
@@ -411,7 +411,7 @@ test('CASE-089 CASE-094 bugfix verification requires baseline failure and curren
     '--target', 'src', '--target', 'test', '--target', '.tiller/cases'));
   success(confirmTask(root, id, 'requirements', '--by', 'Tiller Test'));
   success(cli(root, 'case', 'add', id, '--module', 'workflow', '--kind', 'behavior', '--title', '加法回归', '--expected', '基线失败且当前通过',
-    '--criterion', 'AC-1', '--source', 'src/bug.mjs'));
+    '--criterion', 'AC-1'));
 
   const baseline = success(cli(root, 'verify', id, '--criterion', 'AC-1', '--test', testRef, '--expect-fail'));
   assert.equal(baseline.result, 'failed');
