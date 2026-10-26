@@ -14,7 +14,7 @@
 - 需求和设计正文必须先写清；新任务使用结构化需求与设计模板，旧正文保持可读。
 - 确认记录确认部分、确认人、时间、对象摘要和提交；原话不再必填，只作可选附注。
 - 需求与设计分别摘要；只改设计不会使需求确认失效。任务完成后长期结论同步到 specs，超大设计先用 plan 拆分。
-- 验证正文保存人读摘要，完整命令、结果、提交与代码树摘要保存在单行机器旁路；完整输出只写 `.tiller/local/logs/`，不提交原始日志、全文快照、安装包或证据包。
+- 验证正文保存人读摘要，完整命令、结果、提交与代码树摘要保存在单行机器旁路；完整输出只写 `.tiller/local/<id>/logs/`，不提交原始日志、全文快照、安装包或证据包。
 - 同一问题连续两次修复失败后停止自动尝试并报告可选方案。
 - 验证停止按同一 `AC-N` 或同一 `CASE-NNN` 独立计数，成功核实清零；不同键的失败不相互叠加。`verify` 和 `check` 都提示停止自动重试并保留证据，规格/背景回写建议仍不单独阻断验收。
 
@@ -106,16 +106,22 @@
 
 ## 2026-10-24 文档模板与任务标记
 
-- 新任务的开工前改动摘要写 `.tiller/local/tasks/<id>/pre-existing.json`，共享 `tiller-task:v1` 标记不再序列化 `preExisting`；旧标记继续解析，运行时合并旁路，范围与过程卫生检查语义不变。
+- 新任务的开工前改动摘要写 `.tiller/local/<id>/pre-existing.json`，共享 `tiller-task:v1` 标记不再序列化 `preExisting`；旧标记与旧旁路继续读取，运行时合并，范围与过程卫生检查语义不变。
 - 新任务需求使用面向谁与问题、目标、业务范围、关键行为、异常与边界、验收条件章节；业务路径只进任务范围。standard 设计使用方案、失败处理、取舍、影响与风险、验证入口。
 - 确认拒绝空白或占位关键章节，取舍缺失保留提示；旧任务的“范围”章节继续兼容。初始化和规则只提供简短章节提示，不提供长示例。
 
 ## 2026-10-24 任务 worktree 生命周期
 
-- `start` 只对已提交的 Git 工程建任务 worktree。project 为 `.tiller/local/worktrees/<id>/`；workspace 为 `management` 加各登记 `repository.path`，各仓同名任务分支。task.md 与日志不迁入 worktree。
-- 建树先校验全部仓库与目标路径，失败回滚；close/abandon 强拆清单或约定布局中的目录，并删除本任务日志，其他任务日志不动。
-- 本机清单放在 `.tiller/local/tasks/<id>/worktrees.json`，缺失时按 project/workspace 约定布局兜底；共享记录不保存本机绝对路径。
+- `start` 只对已提交的 Git 工程建任务 worktree。project 为 `.tiller/local/<id>/worktrees/`；workspace 为同目录的 `management` 加各登记 `repository.path`，各仓同名任务分支。task.md 不迁入 worktree。
+- 建树先校验全部仓库与目标路径，失败回滚；close/abandon 强拆清单或约定布局中的目录，并删除整棵 `.tiller/local/<id>/`，其他任务目录不动。
+- 本机清单放在 `.tiller/local/<id>/worktrees.json`，缺失时按 project/workspace 约定布局兜底；共享记录不保存本机绝对路径。
 - 本轮不改造 bugfix 临时基线 worktree，不在 reopen 时重建，也不自动提交、合入或连接远端。
+
+## 2026-10-26 任务本机目录聚合
+
+- `.tiller/local/<id>/` 聚合 `worktrees/`、`logs/`、`pre-existing.json` 和 `worktrees.json`，新写入不再创建 `.tiller/local/worktrees|logs|tasks/<id>/`。
+- close 与 abandon 拆除 worktree 后删除整棵任务本机目录，并兼容清理旧布局三路径；缺失幂等，不触碰其他任务目录。
+- sidecar 和开工前摘要读取先新后旧；旧 `TaskWorktreeState.root` 仍可解析用于拆除；不自动搬迁进行中旧任务，也不在 reopen 时重建。
 
 ## 长期边界
 

@@ -798,3 +798,53 @@ start 生成面向谁与问题、目标、业务范围、关键行为、异常�
 ### 预期结果
 
 slug 是任务编号的 -<slug> 后缀时分支为 类型/任务编号；额外描述仍追加；worktree 路径只使用任务编号一次
+
+## CASE-209 project 任务本机目录按任务聚合
+
+- 类型：interface
+- 优先级：high
+- 模块：workflow
+- 关联 AC：20261026-local-task-layout#AC-1
+- 需求：`.tiller/specs/modules/workflow/requirements.md`
+- 源码：`src/task-worktrees.ts`, `src/flow.ts`
+
+### 前置条件
+
+- Git 工程已初始化且基线已提交
+
+### 步骤
+
+1. start 一个 project 任务
+
+### 输入
+
+- 任务编号为 20261026-layout-project
+
+### 预期结果
+
+git worktree 位于 .tiller/local/<id>/worktrees，worktrees.json、pre-existing.json 与 logs 同属 .tiller/local/<id>，旧三棵树不创建
+
+## CASE-214 旧开工前旁路按新后旧读取
+
+- 类型：interface
+- 优先级：medium
+- 模块：workflow
+- 关联 AC：20261026-local-task-layout#AC-1
+- 需求：`.tiller/specs/modules/workflow/requirements.md`
+- 源码：`src/flow.ts`
+
+### 前置条件
+
+- 任务同时存在新旧开工前改动摘要
+
+### 步骤
+
+1. 读取任务并随后移除新旁路
+
+### 输入
+
+- 新旧 pre-existing.json 内容不同
+
+### 预期结果
+
+同时存在时采用新布局，新缺失时回退旧布局且摘要有效

@@ -29,7 +29,7 @@
 - README 非空；npm 项目还需有效的包名/版本，且 README 包含当前版本。非 npm 项目跳过包项。
 - 任务范围内没有未提交改动。发布前仍需单独取得授权，并绑定当前提交和目标。
 
-已验收任务交付完成后用 `close --reason` 收尾；确认不再推进的未验收任务用 `close --reason ... --abandon`。关闭或放弃后先 `reopen --reason` 才能继续，关闭原因和时间留在 `task.md`；两种结束动作都会强拆该任务 worktree 并删除 `.tiller/local/logs/<id>/`，其他任务日志不动。
+已验收任务交付完成后用 `close --reason` 收尾；确认不再推进的未验收任务用 `close --reason ... --abandon`。关闭或放弃后先 `reopen --reason` 才能继续，关闭原因和时间留在 `task.md`；两种结束动作都会强拆该任务 worktree，拆除后删除整棵 `.tiller/local/<id>/`（含日志与旁路），并兼容清理旧布局 `.tiller/local/worktrees|logs|tasks/<id>/`；其他任务目录不动。
 
 ## 提交、分支与 PR/MR
 

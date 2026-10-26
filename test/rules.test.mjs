@@ -131,7 +131,7 @@ test('CASE-097 verification guidance requires self-run tests and private reports
   assert.match(usage, /stdout\/stderr 不参与判定/u);
   assert.match(usage, /verify\.prepare/u);
   assert.match(usage, /verify\.runner/u);
-  assert.match(usage, /\.tiller\/local\/logs\//u);
+  assert.match(usage, /\.tiller\/local\/<任务编号>\/logs\//u);
   assert.match(usage, /报告缺失或损坏、匹配 0 个或多个测试、失败或跳过/u);
 
   const verification = read('rules/quality/verification.md');
@@ -216,15 +216,15 @@ test('CASE-048 global cases use module kinds and scenarios with resolvable named
   const kinds = ['behavior', 'interface', 'performance', 'security'];
   const library = await readCaseLibrary(repository);
   assert.deepEqual(library.issues, []);
-  assert.equal(library.cases.length, 208);
+  assert.equal(library.cases.length, 214);
   assert.deepEqual(library.cases.map(item => item.id).sort(),
-    Array.from({ length: 208 }, (_, index) => `CASE-${String(index + 1).padStart(3, '0')}`));
+    Array.from({ length: 214 }, (_, index) => `CASE-${String(index + 1).padStart(3, '0')}`));
   assert.deepEqual(library.modules.map(item => ({ module: item.module, behavior: item.behavior, interface: item.interface,
     performance: item.performance, security: item.security })), [
     { module: 'initialization', behavior: 25, interface: 7, performance: 11, security: 16 },
     { module: 'standards', behavior: 22, interface: 1, performance: 0, security: 0 },
-    { module: 'verification', behavior: 10, interface: 10, performance: 15, security: 4 },
-    { module: 'workflow', behavior: 47, interface: 31, performance: 0, security: 7 },
+    { module: 'verification', behavior: 10, interface: 11, performance: 15, security: 4 },
+    { module: 'workflow', behavior: 50, interface: 33, performance: 0, security: 7 },
   ]);
   assert.equal(library.scenarios.length, 2);
   for (const item of library.scenarios) assert.ok(item.modules.length > 0 && item.modules.every(module => specs.includes(module)));

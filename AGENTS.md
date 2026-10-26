@@ -15,7 +15,7 @@ tiller 帮助 AI 写清目标与方案、在范围内实现、用可定位测试
 - 同一问题两次修复失败即停止；同一 AC 或 CASE 连续两次验证失败且无成功核实时，`verify`/`check` 要求停止自动重试，报告证据与可选方案。
 - 不删除、跳过或弱化测试来换取通过。验收条件必须编号，先转为全局用例并写清测试设计，再由测试名或紧邻注释引用 `CASE-NNN`；tiller 扫描建立反查。
 - `start` 先写清目标、范围、AC 与设计；确认绑定结构化正文，自动记录部分、确认人、时间、提交和摘要，原话可选。
-- 验证段留摘要和旁路；完整命令、退出码、代码树和输出只进日志。`verify` 只声明 `--test`/`--case`，由 tiller 执行并读私有报告，stdout/stderr 不参与判定。外部报告用 `--reported` 写明理由并放行，bugfix 保留基线失败先行；回归写 `.tiller/cases/`，原始输出只写 `.tiller/local/logs/`，不提交日志、全文快照、自举工程或安装包。
+- 验证段留摘要和旁路；完整命令、退出码、代码树和输出只进日志。`verify` 只声明 `--test`/`--case`，由 tiller 执行并读私有报告，stdout/stderr 不参与判定。外部报告用 `--reported` 写明理由并放行，bugfix 保留基线失败先行；回归写 `.tiller/cases/`，原始输出只写 `.tiller/local/<id>/logs/`，不提交日志、全文快照、自举工程或安装包。
 - `check` 对过薄设计、空壳 decisions/模块设计和当前分支未包含任务编号提示补全；规格/背景未回写时列出路径与提纲，仍为 warning；`verify` 日志含命令、起止和退出码。
 - 单个任务只维护一份 `task.md`；长期结论同步到 `.tiller/specs/`，超大设计用 plan 拆任务。已有任务可用 `plan attach` 补挂，有意保留的受管修改用 `upgrade --adopt` 更新摘要。
 - 阶段由记录事实推导；已验收用 `close`，未验收终止用 `close --abandon`，终态需 `reopen`。

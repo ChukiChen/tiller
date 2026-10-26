@@ -300,6 +300,7 @@ test('CASE-057 accepted tasks close, block further confirm verify and accept, an
   const root = await initialized(t);
   moduleSpec(root, 'workflow');
   put(root, 'src/close.mjs', 'export const close = 1;\n');
+  commitAll(root, '初始化关闭流程夹具');
   const id = '20261022-close-flow';
   success(cli(root, 'start', id, '--title', '关闭流程', '--requirement', 'An accepted task can be closed and reopened.',
     '--criterion', 'AC-1=Close blocks terminal changes', '--size', 'small',

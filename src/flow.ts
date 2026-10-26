@@ -18,7 +18,7 @@ import { applyChanges, inspectSafePaths, readTextIfExists, validateRelativePath,
 import { planItemForAttachment, readPlanItem } from './plans.js';
 import { releaseChecklist, type ReleaseChecklist } from './release.js';
 import { taskIdWarnings, validateTaskId } from './task-id.js';
-import { cleanupTaskWorktrees, createTaskWorktrees, rollbackTaskWorktrees, writeTaskWorktreeState } from './task-worktrees.js';
+import { cleanupTaskWorktrees, createTaskWorktrees, rollbackTaskWorktrees, taskLocalRoot, writeTaskWorktreeState } from './task-worktrees.js';
 import { namePattern, resolveVerifyTarget, runnerFor, type TestEvidence, type TestReference } from './test-output.js';
 import type { ProjectMetadata } from './types.js';
 
@@ -51,7 +51,7 @@ const FLOW_STAGES = ['已开始', '需求已确认', '设计已确认', '已验�
 const TASK_DIRECTORY = '.tiller/task';
 const TASK_FILE = 'task.md';
 const LEGACY_TASK_DIRECTORY = '.tiller/work';
-const PRE_EXISTING_DIRECTORY = '.tiller/local/tasks';
+const LEGACY_PRE_EXISTING_DIRECTORY = '.tiller/local/tasks';
 
 export type FlowType = typeof TYPES[number];
 export type FlowSize = 'small' | 'standard';
@@ -233,7 +233,11 @@ function parseMeta(marker: string, id: string): FlowMeta {
 }
 
 function preExistingPath(id: string): string {
-  return `${PRE_EXISTING_DIRECTORY}/${id}/pre-existing.json`;
+  return `${taskLocalRoot(id)}/pre-existing.json`;
+}
+
+function legacyPreExistingPath(id: string): string {
+  return `${LEGACY_PRE_EXISTING_DIRECTORY}/${id}/pre-existing.json`;
 }
 
 function preExistingValues(value: unknown): Record<string, string> | null {
@@ -249,21 +253,23 @@ function preExistingValues(value: unknown): Record<string, string> | null {
 }
 
 async function readPreExisting(root: string, id: string): Promise<{ values: Record<string, string>; issue?: string }> {
-  const relative = preExistingPath(id);
-  let content: string;
-  try {
-    const resolved = (await inspectSafePaths(root, [relative]))[0]!;
-    if (resolved.stat === null) return { values: {} };
-    if (!resolved.stat.isFile()) return { values: {}, issue: `开工前改动旁路不是普通文件，已按空摘要继续：\`${relative}\`。` };
-    content = await readFile(resolved.target, 'utf8');
-  } catch { return { values: {}, issue: `开工前改动旁路不可读，已按空摘要继续：\`${relative}\`。` }; }
-  let raw: unknown;
-  try { raw = JSON.parse(content); }
-  catch { return { values: {}, issue: `开工前改动旁路不是有效 JSON，已按空摘要继续：\`${relative}\`。` }; }
-  const values = preExistingValues(raw);
-  return values === null
-    ? { values: {}, issue: `开工前改动旁路格式无效，已按空摘要继续：\`${relative}\`。` }
-    : { values };
+  for (const relative of [preExistingPath(id), legacyPreExistingPath(id)]) {
+    let content: string;
+    try {
+      const resolved = (await inspectSafePaths(root, [relative]))[0]!;
+      if (resolved.stat === null) continue;
+      if (!resolved.stat.isFile()) return { values: {}, issue: `开工前改动旁路不是普通文件，已按空摘要继续：\`${relative}\`。` };
+      content = await readFile(resolved.target, 'utf8');
+    } catch { return { values: {}, issue: `开工前改动旁路不可读，已按空摘要继续：\`${relative}\`。` }; }
+    let raw: unknown;
+    try { raw = JSON.parse(content); }
+    catch { return { values: {}, issue: `开工前改动旁路不是有效 JSON，已按空摘要继续：\`${relative}\`。` }; }
+    const values = preExistingValues(raw);
+    return values === null
+      ? { values: {}, issue: `开工前改动旁路格式无效，已按空摘要继续：\`${relative}\`。` }
+      : { values };
+  }
+  return { values: {} };
 }
 
 async function writePreExisting(root: string, id: string, values: Record<string, string>): Promise<void> {
@@ -1707,7 +1713,7 @@ async function runProcess(cwd: string, executable: string, args: string[], label
 }
 
 async function nextLogPath(root: string, id: string, previousRuns: number): Promise<string> {
-  const relativeDirectory = `.tiller/local/logs/${id}`;
+  const relativeDirectory = `${taskLocalRoot(id)}/logs`;
   await mkdir(path.join(root, relativeDirectory), { recursive: true });
   let maximum = previousRuns;
   try {

@@ -2,7 +2,7 @@
 
 ## 1. 任务模型
 
-唯一任务文件为 `.tiller/task/<id>/task.md`，包含标题、一行 `tiller-task:v1` 元信息和可读区段。元信息保存 id、类型、规模、创建时间、Git 基线、范围、可选规划归属、分支描述、标题摘要、需求文件来源和结构化格式标记；新任务不把开工前改动摘要写入标记，而写入已被忽略的 `.tiller/local/tasks/<id>/pre-existing.json`。读取时合并旧标记字段与本机旁路，写回只序列化共享元信息。需求、AC、设计、确认、验证、评审、自检从 Markdown 区段读取；元信息与区段都受格式校验。
+唯一任务文件为 `.tiller/task/<id>/task.md`，包含标题、一行 `tiller-task:v1` 元信息和可读区段。元信息保存 id、类型、规模、创建时间、Git 基线、范围、可选规划归属、分支描述、标题摘要、需求文件来源和结构化格式标记；新任务不把开工前改动摘要写入标记，而写入已被忽略的 `.tiller/local/<id>/pre-existing.json`。读取先找新路径，再回退旧 `.tiller/local/tasks/<id>/pre-existing.json`；合并旧标记字段与本机旁路，写回只序列化共享元信息。需求、AC、设计、确认、验证、评审、自检从 Markdown 区段读取；元信息与区段都受格式校验。
 
 ## 2. 状态与确认
 
@@ -67,8 +67,8 @@
 
 ## 10. 任务 worktree
 
-`src/task-worktrees.ts` 统一生成任务分支与布局。project 的检出就是 `.tiller/local/worktrees/<id>/`；workspace 先建 `management`，再按 `project.json.repositories[].path` 建 `repositories/<id>`。每个源仓必须是自身 Git 工作副本根且有提交，分支复用 `commitTypeForTaskType`、`suggestedBranchNameFor`，任务编号已含同一描述时不双拼；已有同名分支时直接检出，否则从该仓 HEAD 新建。worktree 路径始终只使用任务编号。
+`src/task-worktrees.ts` 统一生成任务分支与布局。每个任务使用 `.tiller/local/<id>/` 作为本机根，检出容器为 `worktrees/`；project 的检出就是该容器，workspace 先建 `management`，再按 `project.json.repositories[].path` 建 `repositories/<id>`。每个源仓必须是自身 Git 工作副本根且有提交，分支复用 `commitTypeForTaskType`、`suggestedBranchNameFor`，任务编号已含同一描述时不双拼；已有同名分支时直接检出，否则从该仓 HEAD 新建。worktree 路径始终只使用任务编号。
 
-建树前先校验任务容器、全部源仓和目标路径，任何一步失败都强制移除本次已建树并清理容器，task.md 不落盘。成功后把相对路径与本机清单 `.tiller/local/tasks/<id>/worktrees.json` 写入；清单缺失或损坏时 close 回退 project/workspace 约定布局。所有目标都经安全路径校验并限制在 `.tiller/local/worktrees/<id>/` 下。
+建树前先校验任务容器、全部源仓和目标路径，任何一步失败都强制移除本次已建树，并清理本次产生的 worktree 容器、清单和开工前旁路；未知的本机文件保留，空任务目录一并移除，task.md 不落盘。成功后把相对路径与本机清单 `.tiller/local/<id>/worktrees.json` 写入；读取先新后旧，清单缺失或损坏时 close 回退 project/workspace 的新旧约定布局。所有目标都经安全路径校验并限制在新旧任务 worktree 容器内。
 
-close 在写入关闭事实后按清单或约定布局执行 `git worktree remove --force` 与 prune；路径已缺失记入 `missingWorktrees` 并继续。Git 移除失败时仅对该受管目录强制删除并返回 warning，随后删除本任务日志；清理失败不阻断关闭记录。所有本机路径保持工程相对形式，不写入共享 task.md。
+close 在写入关闭事实后按清单或约定布局执行 `git worktree remove --force` 与 prune；路径已缺失记入 `missingWorktrees` 并继续。Git 移除失败时仅对该受管目录强制删除并返回 warning；随后删除整棵 `.tiller/local/<id>/`（含 logs 与旁路），并 best-effort 清理旧 `.tiller/local/worktrees|logs|tasks/<id>/`。清理失败不阻断关闭记录，其他任务路径不动。所有本机路径保持工程相对形式，不写入共享 task.md。

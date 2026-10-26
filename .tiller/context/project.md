@@ -8,7 +8,7 @@ tiller 是一套开源的 AI 软件工程方法论与工具集，帮助开发者
 
 - 单次任务记录在 `.tiller/task/<id>/task.md`，包含结构化需求、设计、确认、验证和自检。确认记录对象、确认人、时间、基线和摘要，原话可选。
 - 任务阶段由记录事实推导。已验收任务用 `close` 收尾，未验收终止用 `close --abandon`，恢复使用 `reopen`。
-- `start` 在 `.tiller/local/worktrees/<id>/` 创建任务 worktree；workspace 另含 `management` 与各登记仓库路径。`close`/`--abandon` 强拆该任务 worktree 并清理本任务日志。
+- `start` 在 `.tiller/local/<id>/worktrees/` 创建任务 worktree；workspace 另含 `management` 与各登记仓库路径。清单、开工前摘要和日志同为 `.tiller/local/<id>/` 的旁路。`close`/`--abandon` 强拆该任务 worktree，删除整棵任务本机目录，并兼容清理旧三棵树布局。
 - `.tiller/plans/` 保存大功能规划、任务条目和依赖；依赖未验收时阻塞开工。
 - `.tiller/cases/` 保存跨任务测试设计，按模块和场景组织。新用例先写清前置条件、步骤、输入、预期结果和来源 AC，再由测试名引用稳定编号。
 - `verify` 自主执行声明的测试并从私有报告核实结论；工作区按测试所属仓库选择运行器，准备命令在该仓库根执行，不能唯一归属时拒绝。Java 可用 Maven 或 Gradle 运行器。无法本机执行时使用外部报告并写明理由，验收默认阻断，只有显式放行才可通过。缺陷修复保留基线失败先行和当前通过。
