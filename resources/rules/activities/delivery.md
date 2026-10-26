@@ -2,6 +2,8 @@
 
 规则标识：ACT-DELIVERY。准备验收、合入、发布或交接时使用，并读取[验证依据](../quality/verification.md)。
 
+交付前同时核对[代码质量](../quality/code.md)与[安全约定](../quality/documents.md#安全)条目；这些约定不替代逐条 AC 检查。
+
 ## 交付自检
 
 1. 逐条核对验收条件，确认每项都有存在的用例编号、覆盖它的当前通过测试、核实且未过期的验证，以及用例 `criteria` 对当前 AC 的回指。已验收任务按 acceptance 记录的提交复查当时的树与测试，未验收任务核对工作区/HEAD。

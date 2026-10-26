@@ -1,6 +1,6 @@
 # 实现
 
-规则标识：ACT-IMPL。编写代码、配置或测试时使用。
+规则标识：ACT-IMPL。编写代码、配置或测试时使用，并对照[代码质量](../quality/code.md)与[安全约定](../quality/documents.md#安全)。
 
 ## 范围
 

@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url';
 import test from 'node:test';
 import { cli, fixture, success } from './helpers.mjs';
 import { readCaseLibrary } from '../dist/cases.js';
+import { managedFilesForPlatform, RULES, sha256 } from '../dist/core.js';
 
 const resources = fileURLToPath(new URL('../resources/', import.meta.url));
 const repository = fileURLToPath(new URL('../', import.meta.url));
@@ -192,6 +193,58 @@ test('CASE-151 activity rules keep requirements, design, implementation and deli
   assert.match(read('rules/activities/delivery.md'), /合入与发布仍需各自授权/u);
 });
 
+test('CASE-246 code quality and security rules stay mirrored and managed', () => {
+  const code = read('rules/quality/code.md');
+  const codePatterns = [
+    /规则标识：QUALITY-CODE/u,
+    /\*\*命名\*\*：.*名称清楚.*一致.*无意义缩写/u,
+    /\*\*结构\*\*：.*小步可改.*模块边界清晰/u,
+    /\*\*扩展性\*\*：.*真实变化.*假想场景/u,
+    /\*\*反过度设计\*\*：.*过早泛化.*多层包装.*未使用.*依赖/u,
+    /\*\*可读性\*\*：.*意图.*公共 API.*稳定.*内部实现.*简化/u,
+    /\*\*边界校验一次\*\*：.*未知输入.*边界.*类型化值.*内部.*重复.*防御/u,
+    /\*\*保持简单\*\*：.*一个函数.*单次使用.*helper.*内联/u,
+    /\*\*假想风险\*\*：.*竞态.*安全边角.*失败模式.*概率.*代价/u,
+    /\*\*注释\*\*：.*非显而易见.*约束.*流水账/u,
+  ];
+  for (const pattern of codePatterns) assert.match(code, pattern);
+
+  const documents = read('rules/quality/documents.md');
+  for (const pattern of [
+    /日志、PR\/MR 和任务记录.*密钥、token、凭据.*本机绝对路径/u,
+    /\*\*输入与授权\*\*：.*边界校验.*授权范围.*类型化值/u,
+    /\*\*依赖来源\*\*：.*来源可信.*版本/u,
+    /\*\*危险操作\*\*：.*显式确认/u,
+    /\*\*加固边界\*\*：.*具体威胁.*过度加固.*威胁与失败模式/u,
+  ]) assert.match(documents, pattern);
+
+  for (const relative of ['rules/quality/code.md', 'rules/quality/documents.md', 'rules/index.md',
+    'rules/activities/implementation.md', 'rules/activities/delivery.md']) {
+    assert.equal(readFileSync(join(repository, '.tiller', relative), 'utf8'), read(relative), `${relative}: mirror differs`);
+  }
+
+  const implementation = read('rules/activities/implementation.md');
+  assert.match(implementation, /\[代码质量\]\(\.\.\/quality\/code\.md\)/u);
+  assert.match(implementation, /\[安全约定\]\(\.\.\/quality\/documents\.md#安全\)/u);
+  const delivery = read('rules/activities/delivery.md');
+  assert.match(delivery, /交付前.*\[代码质量\]\(\.\.\/quality\/code\.md\).*\[安全约定\]\(\.\.\/quality\/documents\.md#安全\)/u);
+  const index = read('rules/index.md');
+  assert.match(index, /代码质量 \| \[代码质量\]\(quality\/code\.md\)/u);
+  assert.match(index, /文档质量与安全.*documents\.md/u);
+
+  assert.ok(RULES.includes('rules/quality/code.md'));
+  assert.ok(managedFilesForPlatform('github').includes('.tiller/rules/quality/code.md'));
+  const metadata = JSON.parse(readFileSync(join(repository, '.tiller/project.json'), 'utf8'));
+  assert.deepEqual(Object.keys(metadata.managedFiles).sort(), managedFilesForPlatform('github').sort());
+  for (const relative of ['rules/quality/code.md', 'rules/quality/documents.md', 'rules/index.md',
+    'rules/activities/implementation.md', 'rules/activities/delivery.md']) {
+    const managed = `.tiller/${relative}`;
+    assert.equal(metadata.managedFiles[managed], sha256(readFileSync(join(repository, managed), 'utf8')), managed);
+  }
+  assert.equal(metadata.resourceVersion, '0.5.0');
+  assert.equal(JSON.parse(readFileSync(join(repository, 'package.json'), 'utf8')).version, '0.5.0');
+});
+
 test('CASE-109 README is a user-facing quick start without internal flow detail', () => {
   const readme = readFileSync(new URL('../README.md', import.meta.url), 'utf8');
   assert.match(readme, /^## 快速开始$/mu);
@@ -210,13 +263,13 @@ test('CASE-048 global cases use module kinds and scenarios with resolvable named
   const kinds = ['behavior', 'interface', 'performance', 'security'];
   const library = await readCaseLibrary(repository);
   assert.deepEqual(library.issues, []);
-  assert.equal(library.cases.length, 245);
+  assert.equal(library.cases.length, 246);
   assert.deepEqual(library.cases.map(item => item.id).sort(),
-    Array.from({ length: 245 }, (_, index) => `CASE-${String(index + 1).padStart(3, '0')}`));
+    Array.from({ length: 246 }, (_, index) => `CASE-${String(index + 1).padStart(3, '0')}`));
   assert.deepEqual(library.modules.map(item => ({ module: item.module, behavior: item.behavior, interface: item.interface,
     performance: item.performance, security: item.security })), [
     { module: 'initialization', behavior: 28, interface: 9, performance: 11, security: 16 },
-    { module: 'standards', behavior: 22, interface: 8, performance: 0, security: 0 },
+    { module: 'standards', behavior: 22, interface: 9, performance: 0, security: 0 },
     { module: 'verification', behavior: 10, interface: 11, performance: 15, security: 4 },
     { module: 'workflow', behavior: 62, interface: 40, performance: 0, security: 7 },
   ]);
@@ -258,13 +311,13 @@ test('CASE-048 global cases use module kinds and scenarios with resolvable named
 test('CASE-245 全局用例库同步文档 CLI 名称与版本', async () => {
   const library = await readCaseLibrary(repository);
   assert.deepEqual(library.issues, []);
-  assert.equal(library.cases.length, 245);
-  const added = library.cases.filter(item => Number(item.id.slice(5)) >= 242);
+  assert.equal(library.cases.length, 246);
+  const added = library.cases.filter(item => Number(item.id.slice(5)) >= 242 && Number(item.id.slice(5)) <= 245);
   assert.deepEqual(added.map(item => item.id), ['CASE-242', 'CASE-243', 'CASE-244', 'CASE-245']);
   const standards = library.modules.find(item => item.module === 'standards');
   assert.deepEqual({ behavior: standards?.behavior, interface: standards?.interface,
     performance: standards?.performance, security: standards?.security },
-  { behavior: 22, interface: 8, performance: 0, security: 0 });
+  { behavior: 22, interface: 9, performance: 0, security: 0 });
   for (const item of added) assert.ok(item.tests.some(reference => reference.name?.includes(item.id)));
   assert.equal(JSON.parse(readFileSync(join(repository, 'package.json'), 'utf8')).version, '0.5.0');
   assert.equal(JSON.parse(readFileSync(join(repository, '.tiller/project.json'), 'utf8')).resourceVersion, '0.5.0');
