@@ -1027,3 +1027,55 @@ package.json 与 README 版本保持 0.5.0，全量质量命令通过且测试�
 ### 预期结果
 
 README 只保留介绍与快速开始，包含安装包安装、初始化 PR 标题、合入后 git pull、用 AI 开发功能与用户关键确认；合入与本机清理由 AI 按约定完成，不展开 merge/close 手敲细节；不含决策、npm 未发布或维护者资料堆砌
+
+## CASE-251 文档与 help 以 token/API 为主并记录 push 选择
+
+- 类型：interface
+- 优先级：high
+- 模块：workflow
+- 关联 AC：20261026-api-remote-ops#AC-1, 20261026-api-remote-ops#AC-4
+- 需求：`.tiller/specs/modules/workflow/requirements.md`
+- 源码：`README.md`, `resources/usage.md`, `resources/rules/core.md`, `resources/rules/activities/delivery.md`, `src/cli.ts`, `.tiller/specs/decisions.md`, `test/merge.test.mjs`, `test/init-baseline.test.mjs`
+
+### 前置条件
+
+- 实现、资源和 decisions 已更新
+
+### 步骤
+
+1. 读取 README、usage、core、delivery、CLI help 与 decisions
+2. 核对镜像和关键词
+
+### 输入
+
+- resources、.tiller 与 src/cli.ts 的当前文本
+
+### 预期结果
+
+README/usage/core/delivery/CLI help 说明 GitHub/GitLab token 环境变量与 REST API，不以安装平台 CLI 为主路径；resources 与 .tiller 镜像一致；decisions 写明 GitHub 纯 Git Data API 与 GitLab tokenized HTTPS git push 的传输回退
+
+## CASE-252 API 远端操作保持 0.5.0 且打包模块同步
+
+- 类型：interface
+- 优先级：high
+- 模块：workflow
+- 关联 AC：20261026-api-remote-ops#AC-4
+- 需求：`.tiller/specs/modules/workflow/requirements.md`
+- 源码：`package.json`, `.tiller/project.json`, `scripts/package-smoke.mjs`, `test/merge.test.mjs`, `test/rules.test.mjs`
+
+### 前置条件
+
+- 实现、用例和文档已完成
+
+### 步骤
+
+1. 读取版本与 package-smoke expectedModules
+2. 运行全量质量命令并核对 CASE-048 用例总数和模块分布
+
+### 输入
+
+- 本任务分支与临时 npm 缓存
+
+### 预期结果
+
+package.json、project.json 与 CLI 版本均为 0.5.0；发行包以 platform-api 替换 platform-cli；全量 build、lint、typecheck、test、test:package 通过且 CASE-048 计数同步

@@ -134,6 +134,13 @@
 - 合入即交付完成；合入后 `close` 只清理任务 worktree 和 `.tiller/local/<id>/`，不调用共享 `task.md` 写入，不要求补 `accept` 或另作收尾提交。
 - 旧只认共享“已关闭”段的任务可由已验收或 local 已清理推导完成；`abandon` 发生在合入前，继续写共享放弃事实。重开是显式写操作，不进入合入后主路径。
 
+## 2026-10-26 远端操作改走平台 HTTP API
+
+- GitHub 生产路径使用 REST API：初始化分支优先通过 Git Data API 上传 blob/tree/commit 并更新 ref，保留本地提交 SHA；PR 创建与 squash 合入使用 pulls API。若父对象缺失、历史非单父线性或对象校验不一致，才回退到 tokenized HTTPS `git push`。
+- GitLab 公共 REST 没有导入原始 Git 对象并保留本地 SHA 的接口，因此分支传输使用 tokenized HTTPS `git push`（Basic 凭据经 `GIT_CONFIG_*` 环境传入，不进入 URL、argv 或日志）；MR 创建与 squash 合入仍使用 REST API。
+- 生产路径不再调用 github/gh/gitlab/glab 等平台 CLI。Token 只从 `GITHUB_TOKEN`/`GH_TOKEN`、`GITLAB_TOKEN`/`GL_TOKEN` 读取，错误与记录不得输出其值。
+- 这是 MC-10「托管平台调用的唯一新例外」的替代实现；`pr` 仍只读本地事实生成草稿，人工验收、合入和发布授权边界不变。
+
 ## 2026-10-26 初始化集成基线与 start 门禁
 
 - 有 Git HEAD 时，`init` 在独立初始化 worktree 提交受管基线并尝试创建同标题 PR/MR；远端失败保留本地和可复制命令，任何路径都不自动合入。

@@ -24,7 +24,7 @@
 
 外部报告用 `--reported` 写明命令、结果和理由，默认阻断，放行用 `--allow-reported`；bugfix 用 `--expect-fail` 在基线留失败先行证据。standard 任务 `start` 必须给 `--target`，small 缺省 `.`。`start` 创建 `.tiller/local/<id>/worktrees/`；close/abandon 强拆删除 local，已验收 close 不写共享记录。`check` 拒绝缺失、错配、未核实或过期映射；已验收按验收提交核对树与测试，specs/context 未回写只提示。
 
-首次接入 `init` → 初始化 PR/MR → 人工合入 → `start`；也可用 `tiller merge <init-id>` 合入并清理该 local，网页合入则手动 `close init-id`。未合入默认阻断，`--skip-init-gate` 例外，`close init-id` 只清该 local。`specs` 在任务 worktree 修改并随任务分支合入。
+首次接入 `init` → 初始化 PR/MR → 人工合入 → `start`；也可用 `tiller merge <init-id>` 合入并清理该 local，网页合入则手动 `close init-id`。推送走平台 API 或 tokenized HTTPS git，PR/MR 与合入走 REST API，token 读自环境变量，不调用平台 CLI。未合入默认阻断，`--skip-init-gate` 例外，`close init-id` 只清该 local。`specs` 在任务 worktree 修改并随任务分支合入。
 
 长期回归写入 `.tiller/cases/modules/<模块>/` 与 `scenarios/`；用例保存测试设计、来源与预期，无引用待实现。
 
@@ -34,7 +34,7 @@
 
 确认前校验必填段；需求和设计独立摘要，正文变化使确认失效。验证留摘要与旁路，完整命令和输出只进日志。不提交全文快照、日志、自举工程或安装包；需要时从 Git 取回或重跑。不得记录密钥、凭据或本机绝对路径。
 
-阶段由事实推导；失效显示回退阶段与原因，终态先 `reopen` 继续。已验收任务用 `tiller merge <id>` 调用 `github pr merge` 或 `gitlab mr merge` 以 squash 合入，成功后自动 `close`；失败不清理，网页合入后仍需手动 `close`。
+阶段由事实推导；失效显示回退阶段与原因，终态先 `reopen` 继续。已验收任务用 `tiller merge <id>` 调用 GitHub/GitLab REST API 以 squash 合入；也可用 `tiller merge <init-id>` 合入初始化基线。成功后自动 `close`，失败不清理，网页合入后仍需手动 `close`。
 
 ## 范围与卡住
 

@@ -1,10 +1,11 @@
 import assert from 'node:assert/strict';
-import { chmodSync, existsSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { spawnSync } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
-import { cli, cliPath, confirmTask, failure, fixture, put, spawnCaptured, success } from './helpers.mjs';
+import { cli, cliPath, confirmTask, failure, fixture, put, success } from './helpers.mjs';
+import { fakeGitForTokenizedPush, realGitPath, startPlatformMock } from './platform-api-mock.mjs';
 
 const repository = fileURLToPath(new URL('../', import.meta.url));
 const read = (root, relative) => readFileSync(join(root, relative), 'utf8');
@@ -23,58 +24,45 @@ function configure(root) {
   git(root, 'config', 'user.email', 'tiller@example.invalid');
 }
 
-function fakeTool(t, root, binary, mode) {
-  if (process.platform === 'win32') {
-    t.skip('The fake platform executable uses a POSIX shell script.');
-    return null;
-  }
-  const directory = join(root, 'fake-bin');
-  put(root, `fake-bin/${binary}`, [
-    '#!/bin/sh',
-    'printf "%s|%s\\n" "$(basename "$0")" "$*" >> "${TILLER_FAKE_MERGE_LOG:?}"',
-    `if [ "${mode}" = success ]; then`,
-    '  printf "https://example.invalid/tiller/merge/1\\n"',
-    '  exit 0',
-    'fi',
-    'printf "merge rejected\\n" >&2',
-    'exit 7',
-    '',
-  ].join('\n'));
-  chmodSync(join(directory, binary), 0o755);
-  return directory;
-}
-
-function platformCalls(log) {
-  return readFileSync(log, 'utf8').trim().split('\n').filter(Boolean).map(line => {
-    const [name, ...args] = line.split('|');
-    return { name, args: args.join('|') };
+async function cliAt(root, environment, ...args) {
+  return await new Promise((resolve, reject) => {
+    const child = spawn(process.execPath, [cliPath, ...args, '--json'], {
+      cwd: root, env: { ...process.env, ...environment }, windowsHide: true,
+    });
+    let stdout = '';
+    let stderr = '';
+    child.stdout.setEncoding('utf8');
+    child.stderr.setEncoding('utf8');
+    child.stdout.on('data', chunk => { stdout += chunk; });
+    child.stderr.on('data', chunk => { stderr += chunk; });
+    const timeout = setTimeout(() => child.kill('SIGTERM'), 60_000);
+    child.once('error', error => { clearTimeout(timeout); reject(error); });
+    child.once('close', (status, signal) => {
+      clearTimeout(timeout);
+      assert.equal(signal, null, stderr || stdout);
+      let data;
+      try { data = JSON.parse(stdout); }
+      catch { assert.fail(`Expected JSON output: ${stdout}\n${stderr}`); }
+      resolve({ status, signal, stdout, stderr, data });
+    });
   });
 }
 
-function cliAt(root, environment, ...args) {
-  const result = spawnCaptured(process.execPath, [cliPath, ...args, '--json'], {
-    cwd: root, encoding: 'utf8', timeout: 60_000, env: { ...process.env, ...environment },
-  });
-  assert.equal(result.signal, null, result.stderr);
-  let data;
-  try { data = JSON.parse(result.stdout); }
-  catch { assert.fail(`Expected JSON output: ${result.stdout}\n${result.stderr}`); }
-  return { ...result, data };
-}
-
-function initialize(t, platform, binary, mode) {
+async function initialize(t, platform = 'github') {
   const root = fixture(t);
   configure(root);
-  const directory = fakeTool(t, root, binary, mode);
-  if (!directory) return null;
-  const log = join(root, 'platform.log');
-  const environment = { PATH: `${directory}:${process.env.PATH ?? ''}`, TILLER_FAKE_MERGE_LOG: log };
-  const initialized = success(cliAt(root, environment, 'init', '--platform', platform));
-  put(root, 'platform.log', '');
-  return { root, environment, log, baseline: initialized.initBaseline };
+  const mock = await startPlatformMock(t, { platform, remoteHead: git(root, 'rev-parse', 'HEAD') });
+  git(root, 'remote', 'add', 'origin', `${mock.origin}${platform === 'github' ? '/owner/repo.git' : '/group/project.git'}`);
+  const wrapper = platform === 'gitlab' ? fakeGitForTokenizedPush(t, root, realGitPath()) : null;
+  if (platform === 'gitlab' && wrapper === null) return null;
+  const environment = platform === 'github'
+    ? { GITHUB_TOKEN: 'mock-token', GH_TOKEN: '', GITLAB_TOKEN: '', GL_TOKEN: '' }
+    : { GITHUB_TOKEN: '', GH_TOKEN: '', GITLAB_TOKEN: 'mock-token', GL_TOKEN: '', ...wrapper.environment };
+  const initialized = success(await cliAt(root, environment, 'init', '--platform', platform));
+  return { root, environment, mock, wrapper, baseline: initialized.initBaseline };
 }
 
-function acceptTask(root, id) {
+async function acceptTask(root, id) {
   put(root, '.tiller/specs/modules/workflow/requirements.md', '# Workflow\n\n## Merge\n\nAccepted tasks can be merged.\n');
   put(root, '.tiller/specs/modules/workflow/design.md', '# Workflow design\n\nDelegate merge and cleanup.\n');
   put(root, 'src/merge-fixture.ts', 'export const mergeFixture = true;\n');
@@ -111,139 +99,133 @@ test('CASE-234 README 面向最终用户的介绍与快速开始', () => {
   assert.doesNotMatch(readme, /尚未发布到 npm|维护者|决策记录/u);
 });
 
-test('CASE-242 README 以 AI 执行为主并使用 github/gitlab 命令名', () => {
+test('CASE-242 README 以 AI 执行为主并使用 REST API 与 token', () => {
   const readme = read(repository, 'README.md');
   assert.match(readme, /AI 会按工程内的 tiller 约定执行/u);
   assert.match(readme, /你主要负责在关键节点确认/u);
   assert.match(readme, /合入与本机清理由 AI 按 tiller 约定完成/u);
+  assert.match(readme, /REST API/u);
+  assert.match(readme, /GITHUB_TOKEN|GITLAB_TOKEN/u);
   assert.doesNotMatch(readme, /\bgh\b|\bglab\b/u);
   assert.doesNotMatch(readme, /```[^\n]*\n[^`]*(?:tiller\s+)?(?:pr|merge|close)\b/u);
   assert.doesNotMatch(readme, /squash|平台 CLI|底层工具名/u);
 });
 
-test('CASE-235 GitHub merge 成功后自动清理本机任务', async t => {
-  const initialized = initialize(t, 'github', 'github', 'success');
+test('CASE-235 CASE-249 GitHub merge 经 REST API squash 成功后自动清理本机任务', async t => {
+  const initialized = await initialize(t, 'github');
   if (!initialized) return;
-  const { root, environment, log } = initialized;
+  const { root, environment, mock } = initialized;
   const id = '20261026-github-merge';
-  acceptTask(root, id);
+  await acceptTask(root, id);
   const local = join(root, '.tiller/local', id);
   assert.ok(existsSync(local));
 
-  const merged = success(cliAt(root, environment, 'merge', id));
+  mock.resetRequests();
+  const merged = success(await cliAt(root, environment, 'merge', id));
   assert.equal(merged.merged, true);
   assert.equal(merged.platform, 'github');
   assert.equal(merged.branch, `feat/${id}`);
-  assert.equal(merged.command, `github pr merge feat/${id} --squash`);
+  assert.match(merged.command, /^github-api PUT .*\/pulls\/1\/merge \(squash\)$/u);
   assert.equal(merged.close.id, id);
   assert.equal(existsSync(local), false);
-  assert.deepEqual(platformCalls(log), [{ name: 'github', args: `pr merge feat/${id} --squash` }]);
+  assert.deepEqual(mock.state.requests.map(item => `${item.method} ${item.path}`), [
+    'GET /api/v3/repos/owner/repo/pulls',
+    'PUT /api/v3/repos/owner/repo/pulls/1/merge',
+  ]);
+  assert.ok(mock.state.requests.every(item => item.hasAuthorization));
+  assert.deepEqual(JSON.parse(mock.state.requests[1].body), { merge_method: 'squash' });
 });
 
-test('CASE-236 GitHub merge 失败时保留下本机任务', async t => {
-  const initialized = initialize(t, 'github', 'github', 'failure');
+test('CASE-236 CASE-250 GitHub merge API 失败时保留本机任务', async t => {
+  const initialized = await initialize(t, 'github');
   if (!initialized) return;
-  const { root, environment, log } = initialized;
+  const { root, environment, mock } = initialized;
   const id = '20261026-github-merge-failed';
-  acceptTask(root, id);
+  await acceptTask(root, id);
   const local = join(root, '.tiller/local', id);
 
-  const failed = failure(cliAt(root, environment, 'merge', id));
+  mock.setMode('failure');
+  mock.resetRequests();
+  const failed = failure(await cliAt(root, environment, 'merge', id));
   assert.equal(failed.error.code, 'MERGE_FAILED');
   assert.match(failed.error.message, /merge rejected/u);
+  assert.doesNotMatch(`${failed.stdout}\n${failed.stderr}`, /mock-token/u);
   assert.ok(existsSync(local));
   assert.ok(existsSync(join(local, 'worktrees')));
-  assert.deepEqual(platformCalls(log), [{ name: 'github', args: `pr merge feat/${id} --squash` }]);
+  assert.ok(mock.state.requests.some(item => item.method === 'PUT' && item.path.endsWith('/pulls/1/merge')));
 });
 
-test('CASE-237 GitLab merge 成功后自动清理本机任务', async t => {
-  const initialized = initialize(t, 'gitlab', 'gitlab', 'success');
+test('CASE-237 GitLab merge 经 REST API squash 成功后自动清理本机任务', async t => {
+  const initialized = await initialize(t, 'gitlab');
   if (!initialized) return;
-  const { root, environment, log } = initialized;
+  const { root, environment, mock, wrapper } = initialized;
   const id = '20261026-gitlab-merge';
-  acceptTask(root, id);
+  await acceptTask(root, id);
   const local = join(root, '.tiller/local', id);
 
-  const merged = success(cliAt(root, environment, 'merge', id));
+  mock.resetRequests();
+  const merged = success(await cliAt(root, environment, 'merge', id));
   assert.equal(merged.platform, 'gitlab');
-  assert.equal(merged.command, `gitlab mr merge feat/${id} --squash --yes`);
+  assert.match(merged.command, /^gitlab-api PUT .*\/merge_requests\/7\/merge \(squash\)$/u);
   assert.equal(existsSync(local), false);
-  assert.deepEqual(platformCalls(log), [{ name: 'gitlab', args: `mr merge feat/${id} --squash --yes` }]);
+  assert.deepEqual(mock.state.requests.map(item => `${item.method} ${item.path}`), [
+    'GET /api/v4/projects/group%2Fproject/merge_requests',
+    'PUT /api/v4/projects/group%2Fproject/merge_requests/7/merge',
+  ]);
+  assert.ok(mock.state.requests.every(item => item.hasPrivateToken));
+  assert.deepEqual(JSON.parse(mock.state.requests[1].body), { squash: true });
+  assert.equal(readFileSync(wrapper.log, 'utf8').trim().split('\n').length, 1);
 });
 
-test('CASE-238 GitLab merge 失败时保留下本机任务', async t => {
-  const initialized = initialize(t, 'gitlab', 'gitlab', 'failure');
+test('CASE-238 GitLab merge API 失败时保留本机任务', async t => {
+  const initialized = await initialize(t, 'gitlab');
   if (!initialized) return;
-  const { root, environment, log } = initialized;
+  const { root, environment, mock } = initialized;
   const id = '20261026-gitlab-merge-failed';
-  acceptTask(root, id);
+  await acceptTask(root, id);
   const local = join(root, '.tiller/local', id);
 
-  const failed = failure(cliAt(root, environment, 'merge', id));
+  mock.setMode('failure');
+  mock.resetRequests();
+  const failed = failure(await cliAt(root, environment, 'merge', id));
   assert.equal(failed.error.code, 'MERGE_FAILED');
+  assert.match(failed.error.message, /merge rejected/u);
+  assert.doesNotMatch(`${failed.stdout}\n${failed.stderr}`, /mock-token/u);
   assert.ok(existsSync(local));
   assert.ok(existsSync(join(local, 'worktrees')));
-  assert.deepEqual(platformCalls(log), [{ name: 'gitlab', args: `mr merge feat/${id} --squash --yes` }]);
+  assert.ok(mock.state.requests.some(item => item.method === 'PUT' && item.path.endsWith('/merge_requests/7/merge')));
 });
 
-test('CASE-239 init-id merge 合入初始化分支并清理 local', async t => {
-  const initialized = initialize(t, 'github', 'github', 'success');
+test('CASE-239 init-id merge 通过 REST API 合入初始化分支并清理 local', async t => {
+  const initialized = await initialize(t, 'github');
   if (!initialized) return;
-  const { root, environment, log, baseline } = initialized;
+  const { root, environment, mock, baseline } = initialized;
 
-  const merged = success(cliAt(root, environment, 'merge', baseline.id));
+  mock.resetRequests();
+  const merged = success(await cliAt(root, environment, 'merge', baseline.id));
   assert.equal(merged.branch, 'chore/tiller-init');
   assert.equal(merged.close.stage, '已关闭');
   assert.equal(existsSync(join(root, '.tiller/local', baseline.id)), false);
   assert.equal(JSON.parse(read(root, '.tiller/project.json')).initBaseline.status, 'merged');
-  assert.deepEqual(platformCalls(log), [{ name: 'github', args: 'pr merge chore/tiller-init --squash' }]);
+  assert.match(merged.command, /pulls\/1\/merge \(squash\)/u);
+  assert.ok(mock.state.requests.every(item => item.hasAuthorization));
 
-  const started = success(cliAt(root, {}, 'start', '20261026-after-init-merge', '--title', 'After init',
+  const started = success(await cliAt(root, {}, 'start', '20261026-after-init-merge', '--title', 'After init',
     '--requirement', 'The merged initialization does not block tasks.', '--criterion', 'AC-1=Start succeeds',
     '--size', 'small', '--target', '.'));
   assert.equal(started.id, '20261026-after-init-merge');
 });
 
-test('CASE-244 PATH 仅有官方短名时仍以 github/gitlab 调用并成功', async t => {
-  if (process.platform === 'win32') {
-    t.skip('The fake platform executable uses a POSIX shell script.');
-    return;
-  }
-  for (const item of [
-    { platform: 'github', binary: 'gh', name: 'github', args: 'pr merge' },
-    { platform: 'gitlab', binary: 'glab', name: 'gitlab', args: 'mr merge' },
-  ]) {
-    const root = fixture(t);
-    configure(root);
-    const directory = fakeTool(t, root, item.binary, 'success');
-    if (!directory) return;
-    const log = join(root, 'platform.log');
-    const environment = { PATH: `${directory}:${process.env.PATH ?? ''}`, TILLER_FAKE_MERGE_LOG: log };
-    success(cliAt(root, environment, 'init', '--platform', item.platform));
-    assert.equal(platformCalls(log)[0]?.name, item.name);
-    assert.match(platformCalls(log)[0]?.args ?? '', /^(?:pr|mr) create/u);
-    put(root, 'platform.log', '');
-
-    const id = `20261026-${item.name}-fallback`;
-    acceptTask(root, id);
-    const merged = success(cliAt(root, environment, 'merge', id));
-    assert.equal(merged.platform, item.platform);
-    assert.match(merged.command, new RegExp(`^${item.name} ${item.args}`, 'u'));
-    assert.deepEqual(platformCalls(log), [{ name: item.name, args: `${item.args} feat/${id} --squash${item.name === 'gitlab' ? ' --yes' : ''}` }]);
-  }
-
-  const root = fixture(t);
-  configure(root);
-  const id = '20261026-no-platform-cli';
-  success(cliAt(root, { PATH: '/usr/bin:/bin' }, 'init', '--platform', 'github'));
-  acceptTask(root, id);
-  const unavailable = failure(cliAt(root, { PATH: '/usr/bin:/bin' }, 'merge', id));
-  assert.equal(unavailable.error.code, 'MERGE_TOOL_UNAVAILABLE');
-  assert.match(unavailable.error.message, /无法执行 github/u);
-  assert.doesNotMatch(unavailable.error.message, /\bgh\b|\bglab\b/u);
+test('CASE-244 远端操作只调用平台 REST API 与 tokenized git transport', () => {
+  const sources = ['src/platform-api.ts', 'src/init-baseline.ts', 'src/pr.ts'].map(relative => read(repository, relative)).join('\n');
+  assert.doesNotMatch(sources, /resolvePlatformCli|platform-cli|platformCliUnavailable/u);
+  assert.doesNotMatch(sources, /execFileAsync\(['"](?:github|gitlab|gh|glab)['"]/u);
+  assert.match(sources, /GitHub REST API/u);
+  assert.match(sources, /tokenized HTTPS git push/u);
+  assert.equal(existsSync(join(repository, 'src/platform-cli.ts')), false);
 });
 
-test('CASE-240 接入文档说明 merge 与网页合入手动 close', () => {
+test('CASE-240 接入文档说明 API merge 与网页合入手动 close', () => {
   for (const pair of [
     ['resources/usage.md', '.tiller/usage.md'],
     ['resources/rules/core.md', '.tiller/rules/core.md'],
@@ -256,11 +238,11 @@ test('CASE-240 接入文档说明 merge 与网页合入手动 close', () => {
     assert.match(content, /merge <init-id>/u, relative);
     assert.match(content, /网页合入[^\n]*(?:手动|`close`)[^\n]*close/u, relative);
   }
-  assert.match(read(repository, 'resources/usage.md'), /github pr merge.*gitlab mr merge.*squash/u);
+  assert.match(read(repository, 'resources/usage.md'), /REST API.*squash/u);
   assert.match(read(repository, 'resources/rules/activities/delivery.md'), /失败不清理/u);
 });
 
-test('CASE-243 受管文档与 CLI help 使用 github/gitlab 并保持镜像一致', () => {
+test('CASE-243 受管文档与 CLI help 使用 REST API 并保持镜像一致', () => {
   for (const pair of [
     ['resources/usage.md', '.tiller/usage.md'],
     ['resources/rules/core.md', '.tiller/rules/core.md'],
@@ -269,31 +251,37 @@ test('CASE-243 受管文档与 CLI help 使用 github/gitlab 并保持镜像一�
     const content = read(repository, pair[0]);
     assert.equal(content, read(repository, pair[1]), pair.join(' == '));
     assert.doesNotMatch(content, /\bgh\b|\bglab\b/u, pair[0]);
-    assert.match(content, /`github pr merge`[^\n]*`gitlab mr merge`/u, pair[0]);
+    assert.match(content, /REST API/u, pair[0]);
   }
-  assert.match(read(repository, 'resources/usage.md'), /合入统一使用 `github`\/`gitlab`/u);
+  assert.match(read(repository, 'resources/usage.md'), /GitHub.*GitLab|GitLab.*GitHub/u);
   const help = success(cli(repository, '--help')).help;
-  assert.match(help, /github pr merge 或 gitlab mr merge/u);
+  assert.match(help, /REST API/u);
+  assert.match(help, /GITHUB_TOKEN|GITLAB_TOKEN/u);
   assert.doesNotMatch(help, /\bgh\b|\bglab\b/u);
 });
 
-test('CASE-241 版本保持 0.5.0 且新用例均有测试引用', () => {
+test('CASE-251 文档以 token/API 为主且 decisions 记录 push 选择', () => {
+  const combined = ['README.md', 'resources/usage.md', 'resources/rules/core.md',
+    'resources/rules/activities/delivery.md', 'src/cli.ts'].map(relative => read(repository, relative)).join('\n');
+  for (const token of ['GITHUB_TOKEN', 'GH_TOKEN', 'GITLAB_TOKEN', 'GL_TOKEN']) assert.match(combined, new RegExp(token, 'u'));
+  assert.match(combined, /REST API/u);
+  assert.doesNotMatch(combined, /安装[^\n]*(?:github|gitlab) CLI|请先安装并登录/u);
+  const decisions = read(repository, '.tiller/specs/decisions.md');
+  assert.match(decisions, /Git Data API/u);
+  assert.match(decisions, /tokenized HTTPS `git push`/u);
+  assert.match(decisions, /平台 CLI/u);
+});
+
+test('CASE-241 CASE-245 CASE-252 API 远端操作保持 0.5.0 且打包模块同步', () => {
   assert.equal(JSON.parse(read(repository, 'package.json')).version, '0.5.0');
   assert.equal(JSON.parse(read(repository, '.tiller/project.json')).resourceVersion, '0.5.0');
   assert.match(read(repository, 'src/cli.ts'), /CLI_VERSION = '0\.5\.0'/u);
   const source = read(repository, 'test/merge.test.mjs');
-  for (let number = 234; number <= 241; number += 1) {
-    assert.match(source, new RegExp(`test\\('[^'\\n]*CASE-${number}\\b`, 'u'));
+  for (const id of ['CASE-234', 'CASE-235', 'CASE-236', 'CASE-237', 'CASE-238', 'CASE-239', 'CASE-240',
+    'CASE-241', 'CASE-242', 'CASE-243', 'CASE-244', 'CASE-245', 'CASE-249', 'CASE-250', 'CASE-251', 'CASE-252']) {
+    assert.match(source, new RegExp(`test\\('[^'\\n]*${id}\\b`, 'u'));
   }
-});
-
-test('CASE-245 文档 CLI 名称任务保持 0.5.0 并通过质量门禁', () => {
-  assert.equal(JSON.parse(read(repository, 'package.json')).version, '0.5.0');
-  assert.equal(JSON.parse(read(repository, '.tiller/project.json')).resourceVersion, '0.5.0');
-  assert.match(read(repository, 'src/cli.ts'), /CLI_VERSION = '0\.5\.0'/u);
-  const sources = [read(repository, 'test/merge.test.mjs'), read(repository, 'test/rules.test.mjs'),
-    read(repository, 'test/init-baseline.test.mjs')].join('\n');
-  for (const id of ['CASE-242', 'CASE-243', 'CASE-244', 'CASE-245']) {
-    assert.match(sources, new RegExp(`test\\('[^'\\n]*${id}\\b`, 'u'));
-  }
+  const smoke = read(repository, 'scripts/package-smoke.mjs');
+  assert.match(smoke, /'platform-api'/u);
+  assert.doesNotMatch(smoke, /'platform-cli'/u);
 });

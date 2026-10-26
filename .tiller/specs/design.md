@@ -77,7 +77,7 @@
 
 `upgrade --plan` 只读预览，`upgrade --apply <plan-id>` 应用；读取当前或兼容上一资源契约，按记录摘要判断受管文件是否被用户修改。未修改文件按分发资源或固定区段重建；修改、缺失和异常区段只报告冲突，并给出首个差异位置。`upgrade --adopt <受管文件>` 不重写文件，只把当前受管内容摘要写回元信息，供有意保留本地修改的工程消除漂移。`plan attach <task> --plan <id> --item <id>` 为已有任务补充规划归属；它只校验已确认规划与条目存在，不依赖条目的完成状态，也不改任务确认。预览摘要绑定输入、期望结果和元信息；应用时在锁内重新预览并原子写入，成功后更新摘要与 `resourceVersion`，保留 `verify` 等用户配置。事务失败保留恢复依据，可由 `recover` 恢复。
 
-有 Git HEAD 时，`init` 在受管文件落盘后调用 `src/init-baseline.ts`，从当时 HEAD 建 `chore/tiller-init` 和 `.tiller/local/<YYYYMMDD-tiller-init>/worktrees`。第一笔同标题提交承载受管改动并成为 `initBaseline.commit`，第二笔把引用该提交的元信息写入分支，避免自引用；随后尝试推送和 `gh pr create`/`glab mr create`。远端失败只告警并返回可复制命令，保留 worktree 与提交；本地建树或提交失败则回滚元信息并清理由本次创建的本机目录与分支。`start` 在初始化提交未成为 HEAD 祖先且未标记 merged 时阻断，`--skip-init-gate` 可显式跳过；存量工程没有标记时放行。init-id 的 `close` 只复用本机清理路径。
+有 Git HEAD 时，`init` 在受管文件落盘后调用 `src/init-baseline.ts`，从当时 HEAD 建 `chore/tiller-init` 和 `.tiller/local/<YYYYMMDD-tiller-init>/worktrees`。第一笔同标题提交承载受管改动并成为 `initBaseline.commit`，第二笔把引用该提交的元信息写入分支，避免自引用；随后由 `src/platform-api.ts` 推送并创建 PR/MR：GitHub 优先 Git Data API，GitLab 传输层使用 tokenized HTTPS `git push`，PR/MR 与 merge 操作均走 REST API。远端失败只告警并返回 token/API 下一步，保留 worktree 与提交；本地建树或提交失败则回滚元信息并清理由本次创建的本机目录与分支。`start` 在初始化提交未成为 HEAD 祖先且未标记 merged 时阻断，`--skip-init-gate` 可显式跳过；存量工程没有标记时放行。init-id 的 `close` 只复用本机清理路径。
 
 ## 9. 错误与恢复
 
