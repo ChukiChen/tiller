@@ -1,6 +1,6 @@
 # PR 前同步任务记录
 
-<!-- tiller-task:v1 {"version":1,"id":"20261026-pr-task-sync","type":"feature","size":"standard","created":"2026-10-26T03:08:40.869Z","base":"f853f382197358bb11ebb56812c29b2848a27ed9","scope":["src","test","resources",".tiller","README.md","AGENTS.md"],"format":"structured","slug":"pr-task-sync","summary":"PR 前强制同步任务记录","requirementFile":".tiller/local/20261026-pr-task-sync-req.md"} -->
+<!-- tiller-task:v1 {"version":1,"id":"20261026-pr-task-sync","type":"feature","size":"standard","created":"2026-10-26T03:08:40.869Z","base":"f853f382197358bb11ebb56812c29b2848a27ed9","scope":["src","test","resources",".tiller","README.md","AGENTS.md","scripts"],"format":"structured","slug":"pr-task-sync","summary":"PR 前强制同步任务记录","requirementFile":".tiller/local/20261026-pr-task-sync-req.md"} -->
 
 ## 需求
 
@@ -88,8 +88,115 @@
 
 ## 验证
 
-尚无验证。
+### run-1
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-216 pr blocks uncommitted task records and lists relative paths$' \u002d\u002dtest-reporter=./.tiller/local/verify-bQN5Q2/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-bQN5Q2/report.jsonl test/pr.test.mjs","exitCode":0,"tree":"1e7f05956a6d9d1ad17e1a381750bd1e5bc888572f29927a5715fbc06734ba96","commit":"bd8fe19439da3890de170afcf4e03858ae5e888e"} -->
+- 条件：AC-1
+- 测试：test/pr.test.mjs::CASE-216 pr blocks uncommitted task records and lists relative paths
+- 用例：CASE-216
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/20261026-pr-task-sync/logs/run-5.log
+- 提交：bd8fe19439da
+- 时间：2026-10-26T03:27:34.119Z
+
+### run-2
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-217 pr generates the five-section draft after task records are committed$' \u002d\u002dtest-reporter=./.tiller/local/verify-qa5qaa/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-qa5qaa/report.jsonl test/pr.test.mjs","exitCode":0,"tree":"1e7f05956a6d9d1ad17e1a381750bd1e5bc888572f29927a5715fbc06734ba96","commit":"bd8fe19439da3890de170afcf4e03858ae5e888e"} -->
+- 条件：AC-1
+- 测试：test/pr.test.mjs::CASE-217 pr generates the five-section draft after task records are committed
+- 用例：CASE-217
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/20261026-pr-task-sync/logs/run-6.log
+- 提交：bd8fe19439da
+- 时间：2026-10-26T03:27:35.423Z
+
+### run-3
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-218 another dirty task does not block this task pr$' \u002d\u002dtest-reporter=./.tiller/local/verify-Nd0vV4/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-Nd0vV4/report.jsonl test/pr.test.mjs","exitCode":0,"tree":"1e7f05956a6d9d1ad17e1a381750bd1e5bc888572f29927a5715fbc06734ba96","commit":"bd8fe19439da3890de170afcf4e03858ae5e888e"} -->
+- 条件：AC-1
+- 测试：test/pr.test.mjs::CASE-218 another dirty task does not block this task pr
+- 用例：CASE-218
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/20261026-pr-task-sync/logs/run-7.log
+- 提交：bd8fe19439da
+- 时间：2026-10-26T03:27:36.643Z
+
+### run-4
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-219 pr skips the record gate with a warning when Git is unavailable$' \u002d\u002dtest-reporter=./.tiller/local/verify-TTwBCj/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-TTwBCj/report.jsonl test/pr.test.mjs","exitCode":0,"tree":"1e7f05956a6d9d1ad17e1a381750bd1e5bc888572f29927a5715fbc06734ba96","commit":"bd8fe19439da3890de170afcf4e03858ae5e888e"} -->
+- 条件：AC-1
+- 测试：test/pr.test.mjs::CASE-219 pr skips the record gate with a warning when Git is unavailable
+- 用例：CASE-219
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/20261026-pr-task-sync/logs/run-8.log
+- 提交：bd8fe19439da
+- 时间：2026-10-26T03:27:37.754Z
+
+### run-5
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-220 delivery docs require committing task records before pr$' \u002d\u002dtest-reporter=./.tiller/local/verify-mtXMLU/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-mtXMLU/report.jsonl test/pr.test.mjs","exitCode":0,"tree":"1e7f05956a6d9d1ad17e1a381750bd1e5bc888572f29927a5715fbc06734ba96","commit":"bd8fe19439da3890de170afcf4e03858ae5e888e"} -->
+- 条件：AC-2
+- 测试：test/pr.test.mjs::CASE-220 delivery docs require committing task records before pr
+- 用例：CASE-220
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/20261026-pr-task-sync/logs/run-9.log
+- 提交：bd8fe19439da
+- 时间：2026-10-26T03:27:38.837Z
+
+### run-6
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-221 closed task accept/close records are committed on this branch$' \u002d\u002dtest-reporter=./.tiller/local/verify-5kybuh/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-5kybuh/report.jsonl test/pr.test.mjs","exitCode":0,"tree":"c971ce6e55c02649647384c99447dfb3386243376c26239b2a18e2ef0ef201d2","commit":"bd8fe19439da3890de170afcf4e03858ae5e888e"} -->
+- 条件：AC-3
+- 测试：test/pr.test.mjs::CASE-221 closed task accept/close records are committed on this branch
+- 用例：CASE-221
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/20261026-pr-task-sync/logs/run-10.log
+- 提交：bd8fe19439da
+- 时间：2026-10-26T03:28:14.626Z
+
+### run-7
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-222 package stays 0\\.5\\.0 and pr dirty-record coverage exists$' \u002d\u002dtest-reporter=./.tiller/local/verify-5heFf1/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-5heFf1/report.jsonl test/pr.test.mjs","exitCode":0,"tree":"c971ce6e55c02649647384c99447dfb3386243376c26239b2a18e2ef0ef201d2","commit":"bd8fe19439da3890de170afcf4e03858ae5e888e"} -->
+- 条件：AC-4
+- 测试：test/pr.test.mjs::CASE-222 package stays 0.5.0 and pr dirty-record coverage exists
+- 用例：CASE-222
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/20261026-pr-task-sync/logs/run-11.log
+- 提交：bd8fe19439da
+- 时间：2026-10-26T03:28:15.123Z
 
 ## 自检
 
-交付前运行 check；验收后运行 accept。
+- [ ] 需求确认有效
+- [ ] 设计确认有效
+- [ ] 验收条件均有当前通过且绑定全局用例的测试引用
+- [ ] 每条验收条件均映射到本次验证引用的全局用例
+- [x] 验收条件与用例来源 criteria 相互指向或由本任务新增/修改
+- [ ] 验证命令已执行且测试输出已核实
+- [x] 全局用例结构与引用有效
+- [x] 改动未超出范围
+- [x] 未弱化仍存在的测试
+- [x] 评审无未清除阻塞项
+- [x] 记录不含密钥或本机绝对路径
+
+阻塞项：
+- 需求确认后需求正文、范围或验收条件已变化，需要重新确认。
+- 设计确认后需求或设计已变化，需要重新确认。
+- 过程卫生：需求、设计确认提交 f853f3821973 后，工作区仍有未提交业务改动：test/pr.test.mjs。请先提交或移出本任务。
+- AC-1 的验证已过期：记录时的代码树与当前工作树不同（范围内代码已变化）。
+- AC-2 的验证已过期：记录时的代码树与当前工作树不同（范围内代码已变化）。
+- 交付范围存在未提交改动：.tiller/cases/modules/workflow/behavior.md、.tiller/cases/modules/workflow/interface.md、test/pr.test.mjs
+
+提示：
+- 90 条历史用例未绑定来源 AC；新用例请用 case add 写入 criteria。
+- 本次改动涉及模块 initialization：建议回归该模块 59 条用例及经过它的场景 CASE-055, CASE-001。
+- 本次改动涉及模块 standards：建议回归该模块 23 条用例及经过它的场景 CASE-055。
+- 本次改动涉及模块 verification：建议回归该模块 40 条用例及经过它的场景 CASE-055, CASE-001。
+- 本次改动涉及模块 workflow：建议回归该模块 98 条用例及经过它的场景 CASE-055, CASE-001。

@@ -1385,3 +1385,29 @@ pr 成功生成既有五段 PR/MR 草稿
 ### 预期结果
 
 pr 不因记录门禁失败，并在 warnings 说明无法读取未提交改动
+
+## CASE-221 已关闭任务收尾记录随本分支提交
+
+- 类型：behavior
+- 优先级：medium
+- 模块：workflow
+- 关联 AC：20261026-pr-task-sync#AC-3
+- 需求：`.tiller/specs/modules/workflow/requirements.md`
+- 源码：`.tiller/task/20261026-local-task-layout/task.md`
+
+### 前置条件
+
+- 本任务分支包含该关闭任务的 task.md 清理提交
+
+### 步骤
+
+1. 读取已关闭任务 task.md
+2. 断言含验收与关闭事实
+
+### 输入
+
+- 按用例描述准备正常输入及必要的边界输入。
+
+### 预期结果
+
+仓库中 .tiller/task/20261026-local-task-layout/task.md 含验收与关闭记录，且相对 HEAD 已提交

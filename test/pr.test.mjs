@@ -512,3 +512,22 @@ test('CASE-220 delivery docs require committing task records before pr', () => {
   assert.equal(readFileSync(new URL('../.tiller/usage.md', import.meta.url), 'utf8'), usage);
   assert.equal(readFileSync(new URL('../.tiller/rules/activities/delivery.md', import.meta.url), 'utf8'), delivery);
 });
+
+test('CASE-221 closed task accept/close records are committed on this branch', () => {
+  const closed = readFileSync(new URL('../.tiller/task/20261026-local-task-layout/task.md', import.meta.url), 'utf8');
+  assert.match(closed, /^## 确认$/mu);
+  assert.match(closed, /交付验收/u);
+  assert.match(closed, /^## 关闭$/mu);
+  assert.match(closed, /tiller-confirm:v1.*"gate":"acceptance"/su);
+});
+
+test('CASE-222 package stays 0.5.0 and pr dirty-record coverage exists', () => {
+  const pkg = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'));
+  const readme = readFileSync(new URL('../README.md', import.meta.url), 'utf8');
+  const smoke = readFileSync(new URL('../scripts/package-smoke.mjs', import.meta.url), 'utf8');
+  const prSrc = readFileSync(new URL('../src/pr.ts', import.meta.url), 'utf8');
+  assert.equal(pkg.version, '0.5.0');
+  assert.match(readme, /0\.5\.0/u);
+  assert.match(smoke, /0\.5\.0/u);
+  assert.match(prSrc, /PR_TASK_RECORDS_DIRTY/u);
+});

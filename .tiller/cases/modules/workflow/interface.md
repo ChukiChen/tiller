@@ -899,3 +899,29 @@ usage、rules、workflow specs 与 decisions 描述 .tiller/local/<id>/ 聚合�
 ### 预期结果
 
 文档写明 verify/check 与 cases/specs 回写后先提交任务记录再 pr，合入后收尾修改需另提交
+
+## CASE-222 全量质量门禁通过且版本保持 0.5.0
+
+- 类型：interface
+- 优先级：medium
+- 模块：workflow
+- 关联 AC：20261026-pr-task-sync#AC-4
+- 需求：`.tiller/specs/modules/workflow/requirements.md`
+- 源码：`package.json`, `README.md`, `test/pr.test.mjs`, `scripts/package-smoke.mjs`
+
+### 前置条件
+
+- 实现与文档已合入本分支
+
+### 步骤
+
+1. 读取 package.json 与 README 版本
+2. 断言为 0.5.0 且 PR 相关测试存在
+
+### 输入
+
+- 按用例描述准备正常输入及必要的边界输入。
+
+### 预期结果
+
+package.json 与 README 版本为 0.5.0；定向 pr 测试与 package-smoke 覆盖门禁相关断言
