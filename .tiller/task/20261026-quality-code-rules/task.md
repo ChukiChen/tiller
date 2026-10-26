@@ -51,8 +51,10 @@
 | 部分 | 确认人 | 时间 | 短提交 | 原话 |
 | --- | --- | --- | --- | --- |
 | 需求 | boon yu | 2026-10-26T07:29:11.172Z | 6003b5b14903 | — |
+| 交付验收 | boon yu | 2026-10-26T07:39:02.202Z | 3a64a741e486 | — |
 
 <!-- tiller-confirm:v1 {"gate":"requirements","object":"需求正文（目标、范围与验收条件）","subject":"a3e34c29cfa499ed9d22de9811e6526f1078bf9fc99c7d414dd7b67c4fd6b1f1","commit":"6003b5b14903463c8296278e17027b868d600e80","by":"boon yu","quote":"","at":"2026-10-26T07:29:11.172Z"} -->
+<!-- tiller-confirm:v1 {"gate":"acceptance","object":"当前交付（需求、设计、验证与提交）","subject":"020e7a9e65b6bd7e39974036e37365e4488c8384c197ef0699503257e62cd31f","commit":"3a64a741e4866db54ed4e9451858e826dec13b31","by":"boon yu","quote":"","at":"2026-10-26T07:39:02.202Z"} -->
 
 ## 验证
 
