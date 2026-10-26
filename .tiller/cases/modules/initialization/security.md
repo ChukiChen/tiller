@@ -7,7 +7,6 @@
 - 模块：initialization
 - 关联 AC：无
 - 需求：`.tiller/specs/modules/initialization/requirements.md`
-- 源码：`src/core.ts`, `src/repository-paths.ts`, `test/core.test.mjs`
 
 ### 前置条件
 
@@ -32,7 +31,6 @@
 - 模块：initialization
 - 关联 AC：无
 - 需求：`.tiller/specs/modules/initialization/requirements.md`
-- 源码：`src/core.ts`, `test/core.test.mjs`
 
 ### 前置条件
 
@@ -57,7 +55,6 @@
 - 模块：initialization
 - 关联 AC：无
 - 需求：`.tiller/specs/modules/initialization/requirements.md`
-- 源码：`src/files.ts`, `src/core.ts`, `test/core.test.mjs`
 
 ### 前置条件
 
@@ -83,7 +80,6 @@
 - 模块：initialization
 - 关联 AC：无
 - 需求：`.tiller/specs/modules/initialization/requirements.md`
-- 源码：`src/files.ts`, `test/core.test.mjs`
 
 ### 前置条件
 
@@ -109,7 +105,6 @@
 - 模块：initialization
 - 关联 AC：无
 - 需求：`.tiller/specs/modules/initialization/requirements.md`
-- 源码：`src/runtime.ts`, `test/runtime.test.mjs`
 
 ### 前置条件
 
@@ -134,7 +129,6 @@
 - 模块：initialization
 - 关联 AC：无
 - 需求：`.tiller/specs/modules/initialization/requirements.md`
-- 源码：`src/runtime.ts`, `test/runtime.test.mjs`
 
 ### 前置条件
 
@@ -159,7 +153,6 @@
 - 模块：initialization
 - 关联 AC：无
 - 需求：`.tiller/specs/modules/initialization/requirements.md`
-- 源码：`src/runtime.ts`, `test/runtime.test.mjs`
 
 ### 前置条件
 
@@ -184,7 +177,6 @@
 - 模块：initialization
 - 关联 AC：无
 - 需求：`.tiller/specs/modules/initialization/requirements.md`
-- 源码：`src/runtime.ts`, `test/runtime.test.mjs`
 
 ### 前置条件
 
@@ -211,7 +203,6 @@
 - 模块：initialization
 - 关联 AC：无
 - 需求：`.tiller/specs/modules/initialization/requirements.md`
-- 源码：`src/runtime.ts`, `test/runtime.test.mjs`
 
 ### 前置条件
 
@@ -236,7 +227,6 @@
 - 模块：initialization
 - 关联 AC：无
 - 需求：`.tiller/specs/modules/initialization/requirements.md`
-- 源码：`src/core.ts`, `src/runtime.ts`, `test/runtime.test.mjs`
 
 ### 前置条件
 
@@ -261,7 +251,6 @@
 - 模块：initialization
 - 关联 AC：无
 - 需求：`.tiller/specs/modules/initialization/requirements.md`
-- 源码：`src/runtime.ts`, `test/runtime.test.mjs`
 
 ### 前置条件
 
@@ -286,7 +275,6 @@
 - 模块：initialization
 - 关联 AC：无
 - 需求：`.tiller/specs/modules/initialization/requirements.md`
-- 源码：`src/core.ts`, `src/upgrade.ts`, `test/usage-resources.test.mjs`
 
 ### 前置条件
 
@@ -312,7 +300,6 @@
 - 模块：initialization
 - 关联 AC：无
 - 需求：`.tiller/specs/modules/initialization/requirements.md`
-- 源码：`src/upgrade.ts`, `test/upgrade.test.mjs`
 
 ### 前置条件
 
@@ -338,7 +325,6 @@
 - 模块：initialization
 - 关联 AC：无
 - 需求：`.tiller/specs/modules/initialization/requirements.md`
-- 源码：`src/files.ts`, `src/core.ts`, `test/upgrade.test.mjs`
 
 ### 前置条件
 
@@ -364,7 +350,6 @@
 - 模块：initialization
 - 关联 AC：无
 - 需求：`.tiller/specs/modules/initialization/requirements.md`
-- 源码：`src/core.ts`, `src/upgrade.ts`, `test/upgrade.test.mjs`
 
 ### 前置条件
 
@@ -391,7 +376,6 @@
 - 模块：initialization
 - 关联 AC：无
 - 需求：`.tiller/specs/modules/initialization/requirements.md`
-- 源码：`src/repository-paths.ts`, `src/project-metadata.ts`, `test/repository-paths.test.mjs`
 
 ### 前置条件
 
@@ -408,3 +392,27 @@
 ### 预期结果
 
 历史版本一律拒绝映射解析；直接兼容版本接受对象路径；只有标识、没有路径的旧清单被拒绝；空的当前工程不需要旁路映射
+
+## CASE-254 init 基线缺 token 或 API 失败时不静默放行
+
+- 类型：security
+- 优先级：medium
+- 模块：initialization
+- 关联 AC：20261026-flow-stability#AC-1
+- 需求：`.tiller/specs/modules/initialization/requirements.md`
+
+### 前置条件
+
+- 初始化基线为 pending 且提交不是 HEAD 祖先。
+
+### 步骤
+
+1. 分别在无 token 和平台 API 失败时运行 start。
+
+### 输入
+
+- 两种失败环境均未提供可用合入证据。
+
+### 预期结果
+
+start 以 INIT_BASELINE_PENDING 失败并保留 --skip-init-gate 提示，不更新 merged。

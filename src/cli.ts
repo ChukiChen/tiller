@@ -28,8 +28,8 @@ const HELP = `tiller ${CLI_VERSION} — 默认工作流
   tiller start <YYYYMMDD-task-id> --title <标题> (--requirement <需求正文> | --requirement-file <工程相对路径>) --criterion "AC-1=<验收条件>" [--criterion ...] [--type feature] [--size small|standard] [--target <相对路径> ...] [--summary <中文摘要>] [--slug <英文描述>] [--plan <YYYYMMDD-plan-id> --item <条目>] [--skip-init-gate] [--path <root>]
   tiller resume [YYYYMMDD-task-id] [--path <root>]
   tiller confirm <YYYYMMDD-task-id> requirements|design|acceptance [--by <确认人>] [--quote "<可选原话>"] [--commit <oid>] [--path <root>]
-  tiller case add <YYYYMMDD-task-id> --module <模块> --kind behavior|interface|performance|security --title <标题> --criterion AC-1 [--criterion ...] --expected "<预期结果>" [--precondition <条件> ...] [--step <步骤> ...] [--input <输入> ...] [--priority high|medium|low] [--spec <引用> ...] --source <源码路径> [--source ...] [--path <root>]
-  tiller case add <YYYYMMDD-task-id> --scenario <场景名> --module <模块> [--module ...] --title <标题> --criterion AC-1 --expected "<预期结果>" [--spec <引用> ...] --source <源码路径> [--source ...]
+  tiller case add <YYYYMMDD-task-id> --module <模块> --kind behavior|interface|performance|security --title <标题> --criterion AC-1 [--criterion ...] --expected "<预期结果>" [--precondition <条件> ...] [--step <步骤> ...] [--input <输入> ...] [--priority high|medium|low] [--spec <引用> ...] [--path <root>]
+  tiller case add <YYYYMMDD-task-id> --scenario <场景名> --module <模块> [--module ...] --title <标题> --criterion AC-1 --expected "<预期结果>" [--spec <引用> ...] [--path <root>]
   tiller verify <YYYYMMDD-task-id> --criterion AC-1 [--criterion ...] --test "<文件::测试名>" [--expect-fail] [--verbose] [--path <root>]
   tiller verify <YYYYMMDD-task-id> [--criterion AC-1 ...] --case CASE-NNN [--verbose] [--path <root>]
   tiller verify <YYYYMMDD-task-id> --criterion AC-1 --test "<文件::测试名>" --reported --command "<外部命令>" --result passed|failed|skipped --reason "<理由>" [--path <root>]
@@ -37,9 +37,9 @@ const HELP = `tiller ${CLI_VERSION} — 默认工作流
   tiller review <YYYYMMDD-task-id> [--by <评审人>] [--finding <发现> ...] [--blocking <阻塞发现> ...] [--resolve REV-NNN ...] [--path <root>]
   tiller release <YYYYMMDD-task-id> [--path <root>]
   tiller pr <YYYYMMDD-task-id> [--summary <中文摘要>] [--slug <英文描述>] [--path <root>]
-  tiller merge <YYYYMMDD-task-id> [--path <root>]
+  tiller merge <YYYYMMDD-task-id> [--keep-branch] [--path <root>]
   tiller accept <YYYYMMDD-task-id> [--by <确认人>] [--quote "<可选原话>"] [--commit <oid>] [--allow-reported] [--path <root>]
-  tiller close <YYYYMMDD-task-id> --reason "<原因>" [--abandon] [--path <root>]
+  tiller close <YYYYMMDD-task-id> --reason "<原因>" [--abandon] [--keep-branch] [--path <root>]
   tiller reopen <YYYYMMDD-task-id> --reason "<原因>" [--path <root>]
   tiller recover [path]
   tiller runtime status|bind [--path <root>]
@@ -53,10 +53,11 @@ const HELP = `tiller ${CLI_VERSION} — 默认工作流
 - 大功能可先写 .tiller/plans/<id>.md 并确认；start 挂到条目时默认继承粒度，依赖未验收会阻塞。
 - task.md 是唯一任务记录：start 生成结构化需求，可从工程内需求文件接入；确认前校验正文，原话只作可选附注。verify 自主执行测试并从私有报告核实。
 - review 记录独立评审发现；未解决阻塞项会阻断 check/accept。release 只做发布门禁，不发布包。check 汇总发布清单；已验收任务按验收提交读取代码树与测试，之后代码漂移不误报过期。
-- 阶段由 task.md 事实推导；accept 须在 pr 前；merge 通过 GitHub/GitLab REST API 以 squash 合入，成功后自动 close；token 从 GITHUB_TOKEN/GH_TOKEN 或 GITLAB_TOKEN/GL_TOKEN 读取；init 推送与 PR/MR 同走平台 API，GitLab 传输层可用 tokenized HTTPS git push，不依赖平台 CLI；网页合入后仍需手动 close；未验收终止用 --abandon，必要时 reopen。
-- check 对过薄文档给出可定位提示：空白或占位的 standard 设计、无有效条目的 .tiller/specs/decisions.md、空壳模块设计 design.md；规格/背景未回写时列出路径与提纲。默认不单独阻断。verify 日志含显示命令、起止时间与退出码。当前分支未包含任务编号时 check 提示，分支名用“类型/任务编号[-描述]”。
+- 阶段由 task.md 事实推导；accept 须在 pr 前；merge 通过 GitHub/GitLab REST API 以 squash 合入，成功后自动 close；merge/close 默认删除本地与远端任务分支，close init-id 同样清理 chore/tiller-init；--keep-branch 保留，删除失败只记 warning。token 从 GITHUB_TOKEN/GH_TOKEN 或 GITLAB_TOKEN/GL_TOKEN 读取；init 推送与 PR/MR 同走平台 API，GitLab 传输层可用 tokenized HTTPS git push，不依赖平台 CLI；网页合入后仍需手动 close；未验收终止用 --abandon，必要时 reopen。
+- start 对 pending 初始化基线先判祖先，再通过平台 API 查同分支已合入 PR/MR；确认后写回 merged 并放行，无 token、API 失败或无记录仍阻断，--skip-init-gate 例外。
+- check 对过薄文档给出可定位提示：空白或占位的 standard 设计、无有效条目的 .tiller/specs/decisions.md、空壳模块设计 design.md；需求“业务范围·做”中的交付路径给 warning；规格/背景未回写时列出路径与提纲。默认不单独阻断。verify 日志含显示命令、起止时间与退出码。当前分支未包含任务编号时 check 提示，分支名用“类型/任务编号[-描述]”。
 - 同一 AC 或 CASE 连续两次 verify 失败且无成功核实时，verify/check 要求停止自动重试并按 FLOW-05 报告证据与可选方案；成功核实清零。
-- case add 在测试之前登记测试设计（前置条件、步骤、输入、预期结果、类型、优先级、来源 AC），自动分配 CASE 编号；测试名引用 CASE 编号形成反查。check 分阶段核对 AC→用例→测试→当前验证，校验模块/场景结构并提示相关回归，同时检查范围、测试弱化、密钥和本机绝对路径。
+- case add 在测试之前登记测试设计（前置条件、步骤、输入、预期结果、类型、优先级、来源 AC），不保存源码字段，自动分配 CASE 编号；测试名引用 CASE 编号形成反查。check 分阶段核对 AC→用例→测试→当前验证，校验模块/场景结构并提示相关回归，同时检查范围、测试弱化、密钥和本机绝对路径。
 - pr 从 task.md 和 Git 提交生成五段 PR/MR 草稿及建议分支名；提交用“类型(模块): 中文摘要”，分支用“类型/任务编号[-描述]”；check 只提示格式问题。
 - 验证运行器支持 node-test、junit-maven、junit-gradle 与 pytest；pytest 从私有 JUnit XML 核实。upgrade 刷新未修改的受管文件，--adopt 保留用户当前内容并更新摘要；版本号只在正式发布时修改。
 `;
@@ -102,17 +103,17 @@ export async function runCli(rawArgs = process.argv.slice(2)): Promise<void> {
         verbose: { type: 'boolean' }, adopt: { type: 'string', multiple: true },
         plan: { type: 'string' }, item: { type: 'string', multiple: true }, goal: { type: 'string' },
         spec: { type: 'string', multiple: true }, module: { type: 'string', multiple: true },
-        kind: { type: 'string' }, scenario: { type: 'string' }, source: { type: 'string', multiple: true },
+        kind: { type: 'string' }, scenario: { type: 'string' },
         expected: { type: 'string' }, precondition: { type: 'string', multiple: true }, step: { type: 'string', multiple: true },
         input: { type: 'string', multiple: true }, priority: { type: 'string' }, case: { type: 'string' },
         finding: { type: 'string', multiple: true }, blocking: { type: 'string', multiple: true },
         resolve: { type: 'string', multiple: true }, apply: { type: 'string' }, abandon: { type: 'boolean' },
-        'skip-init-gate': { type: 'boolean' },
+        'skip-init-gate': { type: 'boolean' }, 'keep-branch': { type: 'boolean' },
       },
     });
     const seenOptions = new Set<string>();
     for (const token of tokens) {
-      if (token.kind !== 'option' || ['repo', 'target', 'criterion', 'item', 'spec', 'module', 'source', 'precondition', 'step', 'input', 'finding', 'blocking', 'resolve', 'adopt'].includes(token.name)) continue;
+      if (token.kind !== 'option' || ['repo', 'target', 'criterion', 'item', 'spec', 'module', 'precondition', 'step', 'input', 'finding', 'blocking', 'resolve', 'adopt'].includes(token.name)) continue;
       if (seenOptions.has(token.name)) usage(`选项 --${token.name} 不能重复。`);
       seenOptions.add(token.name);
     }
@@ -134,14 +135,14 @@ export async function runCli(rawArgs = process.argv.slice(2)): Promise<void> {
                 : command === 'accept' ? ['path', 'quote', 'by', 'commit', 'allow-reported']
                   : command === 'review' ? ['path', 'by', 'finding', 'blocking', 'resolve']
                     : command === 'release' ? ['path']
-                      : command === 'merge' ? ['path']
-                      : command === 'close' ? ['path', 'reason', 'abandon']
+                      : command === 'merge' ? ['path', 'keep-branch']
+                      : command === 'close' ? ['path', 'reason', 'abandon', 'keep-branch']
                         : command === 'reopen' ? ['path', 'reason'] : ['path', 'allow-reported']
         : planCommand ? (second === 'start' ? ['path', 'title', 'goal', 'spec', 'item']
           : second === 'confirm' ? ['path', 'quote', 'by', 'commit']
             : second === 'status' ? ['path']
               : second === 'attach' ? ['path', 'plan', 'item'] : [])
-          : caseCommand ? second === 'add' ? ['path', 'module', 'kind', 'scenario', 'title', 'criterion', 'spec', 'source', 'expected', 'precondition', 'step', 'input', 'priority'] : []
+          : caseCommand ? second === 'add' ? ['path', 'module', 'kind', 'scenario', 'title', 'criterion', 'spec', 'expected', 'precondition', 'step', 'input', 'priority'] : []
             : prCommand ? ['path', 'slug', 'summary']
               : command === 'init' ? ['mode', 'repo', 'platform']
               : command === 'upgrade' ? ['plan', 'apply', 'adopt']
@@ -231,11 +232,12 @@ export async function runCli(rawArgs = process.argv.slice(2)): Promise<void> {
           ready = (result as { ready?: boolean }).ready !== false;
         } else if (command === 'merge') {
           if (positionals.length !== 2) usage('merge 需要一个任务标识。');
-          result = await mergeFlow(root, second!);
+          result = await mergeFlow(root, second!, { keepBranch: values['keep-branch'] === true });
         } else if (command === 'close') {
           if (positionals.length !== 2) usage('close 需要一个任务标识。');
           if (!values.reason) usage('close 需要 --reason "<关闭原因>"；未验收终止请同时使用 --abandon。');
-          result = await closeFlow(root, second!, values.reason, values.abandon === true);
+          result = await closeFlow(root, second!, values.reason, values.abandon === true,
+            { keepBranch: values['keep-branch'] === true });
         } else {
           if (positionals.length !== 2) usage('reopen 需要一个任务标识。');
           if (!values.reason) usage('reopen 需要 --reason "<重开原因>"。');
@@ -275,7 +277,7 @@ export async function runCli(rawArgs = process.argv.slice(2)): Promise<void> {
         const root = resolve(values.path ?? process.cwd());
         result = await addGlobalCase(root, {
           task: third!, title: values.title, criteria: values.criterion,
-          requirements: values.spec ?? [], source: values.source ?? [], modules: values.module,
+          requirements: values.spec ?? [], modules: values.module,
           preconditions: values.precondition ?? [], steps: values.step ?? [], inputs: values.input ?? [],
           expected: values.expected,
           ...(values.priority === undefined ? {} : { priority: values.priority }),

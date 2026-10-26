@@ -7,7 +7,6 @@
 - 模块：initialization, workflow, verification, standards
 - 关联 AC：20261022-first-batch#AC-1, 20261022-first-batch#AC-6
 - 需求：`.tiller/specs/requirements.md#3-默认工作流`, `.tiller/specs/modules/standards/requirements.md`
-- 源码：`src/core.ts`, `src/flow.ts`, `src/plans.ts`, `src/cases.ts`
 
 ### 前置条件
 

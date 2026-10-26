@@ -61,7 +61,7 @@ for (const path of ['dist/cli.js', 'dist/flow.js', 'resources/entry.md', 'resour
   assert.ok(paths.has(path), path);
 }
 for (const path of [...paths]) assert.ok(!/^resources\/(?:workflows|templates)\//u.test(path), path);
-const expectedModules = ['branch-conventions', 'cases', 'cli', 'commit-conventions', 'confirmer', 'core', 'files', 'flow', 'init-baseline', 'plans', 'platform-api', 'pr', 'project-metadata', 'release', 'repository-paths', 'runtime', 'shared-paths', 'task-id', 'task-worktrees', 'test-output', 'test-reporter', 'types', 'upgrade'];
+const expectedModules = ['branch-cleanup', 'branch-conventions', 'cases', 'cli', 'commit-conventions', 'confirmer', 'core', 'files', 'flow', 'init-baseline', 'plans', 'platform-api', 'pr', 'project-metadata', 'release', 'repository-paths', 'runtime', 'shared-paths', 'task-id', 'task-worktrees', 'test-output', 'test-reporter', 'types', 'upgrade'];
 const packagedModules = [...paths].filter(path => /^dist\/[^/]+\.js$/u.test(path)).map(path => path.slice(5, -3)).sort();
 assert.deepEqual(packagedModules, expectedModules);
 assert.ok(![...paths].some(path => /^(src|test|\.tiller|node_modules)\//u.test(path)));
@@ -145,7 +145,7 @@ writeFileSync(taskRecord, requirementRecord);
 invoke(['confirm', taskId, 'requirements', '--quote', 'Package smoke requirement confirmed']);
 const added = invoke(['case', 'add', taskId, '--module', 'package-smoke', '--kind', 'behavior', '--title', 'Packaged flow works',
   '--expected', 'the packaged test passes its named case', '--criterion', 'AC-1',
-  '--spec', '.tiller/specs/modules/package-smoke/requirements.md', '--source', 'test/package-smoke.test.mjs']);
+  '--spec', '.tiller/specs/modules/package-smoke/requirements.md']);
 assert.equal(added.id, 'CASE-001');
 mkdirSync(join(target, 'test'), { recursive: true });
 writeFileSync(join(target, 'test/package-smoke.test.mjs'), "import assert from 'node:assert/strict';\nimport test from 'node:test';\n\ntest('CASE-001 package flow works', () => { assert.equal(1, 1); });\n");

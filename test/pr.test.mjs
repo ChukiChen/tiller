@@ -46,7 +46,7 @@ function commitAll(root, message = 'chore(workflow): 同步验收夹具') {
   git(root, 'commit', '--quiet', '--allow-empty', '-m', message);
 }
 
-function acceptTaskForPr(root, id, source = 'src/workflow.ts') {
+function acceptTaskForPr(root, id) {
   const task = success(cli(root, 'resume', id));
   if (!task.confirmations.some(item => item.gate === 'requirements')) {
     success(confirmTask(root, id, 'requirements', '--by', 'Tiller Test'));
@@ -57,7 +57,7 @@ function acceptTaskForPr(root, id, source = 'src/workflow.ts') {
   }
   if (!task.verifications.length) {
     const added = success(cli(root, 'case', 'add', id, '--module', 'workflow', '--kind', 'behavior',
-      '--title', 'PR 验收夹具', '--expected', '任务可进入交付验收', '--criterion', 'AC-1', '--source', source));
+      '--title', 'PR 验收夹具', '--expected', '任务可进入交付验收', '--criterion', 'AC-1'));
     const testPath = 'test/pr-acceptance.test.mjs';
     const testName = `${added.id} pr acceptance fixture`;
     const testSource = existsSync(join(root, testPath))
@@ -119,8 +119,7 @@ test('CASE-068 pr draft derives title, five sections and current AC state', asyn
   success(confirmTask(root, id, 'requirements', '--by', 'Tiller Test'));
   success(cli(root, 'confirm', id, 'design', '--by', 'Tiller Test'));
   const added = success(cli(root, 'case', 'add', id, '--module', 'workflow', '--kind', 'behavior',
-    '--title', 'PR 草稿结构', '--expected', 'PR 草稿包含固定五段', '--criterion', 'AC-1',
-    '--source', 'src/workflow.ts'));
+    '--title', 'PR 草稿结构', '--expected', 'PR 草稿包含固定五段', '--criterion', 'AC-1'));
   assert.equal(added.id, 'CASE-001');
   success(cli(root, 'verify', id, '--criterion', 'AC-1', '--test', 'test/workflow.test.mjs::CASE-001 workflow behavior'));
   git(root, 'add', '.');
@@ -168,7 +167,7 @@ test('CASE-069 check warns about nonconforming commit subjects and skips merge s
     '--criterion', 'AC-1=提交主题违规只产生提示', '--size', 'small', '--target', 'src', '--target', 'test', '--target', '.tiller/cases',
     '--target', '.tiller/specs/modules/workflow'));
   success(confirmTask(root, id, 'requirements', '--by', 'Tiller Test'));
-  success(cli(root, 'case', 'add', id, '--module', 'workflow', '--kind', 'behavior', '--title', '提交信息检查', '--expected', '不合规提交只产生提示', '--criterion', 'AC-1', '--source', 'src/workflow.ts'));
+  success(cli(root, 'case', 'add', id, '--module', 'workflow', '--kind', 'behavior', '--title', '提交信息检查', '--expected', '不合规提交只产生提示', '--criterion', 'AC-1'));
   success(cli(root, 'verify', id, '--criterion', 'AC-1', '--test', 'test/workflow.test.mjs::CASE-001 workflow behavior'));
   git(root, 'add', '.');
   git(root, 'commit', '--quiet', '-m', 'update stuff');
@@ -214,7 +213,7 @@ test('CASE-075 pr title selects first declared module and omits unknown modules'
   const unknownId = '20261022-unknown-module';
   success(cli(unknown, 'start', unknownId, '--title', '未知模块标题', '--requirement', '没有可推导模块。',
     '--criterion', 'AC-1=标题省略模块', '--size', 'small', '--target', 'src', '--target', 'test', '--target', '.tiller/cases'));
-  acceptTaskForPr(unknown, unknownId, '.tiller/context/project.md');
+  acceptTaskForPr(unknown, unknownId);
   const fallback = success(cli(unknown, 'pr', unknownId));
   assert.equal(fallback.module, null);
   assert.equal(fallback.title, `feat: 未知模块标题 [${unknownId}]`);
@@ -252,8 +251,7 @@ test('CASE-077 pr verification section lists every recorded run in order', async
     '--target', '.tiller/specs/modules/workflow', '--target', '.tiller/cases'));
   success(confirmTask(root, id, 'requirements', '--by', 'Tiller Test'));
   const added = success(cli(root, 'case', 'add', id, '--module', 'workflow', '--kind', 'behavior',
-    '--title', '全部验证记录', '--expected', '保留每次验证记录', '--criterion', 'AC-1',
-    '--source', 'src/workflow.ts'));
+    '--title', '全部验证记录', '--expected', '保留每次验证记录', '--criterion', 'AC-1'));
   const firstRun = success(cli(root, 'verify', id, '--criterion', 'AC-1', '--test', 'test/workflow.test.mjs::CASE-001 workflow behavior'));
   const secondRun = success(cli(root, 'verify', id, '--criterion', 'AC-1', '--test', 'test/workflow.test.mjs::CASE-001 workflow behavior'));
   const first = firstRun.entries[0].command;
@@ -307,7 +305,7 @@ test('CASE-081 pr summary prefers flag then metadata then earliest conventional 
   const fallbackId = '20261022-summary-fallback';
   success(cli(fallbackRoot, 'start', fallbackId, '--title', '任务标题回退', '--requirement', '没有提交摘要时使用任务标题。',
     '--criterion', 'AC-1=使用任务标题', '--size', 'small', '--target', 'src', '--target', 'test', '--target', '.tiller/cases'));
-  acceptTaskForPr(fallbackRoot, fallbackId, '.tiller/context/project.md');
+  acceptTaskForPr(fallbackRoot, fallbackId);
   assert.equal(success(cli(fallbackRoot, 'pr', fallbackId)).title, `feat: 任务标题回退 [${fallbackId}]`);
 });
 
@@ -344,8 +342,7 @@ test('CASE-083 pr verification section uses plain nested records without numbere
     '--target', '.tiller/specs/modules/workflow', '--target', '.tiller/cases'));
   success(confirmTask(root, id, 'requirements', '--by', 'Tiller Test'));
   const added = success(cli(root, 'case', 'add', id, '--module', 'workflow', '--kind', 'behavior',
-    '--title', '验证格式', '--expected', '验证记录使用普通嵌套列表', '--criterion', 'AC-1',
-    '--source', 'src/workflow.ts'));
+    '--title', '验证格式', '--expected', '验证记录使用普通嵌套列表', '--criterion', 'AC-1'));
   const verified = success(cli(root, 'verify', id, '--criterion', 'AC-1', '--test', 'test/workflow.test.mjs::CASE-001 workflow behavior'));
   const command = verified.entries[0].command;
 
@@ -557,7 +554,7 @@ test('CASE-220 delivery docs require committing task records before pr', () => {
   for (const text of [usage, delivery, decisions]) assert.match(text, /提交任务记录/u);
   assert.match(usage, /PR_TASK_RECORDS_DIRTY/u);
   assert.match(usage, /accept.*提交任务记录.*pr/su);
-  assert.match(usage, /合入后 `close` 只.*local/su);
+  assert.match(usage, /收尾不改 `task\.md`/u);
   assert.doesNotMatch(usage, /合入后\s*`accept`\/`close`[^。\n]*另作收尾提交/u);
   assert.match(delivery, /其他任务.*不阻断/su);
   assert.match(decisions, /不自动提交/u);
@@ -596,7 +593,7 @@ test('CASE-223 pr blocks a task without a valid delivery acceptance', async t =>
     '--target', '.tiller/cases'));
   success(confirmTask(root, id, 'requirements', '--by', 'Tiller Test'));
   const added = success(cli(root, 'case', 'add', id, '--module', 'workflow', '--kind', 'behavior',
-    '--title', 'PR 前验收', '--expected', '未验收时阻断 PR', '--criterion', 'AC-1', '--source', 'src/workflow.ts'));
+    '--title', 'PR 前验收', '--expected', '未验收时阻断 PR', '--criterion', 'AC-1'));
   const testPath = 'test/pr-not-accepted.test.mjs';
   const testName = `${added.id} unaccepted pr fixture`;
   put(root, testPath, `import assert from 'node:assert/strict';\nimport test from 'node:test';\n\ntest('${testName}', () => assert.equal(1, 1));\n`);

@@ -48,7 +48,6 @@ async function project(t) {
 - 模块：workflow
 - 关联 AC：无
 - 需求：\`.tiller/specs/modules/workflow/requirements.md#baseline-behavior\`
-- 源码：\`src/value.txt\`
 
 ### 前置条件
 
@@ -88,7 +87,7 @@ function addCaseLibrary(root, files) {
 }
 
 function caseMarkdown({ id, title, kind = 'behavior', module = 'workflow', modules = [module], criteria = [],
-  source = ['src/value.txt'], requirements = ['.tiller/specs/modules/workflow/requirements.md#baseline-behavior'] }) {
+  requirements = ['.tiller/specs/modules/workflow/requirements.md#baseline-behavior'] }) {
   return `# ${module} / ${kind}
 
 ## ${id} ${title}
@@ -98,7 +97,6 @@ function caseMarkdown({ id, title, kind = 'behavior', module = 'workflow', modul
 - 模块：${modules.join(', ')}
 - 关联 AC：${criteria.length ? criteria.join(', ') : '无'}
 - 需求：${requirements.map(value => `\`${value}\``).join(', ')}
-- 源码：${source.map(value => `\`${value}\``).join(', ')}
 
 ### 前置条件
 
@@ -118,7 +116,7 @@ function caseMarkdown({ id, title, kind = 'behavior', module = 'workflow', modul
 `;
 }
 
-function scenarioMarkdown({ id, title, modules, criteria = [], source = ['src/value.txt'],
+function scenarioMarkdown({ id, title, modules, criteria = [],
   requirements = ['.tiller/specs/modules/workflow/requirements.md#baseline-behavior'] }) {
   return `# 场景：${id.toLowerCase()}
 
@@ -129,7 +127,6 @@ function scenarioMarkdown({ id, title, modules, criteria = [], source = ['src/va
 - 模块：${modules.join(', ')}
 - 关联 AC：${criteria.length ? criteria.join(', ') : '无'}
 - 需求：${requirements.map(value => `\`${value}\``).join(', ')}
-- 源码：${source.map(value => `\`${value}\``).join(', ')}
 
 ### 前置条件
 
@@ -627,8 +624,9 @@ test('CASE-047 module cases and scenarios report counts and regression hints', a
     '--criterion', 'AC-1=The scenario is visible', '--size', 'small', '--target', 'src', '--target', 'test'));
   success(confirmTask(root, id, 'requirements', '--quote', '确认'));
   put(root, 'src/value.txt', 'summary\n');
+  put(root, 'test/baseline.test.mjs', `${read(root, 'test/baseline.test.mjs').trimEnd()}\n// CASE-001 CASE-002 module regression fixture.\n`);
   success(cli(root, 'verify', id, '--criterion', 'AC-1', '--test', 'test/baseline.test.mjs::CASE-001 baseline'));
-  git(root, 'add', 'src/value.txt');
+  git(root, 'add', 'src/value.txt', 'test/baseline.test.mjs');
   git(root, 'commit', '--quiet', '-m', 'feat(workflow): 汇总用例');
   const checked = success(cli(root, 'check', id));
   assert.equal(checked.cases.count, 2);

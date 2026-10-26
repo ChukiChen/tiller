@@ -7,7 +7,6 @@
 - 模块：workflow
 - 关联 AC：无
 - 需求：`.tiller/specs/modules/workflow/requirements.md#flow-03-选择必要工作与验证安排`, `.tiller/specs/modules/workflow/requirements.md#flow-15-在关键节点取得人工确认`
-- 源码：`src/flow.ts`
 
 ### 前置条件
 
@@ -33,7 +32,6 @@
 - 模块：workflow
 - 关联 AC：无
 - 需求：`.tiller/specs/modules/workflow/requirements.md#flow-02-明确要求与交付边界`, `.tiller/specs/modules/workflow/requirements.md#flow-15-在关键节点取得人工确认`
-- 源码：`src/flow.ts`
 
 ### 前置条件
 
@@ -59,7 +57,6 @@
 - 模块：workflow
 - 关联 AC：无
 - 需求：`.tiller/specs/modules/workflow/requirements.md#flow-09-依据验证结果判断交付`, `.tiller/specs/modules/workflow/requirements.md#flow-15-在关键节点取得人工确认`
-- 源码：`src/flow.ts`
 
 ### 前置条件
 
@@ -85,7 +82,6 @@
 - 模块：workflow
 - 关联 AC：无
 - 需求：`.tiller/rules/core.md#人工确认`, `.tiller/rules/core.md#任务记录约定`
-- 源码：`src/flow.ts`
 
 ### 前置条件
 
@@ -111,7 +107,6 @@
 - 模块：workflow
 - 关联 AC：无
 - 需求：`.tiller/rules/core.md#人工确认`, `.tiller/rules/activities/requirements.md#确认`
-- 源码：`src/flow.ts`
 
 ### 前置条件
 
@@ -137,7 +132,6 @@
 - 模块：workflow
 - 关联 AC：20261022-first-batch#AC-2
 - 需求：`.tiller/specs/modules/workflow/requirements.md#3-规划拆分`
-- 源码：`src/plans.ts`, `src/flow.ts`
 
 ### 前置条件
 
@@ -163,7 +157,6 @@
 - 模块：workflow
 - 关联 AC：20261022-round8#AC-2
 - 需求：`.tiller/specs/modules/workflow/requirements.md#flow-25-从事实推导任务阶段`, `.tiller/specs/modules/workflow/requirements.md#flow-09-依据验证结果判断交付`
-- 源码：`src/flow.ts`, `src/plans.ts`
 
 ### 前置条件
 
@@ -189,7 +182,6 @@
 - 模块：workflow
 - 关联 AC：20261022-round8#AC-3
 - 需求：`.tiller/specs/modules/workflow/requirements.md#flow-26-关闭放弃与恢复`, `.tiller/specs/modules/workflow/requirements.md#flow-15-在关键节点取得人工确认`
-- 源码：`src/flow.ts`
 
 ### 前置条件
 
@@ -215,7 +207,6 @@
 - 模块：workflow
 - 关联 AC：20261022-round8#AC-4
 - 需求：`.tiller/specs/modules/workflow/requirements.md#3-规划拆分`, `.tiller/specs/modules/workflow/requirements.md#flow-26-关闭放弃与恢复`
-- 源码：`src/plans.ts`, `src/flow.ts`
 
 ### 前置条件
 
@@ -241,7 +232,6 @@
 - 模块：workflow
 - 关联 AC：20261022-round9#AC-1
 - 需求：`.tiller/specs/modules/workflow/requirements.md#flow-15-在关键节点取得人工确认`
-- 源码：`src/flow.ts`
 
 ### 前置条件
 
@@ -267,7 +257,6 @@
 - 模块：workflow
 - 关联 AC：20261022-round9#AC-2
 - 需求：`.tiller/specs/modules/workflow/requirements.md#2-开始与接续`
-- 源码：`src/flow.ts`
 
 ### 前置条件
 
@@ -293,7 +282,6 @@
 - 模块：workflow
 - 关联 AC：20261022-round9#AC-3
 - 需求：`.tiller/specs/modules/workflow/requirements.md#flow-06-处理要求和方案变化`
-- 源码：`src/flow.ts`
 
 ### 前置条件
 
@@ -319,7 +307,6 @@
 - 模块：workflow
 - 关联 AC：20261022-round9#AC-4
 - 需求：`.tiller/specs/modules/workflow/requirements.md#4-任务记录`
-- 源码：`src/flow.ts`
 
 ### 前置条件
 
@@ -345,7 +332,6 @@
 - 模块：workflow
 - 关联 AC：20261022-round9#AC-1
 - 需求：`.tiller/specs/modules/workflow/requirements.md#flow-15-在关键节点取得人工确认`
-- 源码：`src/flow.ts`
 
 ### 前置条件
 
@@ -371,7 +357,6 @@
 - 模块：workflow
 - 关联 AC：20261022-round9#AC-2
 - 需求：`.tiller/specs/modules/workflow/requirements.md#flow-27-结构化正文与去原话确认`
-- 源码：`src/flow.ts`
 
 ### 前置条件
 
@@ -397,7 +382,6 @@
 - 模块：workflow
 - 关联 AC：20261022-round12#AC-3
 - 需求：`.tiller/specs/modules/workflow/requirements.md#5-提交与-prmr-草稿`
-- 源码：`src/pr.ts`
 
 ### 前置条件
 
@@ -423,7 +407,6 @@
 - 模块：workflow
 - 关联 AC：20261022-round13#AC-1
 - 需求：`.tiller/specs/modules/workflow/requirements.md#5-提交与-prmr-草稿`
-- 源码：`src/pr.ts`, `src/flow.ts`, `src/cli.ts`
 
 ### 前置条件
 
@@ -449,7 +432,6 @@
 - 模块：workflow
 - 关联 AC：20261022-round13#AC-2
 - 需求：`.tiller/specs/modules/workflow/requirements.md#5-提交与-prmr-草稿`
-- 源码：`src/pr.ts`, `src/commit-conventions.ts`
 
 ### 前置条件
 
@@ -475,7 +457,6 @@
 - 模块：workflow
 - 关联 AC：20261022-round14#AC-3
 - 需求：`.tiller/specs/modules/verification/requirements.md#3-用例先行`
-- 源码：`src/flow.ts`, `src/test-output.ts`
 
 ### 前置条件
 
@@ -501,7 +482,6 @@
 - 模块：workflow
 - 关联 AC：20261022-round15#AC-3
 - 需求：`.tiller/specs/modules/workflow/requirements.md`
-- 源码：`src/flow.ts`, `src/test-output.ts`
 
 ### 前置条件
 
@@ -527,7 +507,6 @@
 - 模块：workflow
 - 关联 AC：20261022-round15#AC-5
 - 需求：`.tiller/specs/modules/workflow/requirements.md`
-- 源码：`src/flow.ts`
 
 ### 前置条件
 
@@ -553,7 +532,6 @@
 - 模块：workflow
 - 关联 AC：20261022-round16#AC-1
 - 需求：`.tiller/specs/modules/workflow/requirements.md`
-- 源码：`src/cases.ts`, `src/cli.ts`
 
 ### 前置条件
 
@@ -579,7 +557,6 @@
 - 模块：workflow
 - 关联 AC：20261022-round16#AC-5
 - 需求：`.tiller/specs/modules/workflow/requirements.md`
-- 源码：`src/flow.ts`
 
 ### 前置条件
 
@@ -605,7 +582,6 @@
 - 模块：workflow
 - 关联 AC：20261022-round17#AC-1
 - 需求：`.tiller/specs/modules/workflow/requirements.md`
-- 源码：`src/flow.ts`, `src/cli.ts`
 
 ### 前置条件
 
@@ -630,7 +606,6 @@
 - 模块：workflow
 - 关联 AC：20261023-migrate-work#AC-1
 - 需求：`.tiller/specs/modules/workflow/requirements.md#4-任务记录`
-- 源码：`test/work-migration.test.mjs`
 
 ### 前置条件
 
@@ -656,7 +631,6 @@
 - 模块：workflow
 - 关联 AC：20261023-migrate-work#AC-2
 - 需求：`.tiller/specs/modules/workflow/requirements.md#4-任务记录`, `.tiller/specs/modules/standards/requirements.md#2-必读与按需读取`
-- 源码：`test/work-migration.test.mjs`
 
 ### 前置条件
 
@@ -681,7 +655,6 @@
 - 模块：workflow
 - 关联 AC：20261023-case-backfill#AC-4
 - 需求：`.tiller/specs/modules/workflow/requirements.md`
-- 源码：`.tiller/task/20261023-case-backfill/task.md`, `test/case-redesign.test.mjs`
 
 ### 前置条件
 
@@ -706,7 +679,6 @@ task.md 含「映射」节，列出文件::旧测试名到 CASE 的复用或新�
 - 模块：workflow
 - 关联 AC：20261023-hygiene-p1p2#AC-1
 - 需求：`.tiller/specs/modules/workflow/requirements.md#6-任务阶段与结束`
-- 源码：`.tiller/task/20261023-hygiene-p1p2/task.md`, `test/rules.test.mjs`
 
 ### 前置条件
 
@@ -731,7 +703,6 @@ task.md 含「映射」节，列出文件::旧测试名到 CASE 的复用或新�
 - 模块：workflow
 - 关联 AC：20261023-hygiene-p1p2#AC-4
 - 需求：`.tiller/specs/modules/workflow/requirements.md#5-提交与-prmr-草稿`
-- 源码：`.tiller/task/20261023-hygiene-p1p2/task.md`, `test/rules.test.mjs`
 
 ### 前置条件
 
@@ -756,7 +727,6 @@ task.md 含「映射」节，列出文件::旧测试名到 CASE 的复用或新�
 - 模块：workflow
 - 关联 AC：20261023-flow-hardening-wave1#AC-1
 - 需求：`.tiller/specs/modules/workflow/requirements.md`
-- 源码：`src/task-id.ts`, `src/flow.ts`, `resources/usage.md`
 
 ### 前置条件
 
@@ -781,7 +751,6 @@ start 返回 YYYYMMDD- 前缀警告，保留原任务编号不改写，公开示
 - 模块：workflow
 - 关联 AC：20261023-flow-hardening-wave1#AC-2
 - 需求：`.tiller/specs/modules/workflow/requirements.md`
-- 源码：`src/flow.ts`
 
 ### 前置条件
 
@@ -806,7 +775,6 @@ verify 仍可执行；check 汇总过程卫生 issue 并阻断默认 accept
 - 模块：workflow
 - 关联 AC：20261023-flow-hardening-wave1#AC-5
 - 需求：`.tiller/specs/modules/workflow/requirements.md`
-- 源码：`test/flow-hardening.test.mjs`, `package.json`
 
 ### 前置条件
 
@@ -831,7 +799,6 @@ verify 仍可执行；check 汇总过程卫生 issue 并阻断默认 accept
 - 模块：workflow
 - 关联 AC：20261023-flow-hardening-wave2#AC-1
 - 需求：`.tiller/specs/modules/workflow/requirements.md`
-- 源码：`src/flow.ts`, `test/flow-hardening.test.mjs`
 
 ### 前置条件
 
@@ -856,7 +823,6 @@ check 对空白或占位的方案、取舍、影响与风险逐字段给出指�
 - 模块：workflow
 - 关联 AC：20261023-flow-hardening-wave2#AC-1
 - 需求：`.tiller/specs/modules/workflow/requirements.md`
-- 源码：`src/flow.ts`, `test/flow-hardening.test.mjs`
 
 ### 前置条件
 
@@ -881,7 +847,6 @@ decisions.md 无有效决定条目、任务涉及模块的 design.md 仅有标�
 - 模块：workflow
 - 关联 AC：20261023-flow-hardening-wave2#AC-4
 - 需求：`.tiller/specs/modules/workflow/requirements.md`
-- 源码：`test/flow-hardening.test.mjs`, `package.json`, `.tiller/project.json`
 
 ### 前置条件
 
@@ -906,7 +871,6 @@ CASE-179 至 CASE-185 均有具名测试引用，包与资源版本保持 0.5.0
 - 模块：workflow
 - 关联 AC：20261024-gap-closure#AC-2
 - 需求：`.tiller/specs/modules/workflow/requirements.md`
-- 源码：`src/flow.ts`
 
 ### 前置条件
 
@@ -933,7 +897,6 @@ CASE-179 至 CASE-185 均有具名测试引用，包与资源版本保持 0.5.0
 - 模块：workflow
 - 关联 AC：20261024-doc-templates#AC-1
 - 需求：`.tiller/specs/modules/workflow/requirements.md`
-- 源码：`src/flow.ts`, `test/doc-templates.test.mjs`
 
 ### 前置条件
 
@@ -959,7 +922,6 @@ CASE-179 至 CASE-185 均有具名测试引用，包与资源版本保持 0.5.0
 - 模块：workflow
 - 关联 AC：20261024-doc-templates#AC-1
 - 需求：`.tiller/specs/modules/workflow/requirements.md`
-- 源码：`src/flow.ts`, `test/doc-templates.test.mjs`
 
 ### 前置条件
 
@@ -985,7 +947,6 @@ CASE-179 至 CASE-185 均有具名测试引用，包与资源版本保持 0.5.0
 - 模块：workflow
 - 关联 AC：20261024-doc-templates#AC-2
 - 需求：`.tiller/specs/modules/workflow/requirements.md`
-- 源码：`src/flow.ts`, `test/doc-templates.test.mjs`
 
 ### 前置条件
 
@@ -1011,7 +972,6 @@ confirm requirements 对空白或占位关键章节返回可定位缺失，旧�
 - 模块：workflow
 - 关联 AC：20261024-doc-templates#AC-3
 - 需求：`.tiller/specs/modules/workflow/requirements.md`
-- 源码：`src/flow.ts`, `test/doc-templates.test.mjs`
 
 ### 前置条件
 
@@ -1037,7 +997,6 @@ standard 设计模板包含方案、失败处理、取舍、影响与风险、�
 - 模块：workflow
 - 关联 AC：20261024-task-worktrees#AC-1
 - 需求：`.tiller/specs/modules/workflow/requirements.md`
-- 源码：`src/task-worktrees.ts`, `test/task-worktrees.test.mjs`
 
 ### 前置条件
 
@@ -1063,7 +1022,6 @@ start 在 .tiller/local/worktrees/<id>/ 创建分支为类型/任务编号[-描�
 - 模块：workflow
 - 关联 AC：20261024-task-worktrees#AC-3
 - 需求：`.tiller/specs/modules/workflow/requirements.md`
-- 源码：`src/task-worktrees.ts`, `test/task-worktrees.test.mjs`
 
 ### 前置条件
 
@@ -1089,7 +1047,6 @@ close 与 close --abandon 删除该任务全部 worktree 和 .tiller/local/logs/
 - 模块：workflow
 - 关联 AC：20261024-task-worktrees#AC-4
 - 需求：`.tiller/specs/modules/workflow/requirements.md`
-- 源码：`src/task-worktrees.ts`, `test/task-worktrees.test.mjs`
 
 ### 前置条件
 
@@ -1115,7 +1072,6 @@ worktree 缺失按幂等跳过，close/abandon 成功并删除既有日志目录
 - 模块：workflow
 - 关联 AC：20261024-task-worktrees#AC-1, 20261024-task-worktrees#AC-2
 - 需求：`.tiller/specs/modules/workflow/requirements.md`
-- 源码：`src/task-worktrees.ts`, `test/task-worktrees.test.mjs`
 
 ### 前置条件
 
@@ -1141,7 +1097,6 @@ worktree 缺失按幂等跳过，close/abandon 成功并删除既有日志目录
 - 模块：workflow
 - 关联 AC：20261024-slim-verify-render#AC-3
 - 需求：`.tiller/specs/modules/workflow/requirements.md`
-- 源码：`src/flow.ts`, `test/verification-integrity.test.mjs`
 
 ### 前置条件
 
@@ -1166,7 +1121,6 @@ worktree 缺失按幂等跳过，close/abandon 成功并删除既有日志目录
 - 模块：workflow
 - 关联 AC：20261024-taskmd-cleanup#AC-1
 - 需求：`.tiller/specs/modules/workflow/requirements.md`
-- 源码：`src/flow.ts`, `test/flow-cli.test.mjs`
 
 ### 前置条件
 
@@ -1192,7 +1146,6 @@ worktree 缺失按幂等跳过，close/abandon 成功并删除既有日志目录
 - 模块：workflow
 - 关联 AC：20261024-taskmd-cleanup#AC-2
 - 需求：`.tiller/specs/modules/workflow/requirements.md`
-- 源码：`src/flow.ts`, `test/review-release.test.mjs`
 
 ### 前置条件
 
@@ -1218,7 +1171,6 @@ close 前后 task.md 内容完全一致且不新增 ## 关闭；check 的 warnin
 - 模块：workflow
 - 关联 AC：20261026-local-task-layout#AC-2
 - 需求：`.tiller/specs/modules/workflow/requirements.md`
-- 源码：`src/task-worktrees.ts`
 
 ### 前置条件
 
@@ -1243,7 +1195,6 @@ management 和各 repository.path 均位于 .tiller/local/<id>/worktrees 下并�
 - 模块：workflow
 - 关联 AC：20261026-local-task-layout#AC-3
 - 需求：`.tiller/specs/modules/workflow/requirements.md`
-- 源码：`src/task-worktrees.ts`, `src/flow.ts`
 
 ### 前置条件
 
@@ -1268,7 +1219,6 @@ management 和各 repository.path 均位于 .tiller/local/<id>/worktrees 下并�
 - 模块：workflow
 - 关联 AC：20261026-local-task-layout#AC-3
 - 需求：`.tiller/specs/modules/workflow/requirements.md`
-- 源码：`src/task-worktrees.ts`
 
 ### 前置条件
 
@@ -1293,7 +1243,6 @@ management 和各 repository.path 均位于 .tiller/local/<id>/worktrees 下并�
 - 模块：workflow
 - 关联 AC：20261026-pr-task-sync#AC-1
 - 需求：`.tiller/specs/modules/workflow/requirements.md`
-- 源码：`src/pr.ts`, `test/pr.test.mjs`
 
 ### 前置条件
 
@@ -1318,7 +1267,6 @@ pr 以 PR_TASK_RECORDS_DIRTY 失败并列出记录路径
 - 模块：workflow
 - 关联 AC：20261026-pr-task-sync#AC-1
 - 需求：`.tiller/specs/modules/workflow/requirements.md`
-- 源码：`src/pr.ts`, `test/pr.test.mjs`
 
 ### 前置条件
 
@@ -1343,7 +1291,6 @@ pr 成功生成既有五段 PR/MR 草稿
 - 模块：workflow
 - 关联 AC：20261026-pr-task-sync#AC-1
 - 需求：`.tiller/specs/modules/workflow/requirements.md`
-- 源码：`src/pr.ts`, `test/pr.test.mjs`
 
 ### 前置条件
 
@@ -1368,7 +1315,6 @@ pr 成功生成既有五段 PR/MR 草稿
 - 模块：workflow
 - 关联 AC：20261026-pr-task-sync#AC-1
 - 需求：`.tiller/specs/modules/workflow/requirements.md`
-- 源码：`src/pr.ts`, `test/pr.test.mjs`
 
 ### 前置条件
 
@@ -1393,7 +1339,6 @@ pr 不因记录门禁失败，并在 warnings 说明无法读取未提交改动
 - 模块：workflow
 - 关联 AC：20261026-pr-task-sync#AC-3
 - 需求：`.tiller/specs/modules/workflow/requirements.md`
-- 源码：`.tiller/task/20261026-local-task-layout/task.md`
 
 ### 前置条件
 
@@ -1419,7 +1364,6 @@ pr 不因记录门禁失败，并在 warnings 说明无法读取未提交改动
 - 模块：workflow
 - 关联 AC：20261026-post-merge-freeze#AC-1
 - 需求：`.tiller/specs/modules/workflow/requirements.md#flow-35-prmr-前同步任务记录`
-- 源码：`src/pr.ts`, `test/pr.test.mjs`
 
 ### 前置条件
 
@@ -1444,7 +1388,6 @@ pr 以 PR_NOT_ACCEPTED 失败并提示先 accept、提交任务记录再 pr
 - 模块：workflow
 - 关联 AC：20261026-post-merge-freeze#AC-2
 - 需求：`.tiller/specs/modules/workflow/requirements.md#flow-26-关闭放弃与恢复`
-- 源码：`src/flow.ts`, `test/review-release.test.mjs`
 
 ### 前置条件
 
@@ -1469,7 +1412,6 @@ close 删除本机任务目录和工作树，task.md 内容与哈希不变，重
 - 模块：workflow
 - 关联 AC：20261026-post-merge-freeze#AC-4
 - 需求：`.tiller/specs/modules/workflow/requirements.md#flow-35-prmr-前同步任务记录`
-- 源码：`.tiller/task/20261026-pr-task-sync/task.md`, `test/pr.test.mjs`
 
 ### 前置条件
 
@@ -1494,7 +1436,6 @@ close 删除本机任务目录和工作树，task.md 内容与哈希不变，重
 - 模块：workflow
 - 关联 AC：20261026-readme-merge-close#AC-2
 - 需求：`.tiller/specs/modules/workflow/requirements.md`
-- 源码：`src/pr.ts`, `src/cli.ts`
 
 ### 前置条件
 
@@ -1519,7 +1460,6 @@ close 删除本机任务目录和工作树，task.md 内容与哈希不变，重
 - 模块：workflow
 - 关联 AC：20261026-readme-merge-close#AC-2
 - 需求：`.tiller/specs/modules/workflow/requirements.md`
-- 源码：`src/pr.ts`, `src/cli.ts`
 
 ### 前置条件
 
@@ -1544,7 +1484,6 @@ close 删除本机任务目录和工作树，task.md 内容与哈希不变，重
 - 模块：workflow
 - 关联 AC：20261026-readme-merge-close#AC-3
 - 需求：`.tiller/specs/modules/workflow/requirements.md`
-- 源码：`src/pr.ts`, `src/cli.ts`
 
 ### 前置条件
 
@@ -1569,7 +1508,6 @@ close 删除本机任务目录和工作树，task.md 内容与哈希不变，重
 - 模块：workflow
 - 关联 AC：20261026-readme-merge-close#AC-3
 - 需求：`.tiller/specs/modules/workflow/requirements.md`
-- 源码：`src/pr.ts`, `src/cli.ts`
 
 ### 前置条件
 
@@ -1594,7 +1532,6 @@ close 删除本机任务目录和工作树，task.md 内容与哈希不变，重
 - 模块：workflow
 - 关联 AC：20261026-api-remote-ops#AC-2, 20261026-api-remote-ops#AC-1
 - 需求：`.tiller/specs/modules/workflow/requirements.md`
-- 源码：`src/platform-api.ts`, `src/init-baseline.ts`, `test/init-baseline.test.mjs`
 
 ### 前置条件
 
@@ -1620,7 +1557,6 @@ close 删除本机任务目录和工作树，task.md 内容与哈希不变，重
 - 模块：workflow
 - 关联 AC：20261026-api-remote-ops#AC-2, 20261026-api-remote-ops#AC-1
 - 需求：`.tiller/specs/modules/workflow/requirements.md`
-- 源码：`src/platform-api.ts`, `src/init-baseline.ts`, `test/init-baseline.test.mjs`
 
 ### 前置条件
 
@@ -1646,7 +1582,6 @@ close 删除本机任务目录和工作树，task.md 内容与哈希不变，重
 - 模块：workflow
 - 关联 AC：20261026-api-remote-ops#AC-3, 20261026-api-remote-ops#AC-1
 - 需求：`.tiller/specs/modules/workflow/requirements.md`
-- 源码：`src/platform-api.ts`, `src/pr.ts`, `test/merge.test.mjs`
 
 ### 前置条件
 
@@ -1672,7 +1607,6 @@ close 删除本机任务目录和工作树，task.md 内容与哈希不变，重
 - 模块：workflow
 - 关联 AC：20261026-api-remote-ops#AC-3
 - 需求：`.tiller/specs/modules/workflow/requirements.md`
-- 源码：`src/platform-api.ts`, `src/pr.ts`, `test/merge.test.mjs`
 
 ### 前置条件
 
@@ -1690,3 +1624,75 @@ close 删除本机任务目录和工作树，task.md 内容与哈希不变，重
 ### 预期结果
 
 平台 API 非 2xx 或返回不可合入时 tiller merge 非零退出，报告截断后的平台错误且不 close、不删除本机任务
+
+## CASE-255 merge 后默认删除 feat 本地与远端分支
+
+- 类型：behavior
+- 优先级：medium
+- 模块：workflow
+- 关联 AC：20261026-flow-stability#AC-2
+- 需求：`.tiller/specs/modules/workflow/requirements.md`
+
+### 前置条件
+
+- 已验收任务的 feat 分支存在本地与远端。
+
+### 步骤
+
+1. 运行 merge 合入并自动收尾。
+
+### 输入
+
+- 平台合入成功且未使用 --keep-branch。
+
+### 预期结果
+
+本机 worktree 与 feat 本地、远端分支均被删除。
+
+## CASE-260 check 对业务范围做中的交付路径给出 warning
+
+- 类型：behavior
+- 优先级：medium
+- 模块：workflow
+- 关联 AC：20261026-flow-stability#AC-4
+- 需求：`.tiller/specs/modules/workflow/requirements.md`
+
+### 前置条件
+
+- 任务已在业务范围“做”中写入交付文件路径。
+
+### 步骤
+
+1. 运行 check。
+
+### 输入
+
+- 路径位于 src/test/resources/.tiller 或以代码文档扩展名出现。
+
+### 预期结果
+
+check 返回可定位 warning 且不因此升级为阻塞项。
+
+## CASE-262 分支删除失败只返回 warning 不阻断合入收尾
+
+- 类型：behavior
+- 优先级：medium
+- 模块：workflow
+- 关联 AC：20261026-flow-stability#AC-2
+- 需求：`.tiller/specs/modules/workflow/requirements.md`
+
+### 前置条件
+
+- 平台已合入但远端分支删除失败。
+
+### 步骤
+
+1. 运行 merge 或 close 并观察结果。
+
+### 输入
+
+- 远端删除接口返回权限或服务错误。
+
+### 预期结果
+
+合入或收尾仍成功，本机清理继续，结果 warnings 记录未删除分支。

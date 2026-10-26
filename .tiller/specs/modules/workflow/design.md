@@ -34,14 +34,14 @@
 - AC 是否映射到带完整测试设计的用例，验证阶段每个用例是否至少有一个引用它的当前通过测试；
 - 用例 `criteria` 是否回指当前 AC 或在本任务修改，用例库结构与模块/场景引用是否有效；
 - Git 范围内的越界、未提交改动、删除/跳过/弱化测试；
-- standard 设计字段、decisions 有效条目和本任务涉及模块设计是否过薄，分支名是否包含任务编号；
+- standard 设计字段、decisions 有效条目和本任务涉及模块设计是否过薄，分支名是否包含任务编号，需求“业务范围·做”是否混入交付路径；
 - 记录中的密钥和本机路径。
 
 结果分为阻塞项、提示、逐项覆盖和可写入 `task.md` 的自检清单。`accept` 复用同一检查，防止技术未就绪时写入验收。终态任务写回自检时只保留短复核指引，不复制回归和回写提示；`check` 返回值仍保留完整提示。已验收 close 不写共享记录，因此不重写自检。
 
 ## 5. 关闭与恢复
 
-`close --reason` 只接受当前阶段为已验收的任务；它只按任务默认 worktree 清理流程删除本机检出与 `.tiller/local/<id>/`，不调用 `writeTask`，共享 `task.md` 内容、摘要和修改时间保持不变，返回阶段仍为已验收并标明本机清理完成。未验收任务必须显式 `close --reason ... --abandon`；放弃事件写入 `task.md` 的“关闭”区段，保存状态、原因和时间，放弃任务保持终态。`reopen --reason` 对已放弃或历史已关闭任务追加恢复事件，也允许从已验收任务显式重开；验收、确认和验证仍按原摘要判断，阶段从最后一次恢复之后的事实重新计算。终态任务上的 `confirm`、`verify`、`accept` 直接阻塞。
+`close --reason` 只接受当前阶段为已验收的任务；它按任务默认 worktree 清理流程删除本机检出与 `.tiller/local/<id>/`，再默认删除本地与远端任务分支；`--keep-branch` 保留分支，删除失败只记 warning。它不调用 `writeTask`，共享 `task.md` 内容、摘要和修改时间保持不变，返回阶段仍为已验收并标明本机清理完成。未验收任务必须显式 `close --reason ... --abandon`；放弃事件写入 `task.md` 的“关闭”区段，保存状态、原因和时间，放弃任务保持终态。`reopen --reason` 对已放弃或历史已关闭任务追加恢复事件，也允许从已验收任务显式重开；验收、确认和验证仍按原摘要判断，阶段从最后一次恢复之后的事实重新计算。终态任务上的 `confirm`、`verify`、`accept` 直接阻塞。
 
 ## 6. 交付草稿
 
@@ -49,7 +49,7 @@
 
 提交主题固定为 `类型(模块): 中文摘要`，类型限 `feat/fix/docs/refactor/test/chore`，模块取规格模块名；PR/MR 标题沿用该格式并在末尾加 `[任务编号]`。格式问题只提示，不阻断技术自检。
 
-`draftPullRequest` 复用 `inspectFlow` 的 AC 覆盖状态，从任务范围的模块路径、“涉及模块”声明和全局用例来源按声明顺序推导模块，标题取首个主模块，无模块时省略括号。标题摘要依次取 `pr --summary`、任务元数据 `summary`、任务基线后最早的规范 feat/fix 提交摘要和任务标题。提交读取保持正序，正文生成器只接受五个固定二级标题；关联任务输出纯文本路径，验证结果以每条 AC 的摘要行加普通嵌套记录呈现，不使用编号圆点。Markdown 在标题后单列建议分支，JSON 同时返回 `body`、`branch` 和提交列表。分支描述依次读取 `pr --slug`、任务元数据 `slug`、当前分支匹配描述，并统一规范化为小写字母、数字和连字符。该模块没有网络依赖，文案对 PR/MR 中性。
+`draftPullRequest` 复用 `inspectFlow` 的 AC 覆盖状态，从任务范围的模块路径、“涉及模块”声明以及用例需求/测试引用按声明顺序推导模块，标题取首个主模块，无模块时省略括号。标题摘要依次取 `pr --summary`、任务元数据 `summary`、任务基线后最早的规范 feat/fix 提交摘要和任务标题。提交读取保持正序，正文生成器只接受五个固定二级标题；关联任务输出纯文本路径，验证结果以每条 AC 的摘要行加普通嵌套记录呈现，不使用编号圆点。Markdown 在标题后单列建议分支，JSON 同时返回 `body`、`branch` 和提交列表。分支描述依次读取 `pr --slug`、任务元数据 `slug`、当前分支匹配描述，并统一规范化为小写字母、数字和连字符。该模块没有网络依赖，文案对 PR/MR 中性。
 
 `draftPullRequest` 在生成草稿前先复用 `inspectFlow` 的 acceptance 状态；没有有效交付验收时以 `PR_NOT_ACCEPTED` 失败，并提示先 `accept`、提交任务记录再 `pr`。随后读取相对 HEAD 的 tracked 与 untracked 路径，命中本任务 `.tiller/task/<id>/` 或任务 scope 覆盖的 `.tiller/cases/`、`.tiller/specs/` 时以 `PR_TASK_RECORDS_DIRTY` 失败并列出工程相对路径；其他任务目录不在门禁范围，tiller 不自动提交。无 Git 或 Git 工作树不可读时跳过记录门禁，并在草稿 warnings 中保留提示；验收门禁仍生效。
 
@@ -73,10 +73,10 @@
 
 建树前先校验任务容器、全部源仓和目标路径，任何一步失败都强制移除本次已建树，并清理本次产生的 worktree 容器、清单和开工前旁路；未知的本机文件保留，空任务目录一并移除，task.md 不落盘。成功后把相对路径与本机清单 `.tiller/local/<id>/worktrees.json` 写入；读取先新后旧，清单缺失或损坏时 close 回退 project/workspace 的新旧约定布局。所有目标都经安全路径校验并限制在新旧任务 worktree 容器内。
 
-已验收 close 不写共享关闭事实，直接按清单或约定布局执行 `git worktree remove --force` 与 prune；abandon 与历史已关闭任务先写共享记录再执行同一清理。路径已缺失记入 `missingWorktrees` 并继续。Git 移除失败时仅对该受管目录强制删除并返回 warning；随后删除整棵 `.tiller/local/<id>/`（含 logs 与旁路），并 best-effort 清理旧 `.tiller/local/worktrees|logs|tasks/<id>/`。清理失败不阻断本机清理结果或放弃记录，其他任务路径不动。所有本机路径保持工程相对形式，不写入共享 task.md。
+已验收 close 不写共享关闭事实，直接按清单或约定布局执行 `git worktree remove --force` 与 prune；abandon 与历史已关闭任务先写共享记录再执行同一清理。路径已缺失记入 `missingWorktrees` 并继续。Git 移除失败时仅对该受管目录强制删除并返回 warning；随后删除整棵 `.tiller/local/<id>/`（含 logs 与旁路），并 best-effort 清理旧 `.tiller/local/worktrees|logs|tasks/<id>/`。本机清理完成后，`src/branch-cleanup.ts` 在管理仓与各业务仓删除同名本地分支，并优先通过平台 API 删除远端分支；无 token、平台解析失败、远端 API 失败或当前分支无法安全切换都只汇总 warning，不回滚本机清理。`--keep-branch` 跳过整段分支删除。清理失败不阻断本机清理结果或放弃记录，其他任务路径不动。所有本机路径保持工程相对形式，不写入共享 task.md。
 
 ## 11. 初始化基线门禁
 
-`startFlow` 在读任务记录前调用 `assertInitBaselineReady`。无 `initBaseline` 视为存量工程并放行；`status=merged` 直接放行；其余状态执行 `git merge-base --is-ancestor <commit> HEAD`，成功即视为已合入，失败返回 `INIT_BASELINE_PENDING` 并提示合入或 `--skip-init-gate`。跳过选项只属于 `start`，进入时写入 warning。
+`startFlow` 在读任务记录前调用 `assertInitBaselineReady`。无 `initBaseline` 视为存量工程并放行；`status=merged` 直接放行；其余状态先执行 `git merge-base --is-ancestor <commit> HEAD`。祖先失败后解析平台与 token，按 `branch` 查询已合入 GitHub PR/GitLab MR；命中则调用 `markInitBaselineMerged` 写回并放行，覆盖网页 squash 导致提交非祖先的情形。无 token、平台解析/API 失败或无已合入记录仍返回 `INIT_BASELINE_PENDING` 并提示合入或 `--skip-init-gate`；跳过选项只属于 `start`，进入时写入 warning。
 
-`initBaselineId` 识别 `<YYYYMMDD>-tiller-init`。`closeFlow` 对此类 id 不读取任务记录、不要求验收，也不允许 `--abandon`；直接复用 `cleanupTaskWorktrees` 清理该 id 的 worktree、日志与 local，保持其他任务目录不变。
+`initBaselineId` 识别 `<YYYYMMDD>-tiller-init`。`closeFlow` 对此类 id 不读取任务记录、不要求验收，也不允许 `--abandon`；复用 `cleanupTaskWorktrees` 清理该 id 的 worktree、日志与 local，再删除本地与远端 `chore/tiller-init`（`--keep-branch` 保留），保持其他任务目录不变。

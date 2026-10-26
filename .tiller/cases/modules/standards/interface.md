@@ -7,7 +7,6 @@
 - 模块：standards
 - 关联 AC：20261024-gap-closure#AC-4
 - 需求：`.tiller/specs/modules/standards/requirements.md`
-- 源码：`src/upgrade.ts`, `src/plans.ts`, `src/flow.ts`
 
 ### 前置条件
 
@@ -34,7 +33,6 @@ upgrade --adopt 写入当前受管内容摘要并消除漂移；plan attach 为�
 - 模块：standards
 - 关联 AC：20261026-init-baseline#AC-5
 - 需求：`.tiller/specs/modules/standards/requirements.md`
-- 源码：`package.json`, `.tiller/project.json`, `test/init-baseline.test.mjs`
 
 ### 前置条件
 
@@ -59,7 +57,6 @@ upgrade --adopt 写入当前受管内容摘要并消除漂移；plan attach 为�
 - 模块：standards
 - 关联 AC：20261026-readme-merge-close#AC-4
 - 需求：`.tiller/specs/modules/standards/requirements.md`
-- 源码：`resources/usage.md`, `resources/rules/core.md`, `resources/rules/activities/delivery.md`
 
 ### 前置条件
 
@@ -84,7 +81,6 @@ upgrade --adopt 写入当前受管内容摘要并消除漂移；plan attach 为�
 - 模块：standards
 - 关联 AC：20261026-readme-merge-close#AC-5
 - 需求：`.tiller/specs/modules/standards/requirements.md`
-- 源码：`package.json`, `.tiller/project.json`, `src/cli.ts`, `test/merge.test.mjs`
 
 ### 前置条件
 
@@ -109,7 +105,6 @@ upgrade --adopt 写入当前受管内容摘要并消除漂移；plan attach 为�
 - 模块：standards
 - 关联 AC：20261026-docs-cli-names#AC-1
 - 需求：`.tiller/specs/modules/standards/requirements.md`
-- 源码：`README.md`, `test/merge.test.mjs`
 
 ### 前置条件
 
@@ -135,7 +130,6 @@ README 仍只含介绍与快速开始；AI 按 start →（设计确认）→ �
 - 模块：standards
 - 关联 AC：20261026-docs-cli-names#AC-2, 20261026-docs-cli-names#AC-3
 - 需求：`.tiller/specs/modules/standards/requirements.md`
-- 源码：`resources/usage.md`, `resources/rules/core.md`, `resources/rules/activities/delivery.md`, `.tiller/usage.md`, `.tiller/rules/core.md`, `.tiller/rules/activities/delivery.md`, `test/merge.test.mjs`
 
 ### 前置条件
 
@@ -161,7 +155,6 @@ usage、core、delivery 与 CLI help 均说明 GitHub/GitLab REST API 与 token 
 - 模块：standards
 - 关联 AC：20261026-api-remote-ops#AC-1
 - 需求：`.tiller/specs/modules/standards/requirements.md`
-- 源码：`src/platform-api.ts`, `src/init-baseline.ts`, `src/pr.ts`, `test/merge.test.mjs`, `test/init-baseline.test.mjs`
 
 ### 前置条件
 
@@ -187,7 +180,6 @@ init 推送、PR/MR 创建与 squash 合入均走平台 REST API；GitHub 优先
 - 模块：standards
 - 关联 AC：20261026-docs-cli-names#AC-4
 - 需求：`.tiller/specs/modules/standards/requirements.md`
-- 源码：`.tiller/cases/modules/standards/interface.md`, `package.json`, `.tiller/project.json`, `src/cli.ts`, `test/rules.test.mjs`, `test/merge.test.mjs`
 
 ### 前置条件
 
@@ -204,7 +196,7 @@ init 推送、PR/MR 创建与 squash 合入均走平台 REST API；GitHub 优先
 
 ### 预期结果
 
-package、project 与 CLI 版本均为 0.5.0；CASE-242 至 CASE-245 均有命名测试引用；CASE-048 的 total 为 252、standards/interface 为 9；build、lint、typecheck、test 与 test:package 全部通过
+package、project 与 CLI 版本均为 0.5.0；CASE-242 至 CASE-245 均有命名测试引用；CASE-048 的 total 为 262、standards/interface 为 10；build、lint、typecheck、test 与 test:package 全部通过
 
 ## CASE-246 代码质量与安全通用规则纳入受管资源
 
@@ -213,7 +205,6 @@ package、project 与 CLI 版本均为 0.5.0；CASE-242 至 CASE-245 均有命�
 - 模块：standards
 - 关联 AC：20261026-quality-code-rules#AC-1, 20261026-quality-code-rules#AC-2, 20261026-quality-code-rules#AC-3, 20261026-quality-code-rules#AC-4
 - 需求：`.tiller/specs/modules/standards/requirements.md`
-- 源码：`resources/rules/quality/code.md`, `.tiller/rules/quality/code.md`, `resources/rules/quality/documents.md`, `.tiller/rules/quality/documents.md`, `resources/rules/index.md`, `resources/rules/activities/implementation.md`, `resources/rules/activities/delivery.md`, `src/project-metadata.ts`, `test/rules.test.mjs`
 
 ### 前置条件
 
@@ -231,4 +222,28 @@ package、project 与 CLI 版本均为 0.5.0；CASE-242 至 CASE-245 均有命�
 
 ### 预期结果
 
-quality/code.md 在双份镜像中包含命名、结构、扩展性、反过度设计、可读性、边界校验一次、保持简单、假想风险与注释约束；documents.md 双份保留密钥和绝对路径限制并补充记录凭据、输入校验与授权边界、可信依赖、危险操作确认和无具体威胁不过度加固；implementation、delivery 与 rules/index 双份形成质量/安全交叉引用；RULES 含 rules/quality/code.md，project.json 摘要覆盖新文件及被改文件；CASE-048 的 total 为 252、standards/interface 为 9；版本保持 0.5.0，资源镜像一致且规则测试通过
+quality/code.md 在双份镜像中包含命名、结构、扩展性、反过度设计、可读性、边界校验一次、保持简单、假想风险与注释约束；documents.md 双份保留密钥和绝对路径限制并补充记录凭据、输入校验与授权边界、可信依赖、危险操作确认和无具体威胁不过度加固；implementation、delivery 与 rules/index 双份形成质量/安全交叉引用；RULES 含 rules/quality/code.md，project.json 摘要覆盖新文件及被改文件；CASE-048 的 total 为 262、standards/interface 为 10；版本保持 0.5.0，资源镜像一致且规则测试通过
+
+## CASE-261 帮助与受管文档同步基线 API、清分支、无源码与 check warning
+
+- 类型：interface
+- 优先级：medium
+- 模块：standards
+- 关联 AC：20261026-flow-stability#AC-4
+- 需求：`.tiller/specs/modules/standards/requirements.md`
+
+### 前置条件
+
+- CLI 与受管 usage/rules/decisions 已更新。
+
+### 步骤
+
+1. 读取 help 与镜像文档并核对关键描述。
+
+### 输入
+
+- 文档发布前检查。
+
+### 预期结果
+
+文档一致说明 API 基线放行、默认清分支与 --keep-branch、无源码字段和业务路径 warning。

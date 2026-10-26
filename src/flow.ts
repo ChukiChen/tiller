@@ -10,6 +10,7 @@ import {
   regressionWarnings, sameTestReference, testBlocks,
   type CaseLibrary, type GlobalCase,
 } from './cases.js';
+import { cleanupTaskBranches } from './branch-cleanup.js';
 import { resolveConfirmer } from './confirmer.js';
 import { branchNameWarning, normalizeBranchSlug } from './branch-conventions.js';
 import { commitMessageWarnings } from './commit-conventions.js';
@@ -19,7 +20,7 @@ import { assertInitBaselineReady, isInitBaselineId } from './init-baseline.js';
 import { planItemForAttachment, readPlanItem } from './plans.js';
 import { releaseChecklist, type ReleaseChecklist } from './release.js';
 import { taskIdWarnings, validateTaskId } from './task-id.js';
-import { cleanupTaskWorktrees, createTaskWorktrees, rollbackTaskWorktrees, taskLocalRoot, writeTaskWorktreeState } from './task-worktrees.js';
+import { cleanupTaskWorktrees, createTaskWorktrees, rollbackTaskWorktrees, taskBranchName, taskLocalRoot, writeTaskWorktreeState } from './task-worktrees.js';
 import { namePattern, resolveVerifyTarget, runnerFor, type TestEvidence, type TestReference } from './test-output.js';
 import type { ProjectMetadata } from './types.js';
 
@@ -686,6 +687,24 @@ function taskDesignThinWarnings(task: FlowTask): string[] {
     .filter(field => markdownMeaningfulLines(subSectionBody(task.design, field)).length === 0)
     .map(field => `任务设计“${field}”仅空白或占位：\`${task.path}\`。`);
 }
+
+function businessScopeDeliveryPathWarnings(task: FlowTask): string[] {
+  const body = subSectionBody(task.requirement, '业务范围');
+  if (!body) return [];
+  const paths = new Set<string>();
+  let inDo = false;
+  for (const raw of body.split(/\r?\n/u)) {
+    const line = raw.trim();
+    if (/^[-*+]\s*做\s*[:：]/u.test(line)) inDo = true;
+    else if (/^[-*+]\s*(?:不做|假设与待确认)\s*[:：]/u.test(line)) { inDo = false; continue; }
+    if (!inDo) continue;
+    const content = line.replace(/^[-*+]\s*/u, '');
+    const matcher = /(?:^|[\s`（(、，,：:])((?:\.tiller|src|test|resources|scripts)\/[^\s`，。；;、）)]+|(?:[A-Za-z0-9_.-]+\/)+[A-Za-z0-9_.<>-]+\.(?:ts|mjs|cjs|js|md|json|ya?ml))/gu;
+    for (const match of content.matchAll(matcher)) paths.add(match[1]!.replace(/[),.;:]+$/u, ''));
+  }
+  return [...paths].map(relative =>
+    `需求“业务范围·做”包含交付路径 \`${relative}\`；业务范围应写约束，交付路径请只记录在任务范围（--target）：\`${task.path}\`。`);
+}
 async function decisionsThinWarning(root: string): Promise<string | null> {
   const relative = '.tiller/specs/decisions.md';
   const content = await readTextIfExists(root, relative);
@@ -703,7 +722,7 @@ function changedModuleNames(changed: string[], library: CaseLibrary): string[] {
     if (match) modules.add(match[1]!);
   }
   for (const entry of library.cases) {
-    const references = [...entry.source, ...entry.tests.map(reference => reference.path)];
+    const references = [...entry.requirements, ...entry.tests.map(reference => reference.path)];
     if (!references.some(reference => changed.some(relative => relative === reference || relative.startsWith(`${reference}/`)))) continue;
     for (const module of entry.modules) modules.add(module);
   }
@@ -1238,7 +1257,7 @@ async function weakensTests(root: string, base: string, endpoint?: string): Prom
 
 function caseSignature(item: Partial<GlobalCase>): string {
   return JSON.stringify({
-    title: item.title, requirements: item.requirements, modules: item.modules, source: item.source,
+    title: item.title, requirements: item.requirements, modules: item.modules,
     criteria: item.criteria ?? [], kind: item.kind, priority: item.priority,
     preconditions: item.preconditions, steps: item.steps, inputs: item.inputs, expected: item.expected,
   });
@@ -1613,6 +1632,7 @@ async function evaluateFlow(root: string, id: string, task: FlowTask, options: F
   }
   warnings.push(...regressionWarnings(library, changed ?? []));
   warnings.push(...taskDesignThinWarnings(task));
+  warnings.push(...businessScopeDeliveryPathWarnings(task));
   const decisionsWarning = await decisionsThinWarning(root);
   if (decisionsWarning) warnings.push(decisionsWarning);
   warnings.push(...await moduleDesignThinWarnings(root, changed ?? task.meta.scope, library));
@@ -2013,7 +2033,8 @@ export async function releaseFlow(rootInput: string, id: string) {
     ...(acceptance?.commit ? { acceptanceCommit: acceptance.commit } : {}), ...checklist };
 }
 
-export async function closeFlow(rootInput: string, id: string, reasonInput: string, abandon = false) {
+export async function closeFlow(rootInput: string, id: string, reasonInput: string, abandon = false,
+  options: { keepBranch?: boolean } = {}) {
   const root = path.resolve(rootInput);
   const reason = safeInput(text(reasonInput, '关闭原因', 4000), '关闭原因');
   return withProjectLock(root, async () => {
@@ -2021,9 +2042,14 @@ export async function closeFlow(rootInput: string, id: string, reasonInput: stri
     if (isInitBaselineId(id)) {
       if (abandon) fail('INIT_BASELINE_CLOSE', '初始化基线不是任务，不能使用 --abandon；直接 close 只清理本机目录。');
       const cleanup = await cleanupTaskWorktrees(root, id, metadata);
+      const branchCleanup = metadata.initBaseline
+        ? await cleanupTaskBranches(root, metadata, metadata.initBaseline.branch, options)
+        : null;
+      const warnings = [...cleanup.warnings, ...(branchCleanup?.warnings ?? [])];
       return { id, stage: '已关闭', stageReason: '初始化基线本机清理完成；共享记录未改写。', reason,
         at: new Date().toISOString(), worktrees: cleanup.removedWorktrees, missingWorktrees: cleanup.missingWorktrees,
-        logsRemoved: cleanup.logsRemoved, ...(cleanup.warnings.length ? { warnings: cleanup.warnings } : {}),
+        logsRemoved: cleanup.logsRemoved, ...(branchCleanup ? { branch: branchCleanup } : {}),
+        ...(warnings.length ? { warnings } : {}),
         next: '初始化基线本机目录已清理；共享 task 记录不受影响。' };
     }
     const task = await readTask(root, id);
@@ -2039,9 +2065,11 @@ export async function closeFlow(rootInput: string, id: string, reasonInput: stri
     if (!abandon) {
       const at = new Date().toISOString();
       const cleanup = await cleanupTaskWorktrees(root, id, metadata);
+      const branchCleanup = await cleanupTaskBranches(root, metadata, taskBranchName(task.meta), options);
+      const warnings = [...cleanup.warnings, ...branchCleanup.warnings];
       return { id, stage: current.stage, stageReason: '交付验收有效；本机清理完成。', reason, at, path: task.path,
         worktrees: cleanup.removedWorktrees, missingWorktrees: cleanup.missingWorktrees, logsRemoved: cleanup.logsRemoved,
-        ...(cleanup.warnings.length ? { warnings: cleanup.warnings } : {}),
+        branch: branchCleanup, ...(warnings.length ? { warnings } : {}),
         next: `任务已交付；如需继续修改，执行 tiller reopen ${id} --reason "<原因>".` };
     }
     const closure: FlowClosure = {
@@ -2053,9 +2081,11 @@ export async function closeFlow(rootInput: string, id: string, reasonInput: stri
     await writeTask(root, id, task.content, renderTask(body, sectionBody(task.content, '自检')), body.meta.preExisting);
     const stage = terminalStage(next)!;
     const cleanup = await cleanupTaskWorktrees(root, id, metadata);
+    const branchCleanup = await cleanupTaskBranches(root, metadata, taskBranchName(task.meta), options);
+    const warnings = [...cleanup.warnings, ...branchCleanup.warnings];
     return { id, stage: stage.stage, stageReason: stage.reason, reason, at: closure.at, path: task.path,
       worktrees: cleanup.removedWorktrees, missingWorktrees: cleanup.missingWorktrees, logsRemoved: cleanup.logsRemoved,
-      ...(cleanup.warnings.length ? { warnings: cleanup.warnings } : {}),
+      branch: branchCleanup, ...(warnings.length ? { warnings } : {}),
       next: `如需继续修改，执行 tiller reopen ${id} --reason "<原因>".` };
   });
 }

@@ -3,7 +3,6 @@ import { readdir } from 'node:fs/promises';
 import path from 'node:path';
 import { promisify } from 'node:util';
 import { branchDescriptionForTask, currentBranch, normalizeBranchSlug, suggestedBranchNameFor } from './branch-conventions.js';
-import { readCaseLibrary } from './cases.js';
 import { commitSubjectIssue, commitTypeForTaskType, taskCommits, type CommitType, type TaskCommit } from './commit-conventions.js';
 import { readProjectMetadata } from './core.js';
 import { closeFlow, inspectFlow, readTask, taskStage } from './flow.js';
@@ -215,12 +214,6 @@ export async function draftPullRequest(
   }
   const available = await specModules(root);
   const modules = new Set(referencedModules(task, available));
-  const library = await readCaseLibrary(root);
-  for (const item of library.cases) {
-    if (item.source.some(source => scopeCovers(task.meta.scope, source))) {
-      for (const module of item.modules) if (available.includes(module)) modules.add(module);
-    }
-  }
   const resolvedModules = [...modules];
   const branchDescription = options.slug === undefined
     ? task.meta.slug ?? branchDescriptionForTask((await currentBranch(root)) ?? '', task.meta.id)
@@ -246,7 +239,7 @@ export async function draftPullRequest(
   };
 }
 
-export async function mergeFlow(rootInput: string, id: string): Promise<MergeResult> {
+export async function mergeFlow(rootInput: string, id: string, options: { keepBranch?: boolean } = {}): Promise<MergeResult> {
   const root = path.resolve(rootInput);
   const metadata = await readProjectMetadata(root);
   let repository;
@@ -277,7 +270,7 @@ export async function mergeFlow(rootInput: string, id: string): Promise<MergeRes
 
   let closed: Awaited<ReturnType<typeof closeFlow>>;
   try {
-    closed = await closeFlow(root, id, '合入后自动清理');
+    closed = await closeFlow(root, id, '合入后自动清理', false, { keepBranch: options.keepBranch === true });
   } catch (error) {
     const metadataNote = metadataError ? `；初始化状态也未更新：${metadataError.message}` : '';
     fail('MERGE_CLOSE_FAILED', `远端已合入，但本机清理失败：${(error as Error).message}${metadataNote}；请手动运行 tiller close ${id} --reason "已合入"。`);
@@ -288,6 +281,7 @@ export async function mergeFlow(rootInput: string, id: string): Promise<MergeRes
   return {
     id, platform, branch: target.branch, merged: true,
     command: merged.command, close: closed,
+    ...(closed.warnings?.length ? { warnings: closed.warnings } : {}),
     next: `已通过 ${platform === 'github' ? 'GitHub' : 'GitLab'} REST API squash 合入并清理本机；如从网页合入，仍需手动运行 tiller close。`,
   };
 }
