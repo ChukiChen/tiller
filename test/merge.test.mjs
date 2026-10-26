@@ -76,7 +76,7 @@ async function acceptTask(root, id) {
     '--criterion', 'AC-1=Merge behavior is observable', '--size', 'small', '--target', '.'));
   success(confirmTask(root, id, 'requirements', '--by', 'Tiller Test'));
   const added = success(cli(root, 'case', 'add', id, '--module', 'workflow', '--kind', 'behavior',
-    '--title', 'Merge fixture', '--expected', 'The accepted task can be merged.', '--criterion', 'AC-1'));
+    '--title', 'Merge fixture', '--expected', 'The accepted task can be merged.'));
   const testPath = `test/${id}.test.mjs`;
   const testName = `${added.id} merge fixture`;
   put(root, testPath, `import test from 'node:test';\n\ntest('${testName}', () => {});\n`);

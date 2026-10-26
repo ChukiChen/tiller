@@ -1696,3 +1696,29 @@ check 返回可定位 warning 且不因此升级为阻塞项。
 ### 预期结果
 
 合入或收尾仍成功，本机清理继续，结果 warnings 记录未删除分支。
+
+## CASE-264 check 不要求用例回指 taskId#AC
+
+- 类型：behavior
+- 优先级：high
+- 模块：workflow
+- 关联 AC：无
+- 需求：`.tiller/specs/modules/workflow/requirements.md`
+
+### 前置条件
+
+- 需求与设计已确认，已有全局用例与通过验证
+
+### 步骤
+
+1. 登记关联 AC 为无的用例并实现测试
+2. verify 绑定 AC 与 CASE
+3. 运行 check
+
+### 输入
+
+- 任务 AC、CASE、通过测试
+
+### 预期结果
+
+用例关联 AC 为无时，只要 verify 记录 AC→测试→CASE 且测试通过，check/accept 不因缺少 task#AC 回指失败

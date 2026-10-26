@@ -1061,3 +1061,53 @@ package.json、project.json 与 CLI 版本均为 0.5.0；发行包以 platform-a
 ### 预期结果
 
 合入或收尾成功，本地与远端分支均保留，其余本机清理照常。
+
+## CASE-265 start requirement-file 保留多行并含需求来源
+
+- 类型：interface
+- 优先级：high
+- 模块：workflow
+- 关联 AC：无
+- 需求：`.tiller/specs/modules/workflow/requirements.md`
+
+### 前置条件
+
+- 工程内存在非空相对路径需求文件
+
+### 步骤
+
+1. 用 --requirement-file 启动任务
+2. 读取 task.md 需求段
+
+### 输入
+
+- 结构化或多行需求文件与 --criterion
+
+### 预期结果
+
+start --requirement-file 后 task 需求保留多行结构并含需求来源路径，可追溯稳定需求
+
+## CASE-269 requirement-file 拒绝 local 且 specs 多行保留
+
+- 类型：interface
+- 优先级：high
+- 模块：workflow
+- 关联 AC：无
+- 需求：`.tiller/specs/modules/workflow/requirements.md`, `.tiller/specs/modules/verification/case-req-link.md`
+
+### 前置条件
+
+- 对应模块与运行环境可用。
+
+### 步骤
+
+1. 执行覆盖本用例的测试。
+2. 核对实际结果与预期结果一致。
+
+### 输入
+
+- 按用例描述准备正常输入及必要的边界输入。
+
+### 预期结果
+
+指向 .tiller/local 需求文件时失败并提示迁入 specs；指向 specs 时保留多行且需求来源为 specs 路径

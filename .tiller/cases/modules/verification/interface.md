@@ -297,3 +297,28 @@ init 探测 pytest 工程并写入 verify.runner=pytest；case add 生成 pytest
 ### 预期结果
 
 无源码登记成功且模板无源码行；--source 作为未知选项失败。
+
+## CASE-263 case add 无需 criterion 且关联 AC 为无
+
+- 类型：interface
+- 优先级：high
+- 模块：verification
+- 关联 AC：无
+- 需求：`.tiller/specs/modules/verification/requirements.md`
+
+### 前置条件
+
+- 工程已有对应模块 specs
+
+### 步骤
+
+1. 运行 case add 不带 --criterion
+2. 查看生成用例与 help
+
+### 输入
+
+- 模块、标题、预期、可选 --spec
+
+### 预期结果
+
+不传 --criterion 时可登记用例；生成条目关联 AC 为无；需求指向稳定 specs；help 不再要求来源 AC

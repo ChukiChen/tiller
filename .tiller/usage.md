@@ -8,8 +8,8 @@
 node .tiller/run.cjs start <id> --title "修复退出码" --summary "失败命令返回非零" \
   --requirement "失败时返回非零" --criterion "AC-1=失败命令返回非零" --size small --target src --target test
 node .tiller/run.cjs confirm <id> requirements
-node .tiller/run.cjs case add <id> --module cli --kind interface --title "失败退出码" --expected "返回退出码 2" --criterion AC-1
-node .tiller/run.cjs verify <id> --case CASE-001
+node .tiller/run.cjs case add <id> --module cli --kind interface --title "失败退出码" --expected "返回退出码 2" --spec .tiller/specs/modules/cli/requirements.md
+node .tiller/run.cjs verify <id> --criterion AC-1 --case CASE-001
 node .tiller/run.cjs verify <id> --criterion AC-1 --test "test/cli.test.mjs::CASE-001 失败退出码"
 node .tiller/run.cjs review <id> [--blocking <发现> ...] [--resolve REV-NNN ...]
 node .tiller/run.cjs release <id>
@@ -22,13 +22,13 @@ node .tiller/run.cjs merge <id>
 node .tiller/run.cjs close <id> --reason "已合入"
 ```
 
-`start` 生成需求（standard 另生成设计），worktree：`.tiller/local/<id>/worktrees/`；`--requirement` 与 `--requirement-file` 二选一；`--quote` 可选，`--by` 默认取 `git config user.name`。首次 `init` → 初始化 PR/MR → 人工合入 → `start`；pending 基线先判祖先，再经平台 API 查同分支已合入 PR/MR，命中写回 merged；无 token、API 失败或无记录仍阻断，`--skip-init-gate` 例外。`specs` 在任务 worktree 修改并随分支合入。
+`start` 生成需求（standard 另生成设计），worktree：`.tiller/local/<id>/worktrees/`；正文引用稳定 specs，`--requirement`/`--requirement-file` 二选一，后者必须在 `.tiller/specs/` 下，保留多行并写“需求来源”。`--quote` 可选，`--by` 默认取 `git config user.name`。首次 `init` → 初始化 PR/MR → 人工合入 → `start`；pending 基线由平台 API 确认合入，无证据阻断，`--skip-init-gate` 例外。`specs` 经任务 worktree 合入。
 
 `review` 阻塞 `check`/`accept`；`release` 与已验收任务钉在验收提交。未验收终止用 `close --abandon`；再交付先 `reopen`。
 
 standard 在有效设计确认前 verify，或确认后有未提交业务改动，`check` 阻断 `accept`；`verify` 本身不要求设计确认。
 
-accept 须在 pr 前并先提交验证记录；accept 后提交含 acceptance 记录，再 pr。`PR_NOT_ACCEPTED`/`PR_TASK_RECORDS_DIRTY` 分别阻断；合入即交付完成。`merge <id>` 走 GitHub/GitLab REST API squash，成功后 close；merge/close 默认删本地与远端任务分支（init-id 为 `chore/tiller-init`），`--keep-branch` 保留，删除失败只 warning。收尾不改 `task.md`，兼容清理旧布局。合入失败不清理，网页合入仍手动 close。
+accept 须在 pr 前，先提交任务记录（含 acceptance）。`PR_NOT_ACCEPTED`/`PR_TASK_RECORDS_DIRTY` 分别阻断。`merge <id>` 经 GitHub/GitLab REST API squash，成功后 close；合入即交付完成。merge/close 默认删本地与远端任务分支，`--keep-branch` 保留，删除失败只 warning。网页合入后仍手动 close；合入失败不清理；收尾不改 `task.md`，兼容清理旧布局。
 
 `check` 提示过薄设计、空壳 decisions/模块设计、分支未包含任务编号；业务范围·做的交付路径给 warning，不阻断；规格/背景未回写列路径与提纲。verify 日志含命令、起止、退出码。
 
@@ -48,8 +48,8 @@ accept 须在 pr 前并先提交验证记录；accept 后提交含 acceptance �
 
 规划用 `plan start/confirm/status`；已有任务用 `plan attach` 补挂。参数见 `node .tiller/run.cjs --help`。用例写 `.tiller/cases/modules/<模块>/`，场景写 `scenarios/`。
 
-`case add` 写清前置、步骤、输入、预期、类型、优先级与来源 AC；不保存源码路径，仅由测试名或紧邻注释引用 `CASE-NNN` 建立关联。无引用待实现，`verify --case` 执行覆盖。单任务只有 `.tiller/task/<id>/task.md`；外部仓 `.tiller/work/` 只读遗留；输出写 local logs，不提交全文快照或日志。
+`task → 需求`：任务挂稳定 `.tiller/specs/...`；`用例 → 需求`：用例“需求”挂 specs，关联 AC 固定写“无”，不写 `<任务>#AC-n`。用例写清前置、步骤、输入、预期、类型、优先级和需求；测试名或紧邻注释引用 `CASE-NNN`。`verify --criterion <AC-N> --case CASE-NNN` 覆盖，AC 覆盖只认 verify 的 AC→测试→CASE。单任务只有 `.tiller/task/<id>/task.md`；外部仓 `.tiller/work/` 只读遗留；不提交全文快照或日志。
 
 ## 接入与升级
 
-`init [--platform github|gitlab|both]` 有 HEAD 时建 `chore/tiller-init` worktree，经平台 API/token 推送并建 PR/MR；失败保留本机与 token/API 下一步。Token 读自 `GITHUB_TOKEN`/`GH_TOKEN` 或 `GITLAB_TOKEN`/`GL_TOKEN`，不写记录。`initBaseline` 先判祖先，再经平台 API 确认合入并写 merged，网页 squash 同样识别；无证据阻断。`merge <init-id>` 标记并清理，网页合入可 `close <init-id>`，默认删本地与远端初始化分支。平台在初始化时选定，之后不能通过 CLI 切换，需手动修改 `.tiller/project.json` 并补齐对应模板。`upgrade` 只刷新未改项，`--adopt` 更新摘要；兼容当前及上一资源契约。
+`init [--platform github|gitlab|both]` 建 `chore/tiller-init` worktree 并推送 PR/MR；失败保留本机。`initBaseline` 由平台 API 确认合入。`merge <init-id>` 标记并清理，网页合入可 `close <init-id>`。平台在初始化时选定，之后不能通过 CLI 切换，需手动修改 `.tiller/project.json` 并补齐对应模板。`upgrade --adopt` 刷新未改项；兼容当前及上一资源契约。

@@ -135,7 +135,7 @@ async function assertRunnerCase(t, buildFile, runner, marker) {
     '--criterion', 'AC-1=Skeleton matches runner', '--size', 'small', '--target', 'src'));
   success(confirmTask(root, id, 'requirements'));
   const added = success(cli(root, 'case', 'add', id, '--module', 'workflow', '--kind', 'behavior', '--title', 'Runner skeleton',
-    '--expected', 'Skeleton uses the configured runner', '--criterion', 'AC-1'));
+    '--expected', 'Skeleton uses the configured runner'));
   assert.equal(added.runner, runner);
   assert.match(added.skeleton, new RegExp(marker.replace(/[.*+?^${}()|[\]\\]/gu, '\\$&'), 'u'));
   assert.equal(added.skeleton.includes('node:test'), runner === 'node-test');
