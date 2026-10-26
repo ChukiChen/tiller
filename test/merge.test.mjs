@@ -23,15 +23,15 @@ function configure(root) {
   git(root, 'config', 'user.email', 'tiller@example.invalid');
 }
 
-function fakeTool(t, root, tool, mode) {
+function fakeTool(t, root, binary, mode) {
   if (process.platform === 'win32') {
     t.skip('The fake platform executable uses a POSIX shell script.');
     return null;
   }
   const directory = join(root, 'fake-bin');
-  put(root, `fake-bin/${tool}`, [
+  put(root, `fake-bin/${binary}`, [
     '#!/bin/sh',
-    'printf "%s\\n" "$*" >> "${TILLER_FAKE_MERGE_LOG:?}"',
+    'printf "%s|%s\\n" "$(basename "$0")" "$*" >> "${TILLER_FAKE_MERGE_LOG:?}"',
     `if [ "${mode}" = success ]; then`,
     '  printf "https://example.invalid/tiller/merge/1\\n"',
     '  exit 0',
@@ -40,8 +40,15 @@ function fakeTool(t, root, tool, mode) {
     'exit 7',
     '',
   ].join('\n'));
-  chmodSync(join(directory, tool), 0o755);
+  chmodSync(join(directory, binary), 0o755);
   return directory;
+}
+
+function platformCalls(log) {
+  return readFileSync(log, 'utf8').trim().split('\n').filter(Boolean).map(line => {
+    const [name, ...args] = line.split('|');
+    return { name, args: args.join('|') };
+  });
 }
 
 function cliAt(root, environment, ...args) {
@@ -55,10 +62,10 @@ function cliAt(root, environment, ...args) {
   return { ...result, data };
 }
 
-function initialize(t, platform, tool, mode) {
+function initialize(t, platform, binary, mode) {
   const root = fixture(t);
   configure(root);
-  const directory = fakeTool(t, root, tool, mode);
+  const directory = fakeTool(t, root, binary, mode);
   if (!directory) return null;
   const log = join(root, 'platform.log');
   const environment = { PATH: `${directory}:${process.env.PATH ?? ''}`, TILLER_FAKE_MERGE_LOG: log };
@@ -95,17 +102,30 @@ test('CASE-234 README 面向最终用户的介绍与快速开始', () => {
   assert.match(readme, /chore\(tiller\): 完成工程初始化/u);
   assert.match(readme, /合入[^\n]*git pull/u);
   assert.match(readme, /用 Codex 等 AI 编程工具/u);
+  assert.match(readme, /`start` →（standard 任务先完成设计确认）→ 实现 → `verify` → `pr` → `merge`\/`close`/u);
+  assert.match(readme, /需求范围、standard 任务的设计，以及最终交付验收/u);
   assert.match(readme, /tiller merge <任务编号>/u);
   assert.match(readme, /成功后自动清理本机任务目录/u);
-  assert.match(readme, /网页[\s\S]*tiller close <任务编号>/u);
+  assert.match(readme, /网页[\s\S]*AI 会在合入后运行 `tiller close <任务编号>/u);
+  assert.deepEqual([...readme.matchAll(/```[^\n]*\n([\s\S]*?)```/gu)].map(match => match[1].trim()),
+    ['npm install -g ./tiller-0.5.0.tgz', 'tiller init .']);
   assert.doesNotMatch(readme, /尚未发布到 npm|维护者|决策记录/u);
 });
 
+test('CASE-242 README 以 AI 执行为主并使用 github/gitlab 命令名', () => {
+  const readme = read(repository, 'README.md');
+  assert.match(readme, /`github` \/ `gitlab` 命令名/u);
+  assert.match(readme, /AI 会按工程内的 tiller 约定执行/u);
+  assert.match(readme, /你主要负责在关键节点确认/u);
+  assert.doesNotMatch(readme, /\bgh\b|\bglab\b/u);
+  assert.doesNotMatch(readme, /```[^\n]*\n[^`]*(?:tiller\s+)?(?:pr|merge|close)\b/u);
+});
+
 test('CASE-235 GitHub merge 成功后自动清理本机任务', async t => {
-  const initialized = initialize(t, 'github', 'gh', 'success');
+  const initialized = initialize(t, 'github', 'github', 'success');
   if (!initialized) return;
   const { root, environment, log } = initialized;
-  const id = '20261026-gh-merge';
+  const id = '20261026-github-merge';
   acceptTask(root, id);
   const local = join(root, '.tiller/local', id);
   assert.ok(existsSync(local));
@@ -114,17 +134,17 @@ test('CASE-235 GitHub merge 成功后自动清理本机任务', async t => {
   assert.equal(merged.merged, true);
   assert.equal(merged.platform, 'github');
   assert.equal(merged.branch, `feat/${id}`);
-  assert.equal(merged.command, `gh pr merge feat/${id} --squash`);
+  assert.equal(merged.command, `github pr merge feat/${id} --squash`);
   assert.equal(merged.close.id, id);
   assert.equal(existsSync(local), false);
-  assert.match(readFileSync(log, 'utf8'), new RegExp(`pr merge feat/${id} --squash`, 'u'));
+  assert.deepEqual(platformCalls(log), [{ name: 'github', args: `pr merge feat/${id} --squash` }]);
 });
 
 test('CASE-236 GitHub merge 失败时保留下本机任务', async t => {
-  const initialized = initialize(t, 'github', 'gh', 'failure');
+  const initialized = initialize(t, 'github', 'github', 'failure');
   if (!initialized) return;
   const { root, environment, log } = initialized;
-  const id = '20261026-gh-merge-failed';
+  const id = '20261026-github-merge-failed';
   acceptTask(root, id);
   const local = join(root, '.tiller/local', id);
 
@@ -133,29 +153,29 @@ test('CASE-236 GitHub merge 失败时保留下本机任务', async t => {
   assert.match(failed.error.message, /merge rejected/u);
   assert.ok(existsSync(local));
   assert.ok(existsSync(join(local, 'worktrees')));
-  assert.match(readFileSync(log, 'utf8'), new RegExp(`pr merge feat/${id} --squash`, 'u'));
+  assert.deepEqual(platformCalls(log), [{ name: 'github', args: `pr merge feat/${id} --squash` }]);
 });
 
 test('CASE-237 GitLab merge 成功后自动清理本机任务', async t => {
-  const initialized = initialize(t, 'gitlab', 'glab', 'success');
+  const initialized = initialize(t, 'gitlab', 'gitlab', 'success');
   if (!initialized) return;
   const { root, environment, log } = initialized;
-  const id = '20261026-glab-merge';
+  const id = '20261026-gitlab-merge';
   acceptTask(root, id);
   const local = join(root, '.tiller/local', id);
 
   const merged = success(cliAt(root, environment, 'merge', id));
   assert.equal(merged.platform, 'gitlab');
-  assert.equal(merged.command, `glab mr merge feat/${id} --squash --yes`);
+  assert.equal(merged.command, `gitlab mr merge feat/${id} --squash --yes`);
   assert.equal(existsSync(local), false);
-  assert.match(readFileSync(log, 'utf8'), new RegExp(`mr merge feat/${id} --squash --yes`, 'u'));
+  assert.deepEqual(platformCalls(log), [{ name: 'gitlab', args: `mr merge feat/${id} --squash --yes` }]);
 });
 
 test('CASE-238 GitLab merge 失败时保留下本机任务', async t => {
-  const initialized = initialize(t, 'gitlab', 'glab', 'failure');
+  const initialized = initialize(t, 'gitlab', 'gitlab', 'failure');
   if (!initialized) return;
   const { root, environment, log } = initialized;
-  const id = '20261026-glab-merge-failed';
+  const id = '20261026-gitlab-merge-failed';
   acceptTask(root, id);
   const local = join(root, '.tiller/local', id);
 
@@ -163,11 +183,11 @@ test('CASE-238 GitLab merge 失败时保留下本机任务', async t => {
   assert.equal(failed.error.code, 'MERGE_FAILED');
   assert.ok(existsSync(local));
   assert.ok(existsSync(join(local, 'worktrees')));
-  assert.match(readFileSync(log, 'utf8'), new RegExp(`mr merge feat/${id} --squash --yes`, 'u'));
+  assert.deepEqual(platformCalls(log), [{ name: 'gitlab', args: `mr merge feat/${id} --squash --yes` }]);
 });
 
 test('CASE-239 init-id merge 合入初始化分支并清理 local', async t => {
-  const initialized = initialize(t, 'github', 'gh', 'success');
+  const initialized = initialize(t, 'github', 'github', 'success');
   if (!initialized) return;
   const { root, environment, log, baseline } = initialized;
 
@@ -176,12 +196,51 @@ test('CASE-239 init-id merge 合入初始化分支并清理 local', async t => {
   assert.equal(merged.close.stage, '已关闭');
   assert.equal(existsSync(join(root, '.tiller/local', baseline.id)), false);
   assert.equal(JSON.parse(read(root, '.tiller/project.json')).initBaseline.status, 'merged');
-  assert.match(readFileSync(log, 'utf8'), /pr merge chore\/tiller-init --squash/u);
+  assert.deepEqual(platformCalls(log), [{ name: 'github', args: 'pr merge chore/tiller-init --squash' }]);
 
   const started = success(cliAt(root, {}, 'start', '20261026-after-init-merge', '--title', 'After init',
     '--requirement', 'The merged initialization does not block tasks.', '--criterion', 'AC-1=Start succeeds',
     '--size', 'small', '--target', '.'));
   assert.equal(started.id, '20261026-after-init-merge');
+});
+
+test('CASE-244 PATH 仅有官方短名时仍以 github/gitlab 调用并成功', async t => {
+  if (process.platform === 'win32') {
+    t.skip('The fake platform executable uses a POSIX shell script.');
+    return;
+  }
+  for (const item of [
+    { platform: 'github', binary: 'gh', name: 'github', args: 'pr merge' },
+    { platform: 'gitlab', binary: 'glab', name: 'gitlab', args: 'mr merge' },
+  ]) {
+    const root = fixture(t);
+    configure(root);
+    const directory = fakeTool(t, root, item.binary, 'success');
+    if (!directory) return;
+    const log = join(root, 'platform.log');
+    const environment = { PATH: `${directory}:${process.env.PATH ?? ''}`, TILLER_FAKE_MERGE_LOG: log };
+    success(cliAt(root, environment, 'init', '--platform', item.platform));
+    assert.equal(platformCalls(log)[0]?.name, item.name);
+    assert.match(platformCalls(log)[0]?.args ?? '', /^(?:pr|mr) create/u);
+    put(root, 'platform.log', '');
+
+    const id = `20261026-${item.name}-fallback`;
+    acceptTask(root, id);
+    const merged = success(cliAt(root, environment, 'merge', id));
+    assert.equal(merged.platform, item.platform);
+    assert.match(merged.command, new RegExp(`^${item.name} ${item.args}`, 'u'));
+    assert.deepEqual(platformCalls(log), [{ name: item.name, args: `${item.args} feat/${id} --squash${item.name === 'gitlab' ? ' --yes' : ''}` }]);
+  }
+
+  const root = fixture(t);
+  configure(root);
+  const id = '20261026-no-platform-cli';
+  success(cliAt(root, { PATH: '/usr/bin:/bin' }, 'init', '--platform', 'github'));
+  acceptTask(root, id);
+  const unavailable = failure(cliAt(root, { PATH: '/usr/bin:/bin' }, 'merge', id));
+  assert.equal(unavailable.error.code, 'MERGE_TOOL_UNAVAILABLE');
+  assert.match(unavailable.error.message, /无法执行 github/u);
+  assert.doesNotMatch(unavailable.error.message, /\bgh\b|\bglab\b/u);
 });
 
 test('CASE-240 接入文档说明 merge 与网页合入手动 close', () => {
@@ -197,8 +256,25 @@ test('CASE-240 接入文档说明 merge 与网页合入手动 close', () => {
     assert.match(content, /merge <init-id>/u, relative);
     assert.match(content, /网页合入[^\n]*(?:手动|`close`)[^\n]*close/u, relative);
   }
-  assert.match(read(repository, 'resources/usage.md'), /gh pr merge.*glab mr merge.*squash/u);
+  assert.match(read(repository, 'resources/usage.md'), /github pr merge.*gitlab mr merge.*squash/u);
   assert.match(read(repository, 'resources/rules/activities/delivery.md'), /失败不清理/u);
+});
+
+test('CASE-243 受管文档与 CLI help 使用 github/gitlab 并保持镜像一致', () => {
+  for (const pair of [
+    ['resources/usage.md', '.tiller/usage.md'],
+    ['resources/rules/core.md', '.tiller/rules/core.md'],
+    ['resources/rules/activities/delivery.md', '.tiller/rules/activities/delivery.md'],
+  ]) {
+    const content = read(repository, pair[0]);
+    assert.equal(content, read(repository, pair[1]), pair.join(' == '));
+    assert.doesNotMatch(content, /\bgh\b|\bglab\b/u, pair[0]);
+    assert.match(content, /`github pr merge`[^\n]*`gitlab mr merge`/u, pair[0]);
+  }
+  assert.match(read(repository, 'resources/usage.md'), /合入统一使用 `github`\/`gitlab`/u);
+  const help = success(cli(repository, '--help')).help;
+  assert.match(help, /github pr merge 或 gitlab mr merge/u);
+  assert.doesNotMatch(help, /\bgh\b|\bglab\b/u);
 });
 
 test('CASE-241 版本保持 0.5.0 且新用例均有测试引用', () => {
@@ -208,5 +284,16 @@ test('CASE-241 版本保持 0.5.0 且新用例均有测试引用', () => {
   const source = read(repository, 'test/merge.test.mjs');
   for (let number = 234; number <= 241; number += 1) {
     assert.match(source, new RegExp(`test\\('[^'\\n]*CASE-${number}\\b`, 'u'));
+  }
+});
+
+test('CASE-245 文档 CLI 名称任务保持 0.5.0 并通过质量门禁', () => {
+  assert.equal(JSON.parse(read(repository, 'package.json')).version, '0.5.0');
+  assert.equal(JSON.parse(read(repository, '.tiller/project.json')).resourceVersion, '0.5.0');
+  assert.match(read(repository, 'src/cli.ts'), /CLI_VERSION = '0\.5\.0'/u);
+  const sources = [read(repository, 'test/merge.test.mjs'), read(repository, 'test/rules.test.mjs'),
+    read(repository, 'test/init-baseline.test.mjs')].join('\n');
+  for (const id of ['CASE-242', 'CASE-243', 'CASE-244', 'CASE-245']) {
+    assert.match(sources, new RegExp(`test\\('[^'\\n]*${id}\\b`, 'u'));
   }
 });
