@@ -85,14 +85,92 @@
 | --- | --- | --- | --- | --- |
 | 需求 | boon yu | 2026-10-26T03:37:28.721Z | e914a51cd9e8 | — |
 | 设计 | boon yu | 2026-10-26T03:37:33.477Z | e914a51cd9e8 | — |
+| 交付验收 | boon yu | 2026-10-26T04:03:21.007Z | b7b71cc5ccd8 | — |
 
 <!-- tiller-confirm:v1 {"gate":"requirements","object":"需求正文（目标、范围与验收条件）","subject":"d92bfd531025bdfc87854b95cb87a27564321fd119f42c23a208655ae7cda8ab","commit":"e914a51cd9e81291e17a7fdf2c8a6bdfd998cf4a","by":"boon yu","quote":"","at":"2026-10-26T03:37:28.721Z"} -->
 <!-- tiller-confirm:v1 {"gate":"design","object":"设计正文","subject":"8b8073664842eeaf17a29dd6ac485566fa5892668916342424b9df023fd6259f","commit":"e914a51cd9e81291e17a7fdf2c8a6bdfd998cf4a","by":"boon yu","quote":"","at":"2026-10-26T03:37:33.477Z"} -->
+<!-- tiller-confirm:v1 {"gate":"acceptance","object":"当前交付（需求、设计、验证与提交）","subject":"9ae5a740cd147c77f5c912bd1d3d8a45abc4f76a9b210e8a530259dd64df2428","commit":"b7b71cc5ccd88a83222da2e7a2a17dcefd8a39ab","by":"boon yu","quote":"","at":"2026-10-26T04:03:21.007Z"} -->
 
 ## 验证
 
-尚无验证。
+### run-1
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-223 pr blocks a task without a valid delivery acceptance$' \u002d\u002dtest-reporter=./.tiller/local/verify-ePN6eF/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-ePN6eF/report.jsonl test/pr.test.mjs","exitCode":0,"tree":"b3d65e42fae606b01cc3e7a92a65f150d35508fbf2b9580f3effb5c3efcdc60b","commit":"b7b71cc5ccd88a83222da2e7a2a17dcefd8a39ab"} -->
+- 条件：AC-1
+- 测试：test/pr.test.mjs::CASE-223 pr blocks a task without a valid delivery acceptance
+- 用例：CASE-223
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/20261026-post-merge-freeze/logs/run-1.log
+- 提交：b7b71cc5ccd8
+- 时间：2026-10-26T04:03:05.895Z
+
+### run-2
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-224 accepted close only cleans local state and leaves shared task content unchanged$' \u002d\u002dtest-reporter=./.tiller/local/verify-4reYoC/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-4reYoC/report.jsonl test/review-release.test.mjs","exitCode":0,"tree":"b3d65e42fae606b01cc3e7a92a65f150d35508fbf2b9580f3effb5c3efcdc60b","commit":"b7b71cc5ccd88a83222da2e7a2a17dcefd8a39ab"} -->
+- 条件：AC-2
+- 测试：test/review-release.test.mjs::CASE-224 accepted close only cleans local state and leaves shared task content unchanged
+- 用例：CASE-224
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/20261026-post-merge-freeze/logs/run-2.log
+- 提交：b7b71cc5ccd8
+- 时间：2026-10-26T04:03:07.355Z
+
+### run-3
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-225 delivery docs freeze shared task records after merge$' \u002d\u002dtest-reporter=./.tiller/local/verify-SnTqRb/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-SnTqRb/report.jsonl test/pr.test.mjs","exitCode":0,"tree":"b3d65e42fae606b01cc3e7a92a65f150d35508fbf2b9580f3effb5c3efcdc60b","commit":"b7b71cc5ccd88a83222da2e7a2a17dcefd8a39ab"} -->
+- 条件：AC-3
+- 测试：test/pr.test.mjs::CASE-225 delivery docs freeze shared task records after merge
+- 用例：CASE-225
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/20261026-post-merge-freeze/logs/run-3.log
+- 提交：b7b71cc5ccd8
+- 时间：2026-10-26T04:03:09.521Z
+
+### run-4
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-226 pr-task-sync record converges to the merged content without post-merge sections$' \u002d\u002dtest-reporter=./.tiller/local/verify-aKpQBI/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-aKpQBI/report.jsonl test/pr.test.mjs","exitCode":0,"tree":"b3d65e42fae606b01cc3e7a92a65f150d35508fbf2b9580f3effb5c3efcdc60b","commit":"b7b71cc5ccd88a83222da2e7a2a17dcefd8a39ab"} -->
+- 条件：AC-4
+- 测试：test/pr.test.mjs::CASE-226 pr-task-sync record converges to the merged content without post-merge sections
+- 用例：CASE-226
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/20261026-post-merge-freeze/logs/run-4.log
+- 提交：b7b71cc5ccd8
+- 时间：2026-10-26T04:03:10.049Z
+
+### run-5
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-227 version stays 0\\.5\\.0 and freeze behavior remains covered$' \u002d\u002dtest-reporter=./.tiller/local/verify-DHSsGu/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-DHSsGu/report.jsonl test/pr.test.mjs","exitCode":0,"tree":"b3d65e42fae606b01cc3e7a92a65f150d35508fbf2b9580f3effb5c3efcdc60b","commit":"b7b71cc5ccd88a83222da2e7a2a17dcefd8a39ab"} -->
+- 条件：AC-5
+- 测试：test/pr.test.mjs::CASE-227 version stays 0.5.0 and freeze behavior remains covered
+- 用例：CASE-227
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/20261026-post-merge-freeze/logs/run-5.log
+- 提交：b7b71cc5ccd8
+- 时间：2026-10-26T04:03:10.562Z
 
 ## 自检
 
-交付前运行 check；验收后运行 accept。
+- [x] 需求确认有效
+- [x] 设计确认有效
+- [x] 验收条件均有当前通过且绑定全局用例的测试引用
+- [x] 每条验收条件均映射到本次验证引用的全局用例
+- [x] 验收条件与用例来源 criteria 相互指向或由本任务新增/修改
+- [x] 验证命令已执行且测试输出已核实
+- [x] 全局用例结构与引用有效
+- [x] 改动未超出范围
+- [x] 未弱化仍存在的测试
+- [x] 评审无未清除阻塞项
+- [x] 记录不含密钥或本机绝对路径
+
+提示：
+- 90 条历史用例未绑定来源 AC；新用例请用 case add 写入 criteria。
+- 本次改动涉及模块 initialization：建议回归该模块 59 条用例及经过它的场景 CASE-055, CASE-001。
+- 本次改动涉及模块 standards：建议回归该模块 23 条用例及经过它的场景 CASE-055。
+- 本次改动涉及模块 verification：建议回归该模块 40 条用例及经过它的场景 CASE-055, CASE-001。
+- 本次改动涉及模块 workflow：建议回归该模块 103 条用例及经过它的场景 CASE-055, CASE-001。
+- 修改的测试文件移除了 2 个测试用例（请确认对应功能已删除；详情见 Git diff）。
