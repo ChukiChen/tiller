@@ -1026,4 +1026,4 @@ package.json 与 README 版本保持 0.5.0，全量质量命令通过且测试�
 
 ### 预期结果
 
-README 只保留介绍与快速开始，包含安装包安装、初始化 PR 标题、合入后 git pull、用 AI 开发功能、tiller merge 自动 close，以及网页合入需手动 close；不含决策、npm 未发布或维护者资料堆砌
+README 只保留介绍与快速开始，包含安装包安装、初始化 PR 标题、合入后 git pull、用 AI 开发功能与用户关键确认；合入与本机清理由 AI 按约定完成，不展开 merge/close 手敲细节；不含决策、npm 未发布或维护者资料堆砌

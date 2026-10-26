@@ -121,8 +121,8 @@ test('CASE-091 verification guidance requires execution, reporting reasons and f
 
   const readme = readFileSync(join(repository, 'README.md'), 'utf8');
   assert.match(readme, /^## 快速开始$/mu);
-  assert.match(readme, /tiller merge <任务编号>/u);
-  assert.match(readme, /成功后自动清理本机任务目录/u);
+  assert.match(readme, /合入与本机清理由 AI 按 tiller 约定完成/u);
+  assert.match(readme, /`merge`\/`close`/u);
   assert.doesNotMatch(readme, /私有.*报告|--reported|失败先行/u);
 });
 
@@ -198,7 +198,7 @@ test('CASE-109 README is a user-facing quick start without internal flow detail'
   assert.match(readme, /^### 安装$/mu);
   assert.match(readme, /^### 初始化工程$/mu);
   assert.match(readme, /^### 用 AI 开发一个功能$/mu);
-  assert.match(readme, /tiller merge <任务编号>/u);
+  assert.match(readme, /`merge`\/`close`/u);
   assert.doesNotMatch(readme, /小改动：|标准或大功能：|默认人工节点|task\.md|close --abandon|reopen --reason|私有报告|--reported|失败先行|advanced/u);
 });
 
@@ -434,8 +434,8 @@ test('CASE-167 README keeps the user quick start and removes maintainer detail',
   assert.match(readme, /chore\(tiller\): 完成工程初始化/u);
   assert.match(readme, /合入[^\n]*git pull/u);
   assert.match(readme, /用 Codex 等 AI 编程工具/u);
-  assert.match(readme, /tiller merge <任务编号>/u);
-  assert.match(readme, /网页[\s\S]*tiller close <任务编号>/u);
+  assert.match(readme, /`merge`\/`close`/u);
+  assert.match(readme, /合入与本机清理由 AI 按 tiller 约定完成/u);
   assert.doesNotMatch(readme, /尚未发布到 npm|维护者|决策记录|verify\.prepare|verify\.runner|--reported|失败先行|advanced/u);
   assert.ok(readme.length < 6000, `README is ${readme.length} characters`);
 });

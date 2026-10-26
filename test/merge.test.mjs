@@ -104,9 +104,8 @@ test('CASE-234 README 面向最终用户的介绍与快速开始', () => {
   assert.match(readme, /用 Codex 等 AI 编程工具/u);
   assert.match(readme, /`start` →（standard 任务先完成设计确认）→ 实现 → `verify` → `pr` → `merge`\/`close`/u);
   assert.match(readme, /需求范围、standard 任务的设计，以及最终交付验收/u);
-  assert.match(readme, /tiller merge <任务编号>/u);
-  assert.match(readme, /成功后自动清理本机任务目录/u);
-  assert.match(readme, /网页[\s\S]*AI 会在合入后运行 `tiller close <任务编号>/u);
+  assert.match(readme, /合入与本机清理由 AI 按 tiller 约定完成/u);
+  assert.match(readme, /合入操作由 AI 推进/u);
   assert.deepEqual([...readme.matchAll(/```[^\n]*\n([\s\S]*?)```/gu)].map(match => match[1].trim()),
     ['npm install -g ./tiller-0.5.0.tgz', 'tiller init .']);
   assert.doesNotMatch(readme, /尚未发布到 npm|维护者|决策记录/u);
@@ -114,11 +113,12 @@ test('CASE-234 README 面向最终用户的介绍与快速开始', () => {
 
 test('CASE-242 README 以 AI 执行为主并使用 github/gitlab 命令名', () => {
   const readme = read(repository, 'README.md');
-  assert.match(readme, /`github` \/ `gitlab` 命令名/u);
   assert.match(readme, /AI 会按工程内的 tiller 约定执行/u);
   assert.match(readme, /你主要负责在关键节点确认/u);
+  assert.match(readme, /合入与本机清理由 AI 按 tiller 约定完成/u);
   assert.doesNotMatch(readme, /\bgh\b|\bglab\b/u);
   assert.doesNotMatch(readme, /```[^\n]*\n[^`]*(?:tiller\s+)?(?:pr|merge|close)\b/u);
+  assert.doesNotMatch(readme, /squash|平台 CLI|底层工具名/u);
 });
 
 test('CASE-235 GitHub merge 成功后自动清理本机任务', async t => {

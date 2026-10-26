@@ -22,14 +22,10 @@ tiller init .
 
 tiller 会写入 `AGENTS.md` 和 `.tiller` 下的工作约定，并创建初始化 PR/MR，标题为 `chore(tiller): 完成工程初始化`。
 
-审阅后合入初始化 PR/MR，再回到主干执行 `git pull`，让本地包含初始化改动。使用 tiller 的合并流程时，成功后会自动清理本机初始化目录；如果从网页合入，则由 AI 运行 `tiller close <初始化任务编号> --reason "初始化基线已合入"` 完成本机清理。
+审阅后合入初始化 PR/MR，再回到主干执行 `git pull`，让本地包含初始化改动。合入与本机清理由 AI 按 tiller 约定完成。
 
 ### 用 AI 开发一个功能
 
 用 Codex 等 AI 编程工具打开工程，说明你想实现的功能。AI 会按工程内的 tiller 约定执行 `start` →（standard 任务先完成设计确认）→ 实现 → `verify` → `pr` → `merge`/`close`，并写清需求、验收条件和可追溯的验证结果。
 
 你主要负责在关键节点确认：需求范围、standard 任务的设计，以及最终交付验收。技术实现、测试与合入操作由 AI 推进。
-
-合入可由 AI 运行 `tiller merge <任务编号>` 完成；tiller 会以 squash 方式合入对应 PR/MR，成功后自动清理本机任务目录。如果你在网页上合入，AI 会在合入后运行 `tiller close <任务编号> --reason "已合入"` 清理本机。
-
-tiller 对外统一使用 `github` / `gitlab` 命令名，并自动对接已安装并登录的平台 CLI；无需把底层工具名写进操作流程。

@@ -126,7 +126,7 @@ upgrade --adopt 写入当前受管内容摘要并消除漂移；plan attach 为�
 
 ### 预期结果
 
-README 仍只含介绍与快速开始；AI 按 start →（设计确认）→ 实现 → verify → pr → merge/close 推进，用户只确认需求、设计与交付验收；pr/merge/close 不写成人类逐步必跑的命令块；网页合入后由 AI close；示例统一为 github/gitlab，无裸 gh/glab
+README 仍只含介绍与快速开始；AI 按 start →（设计确认）→ 实现 → verify → pr → merge/close 推进，用户只确认需求、设计与交付验收；合入与本机清理一句带过，不展开 squash/网页 close/平台 CLI；pr/merge/close 不写成人类逐步必跑的命令块；无裸 gh/glab
 
 ## CASE-243 受管文档与 CLI help 使用 github/gitlab 并保持镜像一致
 
