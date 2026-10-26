@@ -1486,3 +1486,103 @@ close 删除本机任务目录和工作树，task.md 内容与哈希不变，重
 ### 预期结果
 
 共享记录恢复为合入内容，不含合入后追加的验收与关闭段，工作区无该文件脏改动
+
+## CASE-235 GitHub merge 成功后自动清理本机任务
+
+- 类型：behavior
+- 优先级：high
+- 模块：workflow
+- 关联 AC：20261026-readme-merge-close#AC-2
+- 需求：`.tiller/specs/modules/workflow/requirements.md`
+- 源码：`src/pr.ts`, `src/cli.ts`
+
+### 前置条件
+
+- 已验收任务拥有本机 worktree，project.platform 为 github，gh 模拟合入成功
+
+### 步骤
+
+1. 运行 tiller merge <task-id>
+
+### 输入
+
+- 已验收任务编号与模拟成功的 gh
+
+### 预期结果
+
+调用 gh pr merge <任务分支> --squash，成功后 close 该任务并删除 .tiller/local/<task-id>
+
+## CASE-236 GitHub merge 失败时保留下本机任务
+
+- 类型：behavior
+- 优先级：high
+- 模块：workflow
+- 关联 AC：20261026-readme-merge-close#AC-2
+- 需求：`.tiller/specs/modules/workflow/requirements.md`
+- 源码：`src/pr.ts`, `src/cli.ts`
+
+### 前置条件
+
+- 已验收任务拥有本机 worktree，project.platform 为 github，gh 模拟合入失败
+
+### 步骤
+
+1. 运行 tiller merge <task-id>
+
+### 输入
+
+- 已验收任务编号与模拟失败的 gh
+
+### 预期结果
+
+命令非零退出并报告合入失败，不调用 close，任务 local 与 worktree 仍在
+
+## CASE-237 GitLab merge 成功后自动清理本机任务
+
+- 类型：behavior
+- 优先级：high
+- 模块：workflow
+- 关联 AC：20261026-readme-merge-close#AC-3
+- 需求：`.tiller/specs/modules/workflow/requirements.md`
+- 源码：`src/pr.ts`, `src/cli.ts`
+
+### 前置条件
+
+- 已验收任务拥有本机 worktree，project.platform 为 gitlab，glab 模拟合入成功
+
+### 步骤
+
+1. 运行 tiller merge <task-id>
+
+### 输入
+
+- 已验收任务编号与模拟成功的 glab
+
+### 预期结果
+
+调用 glab mr merge <任务分支> 的 squash 等价参数，成功后 close 该任务并删除 .tiller/local/<task-id>
+
+## CASE-238 GitLab merge 失败时保留下本机任务
+
+- 类型：behavior
+- 优先级：high
+- 模块：workflow
+- 关联 AC：20261026-readme-merge-close#AC-3
+- 需求：`.tiller/specs/modules/workflow/requirements.md`
+- 源码：`src/pr.ts`, `src/cli.ts`
+
+### 前置条件
+
+- 已验收任务拥有本机 worktree，project.platform 为 gitlab，glab 模拟合入失败
+
+### 步骤
+
+1. 运行 tiller merge <task-id>
+
+### 输入
+
+- 已验收任务编号与模拟失败的 glab
+
+### 预期结果
+
+命令非零退出并报告合入失败，不调用 close，任务 local 与 worktree 仍在

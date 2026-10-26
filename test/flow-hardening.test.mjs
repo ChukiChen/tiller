@@ -197,7 +197,7 @@ test('CASE-178 hardening regression names and version stay linked at 0.5.0', () 
   assert.equal(JSON.parse(read(repository, '.tiller/project.json')).resourceVersion, '0.5.0');
   for (const relative of ['resources/usage.md', '.tiller/usage.md']) {
     assert.match(read(repository, relative), /`verify` 本身不要求设计确认/u, relative);
-    assert.match(read(repository, relative), /骨架随当前 runner 生成/u, relative);
+    assert.match(read(repository, relative), /骨架.*runner.*生成/u, relative);
   }
 });
 

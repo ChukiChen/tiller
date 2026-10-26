@@ -1,6 +1,6 @@
 # tiller 使用指引
 
-运行 `node .tiller/run.cjs --help`；恢复用 `node .tiller/run.cjs resume`。编号用 `YYYYMMDD-` 前缀，缺少时 `start`/`plan start` 提示但不改写。
+运行 `node .tiller/run.cjs --help`；恢复 `node .tiller/run.cjs resume`。编号用 `YYYYMMDD-` 前缀，缺少时只提示。
 
 ## 默认工作流
 
@@ -17,27 +17,28 @@ node .tiller/run.cjs check <id>
 node .tiller/run.cjs accept <id> [--by "验收人"]
 # 提交含 acceptance 的任务记录
 node .tiller/run.cjs pr <id>
-# 合入后只清理本机
+node .tiller/run.cjs merge <id>
+# 网页合入后只清理本机
 node .tiller/run.cjs close <id> --reason "已合入"
 ```
 
 `start` 生成需求与 worktree（standard 另生成设计）；`.tiller/local/<id>/`：project 用 `worktrees/`，workspace 含 `management`/登记路径。`--requirement`/`--requirement-file <路径>` 二选一；`--quote` 可选，`--by` 默认取 `git config user.name`。首次接入 `init` → 初始化 PR/MR → 人工合入 → `start`；未合入默认阻断，`--skip-init-gate` 例外；`specs` 在任务 worktree 修改并随任务分支合入。
 
-`review` 阻塞 `check`/`accept`；`release` 与已验收任务钉在验收提交。未验收终止用 `close --abandon` 并写共享放弃记录；再次交付需 `reopen`，追加重开事件、重新推导阶段。
+`review` 阻塞 `check`/`accept`；`release` 与已验收任务钉在验收提交。未验收终止用 `close --abandon` 并写放弃记录；再次交付需 `reopen` 并重新推导阶段。
 
 standard 设计确认前 verify 或确认后业务改动未提交时，`check` 阻断 `accept`；`verify` 本身不要求设计确认。
 
-accept 须在 pr 前；回写后先提交验证记录，再 `accept` 并提交任务记录（含 acceptance），最后 `pr`。`PR_NOT_ACCEPTED` 与 `PR_TASK_RECORDS_DIRTY` 分别阻断；合入即交付完成；合入后 `close` 只清 local（兼容清理旧布局）、不改共享 `task.md`。
+accept 须在 pr 前；回写后先提交验证记录，再 `accept` 并提交任务记录（含 acceptance），最后 `pr`。`PR_NOT_ACCEPTED` 与 `PR_TASK_RECORDS_DIRTY` 分别阻断；合入即交付完成。`merge <id>` 调用 `gh pr merge` 或 `glab mr merge` 以 squash 合入，成功后自动 `close`；合入后 `close` 只清 local（兼容清理旧布局）、不改共享 `task.md`，失败不清理，网页合入后仍需手动 `close`。
 
 `check` 对过薄设计、空壳 decisions/模块设计、分支未包含任务编号；规格/背景未回写列路径与提纲 warning。`verify` 日志含命令、起止和退出码。
 
 ## 验证
 
-`verify` 只声明测试，由 tiller 构造并执行；只读私有临时报告，stdout/stderr 不参与判定。报告缺失或损坏、匹配 0 个或多个测试、失败或跳过不核实；引用文件须全通过。`--run` 已删除。standard 必须声明 `--target`，small 缺省 `.`。
+`verify` 只声明测试，由 tiller 构造并执行；只读私有临时报告，stdout/stderr 不参与判定。报告缺失或损坏、匹配 0 个或多个测试、失败或跳过不核实；`--run` 已删除。standard 必须声明 `--target`，small 缺省 `.`。
 
-日志在 `.tiller/local/<任务编号>/logs/run-<序号>.log`，支持 `--verbose`；`task.md` 留摘要，证据进旁路。`verify.prepare` 失败即失败；`verify.runner` 支持 `node-test`、`junit-maven`、`junit-gradle`、`pytest`。pytest 从私有 JUnit XML 核实；`case add` 骨架随当前 runner 生成。
+日志写 `.tiller/local/<任务编号>/logs/run-<序号>.log`（`--verbose`）；`task.md` 留摘要，证据进旁路。`verify.prepare` 失败即失败；`verify.runner` 支持 `node-test`、`junit-maven`、`junit-gradle`、`pytest`，pytest 用私有 JUnit XML；`case add` 骨架按 runner 生成。
 
-同一 AC/CASE 连续两次失败且无成功核实，`verify`/`check` 按 FLOW-05 停止重试，报告现象、尝试、证据和 2～3 个方案；成功核实清零。
+同一 AC/CASE 连续两次失败且无成功核实，`verify`/`check` 按 FLOW-05 停止重试，报告现象、尝试、证据和 2～3 个方案。
 
 无法执行时用 `--reported --command ... --result ... --reason "<理由>"`；`check`/`accept` 默认阻断外部报告，仅 `--allow-reported` 放行，`pr` 标明未执行。bugfix 用 `--expect-fail --test` 在基线工作树留失败证据并保留当前通过。
 
@@ -47,16 +48,15 @@ accept 须在 pr 前；回写后先提交验证记录，再 `accept` 并提交�
 
 ```sh
 node .tiller/run.cjs plan start 20261023-batch --title "第一批" --goal "接入" \
-  --spec .tiller/specs/requirements.md#3-默认工作流 \
+  --spec .tiller/specs/requirements.md#默认工作流 \
   --item "P-1=接入;size=small;deps=-"
-node .tiller/run.cjs start 20261023-onboarding --plan 20261023-batch --item P-1 --title "接入" --requirement "完成最小接入" --criterion "AC-1=接入可用"
 node .tiller/run.cjs plan attach 20261023-closed-task --plan 20261023-batch --item P-1
 ```
 
-`plan confirm/status` 确认拆分，依赖未验收阻塞；`plan attach` 补挂任务，不改确认。用例写 `.tiller/cases/modules/<模块>/`，场景写 `scenarios/`。
+`plan confirm/status` 确认拆分并阻塞未验收依赖；`plan attach` 补挂任务。用例写 `.tiller/cases/modules/<模块>/`，场景写 `scenarios/`。
 
-`case add` 写清前置条件、步骤、输入、预期、类型、优先级、来源。测试名/紧邻注释引用 `CASE-NNN`，自动扫描反查；无引用待实现。`verify --case CASE-NNN` 执行覆盖。单任务只有 `.tiller/task/<id>/task.md`；外部仓 `.tiller/work/` 只读遗留。原始输出写 `.tiller/local/<id>/logs/`，不提交全文快照或日志。
+`case add` 写清前置条件、步骤、输入、预期、类型、优先级和来源；测试名或紧邻注释引用 `CASE-NNN`，无引用待实现，`verify --case` 执行覆盖。单任务只有 `.tiller/task/<id>/task.md`；外部仓 `.tiller/work/` 只读遗留；原始输出写 local logs，不提交全文快照或日志。
 
 ## 接入与升级
 
-`init [--platform github|gitlab|both]` 有 Git HEAD 时另建 `chore/tiller-init` worktree 并尝试 PR/MR，失败保留提交并给出命令。`project.json.initBaseline` 判定初始化合入，`close <init-id>` 只清该 local。平台在初始化时选定，之后不能通过 CLI 切换，需手动修改 `.tiller/project.json` 并补齐对应模板。`upgrade` 只刷新未修改文件，`--adopt` 更新摘要；兼容当前及上一资源契约。
+`init [--platform github|gitlab|both]` 有 Git HEAD 时另建 `chore/tiller-init` worktree 并尝试 PR/MR，失败保留提交并给出命令。`project.json.initBaseline` 判定初始化合入；`merge <init-id>` 合入成功后标记 merged 并清理该 local，网页合入则需手动 `close <init-id>`。平台在初始化时选定，之后不能通过 CLI 切换，需手动修改 `.tiller/project.json` 并补齐对应模板。`upgrade` 只刷新未修改文件，`--adopt` 更新摘要；兼容当前及上一资源契约。

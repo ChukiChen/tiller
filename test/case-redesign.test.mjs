@@ -217,7 +217,7 @@ ${sourceTest('staged coverage without a case id', 'undefined')}
 test('CASE-103 CASE-156 repository history and docs use the new case model', async () => {
   const library = await readCaseLibrary(repository);
   assert.deepEqual(library.issues, []);
-  assert.equal(library.cases.length, 233);
+  assert.equal(library.cases.length, 241);
   assert.ok(library.cases.every(item => item.preconditions.length && item.steps.length && item.inputs.length && item.expected));
   assert.ok(library.cases.every(item => item.tests.length > 0), 'every case should be referenced by a test');
   assert.ok(library.cases.every(item => item.tests.every(reference => reference.name?.includes(item.id))));
@@ -227,7 +227,7 @@ test('CASE-103 CASE-156 repository history and docs use the new case model', asy
     assert.doesNotMatch(content, /test_ref|case link|behavior\.json/u, relative);
   }
   assert.match(read(repository, 'resources/usage.md'), /测试名[^。\n]*CASE/u);
-  assert.match(read(repository, 'resources/usage.md'), /--case CASE-NNN/u);
+  assert.match(read(repository, 'resources/usage.md'), /--case CASE-\d{3}/u);
   assert.match(read(repository, '.tiller/cases/index.md'), /modules\/<模块>\/behavior\.md/u);
 });
 

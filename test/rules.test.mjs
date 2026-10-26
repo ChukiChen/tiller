@@ -120,9 +120,10 @@ test('CASE-091 verification guidance requires execution, reporting reasons and f
   assert.match(delivery, /--allow-reported/u);
 
   const readme = readFileSync(join(repository, 'README.md'), 'utf8');
-  assert.match(readme, /私有.*报告/u);
-  assert.match(readme, /--reported/u);
-  assert.match(readme, /失败先行/u);
+  assert.match(readme, /^## 快速开始$/mu);
+  assert.match(readme, /tiller merge <任务编号>/u);
+  assert.match(readme, /成功后自动清理本机任务目录/u);
+  assert.doesNotMatch(readme, /私有.*报告|--reported|失败先行/u);
 });
 
 test('CASE-097 verification guidance requires self-run tests and private reports', () => {
@@ -191,21 +192,14 @@ test('CASE-151 activity rules keep requirements, design, implementation and deli
   assert.match(read('rules/activities/delivery.md'), /合入与发布仍需各自授权/u);
 });
 
-test('CASE-109 README describes only the default flow and release-time versioning', () => {
+test('CASE-109 README is a user-facing quick start without internal flow detail', () => {
   const readme = readFileSync(new URL('../README.md', import.meta.url), 'utf8');
-  assert.match(readme, /小改动：需求确认 → 实现 → 验证/u);
-  assert.match(readme, /标准或大功能：需求确认 → 设计确认 → 实现 → 验证/u);
-  assert.match(readme, /默认人工节点只有需求、设计/u);
-  assert.match(readme, /单次任务以 `task\.md` 与 Git 追溯/u);
-  assert.match(readme, /原话只是可选凭证，不能替代正文/u);
-  assert.match(readme, /确认部分、确认人、时间、提交/u);
-  assert.match(readme, /单个任务只保留一份 `task\.md`/u);
-  assert.match(readme, /close --abandon/u);
-  assert.match(readme, /reopen --reason/u);
-  assert.match(readme, /\.tiller\/cases\//u);
-  assert.match(readme, /版本号只在正式发布正式包时修改/u);
-  assert.match(readme, /升级命令|升级支持当前及直接兼容的上一资源契约/u);
-  assert.doesNotMatch(readme, /advanced|0\.4\.0 升级到 0\.5\.0/u);
+  assert.match(readme, /^## 快速开始$/mu);
+  assert.match(readme, /^### 安装$/mu);
+  assert.match(readme, /^### 初始化工程$/mu);
+  assert.match(readme, /^### 用 AI 开发一个功能$/mu);
+  assert.match(readme, /tiller merge <任务编号>/u);
+  assert.doesNotMatch(readme, /小改动：|标准或大功能：|默认人工节点|task\.md|close --abandon|reopen --reason|私有报告|--reported|失败先行|advanced/u);
 });
 
 test('CASE-048 global cases use module kinds and scenarios with resolvable named tests', async () => {
@@ -216,15 +210,15 @@ test('CASE-048 global cases use module kinds and scenarios with resolvable named
   const kinds = ['behavior', 'interface', 'performance', 'security'];
   const library = await readCaseLibrary(repository);
   assert.deepEqual(library.issues, []);
-  assert.equal(library.cases.length, 233);
+  assert.equal(library.cases.length, 241);
   assert.deepEqual(library.cases.map(item => item.id).sort(),
-    Array.from({ length: 233 }, (_, index) => `CASE-${String(index + 1).padStart(3, '0')}`));
+    Array.from({ length: 241 }, (_, index) => `CASE-${String(index + 1).padStart(3, '0')}`));
   assert.deepEqual(library.modules.map(item => ({ module: item.module, behavior: item.behavior, interface: item.interface,
     performance: item.performance, security: item.security })), [
-    { module: 'initialization', behavior: 27, interface: 9, performance: 11, security: 16 },
-    { module: 'standards', behavior: 22, interface: 2, performance: 0, security: 0 },
+    { module: 'initialization', behavior: 28, interface: 9, performance: 11, security: 16 },
+    { module: 'standards', behavior: 22, interface: 4, performance: 0, security: 0 },
     { module: 'verification', behavior: 10, interface: 11, performance: 15, security: 4 },
-    { module: 'workflow', behavior: 58, interface: 39, performance: 0, security: 7 },
+    { module: 'workflow', behavior: 62, interface: 40, performance: 0, security: 7 },
   ]);
   assert.equal(library.scenarios.length, 2);
   for (const item of library.scenarios) assert.ok(item.modules.length > 0 && item.modules.every(module => specs.includes(module)));
@@ -419,31 +413,14 @@ test('CASE-166 local stale branches are removed while main remains', () => {
   assert.ok(branches.includes('main'));
 });
 
-test('CASE-167 README keeps capabilities and removes implementation detail', () => {
+test('CASE-167 README keeps the user quick start and removes maintainer detail', () => {
   const readme = readFileSync(join(repository, 'README.md'), 'utf8');
-  assert.match(readme, /小改动：需求确认 → 实现 → 验证/u);
-  assert.match(readme, /标准或大功能：需求确认 → 设计确认 → 实现 → 验证/u);
-  assert.match(readme, /单次任务以 `task\.md` 与 Git 追溯/u);
-  assert.match(readme, /原话只是可选凭证，不能替代正文/u);
-  assert.match(readme, /确认部分、确认人、时间、提交/u);
-  assert.match(readme, /单个任务只保留一份 `task\.md`/u);
-  assert.match(readme, /close --abandon/u);
-  assert.match(readme, /reopen --reason/u);
-  assert.match(readme, /\.tiller\/cases\//u);
-  assert.match(readme, /版本号只在正式发布正式包时修改/u);
-  assert.match(readme, /升级支持当前及直接兼容的上一资源契约/u);
-  assert.match(readme, /私有报告/u);
-  assert.match(readme, /--reported/u);
-  assert.match(readme, /失败先行/u);
-  assert.match(readme, /review/u);
-  assert.match(readme, /release/u);
-  assert.match(readme, /验收提交/u);
-  assert.match(readme, /可用工程内需求文件接入/u);
-  assert.match(readme, /## 安装/u);
-  assert.match(readme, /AGENTS\.md/u);
-  assert.doesNotMatch(readme, /verify\.prepare|verify\.runner|src\/test-output|test\/suites\.json|文件级并发|stdout\/stderr|advanced/u);
-  assert.doesNotMatch(readme, /--requirement-file/u);
-  assert.doesNotMatch(readme, /start <task-id>|--criterion "AC-1=/u);
-  assert.doesNotMatch(readme, /卫生收尾规划|给模型怎么用/u);
+  assert.match(readme, /npm install -g \.\/tiller-0\.5\.0\.tgz/u);
+  assert.match(readme, /chore\(tiller\): 完成工程初始化/u);
+  assert.match(readme, /合入[^\n]*git pull/u);
+  assert.match(readme, /用 Codex 等 AI 编程工具/u);
+  assert.match(readme, /tiller merge <任务编号>/u);
+  assert.match(readme, /网页[\s\S]*tiller close <任务编号>/u);
+  assert.doesNotMatch(readme, /尚未发布到 npm|维护者|决策记录|verify\.prepare|verify\.runner|--reported|失败先行|advanced/u);
   assert.ok(readme.length < 6000, `README is ${readme.length} characters`);
 });
