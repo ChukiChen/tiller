@@ -19,10 +19,10 @@
     ".tiller/rules/activities/requirements.md": "b50af735775467b44e371e407dbcc2faafd0c996347adefc6fc9978bee026416",
     ".tiller/rules/activities/design.md": "2e3e6b4ea9178a32ea0c42e4d7c199c1621a302138b1b9a4b016b1a7c24c150d",
     ".tiller/rules/activities/implementation.md": "b74f8d5e1df079f9c0351b4c4b4a56198107098de471706af245c75b7acd7fb3",
-    ".tiller/rules/activities/delivery.md": "fae4a4ba723b67866e88e78983d811127234b44af76d0d7ea4055ee9e3d98fcd",
+    ".tiller/rules/activities/delivery.md": "bcc3f5abcc6fbc12a73505b58b136f4ada3fb8137d6dbf3679610cae5af303a4",
     ".tiller/rules/quality/documents.md": "62cf6e683ebf9d12e7c44850bea1d4f36f6fb9abfce2a1c1966aff66c73fd12f",
     ".tiller/rules/quality/verification.md": "7d7bae8419738b7d75490a670530a1289343da34060c676f001c79ee39f8669a",
-    ".tiller/usage.md": "63796b0d91a7fd5bb8e37b75ec8a1f5a562d5c85a83912c7b19782d82b08af91",
+    ".tiller/usage.md": "ac67df086af24030d85ba0a828b4e8f75b26aa39fdee8e43d297d64150adc846",
     ".tiller/run.cjs": "b760046bf12723a7f040877ad19bd26de5d94e02a918df832196e64361cac24a",
     ".github/pull_request_template.md": "76169f57652bd136127ac9cec64c29293bd5b6d92039948a01963c4e043aafd4"
   },

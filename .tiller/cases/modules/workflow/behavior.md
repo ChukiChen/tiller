@@ -1285,3 +1285,103 @@ management 和各 repository.path 均位于 .tiller/local/<id>/worktrees 下并�
 ### 预期结果
 
 旧 worktree 可拆除，旧 .tiller/local/worktrees|logs|tasks/<id> 均清理，缺失幂等且不删其他任务
+
+## CASE-216 pr 阻断本任务未提交记录
+
+- 类型：behavior
+- 优先级：high
+- 模块：workflow
+- 关联 AC：20261026-pr-task-sync#AC-1
+- 需求：`.tiller/specs/modules/workflow/requirements.md`
+- 源码：`src/pr.ts`, `test/pr.test.mjs`
+
+### 前置条件
+
+- 任务已确认且工作树可读取
+
+### 步骤
+
+1. 修改本任务 task.md 或范围内 cases/specs 后运行 pr
+
+### 输入
+
+- 本任务记录相对 HEAD 有未提交改动
+
+### 预期结果
+
+pr 以 PR_TASK_RECORDS_DIRTY 失败并列出记录路径
+
+## CASE-217 pr 在任务记录已提交后生成草稿
+
+- 类型：behavior
+- 优先级：high
+- 模块：workflow
+- 关联 AC：20261026-pr-task-sync#AC-1
+- 需求：`.tiller/specs/modules/workflow/requirements.md`
+- 源码：`src/pr.ts`, `test/pr.test.mjs`
+
+### 前置条件
+
+- 本任务记录与范围内 cases/specs 已提交
+
+### 步骤
+
+1. 运行 pr 并读取五段草稿
+
+### 输入
+
+- 干净工作树
+
+### 预期结果
+
+pr 成功生成既有五段 PR/MR 草稿
+
+## CASE-218 其他任务脏记录不阻断本任务 pr
+
+- 类型：behavior
+- 优先级：medium
+- 模块：workflow
+- 关联 AC：20261026-pr-task-sync#AC-1
+- 需求：`.tiller/specs/modules/workflow/requirements.md`
+- 源码：`src/pr.ts`, `test/pr.test.mjs`
+
+### 前置条件
+
+- 本任务记录干净，另一任务 task.md 有未提交改动
+
+### 步骤
+
+1. 运行本任务 pr
+
+### 输入
+
+- 仅其他任务 .tiller/task/<other>/ 变脏
+
+### 预期结果
+
+本任务 pr 成功且不把其他任务路径列为阻断项
+
+## CASE-219 无 Git 工作树时 pr 跳过记录门禁并提示
+
+- 类型：behavior
+- 优先级：medium
+- 模块：workflow
+- 关联 AC：20261026-pr-task-sync#AC-1
+- 需求：`.tiller/specs/modules/workflow/requirements.md`
+- 源码：`src/pr.ts`, `test/pr.test.mjs`
+
+### 前置条件
+
+- 任务记录存在但 Git 工作树不可读取
+
+### 步骤
+
+1. 运行 pr 并读取 warnings
+
+### 输入
+
+- 移除 Git 元数据后的任务工作树
+
+### 预期结果
+
+pr 不因记录门禁失败，并在 warnings 说明无法读取未提交改动

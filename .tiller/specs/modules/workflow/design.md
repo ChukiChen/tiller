@@ -51,6 +51,8 @@
 
 `draftPullRequest` 复用 `inspectFlow` 的 AC 覆盖状态，从任务范围的模块路径、“涉及模块”声明和全局用例来源按声明顺序推导模块，标题取首个主模块，无模块时省略括号。标题摘要依次取 `pr --summary`、任务元数据 `summary`、任务基线后最早的规范 feat/fix 提交摘要和任务标题。提交读取保持正序，正文生成器只接受五个固定二级标题；关联任务输出纯文本路径，验证结果以每条 AC 的摘要行加普通嵌套记录呈现，不使用编号圆点。Markdown 在标题后单列建议分支，JSON 同时返回 `body`、`branch` 和提交列表。分支描述依次读取 `pr --slug`、任务元数据 `slug`、当前分支匹配描述，并统一规范化为小写字母、数字和连字符。该模块没有网络依赖，文案对 PR/MR 中性。
 
+`draftPullRequest` 在生成草稿前读取相对 HEAD 的 tracked 与 untracked 路径，命中本任务 `.tiller/task/<id>/` 或任务 scope 覆盖的 `.tiller/cases/`、`.tiller/specs/` 时以 `PR_TASK_RECORDS_DIRTY` 失败并列出工程相对路径；其他任务目录不在门禁范围，tiller 不自动提交。无 Git 或 Git 工作树不可读时跳过门禁，并在草稿 warnings 中保留提示。
+
 ## 7. 范围与恢复
 
 范围是工程相对路径集合；默认 `.`。排除任务自己的记录、`.tiller/local/`、`.git/` 和依赖目录。无 Git 时跳过依赖提交差分的检查，但保留文件级代码树摘要。写入使用统一事务，失败可用 `recover`。

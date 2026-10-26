@@ -155,6 +155,8 @@ const verified = invoke(['verify', taskId, '--criterion', 'AC-1', '--case', adde
 assert.deepEqual(verified.cases, ['CASE-001']);
 const checked = invoke(['check', taskId]);
 assert.equal(checked.ready, true, checked.issues.join('\n'));
+git(target, 'add', '-A');
+git(target, 'commit', '--quiet', '-m', 'chore(workflow): 同步任务记录');
 const draft = invoke(['pr', taskId]);
 assert.equal(draft.branch, `feat/${taskId}`);
 assert.ok(draft.title.endsWith(`[${taskId}]`));

@@ -37,5 +37,7 @@
 - PR/MR 标题沿用提交格式并在末尾加 `[任务编号]`；主模块按范围声明顺序取首个，无法推导时省略括号。说明固定五段：关联任务、变更内容、验收条件、验证结果、影响与风险。
 - 分支名为 `类型/任务编号`，可加 `-简短描述`；只用小写字母、数字、连字符和一个斜杠，不使用 `codex/` 前缀。
 - `pr <task-id>` 只读 `task.md` 与 Git，生成标题、五段说明和建议分支，列出每条 AC 的全部验证；关联任务用纯文本路径。标题摘要依次取 `pr --summary`、任务元数据、任务基线后最早的规范 feat/fix 提交摘要和任务标题；变更内容按提交时间正序。分支描述取 `--slug`、任务元数据或当前分支。`--json` 返回相同字段；它不调用托管平台、不联网。
+- `verify`/`check` 或 cases/specs 回写后，先提交任务记录，即把本任务 `.tiller/task/<id>/` 与任务范围覆盖的 `.tiller/cases/`、`.tiller/specs/` 改动提交到任务分支，再运行 `pr`。`pr` 对未提交任务记录默认失败（`PR_TASK_RECORDS_DIRTY`）并列出路径；只检查本任务 id 与 scope，其他任务 `.tiller/task/<other>/` 不阻断，tiller 不自动提交。无 Git 或无法读工作树时跳过门禁并提示。
+- 合入后 `accept`/`close` 若再次改写 `task.md`，须另作收尾提交；本版不通过 accept/close 自动提交。
 - `init --platform github|gitlab|both` 按平台安装对应模板，默认 GitHub；平台在初始化时选定，之后不能通过 CLI 切换，需手动修改 `project.json` 并补齐模板。`upgrade` 只补齐当前平台模板，不跨平台新增。
 - `check` 对任务基线后的非合并提交主题和当前分支名给出提示，不阻塞；main/master 与 detached HEAD 跳过分支检查。

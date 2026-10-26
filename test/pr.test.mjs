@@ -30,6 +30,11 @@ function setupRepository(root) {
   git(root, 'commit', '--quiet', '-m', 'baseline');
 }
 
+function commitTaskRecords(root, id, ...paths) {
+  git(root, 'add', `.tiller/task/${id}`, ...paths);
+  git(root, 'commit', '--quiet', '-m', 'chore(workflow): 同步任务记录');
+}
+
 function fillDesign(root, id) {
   completeDesign(root, id);
   const relative = `.tiller/task/${id}/task.md`;
@@ -161,6 +166,7 @@ test('CASE-075 pr title selects first declared module and omits unknown modules'
   success(cli(root, 'start', id, '--title', '模块标题', '--requirement', '从范围选择首个主模块。',
     '--criterion', 'AC-1=标题包含首个模块', '--size', 'small',
     '--target', '.tiller/specs/modules/initialization', '--target', '.tiller/specs/modules/workflow'));
+  commitTaskRecords(root, id, '.tiller/specs/modules/initialization', '.tiller/specs/modules/workflow');
   const draft = success(cli(root, 'pr', id));
   assert.equal(draft.module, 'initialization');
   assert.equal(draft.title, `feat(initialization): 模块标题 [${id}]`);
@@ -171,6 +177,7 @@ test('CASE-075 pr title selects first declared module and omits unknown modules'
   const unknownId = '20261022-unknown-module';
   success(cli(unknown, 'start', unknownId, '--title', '未知模块标题', '--requirement', '没有可推导模块。',
     '--criterion', 'AC-1=标题省略模块', '--size', 'small', '--target', 'src'));
+  commitTaskRecords(unknown, unknownId);
   const fallback = success(cli(unknown, 'pr', unknownId));
   assert.equal(fallback.module, null);
   assert.equal(fallback.title, `feat: 未知模块标题 [${unknownId}]`);
@@ -184,6 +191,7 @@ test('CASE-076 branch slug precedence uses flag then task metadata then current 
   const started = success(cli(root, 'start', metadataTask, '--title', '元数据分支描述', '--requirement', '记录英文标识。',
     '--criterion', 'AC-1=分支包含元数据描述', '--size', 'small', '--target', 'src', '--slug', 'Structured Task'));
   assert.equal(started.slug, 'structured-task');
+  commitTaskRecords(root, metadataTask);
   assert.equal(success(cli(root, 'pr', metadataTask)).branch, `feat/${metadataTask}-structured-task`);
   assert.equal(success(cli(root, 'pr', metadataTask, '--slug', 'PR_Draft 2')).branch, `feat/${metadataTask}-pr-draft-2`);
 
@@ -191,6 +199,7 @@ test('CASE-076 branch slug precedence uses flag then task metadata then current 
   success(cli(root, 'start', branchTask, '--title', '当前分支描述', '--requirement', '从当前分支读取描述。',
     '--criterion', 'AC-1=分支包含当前分支描述', '--size', 'small', '--target', 'src'));
   git(root, 'checkout', '--quiet', '-b', `fix/${branchTask}-from-current`);
+  commitTaskRecords(root, branchTask);
   assert.equal(success(cli(root, 'pr', branchTask)).branch, `feat/${branchTask}-from-current`);
 });
 
@@ -211,6 +220,7 @@ test('CASE-077 pr verification section lists every recorded run in order', async
   const first = firstRun.entries[0].command;
   const second = secondRun.entries[0].command;
 
+  commitTaskRecords(root, id, '.tiller/cases');
   const draft = success(cli(root, 'pr', id));
   assert.ok(draft.body.indexOf(`命令：\`${first}\``) >= 0, draft.body);
   assert.ok(draft.body.indexOf(`命令：\`${second}\``) > draft.body.indexOf(`命令：\`${first}\``), draft.body);
@@ -231,6 +241,7 @@ test('CASE-081 pr summary prefers flag then metadata then earliest conventional 
     '--criterion', 'AC-1=使用元数据摘要', '--size', 'small', '--target', 'src', '--target', 'test',
     '--target', '.tiller/specs/modules/workflow'));
   assert.equal(started.summary, '元数据中文摘要');
+  commitTaskRecords(root, metadataId);
   assert.equal(success(cli(root, 'pr', metadataId)).title, `feat(workflow): 元数据中文摘要 [${metadataId}]`);
   assert.equal(success(cli(root, 'pr', metadataId, '--summary', '命令行中文摘要')).title,
     `feat(workflow): 命令行中文摘要 [${metadataId}]`);
@@ -253,6 +264,7 @@ test('CASE-081 pr summary prefers flag then metadata then earliest conventional 
   const fallbackId = '20261022-summary-fallback';
   success(cli(root, 'start', fallbackId, '--title', '任务标题回退', '--requirement', '没有提交摘要时使用任务标题。',
     '--criterion', 'AC-1=使用任务标题', '--size', 'small', '--target', 'src'));
+  commitTaskRecords(root, fallbackId);
   assert.equal(success(cli(root, 'pr', fallbackId)).title, `feat: 任务标题回退 [${fallbackId}]`);
 });
 
@@ -292,6 +304,7 @@ test('CASE-083 pr verification section uses plain nested records without numbere
   const verified = success(cli(root, 'verify', id, '--criterion', 'AC-1', '--test', 'test/workflow.test.mjs::CASE-001 workflow behavior'));
   const command = verified.entries[0].command;
 
+  commitTaskRecords(root, id, '.tiller/cases');
   const draft = success(cli(root, 'pr', id));
   assert.match(draft.body, /^- AC-1：每条记录单独一行（当前有效）$/mu);
   assert.ok(draft.body.includes(`  - 测试：\`test/workflow.test.mjs::CASE-001 workflow behavior\`；命令：\`${command}\`；结果：passed；提交：\`${verified.entries[0].commit}\`；用例：${added.id}`), draft.body);
@@ -386,6 +399,7 @@ test('CASE-080 pr task section is plain text and PR MR neutral', async t => {
   const id = '20261022-neutral-output';
   success(cli(root, 'start', id, '--title', '中性文案', '--requirement', '关联任务使用纯文本。',
     '--criterion', 'AC-1=输出纯文本记录路径', '--size', 'small', '--target', 'src'));
+  commitTaskRecords(root, id);
   const draft = success(cli(root, 'pr', id));
   assert.match(draft.body, new RegExp(`^## 关联任务\\n\\n任务 ${id}，记录见 \`\\.tiller/task/${id}/task\\.md\`$`, 'mu'));
   assert.doesNotMatch(draft.body, /\[[^\]]+\]\(\.tiller\/task\//u);
@@ -395,4 +409,106 @@ test('CASE-080 pr task section is plain text and PR MR neutral', async t => {
   const gitlabTemplate = readFileSync(new URL('../resources/merge_request_template.md', import.meta.url), 'utf8');
   assert.equal(gitlabTemplate, githubTemplate);
   assert.match(githubTemplate, /任务 <id>，记录见 `\.tiller\/task\/<id>\/task\.md`/u);
+});
+
+test('CASE-216 pr blocks uncommitted task records and lists relative paths', async t => {
+  const root = fixture(t);
+  success(cli(root, 'init'));
+  setupRepository(root);
+  const id = '20261026-pr-records-dirty';
+  success(cli(root, 'start', id, '--title', 'PR 前同步记录', '--requirement', '任务记录必须已提交。',
+    '--criterion', 'AC-1=未提交记录阻断 PR 草稿', '--size', 'small',
+    '--target', 'src', '--target', '.tiller/cases', '--target', '.tiller/specs'));
+
+  const taskPath = `.tiller/task/${id}/task.md`;
+  const taskDirty = failure(cli(root, 'pr', id));
+  assert.equal(taskDirty.error.code, 'PR_TASK_RECORDS_DIRTY');
+  assert.ok(taskDirty.error.message.includes(taskPath), taskDirty.error.message);
+
+  git(root, 'add', `.tiller/task/${id}`);
+  git(root, 'commit', '--quiet', '-m', 'chore(workflow): 记录任务');
+
+  const casePath = '.tiller/cases/modules/workflow/behavior.md';
+  put(root, casePath, '# workflow behavior\n\n## CASE-900 临时用例\n');
+  const caseDirty = failure(cli(root, 'pr', id));
+  assert.equal(caseDirty.error.code, 'PR_TASK_RECORDS_DIRTY');
+  assert.ok(caseDirty.error.message.includes(casePath), caseDirty.error.message);
+
+  git(root, 'add', casePath);
+  git(root, 'commit', '--quiet', '-m', 'test(workflow): 记录用例');
+
+  const specPath = '.tiller/specs/modules/workflow/requirements.md';
+  put(root, specPath, `${read(root, specPath)}\n临时规格改动。\n`);
+  const specDirty = failure(cli(root, 'pr', id));
+  assert.equal(specDirty.error.code, 'PR_TASK_RECORDS_DIRTY');
+  assert.ok(specDirty.error.message.includes(specPath), specDirty.error.message);
+  assert.equal(Object.hasOwn(specDirty, 'body'), false);
+});
+
+test('CASE-217 pr generates the five-section draft after task records are committed', async t => {
+  const root = fixture(t);
+  success(cli(root, 'init'));
+  setupRepository(root);
+  const id = '20261026-pr-records-clean';
+  success(cli(root, 'start', id, '--title', '已提交记录', '--requirement', '干净记录生成草稿。',
+    '--criterion', 'AC-1=干净记录生成五段草稿', '--size', 'small',
+    '--target', 'src', '--target', '.tiller/specs'));
+  const specPath = '.tiller/specs/modules/workflow/requirements.md';
+  put(root, specPath, `${read(root, specPath)}\n## 记录同步\n\nPR 前记录已提交。\n`);
+  git(root, 'add', `.tiller/task/${id}`, specPath);
+  git(root, 'commit', '--quiet', '-m', 'feat(workflow): 记录 PR 前同步');
+
+  const draft = success(cli(root, 'pr', id));
+  assert.ok(draft.title.endsWith(`[${id}]`));
+  for (const heading of ['关联任务', '变更内容', '验收条件', '验证结果', '影响与风险']) {
+    assert.equal(draft.body.split(`## ${heading}`).length - 1, 1, heading);
+  }
+  assert.ok(!draft.warnings.some(item => item.includes('未提交改动')), draft.warnings.join('\n'));
+});
+
+test('CASE-218 another dirty task does not block this task pr', async t => {
+  const root = fixture(t);
+  success(cli(root, 'init'));
+  setupRepository(root);
+  const id = '20261026-pr-records-current';
+  success(cli(root, 'start', id, '--title', '当前任务', '--requirement', '其他任务不误伤。',
+    '--criterion', 'AC-1=其他任务记录不阻断', '--size', 'small', '--target', 'src'));
+  git(root, 'add', `.tiller/task/${id}`);
+  git(root, 'commit', '--quiet', '-m', 'chore(workflow): 记录当前任务');
+  put(root, '.tiller/task/20261026-pr-records-other/task.md', '# 其他任务\n\n未提交记录。\n');
+
+  const draft = success(cli(root, 'pr', id));
+  assert.ok(draft.body.includes(`.tiller/task/${id}/task.md`));
+  assert.doesNotMatch(draft.body, /20261026-pr-records-other/u);
+});
+
+test('CASE-219 pr skips the record gate with a warning when Git is unavailable', async t => {
+  const root = fixture(t);
+  success(cli(root, 'init'));
+  setupRepository(root);
+  const id = '20261026-pr-records-no-git';
+  success(cli(root, 'start', id, '--title', '无 Git', '--requirement', '无 Git 时降级提示。',
+    '--criterion', 'AC-1=无 Git 时跳过门禁', '--size', 'small', '--target', 'src'));
+  rmSync(join(root, '.git'), { recursive: true, force: true });
+
+  const draft = success(cli(root, 'pr', id));
+  assert.ok(draft.warnings.some(item => /无法读取.*未提交改动.*跳过/u.test(item)), draft.warnings.join('\n'));
+  assert.match(draft.body, /^## 关联任务$/mu);
+});
+
+test('CASE-220 delivery docs require committing task records before pr', () => {
+  const usage = readFileSync(new URL('../resources/usage.md', import.meta.url), 'utf8');
+  const delivery = readFileSync(new URL('../resources/rules/activities/delivery.md', import.meta.url), 'utf8');
+  const decisions = readFileSync(new URL('../.tiller/specs/decisions.md', import.meta.url), 'utf8');
+  const requirements = readFileSync(new URL('../.tiller/specs/modules/workflow/requirements.md', import.meta.url), 'utf8');
+  const design = readFileSync(new URL('../.tiller/specs/modules/workflow/design.md', import.meta.url), 'utf8');
+  for (const text of [usage, delivery, decisions]) assert.match(text, /提交任务记录/u);
+  assert.match(usage, /PR_TASK_RECORDS_DIRTY/u);
+  assert.match(usage, /accept.*close.*收尾提交/su);
+  assert.match(delivery, /其他任务.*不阻断/su);
+  assert.match(decisions, /不自动提交/u);
+  assert.match(requirements, /FLOW-35/u);
+  assert.match(design, /PR_TASK_RECORDS_DIRTY/u);
+  assert.equal(readFileSync(new URL('../.tiller/usage.md', import.meta.url), 'utf8'), usage);
+  assert.equal(readFileSync(new URL('../.tiller/rules/activities/delivery.md', import.meta.url), 'utf8'), delivery);
 });
