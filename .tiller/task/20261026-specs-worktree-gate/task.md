@@ -75,9 +75,11 @@
 | --- | --- | --- | --- | --- |
 | 需求 | boon yu | 2026-10-26T15:07:55.379Z | a7f8bfa0f816 | 修改 |
 | 设计 | boon yu | 2026-10-26T15:07:55.463Z | a7f8bfa0f816 | 修改 |
+| 交付验收 | boon yu | 2026-10-26T15:24:47.892Z | 752b1f30439c | 修改 |
 
 <!-- tiller-confirm:v1 {"gate":"requirements","object":"需求正文（目标、范围与验收条件）","subject":"b667658b6547d267a58adabdf78babefdf58b6af01521d2b6f6d40d1e6b9affa","commit":"a7f8bfa0f816332c987d415724601ad612f8f0fc","by":"boon yu","quote":"修改","at":"2026-10-26T15:07:55.379Z"} -->
 <!-- tiller-confirm:v1 {"gate":"design","object":"设计正文","subject":"bcbe1dec7e1d01b7d02eafc1085d0ea790463b9265bdb16d6ff9f73434c4d174","commit":"a7f8bfa0f816332c987d415724601ad612f8f0fc","by":"boon yu","quote":"修改","at":"2026-10-26T15:07:55.463Z"} -->
+<!-- tiller-confirm:v1 {"gate":"acceptance","object":"当前交付（需求、设计、验证与提交）","subject":"b92a31303c0142fad6a8a1e3351795269e0aa34139e78bee77d17a5488139e52","commit":"752b1f30439c1b1802855bd4342dd643478e97d5","by":"boon yu","quote":"修改","at":"2026-10-26T15:24:47.892Z"} -->
 
 ## 验证
 
@@ -131,4 +133,22 @@
 
 ## 自检
 
-交付前运行 check；验收后运行 accept。
+- [x] 需求确认有效
+- [x] 设计确认有效
+- [x] 验收条件均有当前通过且绑定全局用例的测试引用
+- [x] 每条验收条件均映射到本次验证引用的全局用例
+- [x] 验收条件与用例通过 verify 的 AC→测试→CASE 记录关联
+- [x] 验证命令已执行且测试输出已核实
+- [x] 全局用例结构与引用有效
+- [x] 改动未超出范围
+- [x] 未弱化仍存在的测试
+- [x] 评审无未清除阻塞项
+- [x] 记录不含密钥或本机绝对路径
+
+提示：
+- 172 条历史用例仍以 <任务>#AC-n 记录关联 AC；这是可迁移的历史债，不阻断当前覆盖。
+- 106 条用例的关联 AC 为无；覆盖以需求字段和 verify 的 AC→测试→CASE 记录为准。
+- 本次改动涉及模块 initialization：建议回归该模块 67 条用例及经过它的场景 CASE-055, CASE-001。
+- 本次改动涉及模块 standards：建议回归该模块 36 条用例及经过它的场景 CASE-055。
+- 本次改动涉及模块 verification：建议回归该模块 45 条用例及经过它的场景 CASE-055, CASE-001。
+- 本次改动涉及模块 workflow：建议回归该模块 128 条用例及经过它的场景 CASE-055, CASE-001。
