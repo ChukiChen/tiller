@@ -848,3 +848,29 @@ git worktree 位于 .tiller/local/<id>/worktrees，worktrees.json、pre-existing
 ### 预期结果
 
 同时存在时采用新布局，新缺失时回退旧布局且摘要有效
+
+## CASE-215 文档与规格写明任务本机目录布局与 close 生命周期
+
+- 类型：interface
+- 优先级：medium
+- 模块：workflow
+- 关联 AC：20261026-local-task-layout#AC-4
+- 需求：`.tiller/specs/modules/workflow/requirements.md`
+- 源码：`resources/usage.md`, `resources/rules/core.md`, `test/usage-resources.test.mjs`
+
+### 前置条件
+
+- 受管 usage/rules 与 workflow specs 已随本任务更新
+
+### 步骤
+
+1. 阅读 usage、core/delivery 规则与 workflow requirements/design、decisions
+2. 确认写路径与 close 清理语义与实现一致
+
+### 输入
+
+- 按用例描述准备正常输入及必要的边界输入。
+
+### 预期结果
+
+usage、rules、workflow specs 与 decisions 描述 .tiller/local/<id>/ 聚合布局，以及 close/abandon 删除整棵任务目录并兼容旧路径

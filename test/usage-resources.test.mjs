@@ -214,3 +214,21 @@ test('CASE-145 initialization and upgrade accept existing distributed resources 
   assert.equal((await applyUpgrade(root, plan.planId)).ready, true);
   for (const [relative, text] of Object.entries(files)) assert.equal(read(root, relative), text);
 });
+
+test('CASE-215 docs describe task-local layout and close cleanup lifecycle', () => {
+  const usage = readFileSync(new URL('../resources/usage.md', import.meta.url), 'utf8');
+  const core = readFileSync(new URL('../resources/rules/core.md', import.meta.url), 'utf8');
+  const delivery = readFileSync(new URL('../resources/rules/activities/delivery.md', import.meta.url), 'utf8');
+  const design = readFileSync(new URL('../.tiller/specs/modules/workflow/design.md', import.meta.url), 'utf8');
+  const requirements = readFileSync(new URL('../.tiller/specs/modules/workflow/requirements.md', import.meta.url), 'utf8');
+  const decisions = readFileSync(new URL('../.tiller/specs/decisions.md', import.meta.url), 'utf8');
+  for (const text of [usage, core, delivery, design, decisions]) {
+    assert.match(text, /\.tiller\/local\/<id>\//u);
+  }
+  assert.match(usage, /worktrees\//u);
+  assert.match(usage, /兼容清理旧三棵树|兼容清理旧/u);
+  assert.match(core, /worktrees\//u);
+  assert.match(requirements, /FLOW-34|任务 worktree 生命周期|\.tiller\/local\//u);
+  assert.match(design, /worktrees\//u);
+  assert.match(decisions, /聚合|worktrees\.json/u);
+});

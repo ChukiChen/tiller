@@ -96,8 +96,185 @@
 
 ## 验证
 
-尚无验证。
+### run-1
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-196 CASE-209 project start creates a task-local worktree, sidecars and logs in one directory$' \u002d\u002dtest-reporter=./.tiller/local/verify-8KGtFi/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-8KGtFi/report.jsonl test/task-worktrees.test.mjs","exitCode":0,"tree":"c4e6fb9fbb41957ea0e0d09ad1af3c870cb28a151f6d978901b5ae39cdd898c2","commit":"c953a6e81d0cf93745ae0e7d01b9a4d975e4fbc9"} -->
+- 条件：AC-1
+- 测试：test/task-worktrees.test.mjs::CASE-196 CASE-209 project start creates a task-local worktree, sidecars and logs in one directory
+- 用例：CASE-209
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/logs/20261026-local-task-layout/run-1.log
+- 提交：c953a6e81d0c
+- 时间：2026-10-26T02:57:16.818Z
+
+### run-2
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-197 CASE-210 workspace start keeps management and registered repositories under the task worktree root$' \u002d\u002dtest-reporter=./.tiller/local/verify-Ce70LQ/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-Ce70LQ/report.jsonl test/task-worktrees.test.mjs","exitCode":0,"tree":"c4e6fb9fbb41957ea0e0d09ad1af3c870cb28a151f6d978901b5ae39cdd898c2","commit":"c953a6e81d0cf93745ae0e7d01b9a4d975e4fbc9"} -->
+- 条件：AC-2
+- 测试：test/task-worktrees.test.mjs::CASE-197 CASE-210 workspace start keeps management and registered repositories under the task worktree root
+- 用例：CASE-210
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/logs/20261026-local-task-layout/run-2.log
+- 提交：c953a6e81d0c
+- 时间：2026-10-26T02:57:17.758Z
+
+### run-3
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-198 CASE-211 close and abandon remove the whole task-local directory and preserve other tasks$' \u002d\u002dtest-reporter=./.tiller/local/verify-CCduU3/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-CCduU3/report.jsonl test/task-worktrees.test.mjs","exitCode":0,"tree":"c4e6fb9fbb41957ea0e0d09ad1af3c870cb28a151f6d978901b5ae39cdd898c2","commit":"c953a6e81d0cf93745ae0e7d01b9a4d975e4fbc9"} -->
+- 条件：AC-3
+- 测试：test/task-worktrees.test.mjs::CASE-198 CASE-211 close and abandon remove the whole task-local directory and preserve other tasks
+- 用例：CASE-211
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/logs/20261026-local-task-layout/run-3.log
+- 提交：c953a6e81d0c
+- 时间：2026-10-26T02:57:18.763Z
+
+### run-4
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-212 close cleans legacy worktrees, logs and sidecars without touching other task paths$' \u002d\u002dtest-reporter=./.tiller/local/verify-7otVYj/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-7otVYj/report.jsonl test/task-worktrees.test.mjs","exitCode":0,"tree":"c4e6fb9fbb41957ea0e0d09ad1af3c870cb28a151f6d978901b5ae39cdd898c2","commit":"c953a6e81d0cf93745ae0e7d01b9a4d975e4fbc9"} -->
+- 条件：AC-3
+- 测试：test/task-worktrees.test.mjs::CASE-212 close cleans legacy worktrees, logs and sidecars without touching other task paths
+- 用例：CASE-212
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/logs/20261026-local-task-layout/run-4.log
+- 提交：c953a6e81d0c
+- 时间：2026-10-26T02:57:20.541Z
+
+### run-5
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-096 CASE-181 CASE-213 verify writes a readable command summary and verbose log in the task-local directory$' \u002d\u002dtest-reporter=./.tiller/local/verify-Coxewl/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-Coxewl/report.jsonl test/verification-integrity.test.mjs","exitCode":0,"tree":"c4e6fb9fbb41957ea0e0d09ad1af3c870cb28a151f6d978901b5ae39cdd898c2","commit":"c953a6e81d0cf93745ae0e7d01b9a4d975e4fbc9"} -->
+- 条件：AC-1
+- 测试：test/verification-integrity.test.mjs::CASE-096 CASE-181 CASE-213 verify writes a readable command summary and verbose log in the task-local directory
+- 用例：CASE-213
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/logs/20261026-local-task-layout/run-5.log
+- 提交：c953a6e81d0c
+- 时间：2026-10-26T02:57:22.368Z
+
+### run-6
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-214 pre-existing sidecars prefer the task-local layout and fall back to the legacy path$' \u002d\u002dtest-reporter=./.tiller/local/verify-W9XfcQ/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-W9XfcQ/report.jsonl test/doc-templates.test.mjs","exitCode":0,"tree":"c4e6fb9fbb41957ea0e0d09ad1af3c870cb28a151f6d978901b5ae39cdd898c2","commit":"c953a6e81d0cf93745ae0e7d01b9a4d975e4fbc9"} -->
+- 条件：AC-1
+- 测试：test/doc-templates.test.mjs::CASE-214 pre-existing sidecars prefer the task-local layout and fall back to the legacy path
+- 用例：CASE-214
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/logs/20261026-local-task-layout/run-6.log
+- 提交：c953a6e81d0c
+- 时间：2026-10-26T02:57:23.388Z
+
+### run-7
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-196 CASE-209 project start creates a task-local worktree, sidecars and logs in one directory$' \u002d\u002dtest-reporter=./.tiller/local/verify-rGCVTI/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-rGCVTI/report.jsonl test/task-worktrees.test.mjs","exitCode":0,"tree":"c4e6fb9fbb41957ea0e0d09ad1af3c870cb28a151f6d978901b5ae39cdd898c2","commit":"c953a6e81d0cf93745ae0e7d01b9a4d975e4fbc9"} -->
+- 条件：AC-1
+- 测试：test/task-worktrees.test.mjs::CASE-196 CASE-209 project start creates a task-local worktree, sidecars and logs in one directory
+- 用例：CASE-209
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/20261026-local-task-layout/logs/run-7.log
+- 提交：c953a6e81d0c
+- 时间：2026-10-26T02:57:47.249Z
+
+### run-8
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-197 CASE-210 workspace start keeps management and registered repositories under the task worktree root$' \u002d\u002dtest-reporter=./.tiller/local/verify-7ae4MC/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-7ae4MC/report.jsonl test/task-worktrees.test.mjs","exitCode":0,"tree":"c4e6fb9fbb41957ea0e0d09ad1af3c870cb28a151f6d978901b5ae39cdd898c2","commit":"c953a6e81d0cf93745ae0e7d01b9a4d975e4fbc9"} -->
+- 条件：AC-2
+- 测试：test/task-worktrees.test.mjs::CASE-197 CASE-210 workspace start keeps management and registered repositories under the task worktree root
+- 用例：CASE-210
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/20261026-local-task-layout/logs/run-8.log
+- 提交：c953a6e81d0c
+- 时间：2026-10-26T02:57:48.150Z
+
+### run-9
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-198 CASE-211 close and abandon remove the whole task-local directory and preserve other tasks$' \u002d\u002dtest-reporter=./.tiller/local/verify-5g2jSM/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-5g2jSM/report.jsonl test/task-worktrees.test.mjs","exitCode":0,"tree":"c4e6fb9fbb41957ea0e0d09ad1af3c870cb28a151f6d978901b5ae39cdd898c2","commit":"c953a6e81d0cf93745ae0e7d01b9a4d975e4fbc9"} -->
+- 条件：AC-3
+- 测试：test/task-worktrees.test.mjs::CASE-198 CASE-211 close and abandon remove the whole task-local directory and preserve other tasks
+- 用例：CASE-211
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/20261026-local-task-layout/logs/run-9.log
+- 提交：c953a6e81d0c
+- 时间：2026-10-26T02:57:49.070Z
+
+### run-10
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-212 close cleans legacy worktrees, logs and sidecars without touching other task paths$' \u002d\u002dtest-reporter=./.tiller/local/verify-mr66kr/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-mr66kr/report.jsonl test/task-worktrees.test.mjs","exitCode":0,"tree":"c4e6fb9fbb41957ea0e0d09ad1af3c870cb28a151f6d978901b5ae39cdd898c2","commit":"c953a6e81d0cf93745ae0e7d01b9a4d975e4fbc9"} -->
+- 条件：AC-3
+- 测试：test/task-worktrees.test.mjs::CASE-212 close cleans legacy worktrees, logs and sidecars without touching other task paths
+- 用例：CASE-212
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/20261026-local-task-layout/logs/run-10.log
+- 提交：c953a6e81d0c
+- 时间：2026-10-26T02:57:50.707Z
+
+### run-11
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-096 CASE-181 CASE-213 verify writes a readable command summary and verbose log in the task-local directory$' \u002d\u002dtest-reporter=./.tiller/local/verify-FIjSQO/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-FIjSQO/report.jsonl test/verification-integrity.test.mjs","exitCode":0,"tree":"c4e6fb9fbb41957ea0e0d09ad1af3c870cb28a151f6d978901b5ae39cdd898c2","commit":"c953a6e81d0cf93745ae0e7d01b9a4d975e4fbc9"} -->
+- 条件：AC-1
+- 测试：test/verification-integrity.test.mjs::CASE-096 CASE-181 CASE-213 verify writes a readable command summary and verbose log in the task-local directory
+- 用例：CASE-213
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/20261026-local-task-layout/logs/run-11.log
+- 提交：c953a6e81d0c
+- 时间：2026-10-26T02:57:52.366Z
+
+### run-12
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-214 pre-existing sidecars prefer the task-local layout and fall back to the legacy path$' \u002d\u002dtest-reporter=./.tiller/local/verify-XcPAkk/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-XcPAkk/report.jsonl test/doc-templates.test.mjs","exitCode":0,"tree":"c4e6fb9fbb41957ea0e0d09ad1af3c870cb28a151f6d978901b5ae39cdd898c2","commit":"c953a6e81d0cf93745ae0e7d01b9a4d975e4fbc9"} -->
+- 条件：AC-1
+- 测试：test/doc-templates.test.mjs::CASE-214 pre-existing sidecars prefer the task-local layout and fall back to the legacy path
+- 用例：CASE-214
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/20261026-local-task-layout/logs/run-12.log
+- 提交：c953a6e81d0c
+- 时间：2026-10-26T02:57:53.323Z
+
+### run-13
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-215 docs describe task-local layout and close cleanup lifecycle$' \u002d\u002dtest-reporter=./.tiller/local/verify-3sRlIq/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-3sRlIq/report.jsonl test/usage-resources.test.mjs","exitCode":0,"tree":"2e2a5c9585a6c3abdb493642db64baee741a01d8a04f94432974d531d85b6849","commit":"c953a6e81d0cf93745ae0e7d01b9a4d975e4fbc9"} -->
+- 条件：AC-4
+- 测试：test/usage-resources.test.mjs::CASE-215 docs describe task-local layout and close cleanup lifecycle
+- 用例：CASE-215
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/20261026-local-task-layout/logs/run-13.log
+- 提交：c953a6e81d0c
+- 时间：2026-10-26T02:58:39.421Z
 
 ## 自检
 
-交付前运行 check；验收后运行 accept。
+- [x] 需求确认有效
+- [x] 设计确认有效
+- [ ] 验收条件均有当前通过且绑定全局用例的测试引用
+- [ ] 每条验收条件均映射到本次验证引用的全局用例
+- [x] 验收条件与用例来源 criteria 相互指向或由本任务新增/修改
+- [ ] 验证命令已执行且测试输出已核实
+- [x] 全局用例结构与引用有效
+- [ ] 改动未超出范围
+- [x] 未弱化仍存在的测试
+- [x] 评审无未清除阻塞项
+- [x] 记录不含密钥或本机绝对路径
+
+阻塞项：
+- AC-4 未绑定全局用例；先用 case add 把验收条件转为用例，并在测试名中引用用例编号。
+- AC-4 尚无验证。
+- 改动超出范围：node_modules
+
+提示：
+- 90 条历史用例未绑定来源 AC；新用例请用 case add 写入 criteria。
+- 本次改动涉及模块 initialization：建议回归该模块 59 条用例及经过它的场景 CASE-055, CASE-001。
+- 本次改动涉及模块 standards：建议回归该模块 23 条用例及经过它的场景 CASE-055。
+- 本次改动涉及模块 verification：建议回归该模块 40 条用例及经过它的场景 CASE-055, CASE-001。
+- 本次改动涉及模块 workflow：建议回归该模块 90 条用例及经过它的场景 CASE-055, CASE-001。
+- 修改的测试文件移除了 5 个测试用例（请确认对应功能已删除；详情见 Git diff）。
