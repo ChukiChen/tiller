@@ -101,90 +101,140 @@
 
 | 部分 | 确认人 | 时间 | 短提交 | 原话 |
 | --- | --- | --- | --- | --- |
-| 需求 | boon yu | 2026-10-26T05:27:45.684Z | 53d10a8e2034 | — |
-| 设计 | boon yu | 2026-10-26T05:28:02.818Z | 53d10a8e2034 | — |
+| 需求 | boon yu | 2026-10-26T05:54:27.321Z | 773b0d627f30 | — |
+| 设计 | boon yu | 2026-10-26T05:54:27.406Z | 773b0d627f30 | — |
+| 交付验收 | boon yu | 2026-10-26T05:55:20.704Z | 773b0d627f30 | — |
 
-<!-- tiller-confirm:v1 {"gate":"requirements","object":"需求正文（目标、范围与验收条件）","subject":"35e7202b41d1dcaced6ccd455d0356515103f80a3697f1c0fbf7527fe5dfe794","commit":"53d10a8e2034b8b927fe49c053e696a3311a1046","by":"boon yu","quote":"","at":"2026-10-26T05:27:45.684Z"} -->
-<!-- tiller-confirm:v1 {"gate":"design","object":"设计正文","subject":"8be594a4b9fe76c206679d956688996d2f595ccaa9de60a8f214bd57d5378577","commit":"53d10a8e2034b8b927fe49c053e696a3311a1046","by":"boon yu","quote":"","at":"2026-10-26T05:28:02.818Z"} -->
+<!-- tiller-confirm:v1 {"gate":"requirements","object":"需求正文（目标、范围与验收条件）","subject":"35e7202b41d1dcaced6ccd455d0356515103f80a3697f1c0fbf7527fe5dfe794","commit":"773b0d627f3064951ff3d741759bf16aaf025618","by":"boon yu","quote":"","at":"2026-10-26T05:54:27.321Z"} -->
+<!-- tiller-confirm:v1 {"gate":"design","object":"设计正文","subject":"8be594a4b9fe76c206679d956688996d2f595ccaa9de60a8f214bd57d5378577","commit":"773b0d627f3064951ff3d741759bf16aaf025618","by":"boon yu","quote":"","at":"2026-10-26T05:54:27.406Z"} -->
+<!-- tiller-confirm:v1 {"gate":"acceptance","object":"当前交付（需求、设计、验证与提交）","subject":"f315c5c15b95062cd0e5887cd4d0d8ea75694fdaf9b6cb6c7443e4448f988c8c","commit":"773b0d627f3064951ff3d741759bf16aaf025618","by":"boon yu","quote":"","at":"2026-10-26T05:55:20.704Z"} -->
 
 ## 验证
 
-### run-1
-<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-228 init creates a committed initialization worktree and attempts the titled PR$' \u002d\u002dtest-reporter=./.tiller/local/verify-PwgHZv/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-PwgHZv/report.jsonl test/init-baseline.test.mjs","exitCode":0,"tree":"4237ac3afee5d9ad3ef2196819fc2807de382bd30dc29dc1e42357313623f10b","commit":"53d10a8e2034b8b927fe49c053e696a3311a1046"} -->
+### run-7
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-228 init creates a committed initialization worktree and attempts the titled PR$' \u002d\u002dtest-reporter=./.tiller/local/verify-BmOtCD/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-BmOtCD/report.jsonl test/init-baseline.test.mjs","exitCode":0,"tree":"4237ac3afee5d9ad3ef2196819fc2807de382bd30dc29dc1e42357313623f10b","commit":"773b0d627f3064951ff3d741759bf16aaf025618"} -->
 - 条件：AC-1
 - 测试：test/init-baseline.test.mjs::CASE-228 init creates a committed initialization worktree and attempts the titled PR
 - 用例：CASE-228
 - 结果：passed
 - 来源：executed
 - 核实：已核实
-- 日志：.tiller/local/20261026-init-baseline/logs/run-1.log
-- 提交：53d10a8e2034
-- 时间：2026-10-26T05:53:59.151Z
+- 日志：.tiller/local/20261026-init-baseline/logs/run-7.log
+- 提交：773b0d627f30
+- 时间：2026-10-26T05:54:34.323Z
 
-### run-2
-<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-229 failed PR creation keeps the worktree and commit and returns copyable commands$' \u002d\u002dtest-reporter=./.tiller/local/verify-Cd9NBd/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-Cd9NBd/report.jsonl test/init-baseline.test.mjs","exitCode":0,"tree":"4237ac3afee5d9ad3ef2196819fc2807de382bd30dc29dc1e42357313623f10b","commit":"53d10a8e2034b8b927fe49c053e696a3311a1046"} -->
+### run-8
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-228 init creates a committed initialization worktree and attempts the titled PR$' \u002d\u002dtest-reporter=./.tiller/local/verify-clQOaR/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-clQOaR/report.jsonl test/init-baseline.test.mjs","exitCode":0,"tree":"4237ac3afee5d9ad3ef2196819fc2807de382bd30dc29dc1e42357313623f10b","commit":"773b0d627f3064951ff3d741759bf16aaf025618"} -->
+- 条件：AC-1
+- 测试：test/init-baseline.test.mjs::CASE-228 init creates a committed initialization worktree and attempts the titled PR
+- 用例：CASE-228
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/20261026-init-baseline/logs/run-8.log
+- 提交：773b0d627f30
+- 时间：2026-10-26T05:54:35.287Z
+
+### run-9
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-229 failed PR creation keeps the worktree and commit and returns copyable commands$' \u002d\u002dtest-reporter=./.tiller/local/verify-maizYp/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-maizYp/report.jsonl test/init-baseline.test.mjs","exitCode":0,"tree":"4237ac3afee5d9ad3ef2196819fc2807de382bd30dc29dc1e42357313623f10b","commit":"773b0d627f3064951ff3d741759bf16aaf025618"} -->
 - 条件：AC-2
 - 测试：test/init-baseline.test.mjs::CASE-229 failed PR creation keeps the worktree and commit and returns copyable commands
 - 用例：CASE-229
 - 结果：passed
 - 来源：executed
 - 核实：已核实
-- 日志：.tiller/local/20261026-init-baseline/logs/run-2.log
-- 提交：53d10a8e2034
-- 时间：2026-10-26T05:54:00.076Z
+- 日志：.tiller/local/20261026-init-baseline/logs/run-9.log
+- 提交：773b0d627f30
+- 时间：2026-10-26T05:54:36.242Z
 
-### run-3
-<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-230 close init-id only clears that initialization local and preserves task locals$' \u002d\u002dtest-reporter=./.tiller/local/verify-ApCese/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-ApCese/report.jsonl test/init-baseline.test.mjs","exitCode":0,"tree":"4237ac3afee5d9ad3ef2196819fc2807de382bd30dc29dc1e42357313623f10b","commit":"53d10a8e2034b8b927fe49c053e696a3311a1046"} -->
+### run-10
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-229 failed PR creation keeps the worktree and commit and returns copyable commands$' \u002d\u002dtest-reporter=./.tiller/local/verify-ELGOdL/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-ELGOdL/report.jsonl test/init-baseline.test.mjs","exitCode":0,"tree":"4237ac3afee5d9ad3ef2196819fc2807de382bd30dc29dc1e42357313623f10b","commit":"773b0d627f3064951ff3d741759bf16aaf025618"} -->
+- 条件：AC-2
+- 测试：test/init-baseline.test.mjs::CASE-229 failed PR creation keeps the worktree and commit and returns copyable commands
+- 用例：CASE-229
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/20261026-init-baseline/logs/run-10.log
+- 提交：773b0d627f30
+- 时间：2026-10-26T05:54:37.166Z
+
+### run-11
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-228 init creates a committed initialization worktree and attempts the titled PR$' \u002d\u002dtest-reporter=./.tiller/local/verify-cUstNu/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-cUstNu/report.jsonl test/init-baseline.test.mjs","exitCode":0,"tree":"4237ac3afee5d9ad3ef2196819fc2807de382bd30dc29dc1e42357313623f10b","commit":"773b0d627f3064951ff3d741759bf16aaf025618"} -->
+- 条件：AC-1
+- 测试：test/init-baseline.test.mjs::CASE-228 init creates a committed initialization worktree and attempts the titled PR
+- 用例：CASE-228
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/20261026-init-baseline/logs/run-11.log
+- 提交：773b0d627f30
+- 时间：2026-10-26T05:54:44.374Z
+
+### run-12
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-229 failed PR creation keeps the worktree and commit and returns copyable commands$' \u002d\u002dtest-reporter=./.tiller/local/verify-WazUZg/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-WazUZg/report.jsonl test/init-baseline.test.mjs","exitCode":0,"tree":"4237ac3afee5d9ad3ef2196819fc2807de382bd30dc29dc1e42357313623f10b","commit":"773b0d627f3064951ff3d741759bf16aaf025618"} -->
+- 条件：AC-2
+- 测试：test/init-baseline.test.mjs::CASE-229 failed PR creation keeps the worktree and commit and returns copyable commands
+- 用例：CASE-229
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/20261026-init-baseline/logs/run-12.log
+- 提交：773b0d627f30
+- 时间：2026-10-26T05:54:45.290Z
+
+### run-13
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-230 close init-id only clears that initialization local and preserves task locals$' \u002d\u002dtest-reporter=./.tiller/local/verify-Ey1xg7/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-Ey1xg7/report.jsonl test/init-baseline.test.mjs","exitCode":0,"tree":"4237ac3afee5d9ad3ef2196819fc2807de382bd30dc29dc1e42357313623f10b","commit":"773b0d627f3064951ff3d741759bf16aaf025618"} -->
 - 条件：AC-2
 - 测试：test/init-baseline.test.mjs::CASE-230 close init-id only clears that initialization local and preserves task locals
 - 用例：CASE-230
 - 结果：passed
 - 来源：executed
 - 核实：已核实
-- 日志：.tiller/local/20261026-init-baseline/logs/run-3.log
-- 提交：53d10a8e2034
-- 时间：2026-10-26T05:54:00.988Z
+- 日志：.tiller/local/20261026-init-baseline/logs/run-13.log
+- 提交：773b0d627f30
+- 时间：2026-10-26T05:54:46.223Z
 
-### run-4
-<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-231 start blocks a pending initialization commit, supports skip and merged detection$' \u002d\u002dtest-reporter=./.tiller/local/verify-oejKGv/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-oejKGv/report.jsonl test/init-baseline.test.mjs","exitCode":0,"tree":"4237ac3afee5d9ad3ef2196819fc2807de382bd30dc29dc1e42357313623f10b","commit":"53d10a8e2034b8b927fe49c053e696a3311a1046"} -->
+### run-14
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-231 start blocks a pending initialization commit, supports skip and merged detection$' \u002d\u002dtest-reporter=./.tiller/local/verify-YYyAh9/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-YYyAh9/report.jsonl test/init-baseline.test.mjs","exitCode":0,"tree":"4237ac3afee5d9ad3ef2196819fc2807de382bd30dc29dc1e42357313623f10b","commit":"773b0d627f3064951ff3d741759bf16aaf025618"} -->
 - 条件：AC-3
 - 测试：test/init-baseline.test.mjs::CASE-231 start blocks a pending initialization commit, supports skip and merged detection
 - 用例：CASE-231
 - 结果：passed
 - 来源：executed
 - 核实：已核实
-- 日志：.tiller/local/20261026-init-baseline/logs/run-4.log
-- 提交：53d10a8e2034
-- 时间：2026-10-26T05:54:02.023Z
+- 日志：.tiller/local/20261026-init-baseline/logs/run-14.log
+- 提交：773b0d627f30
+- 时间：2026-10-26T05:54:47.297Z
 
-### run-5
-<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-232 usage, core and delivery document initialization order and task worktree specs$' \u002d\u002dtest-reporter=./.tiller/local/verify-bSkqT0/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-bSkqT0/report.jsonl test/init-baseline.test.mjs","exitCode":0,"tree":"4237ac3afee5d9ad3ef2196819fc2807de382bd30dc29dc1e42357313623f10b","commit":"53d10a8e2034b8b927fe49c053e696a3311a1046"} -->
+### run-15
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-232 usage, core and delivery document initialization order and task worktree specs$' \u002d\u002dtest-reporter=./.tiller/local/verify-TADIjm/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-TADIjm/report.jsonl test/init-baseline.test.mjs","exitCode":0,"tree":"4237ac3afee5d9ad3ef2196819fc2807de382bd30dc29dc1e42357313623f10b","commit":"773b0d627f3064951ff3d741759bf16aaf025618"} -->
 - 条件：AC-4
 - 测试：test/init-baseline.test.mjs::CASE-232 usage, core and delivery document initialization order and task worktree specs
 - 用例：CASE-232
 - 结果：passed
 - 来源：executed
 - 核实：已核实
-- 日志：.tiller/local/20261026-init-baseline/logs/run-5.log
-- 提交：53d10a8e2034
-- 时间：2026-10-26T05:54:03.705Z
+- 日志：.tiller/local/20261026-init-baseline/logs/run-15.log
+- 提交：773b0d627f30
+- 时间：2026-10-26T05:54:49.040Z
 
-### run-6
-<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-233 initialization baseline stays at version 0\\.5\\.0 with named test coverage$' \u002d\u002dtest-reporter=./.tiller/local/verify-SjICT2/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-SjICT2/report.jsonl test/init-baseline.test.mjs","exitCode":0,"tree":"4237ac3afee5d9ad3ef2196819fc2807de382bd30dc29dc1e42357313623f10b","commit":"53d10a8e2034b8b927fe49c053e696a3311a1046"} -->
+### run-16
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-233 initialization baseline stays at version 0\\.5\\.0 with named test coverage$' \u002d\u002dtest-reporter=./.tiller/local/verify-RBWq93/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-RBWq93/report.jsonl test/init-baseline.test.mjs","exitCode":0,"tree":"4237ac3afee5d9ad3ef2196819fc2807de382bd30dc29dc1e42357313623f10b","commit":"773b0d627f3064951ff3d741759bf16aaf025618"} -->
 - 条件：AC-5
 - 测试：test/init-baseline.test.mjs::CASE-233 initialization baseline stays at version 0.5.0 with named test coverage
 - 用例：CASE-233
 - 结果：passed
 - 来源：executed
 - 核实：已核实
-- 日志：.tiller/local/20261026-init-baseline/logs/run-6.log
-- 提交：53d10a8e2034
-- 时间：2026-10-26T05:54:04.181Z
+- 日志：.tiller/local/20261026-init-baseline/logs/run-16.log
+- 提交：773b0d627f30
+- 时间：2026-10-26T05:54:49.521Z
 
 ## 自检
 
 - [x] 需求确认有效
-- [ ] 设计确认有效
+- [x] 设计确认有效
 - [x] 验收条件均有当前通过且绑定全局用例的测试引用
 - [x] 每条验收条件均映射到本次验证引用的全局用例
 - [x] 验收条件与用例来源 criteria 相互指向或由本任务新增/修改
@@ -194,10 +244,6 @@
 - [x] 未弱化仍存在的测试
 - [x] 评审无未清除阻塞项
 - [x] 记录不含密钥或本机绝对路径
-
-阻塞项：
-- 过程卫生：需求、设计确认提交 53d10a8e2034 后，工作区仍有未提交业务改动：resources/rules/activities/delivery.md、resources/rules/core.md、resources/usage.md、scripts/package-smoke.mjs、src/cli.ts、src/core.ts、src/flow.ts、src/init-baseline.ts 等 17 项。请先提交或移出本任务。
-- 交付范围存在未提交改动：.tiller/cases/modules/initialization/behavior.md、.tiller/cases/modules/initialization/interface.md、.tiller/cases/modules/standards/interface.md、.tiller/cases/modules/workflow/interface.md、.tiller/context/project.md、.tiller/project.json、.tiller/rules/activities/delivery.md、.tiller/rules/core.md、.tiller/specs/decisions.md、.tiller/specs/design.md、.tiller/specs/modules/initialization/design.md、.tiller/specs/modules/initialization/requirements.md、.tiller/specs/modules/workflow/design.md、.tiller/specs/modules/workflow/requirements.md、.tiller/specs/requirements.md、.tiller/usage.md、README.md、resources/rules/activities/delivery.md、resources/rules/core.md、resources/usage.md、scripts/package-smoke.mjs、src/cli.ts、src/core.ts、src/flow.ts、src/init-baseline.ts、src/project-metadata.ts、src/types.ts、test/case-redesign.test.mjs、test/helpers.mjs、test/init-baseline.test.mjs、test/review-release.test.mjs、test/rules.test.mjs、test/suites.json、test/verification-integrity.test.mjs
 
 提示：
 - 90 条历史用例未绑定来源 AC；新用例请用 case add 写入 criteria。
