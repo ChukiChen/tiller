@@ -29,7 +29,7 @@
 - README 非空；npm 项目还需有效的包名/版本，且 README 包含当前版本。非 npm 项目跳过包项。
 - 任务范围内没有未提交改动。发布前仍需单独取得授权，并绑定当前提交和目标。
 
-已验收任务可用 `merge <id>` 调用 `gh pr merge` 或 `glab mr merge` 以 squash 合入，成功后自动用 `close --reason` 清理本机，失败不清理；网页合入后仍需手动 `close`。`close` 只强拆该任务 worktree 并删除整棵 `.tiller/local/<id>/`（含日志与旁路），兼容清理旧布局 `.tiller/local/worktrees|logs|tasks/<id>/`，其他任务目录不动。`close` 不写共享 `task.md`，合入后不因收尾产生脏记录。确认不再推进的未验收任务用 `close --reason ... --abandon`，仍写共享放弃原因和时间；终止任务先 `reopen --reason` 才能继续，已验收任务再次交付也可 `reopen`。
+已验收任务可用 `merge <id>` 调用 `github pr merge` 或 `gitlab mr merge` 以 squash 合入，成功后自动用 `close --reason` 清理本机，失败不清理；网页合入后仍需手动 `close`。`close` 只强拆该任务 worktree 并删除整棵 `.tiller/local/<id>/`（含日志与旁路），兼容清理旧布局 `.tiller/local/worktrees|logs|tasks/<id>/`，其他任务目录不动。`close` 不写共享 `task.md`，合入后不因收尾产生脏记录。确认不再推进的未验收任务用 `close --reason ... --abandon`，仍写共享放弃原因和时间；终止任务先 `reopen --reason` 才能继续，已验收任务再次交付也可 `reopen`。
 
 ## 提交、分支与 PR/MR
 

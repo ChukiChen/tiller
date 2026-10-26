@@ -22,20 +22,10 @@ tiller init .
 
 tiller 会写入 `AGENTS.md` 和 `.tiller` 下的工作约定，并创建初始化 PR/MR，标题为 `chore(tiller): 完成工程初始化`。
 
-审阅后合入初始化 PR/MR，再回到主干执行 `git pull`，让本地包含初始化改动。使用 `tiller merge <初始化任务编号>` 合入时，命令成功后会自动清理本机初始化目录；如果从网页合入，则需要手动运行 `tiller close <初始化任务编号> --reason "初始化基线已合入"`。
+审阅后合入初始化 PR/MR，再回到主干执行 `git pull`，让本地包含初始化改动。合入与本机清理由 AI 按 tiller 约定完成。
 
 ### 用 AI 开发一个功能
 
-用 Codex 等 AI 编程工具打开工程，说明你想实现的功能。AI 会按工程内的 tiller 约定开任务、写清需求与验收条件、完成实现并运行验证。你可以在每项人工节点审阅范围和结果；standard 任务还会先确认设计。
+用 Codex 等 AI 编程工具打开工程，说明你想实现的功能。AI 会按工程内的 tiller 约定执行 `start` →（standard 任务先完成设计确认）→ 实现 → `verify` → `pr` → `merge`/`close`，并写清需求、验收条件和可追溯的验证结果。
 
-确认交付后，用 `tiller pr <任务编号>` 生成 PR/MR 草稿并推送分支，再由 tiller 合入：
-
-```bash
-tiller merge <任务编号>
-```
-
-`tiller merge` 会使用已安装并登录的 `gh` 或 `glab`，以 squash 方式合入对应 PR/MR，成功后自动清理本机任务目录。如果直接在网页上合入，则需要再运行：
-
-```bash
-tiller close <任务编号> --reason "已合入"
-```
+你主要负责在关键节点确认：需求范围、standard 任务的设计，以及最终交付验收。技术实现、测试与合入操作由 AI 推进。

@@ -53,7 +53,7 @@ const HELP = `tiller ${CLI_VERSION} — 默认工作流
 - 大功能可先写 .tiller/plans/<id>.md 并确认；start 挂到条目时默认继承粒度，依赖未验收会阻塞。
 - task.md 是唯一任务记录：start 生成结构化需求，可从工程内需求文件接入；确认前校验正文，原话只作可选附注。verify 自主执行测试并从私有报告核实。
 - review 记录独立评审发现；未解决阻塞项会阻断 check/accept。release 只做发布门禁，不发布包。check 汇总发布清单；已验收任务按验收提交读取代码树与测试，之后代码漂移不误报过期。
-- 阶段由 task.md 事实推导；accept 须在 pr 前；merge 通过 gh/glab squash 合入并在成功后自动 close，网页合入后仍需手动 close；未验收终止用 --abandon，必要时 reopen。
+- 阶段由 task.md 事实推导；accept 须在 pr 前；merge 通过 github pr merge 或 gitlab mr merge 以 squash 合入，成功后自动 close；网页合入后仍需手动 close；未验收终止用 --abandon，必要时 reopen。
 - check 对过薄文档给出可定位提示：空白或占位的 standard 设计、无有效条目的 .tiller/specs/decisions.md、空壳模块设计 design.md；规格/背景未回写时列出路径与提纲。默认不单独阻断。verify 日志含显示命令、起止时间与退出码。当前分支未包含任务编号时 check 提示，分支名用“类型/任务编号[-描述]”。
 - 同一 AC 或 CASE 连续两次 verify 失败且无成功核实时，verify/check 要求停止自动重试并按 FLOW-05 报告证据与可选方案；成功核实清零。
 - case add 在测试之前登记测试设计（前置条件、步骤、输入、预期结果、类型、优先级、来源 AC），自动分配 CASE 编号；测试名引用 CASE 编号形成反查。check 分阶段核对 AC→用例→测试→当前验证，校验模块/场景结构并提示相关回归，同时检查范围、测试弱化、密钥和本机绝对路径。

@@ -3,6 +3,7 @@ import { mkdir, readFile, realpath, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { promisify } from 'node:util';
 import { assertSafePath } from './files.js';
+import { platformCliUnavailable, resolvePlatformCli } from './platform-cli.js';
 import { META, parseMetadata } from './project-metadata.js';
 import type { FileChange, InitBaseline, ProjectMetadata, ProjectPlatform } from './types.js';
 
@@ -99,10 +100,10 @@ function commandSteps(worktree: string, platform: ProjectPlatform): string[] {
   const commands = [`git -C ${shellQuote(worktree)} push -u origin ${INIT_BRANCH}`];
   const body = '初始化 tiller 工程结构。';
   if (platform === 'github' || platform === 'both') {
-    commands.push(`cd ${shellQuote(worktree)} && gh pr create --head ${INIT_BRANCH} --title ${shellQuote(INIT_PR_TITLE)} --body ${shellQuote(body)}`);
+    commands.push(`cd ${shellQuote(worktree)} && github pr create --head ${INIT_BRANCH} --title ${shellQuote(INIT_PR_TITLE)} --body ${shellQuote(body)}`);
   }
   if (platform === 'gitlab' || platform === 'both') {
-    commands.push(`cd ${shellQuote(worktree)} && glab mr create --source-branch ${INIT_BRANCH} --title ${shellQuote(INIT_PR_TITLE)} --description ${shellQuote(body)} --yes`);
+    commands.push(`cd ${shellQuote(worktree)} && gitlab mr create --source-branch ${INIT_BRANCH} --title ${shellQuote(INIT_PR_TITLE)} --description ${shellQuote(body)} --yes`);
   }
   return commands;
 }
@@ -116,19 +117,28 @@ async function attemptRemote(worktree: string, platform: ProjectPlatform,
   const pushed = await git(worktree, ['push', '-u', 'origin', INIT_BRANCH]);
   if (!pushed.ok) warnings.push(`初始化分支尚未推送：${commandError(pushed, 'git push 失败')}`);
   const body = '初始化 tiller 工程结构。';
-  let lastFailure = '';
+  const failures: string[] = [];
   if (platform === 'github' || platform === 'both') {
-    const created = await run(worktree, 'gh', ['pr', 'create', '--head', INIT_BRANCH, '--title', INIT_PR_TITLE, '--body', body]);
-    if (created.ok) return findUrl(`${created.stdout}\n${created.stderr}`) ?? 'PR 已创建';
-    lastFailure = commandError(created, 'gh pr create 失败');
+    const resolved = await resolvePlatformCli('github');
+    if (!resolved) failures.push(platformCliUnavailable('github'));
+    else try {
+      const created = await run(worktree, resolved.executable,
+        ['pr', 'create', '--head', INIT_BRANCH, '--title', INIT_PR_TITLE, '--body', body]);
+      if (created.ok) return findUrl(`${created.stdout}\n${created.stderr}`) ?? 'PR 已创建';
+      failures.push(commandError(created, 'github pr create 失败'));
+    } finally { await resolved.cleanup(); }
   }
   if (platform === 'gitlab' || platform === 'both') {
-    const created = await run(worktree, 'glab', ['mr', 'create', '--source-branch', INIT_BRANCH, '--title', INIT_PR_TITLE,
-      '--description', body, '--yes']);
-    if (created.ok) return findUrl(`${created.stdout}\n${created.stderr}`) ?? 'MR 已创建';
-    lastFailure = commandError(created, 'glab mr create 失败');
+    const resolved = await resolvePlatformCli('gitlab');
+    if (!resolved) failures.push(platformCliUnavailable('gitlab'));
+    else try {
+      const created = await run(worktree, resolved.executable, ['mr', 'create', '--source-branch', INIT_BRANCH,
+        '--title', INIT_PR_TITLE, '--description', body, '--yes']);
+      if (created.ok) return findUrl(`${created.stdout}\n${created.stderr}`) ?? 'MR 已创建';
+      failures.push(commandError(created, 'gitlab mr create 失败'));
+    } finally { await resolved.cleanup(); }
   }
-  if (lastFailure) warnings.push(`自动创建初始化 PR/MR 失败：${lastFailure}`);
+  if (failures.length) warnings.push(`自动创建初始化 PR/MR 失败：${failures.join('；')}`);
   return undefined;
 }
 

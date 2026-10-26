@@ -121,8 +121,8 @@ test('CASE-091 verification guidance requires execution, reporting reasons and f
 
   const readme = readFileSync(join(repository, 'README.md'), 'utf8');
   assert.match(readme, /^## 快速开始$/mu);
-  assert.match(readme, /tiller merge <任务编号>/u);
-  assert.match(readme, /成功后自动清理本机任务目录/u);
+  assert.match(readme, /合入与本机清理由 AI 按 tiller 约定完成/u);
+  assert.match(readme, /`merge`\/`close`/u);
   assert.doesNotMatch(readme, /私有.*报告|--reported|失败先行/u);
 });
 
@@ -198,7 +198,7 @@ test('CASE-109 README is a user-facing quick start without internal flow detail'
   assert.match(readme, /^### 安装$/mu);
   assert.match(readme, /^### 初始化工程$/mu);
   assert.match(readme, /^### 用 AI 开发一个功能$/mu);
-  assert.match(readme, /tiller merge <任务编号>/u);
+  assert.match(readme, /`merge`\/`close`/u);
   assert.doesNotMatch(readme, /小改动：|标准或大功能：|默认人工节点|task\.md|close --abandon|reopen --reason|私有报告|--reported|失败先行|advanced/u);
 });
 
@@ -210,13 +210,13 @@ test('CASE-048 global cases use module kinds and scenarios with resolvable named
   const kinds = ['behavior', 'interface', 'performance', 'security'];
   const library = await readCaseLibrary(repository);
   assert.deepEqual(library.issues, []);
-  assert.equal(library.cases.length, 241);
+  assert.equal(library.cases.length, 245);
   assert.deepEqual(library.cases.map(item => item.id).sort(),
-    Array.from({ length: 241 }, (_, index) => `CASE-${String(index + 1).padStart(3, '0')}`));
+    Array.from({ length: 245 }, (_, index) => `CASE-${String(index + 1).padStart(3, '0')}`));
   assert.deepEqual(library.modules.map(item => ({ module: item.module, behavior: item.behavior, interface: item.interface,
     performance: item.performance, security: item.security })), [
     { module: 'initialization', behavior: 28, interface: 9, performance: 11, security: 16 },
-    { module: 'standards', behavior: 22, interface: 4, performance: 0, security: 0 },
+    { module: 'standards', behavior: 22, interface: 8, performance: 0, security: 0 },
     { module: 'verification', behavior: 10, interface: 11, performance: 15, security: 4 },
     { module: 'workflow', behavior: 62, interface: 40, performance: 0, security: 7 },
   ]);
@@ -253,6 +253,21 @@ test('CASE-048 global cases use module kinds and scenarios with resolvable named
     const content = readFileSync(join(repository, item.file), 'utf8');
     assert.doesNotMatch(content, /test_ref/u, `${item.id}: obsolete test_ref`);
   }
+});
+
+test('CASE-245 全局用例库同步文档 CLI 名称与版本', async () => {
+  const library = await readCaseLibrary(repository);
+  assert.deepEqual(library.issues, []);
+  assert.equal(library.cases.length, 245);
+  const added = library.cases.filter(item => Number(item.id.slice(5)) >= 242);
+  assert.deepEqual(added.map(item => item.id), ['CASE-242', 'CASE-243', 'CASE-244', 'CASE-245']);
+  const standards = library.modules.find(item => item.module === 'standards');
+  assert.deepEqual({ behavior: standards?.behavior, interface: standards?.interface,
+    performance: standards?.performance, security: standards?.security },
+  { behavior: 22, interface: 8, performance: 0, security: 0 });
+  for (const item of added) assert.ok(item.tests.some(reference => reference.name?.includes(item.id)));
+  assert.equal(JSON.parse(readFileSync(join(repository, 'package.json'), 'utf8')).version, '0.5.0');
+  assert.equal(JSON.parse(readFileSync(join(repository, '.tiller/project.json'), 'utf8')).resourceVersion, '0.5.0');
 });
 
 test('CASE-065 structured confirmation guidance is synchronized across help and durable docs', () => {
@@ -419,8 +434,8 @@ test('CASE-167 README keeps the user quick start and removes maintainer detail',
   assert.match(readme, /chore\(tiller\): 完成工程初始化/u);
   assert.match(readme, /合入[^\n]*git pull/u);
   assert.match(readme, /用 Codex 等 AI 编程工具/u);
-  assert.match(readme, /tiller merge <任务编号>/u);
-  assert.match(readme, /网页[\s\S]*tiller close <任务编号>/u);
+  assert.match(readme, /`merge`\/`close`/u);
+  assert.match(readme, /合入与本机清理由 AI 按 tiller 约定完成/u);
   assert.doesNotMatch(readme, /尚未发布到 npm|维护者|决策记录|verify\.prepare|verify\.runner|--reported|失败先行|advanced/u);
   assert.ok(readme.length < 6000, `README is ${readme.length} characters`);
 });

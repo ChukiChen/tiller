@@ -28,21 +28,28 @@ function configure(root) {
   okGit(root, 'config', 'user.email', 'tiller@example.invalid');
 }
 
-function fakeGh(t, root, mode) {
+function fakeGitHub(t, root, mode) {
   if (process.platform === 'win32') {
-    t.skip('The fake gh executable uses a POSIX shell script.');
+    t.skip('The fake github executable uses a POSIX shell script.');
     return null;
   }
   const directory = join(root, 'fake-bin');
-  put(root, 'fake-bin/gh', [
+  put(root, 'fake-bin/github', [
     '#!/bin/sh',
-    'printf "%s\\n" "$*" >> "${TILLER_FAKE_GH_LOG:?}"',
+    'printf "%s|%s\\n" "$(basename "$0")" "$*" >> "${TILLER_FAKE_GITHUB_LOG:?}"',
     `[ "${mode}" = success ] && printf "https://example.invalid/tiller/pr/1\\n"`,
     `[ "${mode}" = success ] || exit 7`,
     '',
   ].join('\n'));
-  chmodSync(join(directory, 'gh'), 0o755);
+  chmodSync(join(directory, 'github'), 0o755);
   return directory;
+}
+
+function platformCalls(log) {
+  return readFileSync(log, 'utf8').trim().split('\n').filter(Boolean).map(line => {
+    const [name, ...args] = line.split('|');
+    return { name, args: args.join('|') };
+  });
 }
 
 function cliAt(root, environment, ...args) {
@@ -56,21 +63,21 @@ function cliAt(root, environment, ...args) {
   return { ...result, data };
 }
 
-function initializeWithGh(t, mode) {
+function initializeWithGitHub(t, mode) {
   const root = fixture(t);
   configure(root);
-  const directory = fakeGh(t, root, mode);
+  const directory = fakeGitHub(t, root, mode);
   if (!directory) return null;
-  const log = join(root, 'gh.log');
+  const log = join(root, 'github.log');
   const result = cliAt(root, {
     PATH: `${directory}:${process.env.PATH ?? ''}`,
-    TILLER_FAKE_GH_LOG: log,
+    TILLER_FAKE_GITHUB_LOG: log,
   }, 'init');
   return { root, result, log };
 }
 
 test('CASE-228 init creates a committed initialization worktree and attempts the titled PR', async t => {
-  const initialized = initializeWithGh(t, 'success');
+  const initialized = initializeWithGitHub(t, 'success');
   if (!initialized) return;
   const { root, result, log } = initialized;
   const data = success(result);
@@ -92,7 +99,8 @@ test('CASE-228 init creates a committed initialization worktree and attempts the
     id: baseline.id, branch: baseline.branch, commit: baseline.commit, status: 'pending',
   });
   assert.deepEqual(JSON.parse(read(worktree, '.tiller/project.json')).initBaseline, metadata.initBaseline);
-  assert.match(readFileSync(log, 'utf8'), /pr create --head chore\/tiller-init --title chore\(tiller\): 完成工程初始化/u);
+  assert.deepEqual(platformCalls(log), [{ name: 'github',
+    args: 'pr create --head chore/tiller-init --title chore(tiller): 完成工程初始化 --body 初始化 tiller 工程结构。' }]);
 
   const before = okGit(root, 'rev-parse', 'HEAD');
   const merged = git(root, 'merge-base', '--is-ancestor', baseline.commit, before);
@@ -100,7 +108,7 @@ test('CASE-228 init creates a committed initialization worktree and attempts the
 });
 
 test('CASE-229 failed PR creation keeps the worktree and commit and returns copyable commands', async t => {
-  const initialized = initializeWithGh(t, 'failure');
+  const initialized = initializeWithGitHub(t, 'failure');
   if (!initialized) return;
   const { root, result } = initialized;
   const data = success(result);
@@ -112,12 +120,12 @@ test('CASE-229 failed PR creation keeps the worktree and commit and returns copy
   assert.equal(okGit(worktree, 'log', '-1', '--format=%s'), 'chore(tiller): 完成工程初始化');
   assert.ok(data.warnings.some(warning => warning.includes('自动创建初始化 PR/MR 失败')), data.warnings.join('\n'));
   assert.ok(baseline.next.some(command => command.includes('git -C') && command.includes('push -u origin chore/tiller-init')));
-  assert.ok(baseline.next.some(command => command.includes('gh pr create') && command.includes('chore(tiller): 完成工程初始化')));
+  assert.ok(baseline.next.some(command => command.includes('github pr create') && command.includes('chore(tiller): 完成工程初始化')));
   assert.ok(existsSync(join(root, '.tiller/project.json')));
 });
 
 test('CASE-230 close init-id only clears that initialization local and preserves task locals', async t => {
-  const initialized = initializeWithGh(t, 'failure');
+  const initialized = initializeWithGitHub(t, 'failure');
   if (!initialized) return;
   const { root, result } = initialized;
   const baseline = success(result).initBaseline;
@@ -136,7 +144,7 @@ test('CASE-230 close init-id only clears that initialization local and preserves
 });
 
 test('CASE-231 start blocks a pending initialization commit, supports skip and merged detection', async t => {
-  const initialized = initializeWithGh(t, 'failure');
+  const initialized = initializeWithGitHub(t, 'failure');
   if (!initialized) return;
   const { root, result } = initialized;
   const baseline = success(result).initBaseline;
@@ -158,11 +166,11 @@ test('CASE-231 start blocks a pending initialization commit, supports skip and m
 
   const statusRoot = fixture(t);
   configure(statusRoot);
-  const directory = fakeGh(t, statusRoot, 'failure');
+  const directory = fakeGitHub(t, statusRoot, 'failure');
   if (!directory) return;
   const statusInit = success(cliAt(statusRoot, {
     PATH: `${directory}:${process.env.PATH ?? ''}`,
-    TILLER_FAKE_GH_LOG: join(statusRoot, 'gh.log'),
+    TILLER_FAKE_GITHUB_LOG: join(statusRoot, 'github.log'),
   }, 'init'));
   const metadata = JSON.parse(read(statusRoot, '.tiller/project.json'));
   metadata.initBaseline.status = 'merged';

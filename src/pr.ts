@@ -9,6 +9,7 @@ import { readProjectMetadata } from './core.js';
 import { closeFlow, inspectFlow, readTask, taskStage } from './flow.js';
 import type { FlowTask } from './flow.js';
 import { isInitBaselineId, markInitBaselineMerged } from './init-baseline.js';
+import { platformCliUnavailable, resolvePlatformCli, type PlatformCliName } from './platform-cli.js';
 import { taskBranchName } from './task-worktrees.js';
 import type { ProjectPlatform } from './types.js';
 
@@ -52,7 +53,7 @@ async function concretePlatform(root: string, configured: ProjectPlatform): Prom
   if (configured === 'github' || configured === 'gitlab') return configured;
   const remote = await git(root, ['remote', 'get-url', 'origin']);
   if (!remote.ok || !remote.stdout.trim()) {
-    fail('MERGE_PLATFORM_UNKNOWN', '工程平台配置为 both，但无法读取 origin，不能确定应使用 gh 还是 glab。');
+    fail('MERGE_PLATFORM_UNKNOWN', '工程平台配置为 both，但无法读取 origin，不能确定应使用 github 还是 gitlab。');
   }
   const url = remote.stdout.trim();
   if (/gitlab/iu.test(url)) return 'gitlab';
@@ -60,17 +61,21 @@ async function concretePlatform(root: string, configured: ProjectPlatform): Prom
   fail('MERGE_PLATFORM_UNKNOWN', `工程平台配置为 both，无法从 origin 判断平台：${url}；请把 project.json 的 platform 改为 github 或 gitlab。`);
 }
 
-async function runMergeTool(tool: 'gh' | 'glab', args: string[], root: string): Promise<MergeCommandResult> {
+async function runMergeTool(tool: PlatformCliName, args: string[], root: string): Promise<MergeCommandResult> {
+  const resolved = await resolvePlatformCli(tool);
+  if (!resolved) fail('MERGE_TOOL_UNAVAILABLE', platformCliUnavailable(tool));
   try {
-    const result = await execFileAsync(tool, args, {
+    const result = await execFileAsync(resolved.executable, args, {
       cwd: root, encoding: 'utf8', maxBuffer: 16 * 1024 * 1024,
       env: { ...process.env, LC_ALL: 'C', GIT_TERMINAL_PROMPT: '0' },
     });
     return { stdout: result.stdout, stderr: result.stderr };
   } catch (error) {
     const item = error as { stdout?: string; stderr?: string; code?: string | number | null };
-    if (item.code === 'ENOENT') fail('MERGE_TOOL_UNAVAILABLE', `无法执行 ${tool}；请先安装并登录托管平台 CLI。`);
+    if (item.code === 'ENOENT') fail('MERGE_TOOL_UNAVAILABLE', platformCliUnavailable(tool));
     fail('MERGE_FAILED', `${tool} 合入失败：${commandDetail(item, `${tool} 返回非零退出码`)}`);
+  } finally {
+    await resolved.cleanup();
   }
 }
 
@@ -283,7 +288,7 @@ export async function mergeFlow(rootInput: string, id: string): Promise<MergeRes
   const metadata = await readProjectMetadata(root);
   const platform = await concretePlatform(root, metadata.platform ?? 'github');
   const target = await mergeTarget(root, id);
-  const tool = platform === 'github' ? 'gh' : 'glab';
+  const tool = platform;
   const args = platform === 'github'
     ? ['pr', 'merge', target.branch, '--squash']
     : ['mr', 'merge', target.branch, '--squash', '--yes'];
