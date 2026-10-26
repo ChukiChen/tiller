@@ -263,15 +263,15 @@ test('CASE-048 global cases use module kinds and scenarios with resolvable named
   const kinds = ['behavior', 'interface', 'performance', 'security'];
   const library = await readCaseLibrary(repository);
   assert.deepEqual(library.issues, []);
-  assert.equal(library.cases.length, 269);
+  assert.equal(library.cases.length, 272);
   assert.deepEqual(library.cases.map(item => item.id).sort(),
-    Array.from({ length: 269 }, (_, index) => `CASE-${String(index + 1).padStart(3, '0')}`));
+    Array.from({ length: 272 }, (_, index) => `CASE-${String(index + 1).padStart(3, '0')}`));
   assert.deepEqual(library.modules.map(item => ({ module: item.module, behavior: item.behavior, interface: item.interface,
     performance: item.performance, security: item.security })), [
     { module: 'initialization', behavior: 30, interface: 9, performance: 11, security: 17 },
-    { module: 'standards', behavior: 22, interface: 11, performance: 0, security: 0 },
+    { module: 'standards', behavior: 22, interface: 12, performance: 0, security: 0 },
     { module: 'verification', behavior: 13, interface: 13, performance: 15, security: 4 },
-    { module: 'workflow', behavior: 70, interface: 45, performance: 0, security: 7 },
+    { module: 'workflow', behavior: 71, interface: 46, performance: 0, security: 7 },
   ]);
   assert.equal(library.scenarios.length, 2);
   for (const item of library.scenarios) assert.ok(item.modules.length > 0 && item.modules.every(module => specs.includes(module)));
@@ -311,14 +311,18 @@ test('CASE-048 global cases use module kinds and scenarios with resolvable named
 test('CASE-245 全局用例库同步文档 CLI 名称与版本', async () => {
   const library = await readCaseLibrary(repository);
   assert.deepEqual(library.issues, []);
-  assert.equal(library.cases.length, 269);
+  assert.equal(library.cases.length, 272);
   const added = library.cases.filter(item => Number(item.id.slice(5)) >= 242 && Number(item.id.slice(5)) <= 245);
   assert.deepEqual(added.map(item => item.id), ['CASE-242', 'CASE-243', 'CASE-244', 'CASE-245']);
   const standards = library.modules.find(item => item.module === 'standards');
   assert.deepEqual({ behavior: standards?.behavior, interface: standards?.interface,
     performance: standards?.performance, security: standards?.security },
-  { behavior: 22, interface: 11, performance: 0, security: 0 });
+  { behavior: 22, interface: 12, performance: 0, security: 0 });
   for (const item of added) assert.ok(item.tests.some(reference => reference.name?.includes(item.id)));
+  const sceneCases = library.cases.filter(item => Number(item.id.slice(5)) >= 270 && Number(item.id.slice(5)) <= 272)
+    .sort((left, right) => left.id.localeCompare(right.id));
+  assert.deepEqual(sceneCases.map(item => item.id), ['CASE-270', 'CASE-271', 'CASE-272']);
+  for (const item of sceneCases) assert.ok(item.tests.some(reference => reference.name?.includes(item.id)));
   assert.equal(JSON.parse(readFileSync(join(repository, 'package.json'), 'utf8')).version, '0.5.0');
   assert.equal(JSON.parse(readFileSync(join(repository, '.tiller/project.json'), 'utf8')).resourceVersion, '0.5.0');
 });
@@ -339,7 +343,7 @@ test('CASE-065 structured confirmation guidance is synchronized across help and 
   const specs = readFileSync(join(repository, '.tiller/specs/modules/workflow/requirements.md'), 'utf8');
   assert.match(specs, /确认人/u);
   assert.match(specs, /原话可选/u);
-  assert.match(specs, /面向谁与问题.*业务范围/u);
+  assert.match(specs, /使用场景.*业务范围/u);
   assert.match(specs, /方案.*影响与风险/u);
   const decisions = readFileSync(join(repository, '.tiller/specs/decisions.md'), 'utf8');
   assert.match(decisions, /原话不再必填/u);
@@ -504,7 +508,7 @@ test('CASE-164 historical empty AC cases stay warned without fabricated backfill
   assert.match(decisions, /不批量回填/u);
   assert.match(decisions, /不.*冒充历史来源/u);
   const library = await readCaseLibrary(repository);
-  assert.equal(library.cases.filter(item => item.criteria.length === 0).length, 97);
+  assert.equal(library.cases.filter(item => item.criteria.length === 0).length, 100);
 });
 
 test('CASE-165 project rules and context match 0.5.0 without stale workflow guidance', () => {

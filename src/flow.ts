@@ -637,8 +637,9 @@ function criteriaList(values: string[]): FlowCriterion[] {
   }
   return result.sort((left, right) => Number(left.id.slice(3)) - Number(right.id.slice(3)));
 }
-const REQUIREMENT_SECTIONS = ['面向谁与问题', '目标', '业务范围', '关键行为', '异常与边界'] as const;
+const REQUIREMENT_SECTIONS = ['使用场景', '目标', '业务范围', '关键行为', '异常与边界'] as const;
 type RequirementSection = typeof REQUIREMENT_SECTIONS[number];
+const LEGACY_SCENARIO_HEADING = ['面向谁', '与问题'].join('');
 interface ParsedRequirementFile {
   structured: boolean;
   preamble: string;
@@ -656,10 +657,11 @@ function parseRequirementFile(content: string): ParsedRequirementFile {
   for (const [index, heading] of headings.entries()) {
     const rawTitle = heading[1]!.trim();
     const title = rawTitle.replace(/^(?:\d+(?:\.\d+)*[.)、]?)\s*/u, '').trim();
+    const sectionTitle = title === LEGACY_SCENARIO_HEADING ? '使用场景' : title;
     const body = normalized.slice((heading.index ?? 0) + heading[0].length, headings[index + 1]?.index ?? normalized.length).trim();
     if (title === '验收条件') continue;
-    if (REQUIREMENT_SECTIONS.includes(title as RequirementSection)) {
-      const key = title as RequirementSection;
+    if (REQUIREMENT_SECTIONS.includes(sectionTitle as RequirementSection)) {
+      const key = sectionTitle as RequirementSection;
       sections.set(key, [sections.get(key), body].filter(Boolean).join('\n\n'));
     } else if (body) {
       extras.push(`**${rawTitle}**\n\n${body}`);
@@ -678,7 +680,7 @@ function renderStructuredRequirement(goal: string, criteria: FlowCriterion[], re
   const section = (name: RequirementSection, fallback: string): string => parsed?.structured
     ? parsed.sections.get(name) || fallback : fallback;
   return [
-    '### 面向谁与问题', '', section('面向谁与问题', '<!-- 写主要用户、当前问题与已有依据；不复制规格全文。 -->'), '',
+    '### 使用场景', '', section('使用场景', '<!-- 写主要使用场景与背景依据；不复制规格全文。 -->'), '',
     '### 目标', '', ...source, target || '<!-- 写可观察的业务结果、所实现的 `.tiller/specs/...` 稳定需求与约束；不枚举交付路径。 -->', '',
     '### 业务范围', '',
     section('业务范围', [
@@ -1022,7 +1024,7 @@ function requirementFieldIssues(task: FlowTask): string[] {
   const missing: string[] = [];
   const current = /^###\s+业务范围\s*$/mu.test(task.requirement);
   const fields = current
-    ? ['面向谁与问题', '目标', '业务范围', '关键行为', '异常与边界', '验收条件']
+    ? ['使用场景', '目标', '业务范围', '关键行为', '异常与边界', '验收条件']
     : ['目标', '范围', '验收条件'];
   for (const field of fields) {
     const lines = markdownMeaningfulLines(subSectionBody(task.requirement, field));

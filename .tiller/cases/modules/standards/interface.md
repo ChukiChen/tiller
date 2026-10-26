@@ -272,3 +272,27 @@ quality/code.md 在双份镜像中包含命名、结构、扩展性、反过度�
 ### 预期结果
 
 usage、rules、decisions、受管 resources 写明 task→需求、用例→需求，不再要求用例来源 AC 回指任务
+
+## CASE-272 rules 与文档槽位措辞为使用场景
+
+- 类型：interface
+- 优先级：medium
+- 模块：standards
+- 关联 AC：无
+- 需求：`.tiller/specs/modules/workflow/req-scene-heading.md`
+
+### 前置条件
+
+- 资源与 specs 已更新
+
+### 步骤
+
+1. 检索受管规则与规格描述
+
+### 输入
+
+- 旧槽位名作为输入
+
+### 预期结果
+
+activities/requirements、quality/documents、模块 README 说明与相关 specs 描述使用「使用场景」而非旧标题作为该槽位名

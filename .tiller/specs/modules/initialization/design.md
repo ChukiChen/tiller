@@ -2,7 +2,7 @@
 
 ## 1. 文件骨架
 
-初始化使用固定最小清单，只创建缺失文件。清单包括 `.tiller/specs/requirements.md`、`.tiller/specs/design.md`、`.tiller/specs/decisions.md`、`.tiller/specs/modules/README.md`、`.tiller/context/project.md`、`.tiller/cases/index.md`、`.tiller/cases/modules/`、`.tiller/cases/scenarios/`、`.tiller/plans/`、入口规则、使用指引和当前平台合并请求模板。骨架内容说明职责与下一步，不预生成空阶段、项目模块或审计目录。项目需求骨架包含面向谁与问题、目标、业务范围、关键行为、异常与边界、验收条件；项目设计骨架包含方案、失败处理、取舍、影响与风险、验证入口；模块说明列出同一组章节。`plans/README.md` 说明按需规划与依赖阻塞；合并请求模板保持固定五段。
+初始化使用固定最小清单，只创建缺失文件。清单包括 `.tiller/specs/requirements.md`、`.tiller/specs/design.md`、`.tiller/specs/decisions.md`、`.tiller/specs/modules/README.md`、`.tiller/context/project.md`、`.tiller/cases/index.md`、`.tiller/cases/modules/`、`.tiller/cases/scenarios/`、`.tiller/plans/`、入口规则、使用指引和当前平台合并请求模板。骨架内容说明职责与下一步，不预生成空阶段、项目模块或审计目录。项目需求骨架包含使用场景、目标、业务范围、关键行为、异常与边界、验收条件；项目设计骨架包含方案、失败处理、取舍、影响与风险、验证入口；模块说明列出同一组章节。`plans/README.md` 说明按需规划与依赖阻塞；合并请求模板保持固定五段。
 
 ## 2. 受管区段
 

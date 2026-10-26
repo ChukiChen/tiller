@@ -642,7 +642,7 @@ check warning 指出当前分支未包含当前任务编号，并给出类型/�
 
 ### 预期结果
 
-start 生成面向谁与问题、目标、业务范围、关键行为、异常与边界、验收条件；业务范围不含 target 路径，路径只进入 meta.scope
+start 生成使用场景、目标、业务范围、关键行为、异常与边界、验收条件；业务范围不含 target 路径，路径只进入 meta.scope
 
 ## CASE-197 workspace 模式 start 镜像管理仓与业务仓布局
 
@@ -1111,3 +1111,28 @@ start --requirement-file 后 task 需求保留多行结构并含需求来源路�
 ### 预期结果
 
 指向 .tiller/local 需求文件时失败并提示迁入 specs；指向 specs 时保留多行且需求来源为 specs 路径
+
+## CASE-270 start 与骨架首节标题为使用场景
+
+- 类型：interface
+- 优先级：high
+- 模块：workflow
+- 关联 AC：无
+- 需求：`.tiller/specs/modules/workflow/req-scene-heading.md`
+
+### 前置条件
+
+- 已安装当前 tiller 构建
+
+### 步骤
+
+1. 运行 start 或读取骨架模板
+2. 核对首节标题与校验键
+
+### 输入
+
+- 新任务或 init 骨架
+
+### 预期结果
+
+渲染与 init 骨架首节为「使用场景」，REQUIREMENT_SECTIONS 与确认校验列表第一节为「使用场景」
