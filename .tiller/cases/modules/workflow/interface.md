@@ -1136,3 +1136,27 @@ start --requirement-file 后 task 需求保留多行结构并含需求来源路�
 ### 预期结果
 
 渲染与 init 骨架首节为「使用场景」，REQUIREMENT_SECTIONS 与确认校验列表第一节为「使用场景」
+
+## CASE-273 验收条件标题仅为验收条件不含稳定二字
+
+- 类型：interface
+- 优先级：high
+- 模块：workflow
+- 关联 AC：无
+- 需求：`.tiller/specs/modules/workflow/ac-criteria-link.md`
+
+### 前置条件
+
+- 工程已 init；可 start 或读骨架
+
+### 步骤
+
+1. 查看 init 骨架、start 渲染与相关模板中的验收条件标题
+
+### 输入
+
+- 新建任务或读取 specs/requirements 骨架
+
+### 预期结果
+
+标题为「验收条件」，不出现「验收条件（稳定）」

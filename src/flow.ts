@@ -302,17 +302,22 @@ function subSectionBody(content: string, title: string): string {
   const next = /^#{1,3}\s+/mu.exec(rest);
   return rest.slice(0, next?.index ?? rest.length).trim();
 }
+const LEGACY_ACCEPTANCE_HEADING = ['验收条件', '（稳定）'].join('');
 function criteriaFromBody(body: string): FlowCriterion[] {
   const result: FlowCriterion[] = [];
   for (const line of body.split(/\r?\n/u)) {
-    const match = /^-\s+(AC-\d+):\s*(.+)$/u.exec(line.trim());
+    const match = /^-\s+(AC-\d+)[:：]\s*(.+)$/u.exec(line.trim());
     if (match) result.push({ id: match[1]!, text: match[2]!.trim() });
   }
   return result;
 }
 function parseCriteria(content: string, requirement = sectionBody(content, '需求')): FlowCriterion[] {
   const nested = criteriaFromBody(subSectionBody(requirement, '验收条件'));
-  return nested.length ? nested : criteriaFromBody(sectionBody(content, '验收条件'));
+  if (nested.length) return nested;
+  const nestedLegacy = criteriaFromBody(subSectionBody(requirement, LEGACY_ACCEPTANCE_HEADING));
+  if (nestedLegacy.length) return nestedLegacy;
+  const topLevel = criteriaFromBody(sectionBody(content, '验收条件'));
+  return topLevel.length ? topLevel : criteriaFromBody(sectionBody(content, LEGACY_ACCEPTANCE_HEADING));
 }
 function parseConfirmationSidecar(line: string): FlowConfirmation | null {
   const match = /^<!--\s*tiller-confirm:v1\s+(\{.*\})\s*-->$/u.exec(line);
@@ -637,6 +642,18 @@ function criteriaList(values: string[]): FlowCriterion[] {
   }
   return result.sort((left, right) => Number(left.id.slice(3)) - Number(right.id.slice(3)));
 }
+function importedCriteria(values: FlowCriterion[]): FlowCriterion[] {
+  const ids = new Set<string>();
+  for (const item of values) {
+    const body = normalizeLine(item.text);
+    if (!body) fail('INVALID_FLOW_INPUT', `需求文件中的 ${item.id} 验收条件不能为空。`);
+    if (ids.has(item.id)) fail('INVALID_FLOW_INPUT', `需求文件中的验收条件编号重复：${item.id}`);
+    ids.add(item.id);
+  }
+  return values
+    .map(item => ({ ...item, text: normalizeLine(item.text) }))
+    .sort((left, right) => Number(left.id.slice(3)) - Number(right.id.slice(3)));
+}
 const REQUIREMENT_SECTIONS = ['使用场景', '目标', '业务范围', '关键行为', '异常与边界'] as const;
 type RequirementSection = typeof REQUIREMENT_SECTIONS[number];
 const LEGACY_SCENARIO_HEADING = ['面向谁', '与问题'].join('');
@@ -645,21 +662,26 @@ interface ParsedRequirementFile {
   preamble: string;
   sections: Map<RequirementSection, string>;
   extras: string[];
+  criteria: FlowCriterion[];
 }
 function parseRequirementFile(content: string): ParsedRequirementFile {
   const normalized = content.replace(/^\uFEFF/u, '').replace(/\r\n?/gu, '\n');
   const headings = [...normalized.matchAll(/^#{2,3}\s+(.+?)\s*$/gmu)];
-  if (!headings.length) return { structured: false, preamble: normalized.trim(), sections: new Map(), extras: [] };
+  if (!headings.length) return { structured: false, preamble: normalized.trim(), sections: new Map(), extras: [], criteria: [] };
   const rawPreamble = normalized.slice(0, headings[0]!.index ?? 0);
   const preamble = rawPreamble.replace(/^\s*#\s+.*(?:\n|$)/u, '').trim();
   const sections = new Map<RequirementSection, string>();
   const extras: string[] = [];
+  const criteria: FlowCriterion[] = [];
   for (const [index, heading] of headings.entries()) {
     const rawTitle = heading[1]!.trim();
     const title = rawTitle.replace(/^(?:\d+(?:\.\d+)*[.)、]?)\s*/u, '').trim();
     const sectionTitle = title === LEGACY_SCENARIO_HEADING ? '使用场景' : title;
     const body = normalized.slice((heading.index ?? 0) + heading[0].length, headings[index + 1]?.index ?? normalized.length).trim();
-    if (title === '验收条件') continue;
+    if (title === '验收条件' || title === LEGACY_ACCEPTANCE_HEADING) {
+      criteria.push(...criteriaFromBody(body));
+      continue;
+    }
     if (REQUIREMENT_SECTIONS.includes(sectionTitle as RequirementSection)) {
       const key = sectionTitle as RequirementSection;
       sections.set(key, [sections.get(key), body].filter(Boolean).join('\n\n'));
@@ -667,7 +689,7 @@ function parseRequirementFile(content: string): ParsedRequirementFile {
       extras.push(`**${rawTitle}**\n\n${body}`);
     }
   }
-  return { structured: true, preamble, sections, extras };
+  return { structured: true, preamble, sections, extras, criteria };
 }
 function renderStructuredRequirement(goal: string, criteria: FlowCriterion[], requirementFile?: string,
   requirementContent?: string): string {
@@ -871,12 +893,12 @@ function expectedSubject(task: FlowTask, gate: FlowGate, commit: string): string
 export async function startFlow(rootInput: string, idInput: string, input: FlowStartInput) {
   const root = path.resolve(rootInput); validateTaskId(idInput);
   const warnings = taskIdWarnings(idInput);
+  const requestedCriteria = input.criteria ?? [];
   const title = safeInput(text(input.title, '标题', 200), '标题');
   if ((input.requirement === undefined) === (input.requirementFile === undefined)) {
     fail('INVALID_FLOW_INPUT', 'start 需要 --requirement 或 --requirement-file，两者只能选一个。');
   }
   const type = flowType(input.type);
-  const criteria = criteriaList(input.criteria).map(item => ({ ...item, text: safeInput(item.text, `${item.id} 验收条件`) }));
   const slug = input.slug === undefined ? undefined : normalizeBranchSlug(input.slug);
   if (input.slug !== undefined && !slug) fail('INVALID_FLOW_INPUT', '--slug 必须是 1-64 位英文、数字或连字符组成的简短描述。');
   const summary = input.summary === undefined ? undefined : safeInput(text(input.summary, '任务摘要', 200), '任务摘要');
@@ -909,6 +931,12 @@ export async function startFlow(rootInput: string, idInput: string, input: FlowS
       requirement = requirementContent;
     } else {
       requirement = safeInput(text(input.requirement, '需求正文'), '需求正文');
+    }
+    const imported = requirementContent === undefined ? [] : parseRequirementFile(requirementContent).criteria;
+    const criteria = (imported.length ? importedCriteria(imported) : criteriaList(requestedCriteria))
+      .map(item => ({ ...item, text: safeInput(item.text, `${item.id} 验收条件`) }));
+    if (imported.length && requestedCriteria.length) {
+      warnings.push('已按需求文件中的 AC-n 导入验收条件，忽略命令行 --criterion。');
     }
     let plan: string | undefined;
     let item: string | undefined;

@@ -25,7 +25,7 @@ const HELP = `tiller ${CLI_VERSION} — 默认工作流
   tiller plan confirm <YYYYMMDD-plan-id> [--by <确认人>] [--quote "<可选原话>"] [--commit <oid>] [--path <root>]
   tiller plan status <YYYYMMDD-plan-id> [--path <root>]
   tiller plan attach <YYYYMMDD-task-id> --plan <YYYYMMDD-plan-id> --item <条目> [--path <root>]
-  tiller start <YYYYMMDD-task-id> --title <标题> (--requirement <需求正文> | --requirement-file <.tiller/specs/...>) --criterion "AC-1=<验收条件>" [--criterion ...] [--type feature] [--size small|standard] [--target <相对路径> ...] [--summary <中文摘要>] [--slug <英文描述>] [--plan <YYYYMMDD-plan-id> --item <条目>] [--skip-init-gate] [--path <root>]
+  tiller start <YYYYMMDD-task-id> --title <标题> (--requirement <需求正文> | --requirement-file <.tiller/specs/...>) [--criterion "AC-1=<验收条件>" ...] [--type feature] [--size small|standard] [--target <相对路径> ...] [--summary <中文摘要>] [--slug <英文描述>] [--plan <YYYYMMDD-plan-id> --item <条目>] [--skip-init-gate] [--path <root>]
   tiller resume [YYYYMMDD-task-id] [--path <root>]
   tiller confirm <YYYYMMDD-task-id> requirements|design|acceptance [--by <确认人>] [--quote "<可选原话>"] [--commit <oid>] [--path <root>]
   tiller case add <YYYYMMDD-task-id> --module <模块> --kind behavior|interface|performance|security --title <标题> --expected "<预期结果>" [--precondition <条件> ...] [--step <步骤> ...] [--input <输入> ...] [--priority high|medium|low] [--spec <specs 引用> ...] [--path <root>]
@@ -51,7 +51,7 @@ const HELP = `tiller ${CLI_VERSION} — 默认工作流
 - small：需求确认 → 实现 → 验证；standard：需求 → 设计 → 实现 → 验证。确认记录人、时间、摘要和提交，原话可选。
 - 默认人工节点只有需求、设计和交付验收；规划、合入、发布按需确认，没有阶段或审计命令。
 - 大功能可先写 .tiller/plans/<id>.md 并确认；start 挂到条目时默认继承粒度，依赖未验收会阻塞。
-- task.md 是唯一任务记录：start 生成结构化需求，并引用所实现的稳定 specs；--requirement-file 必须位于 .tiller/specs/；确认前校验正文，原话只作可选附注。verify 自主执行测试并从私有报告核实。
+- task.md 是唯一任务记录：start 生成结构化需求，并引用所实现的稳定 specs；--requirement-file 必须位于 .tiller/specs/，文件“验收条件”中的 - AC-n: 正文会导入任务，因此可省略 --criterion；文件无 AC-n 时仍须提供。任务只引用同一 specs 路径与 AC-n，不写模块前缀或“对照”平行列表；确认前校验正文，原话只作可选附注。verify 自主执行测试并从私有报告核实。
 - review 记录独立评审发现；未解决阻塞项会阻断 check/accept。release 只做发布门禁，不发布包。check 汇总发布清单；已验收任务按验收提交读取代码树与测试，之后代码漂移不误报过期。
 - 阶段由 task.md 事实推导；accept 须在 pr 前；merge 通过 GitHub/GitLab REST API 以 squash 合入，成功后自动 close；merge/close 默认删除本地与远端任务分支，close init-id 同样清理 chore/tiller-init；--keep-branch 保留，删除失败只记 warning。token 从 GITHUB_TOKEN/GH_TOKEN 或 GITLAB_TOKEN/GL_TOKEN 读取；init 推送与 PR/MR 同走平台 API，GitLab 传输层可用 tokenized HTTPS git push，不依赖平台 CLI；网页合入后仍需手动 close；未验收终止用 --abandon，必要时 reopen。
 - start 对 pending 初始化基线先判祖先，再通过平台 API 查同分支已合入 PR/MR；确认后写回 merged 并放行，无 token、API 失败或无记录仍阻断，--skip-init-gate 例外。
@@ -160,14 +160,16 @@ export async function runCli(rawArgs = process.argv.slice(2)): Promise<void> {
           if (!values.title || (!values.requirement === !values['requirement-file'])) {
             usage('start 需要 --title，以及 --requirement 或 --requirement-file 之一；验收条件使用可重复的 --criterion。');
           }
-          if (!values.criterion?.length) usage('start 至少需要一个 --criterion，例如 --criterion "AC-1=命令正常退出"。');
+          if (!values.criterion?.length && values['requirement-file'] === undefined) {
+            usage('start 使用 --requirement 时至少需要一个 --criterion；--requirement-file 含 AC-n 时可省略。');
+          }
           if ((values.plan === undefined) !== (values.item === undefined)) usage('start 的 --plan 和 --item 必须同时提供。');
           if (values.item && values.item.length !== 1) usage('start 的 --item 只能提供一个条目。');
           result = await startFlow(root, second!, { title: values.title,
             ...(values.requirement === undefined ? {} : { requirement: values.requirement }),
             ...(values['requirement-file'] === undefined ? {} : { requirementFile: values['requirement-file'] }),
             ...(values.type === undefined ? {} : { type: values.type }), ...(values.size === undefined ? {} : { size: values.size }),
-            ...(values.target === undefined ? {} : { targets: values.target }), criteria: values.criterion,
+            ...(values.target === undefined ? {} : { targets: values.target }), criteria: values.criterion ?? [],
             ...(values.slug === undefined ? {} : { slug: values.slug }),
             ...(values.summary === undefined ? {} : { summary: values.summary }),
             ...(values['skip-init-gate'] === undefined ? {} : { skipInitGate: values['skip-init-gate'] }),

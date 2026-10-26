@@ -217,20 +217,21 @@ test('CASE-107 CASE-265 CASE-271 start requirement-file preserves structured mul
 
 ## 验收条件
 
-- AC-9: 文件内验收条件不应覆盖命令行条件。
+- AC-9: 文件内验收条件导入任务。
 `);
   const id = '20261022-requirement-file';
   const started = success(cli(root, 'start', id, '--title', 'File requirement', '--requirement-file', requirementFile,
-    '--criterion', 'AC-1=Requirement file is loaded', '--size', 'small', '--target', 'src'));
+    '--size', 'small', '--target', 'src'));
   assert.equal(started.requirementFile, requirementFile);
+  assert.deepEqual(started.criteria, [{ id: 'AC-9', text: '文件内验收条件导入任务。' }]);
   const body = read(root, taskPath(id));
   assert.match(body, /需求来源：`\.tiller\/specs\/modules\/workflow\/requirement-file\.md`/u);
   assert.match(body, /### 使用场景\n\n维护者需要从稳定需求建立任务。/u);
   assert.doesNotMatch(body, new RegExp(legacyScenarioHeading, 'u'));
   assert.match(body, /### 目标\n\n需求来源：`\.tiller\/specs\/modules\/workflow\/requirement-file\.md`\n\n从工程内需求文件建立任务。\n\n保持多行结构和可追溯来源。/u);
   assert.match(body, /### 业务范围\n\n- 做：保留结构化小节。\n- 不做：把正文压成一行。/u);
-  assert.match(body, /- AC-1: Requirement file is loaded/u);
-  assert.doesNotMatch(body, /AC-9/u);
+  assert.match(body, /- AC-9: 文件内验收条件导入任务。/u);
+  assert.doesNotMatch(body, /对照|LIB-AC/u);
 
   put(root, '.tiller/specs/modules/workflow/empty.md', '\n');
   const empty = failure(cli(root, 'start', '20261022-empty-requirement', '--title', 'Empty', '--requirement-file', '.tiller/specs/modules/workflow/empty.md',
@@ -248,6 +249,65 @@ test('CASE-107 CASE-265 CASE-271 start requirement-file preserves structured mul
   const both = failure(cli(root, 'start', '20261022-both-requirement', '--title', 'Both', '--requirement', 'inline',
     '--requirement-file', requirementFile, '--criterion', 'AC-1=One source only', '--size', 'small', '--target', 'src'));
   assert.equal(both.error.code, 'INVALID_ARGUMENT');
+});
+
+test('CASE-274 requirement-file imports AC-n from canonical or legacy headings without a parallel list', async t => {
+  const root = await project(t);
+  const legacyFile = '.tiller/specs/modules/workflow/legacy-acceptance.md';
+  put(root, legacyFile, `# 历史验收条件标题
+
+## 使用场景
+
+维护者从 specs 开任务。
+
+## 目标
+
+复用文件中的验收条件。
+
+## 验收条件（稳定）
+
+- AC-2: 第二条条件来自历史标题。
+- AC-1: 第一条条件来自历史标题。
+`);
+  const aliasId = '20261026-legacy-ac-import';
+  const alias = success(cli(root, 'start', aliasId, '--title', 'Legacy AC import', '--requirement-file', legacyFile,
+    '--size', 'small', '--target', 'src'));
+  assert.deepEqual(alias.criteria, [
+    { id: 'AC-1', text: '第一条条件来自历史标题。' },
+    { id: 'AC-2', text: '第二条条件来自历史标题。' },
+  ]);
+  const aliasBody = read(root, taskPath(aliasId));
+  assert.match(aliasBody, /### 验收条件\n\n- AC-1: 第一条条件来自历史标题。\n- AC-2: 第二条条件来自历史标题。/u);
+  assert.match(aliasBody, /需求来源：`\.tiller\/specs\/modules\/workflow\/legacy-acceptance\.md`/u);
+  assert.doesNotMatch(aliasBody, /验收条件（稳定）|LIB-AC|对照/u);
+
+  const canonicalFile = '.tiller/specs/modules/workflow/canonical-acceptance.md';
+  put(root, canonicalFile, `# 文件条件优先
+
+## 目标
+
+文件条件优先于命令行条件。
+
+## 验收条件
+
+- AC-1: 文件中的正文。
+`);
+  const conflictId = '20261026-file-ac-priority';
+  const conflict = success(cli(root, 'start', conflictId, '--title', 'File AC priority', '--requirement-file', canonicalFile,
+    '--criterion', 'AC-1=命令行正文', '--size', 'small', '--target', 'src'));
+  assert.deepEqual(conflict.criteria, [{ id: 'AC-1', text: '文件中的正文。' }]);
+  assert.ok(conflict.warnings.some(item => item.includes('需求文件中的 AC-n')));
+  const conflictBody = read(root, taskPath(conflictId));
+  assert.match(conflictBody, /- AC-1: 文件中的正文。/u);
+  assert.doesNotMatch(conflictBody, /命令行正文|对照|LIB-AC/u);
+
+  const noAcFile = '.tiller/specs/modules/workflow/no-acceptance.md';
+  put(root, noAcFile, '# 无 AC\n\n## 目标\n\n文件没有验收条件节。\n');
+  const missing = failure(cli(root, 'start', '20261026-no-file-ac', '--title', 'No file AC', '--requirement-file', noAcFile,
+    '--size', 'small', '--target', 'src'));
+  assert.equal(missing.error.code, 'INVALID_FLOW_INPUT');
+  assert.match(missing.error.message, /--criterion|AC-n/u);
+  assert.equal(existsSync(join(root, taskPath('20261026-no-file-ac'))), false);
 });
 
 test('CASE-269 requirement-file rejects local paths and keeps specs multiline source', async t => {
@@ -381,7 +441,7 @@ test('CASE-109 repository docs and suite include review release and pinned check
   assert.ok(suite.e2e.includes('review-release.test.mjs'));
   const library = await readCaseLibrary(repository);
   assert.deepEqual(library.issues, []);
-  assert.equal(library.cases.length, 272);
+  assert.equal(library.cases.length, 275);
   for (const id of ['CASE-104', 'CASE-105', 'CASE-106', 'CASE-107', 'CASE-108', 'CASE-109']) {
     assert.ok(library.cases.find(item => item.id === id)?.tests.length, id);
   }

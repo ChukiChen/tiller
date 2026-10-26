@@ -1747,3 +1747,27 @@ check 返回可定位 warning 且不因此升级为阻塞项。
 ### 预期结果
 
 含旧首节标题的结构化 requirement-file 解析进「使用场景」槽位，不落入 extras；新渲染标题为「使用场景」
+
+## CASE-274 requirement-file 导入 specs 中的 AC-n 且无对照列表
+
+- 类型：behavior
+- 优先级：high
+- 模块：workflow
+- 关联 AC：无
+- 需求：`.tiller/specs/modules/workflow/ac-criteria-link.md`
+
+### 前置条件
+
+- specs 文件含「验收条件」与 - AC-n: 正文；或含历史别名「验收条件（稳定）」
+
+### 步骤
+
+1. 运行 start --requirement-file 指向该 specs；检查 task.md 验收条件
+
+### 输入
+
+- 含 AC-1/AC-2 的 specs 需求文件
+
+### 预期结果
+
+任务验收条件为同一套 AC-n 正文；可解析历史别名；无 LIB- 前缀与「对照」平行列表

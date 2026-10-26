@@ -263,15 +263,15 @@ test('CASE-048 global cases use module kinds and scenarios with resolvable named
   const kinds = ['behavior', 'interface', 'performance', 'security'];
   const library = await readCaseLibrary(repository);
   assert.deepEqual(library.issues, []);
-  assert.equal(library.cases.length, 272);
+  assert.equal(library.cases.length, 275);
   assert.deepEqual(library.cases.map(item => item.id).sort(),
-    Array.from({ length: 272 }, (_, index) => `CASE-${String(index + 1).padStart(3, '0')}`));
+    Array.from({ length: 275 }, (_, index) => `CASE-${String(index + 1).padStart(3, '0')}`));
   assert.deepEqual(library.modules.map(item => ({ module: item.module, behavior: item.behavior, interface: item.interface,
     performance: item.performance, security: item.security })), [
     { module: 'initialization', behavior: 30, interface: 9, performance: 11, security: 17 },
-    { module: 'standards', behavior: 22, interface: 12, performance: 0, security: 0 },
+    { module: 'standards', behavior: 22, interface: 13, performance: 0, security: 0 },
     { module: 'verification', behavior: 13, interface: 13, performance: 15, security: 4 },
-    { module: 'workflow', behavior: 71, interface: 46, performance: 0, security: 7 },
+    { module: 'workflow', behavior: 72, interface: 47, performance: 0, security: 7 },
   ]);
   assert.equal(library.scenarios.length, 2);
   for (const item of library.scenarios) assert.ok(item.modules.length > 0 && item.modules.every(module => specs.includes(module)));
@@ -311,13 +311,13 @@ test('CASE-048 global cases use module kinds and scenarios with resolvable named
 test('CASE-245 全局用例库同步文档 CLI 名称与版本', async () => {
   const library = await readCaseLibrary(repository);
   assert.deepEqual(library.issues, []);
-  assert.equal(library.cases.length, 272);
+  assert.equal(library.cases.length, 275);
   const added = library.cases.filter(item => Number(item.id.slice(5)) >= 242 && Number(item.id.slice(5)) <= 245);
   assert.deepEqual(added.map(item => item.id), ['CASE-242', 'CASE-243', 'CASE-244', 'CASE-245']);
   const standards = library.modules.find(item => item.module === 'standards');
   assert.deepEqual({ behavior: standards?.behavior, interface: standards?.interface,
     performance: standards?.performance, security: standards?.security },
-  { behavior: 22, interface: 12, performance: 0, security: 0 });
+  { behavior: 22, interface: 13, performance: 0, security: 0 });
   for (const item of added) assert.ok(item.tests.some(reference => reference.name?.includes(item.id)));
   const sceneCases = library.cases.filter(item => Number(item.id.slice(5)) >= 270 && Number(item.id.slice(5)) <= 272)
     .sort((left, right) => left.id.localeCompare(right.id));
@@ -451,7 +451,7 @@ test('CASE-267 guidance and decisions use task-to-specs and case-to-specs links'
   assert.doesNotMatch(coreSource, /来源 AC/u);
 });
 
-test('CASE-268 stable AC bodies live in specs and tasks link specs', () => {
+test('CASE-268 AC bodies use path-scoped AC-n and tasks link specs', () => {
   const verification = readFileSync(join(repository, '.tiller/specs/modules/verification/requirements.md'), 'utf8');
   for (const id of ['VER-CASE-REQ-1', 'VER-CASE-REQ-2', 'VER-CASE-REQ-3']) {
     assert.match(verification, new RegExp(`^### ${id} `, 'mu'), id);
@@ -461,14 +461,54 @@ test('CASE-268 stable AC bodies live in specs and tasks link specs', () => {
     assert.match(workflow, new RegExp(`^### ${id} `, 'mu'), id);
   }
   const caseSpec = readFileSync(join(repository, '.tiller/specs/modules/verification/case-req-link.md'), 'utf8');
-  assert.match(caseSpec, /VER-CASE-REQ-1 \/ VER-CASE-REQ-2 \/ VER-CASE-REQ-3/u);
-  assert.match(caseSpec, /FLOW-SPEC-AC-1 \/ FLOW-SPEC-AC-2/u);
+  assert.match(caseSpec, /^## 验收条件$/mu);
+  for (const index of [1, 2, 3, 4, 5]) assert.match(caseSpec, new RegExp(`^- AC-${index}: `, 'mu'));
+  assert.doesNotMatch(caseSpec, /^## 验收条件（稳定）$/mu);
+  assert.doesNotMatch(caseSpec, /VER-CASE-REQ|FLOW-SPEC-AC|LIB-AC/u);
 
   const task = readFileSync(join(repository, '.tiller/task/20261026-case-req-link/task.md'), 'utf8');
   assert.match(task, /需求来源：`\.tiller\/specs\/modules\/verification\/case-req-link\.md`/u);
-  assert.match(task, /VER-CASE-REQ-1～3/u);
-  assert.match(task, /FLOW-SPEC-AC-1～2/u);
   assert.doesNotMatch(task, /20261026-case-req-link#AC-/u);
+});
+
+test('CASE-275 rules and examples guide path-scoped AC-n without prefixed acceptance IDs', () => {
+  const documents = [
+    ...RULES.map(relative => [`resources/${relative}`, read(relative)]),
+    ...RULES.map(relative => [`.tiller/${relative}`, readFileSync(join(repository, '.tiller', relative), 'utf8')]),
+    ['resources/usage.md', read('usage.md')],
+    ['.tiller/usage.md', readFileSync(join(repository, '.tiller/usage.md'), 'utf8')],
+    ['.tiller/specs/decisions.md', readFileSync(join(repository, '.tiller/specs/decisions.md'), 'utf8')],
+    ['.tiller/specs/modules/verification/case-req-link.md', readFileSync(join(repository, '.tiller/specs/modules/verification/case-req-link.md'), 'utf8')],
+    ['.tiller/specs/modules/workflow/req-scene-heading.md', readFileSync(join(repository, '.tiller/specs/modules/workflow/req-scene-heading.md'), 'utf8')],
+  ];
+  for (const [name, content] of documents) {
+    assert.doesNotMatch(content, /^#{2,3}\s+验收条件（稳定）\s*$/mu, name);
+    assert.doesNotMatch(content, /LIB-AC/u, name);
+    assert.doesNotMatch(content, /对照\s*(?:VER|FLOW|AC)/u, name);
+  }
+
+  const requirements = read('rules/activities/requirements.md');
+  assert.match(requirements, /文件路径区分模块/u);
+  assert.match(requirements, /同一套 `AC-n`/u);
+  assert.match(requirements, /可省略 `--criterion`/u);
+  const verification = read('rules/quality/verification.md');
+  assert.match(verification, /文件路径作用域使用普通 `AC-n`/u);
+  for (const relative of ['resources/usage.md', '.tiller/usage.md']) {
+    const usage = readFileSync(join(repository, relative), 'utf8');
+    assert.match(usage, /路径作用域用 AC-n/u, relative);
+    assert.match(usage, /有 AC 可省略 `--criterion`/u, relative);
+  }
+  const decisions = readFileSync(join(repository, '.tiller/specs/decisions.md'), 'utf8');
+  assert.match(decisions, /由文件路径区分模块/u);
+  assert.match(decisions, /同一套 `AC-n`/u);
+  for (const relative of ['.tiller/specs/modules/verification/case-req-link.md', '.tiller/specs/modules/workflow/req-scene-heading.md']) {
+    const example = readFileSync(join(repository, relative), 'utf8');
+    assert.match(example, /^## 验收条件$/mu, relative);
+    assert.match(example, /^- AC-1: /mu, relative);
+  }
+  const help = success(cli(repository, '--help')).help;
+  assert.match(help, /文件“验收条件”中的 - AC-n:/u);
+  assert.match(help, /可省略 --criterion/u);
 });
 
 test('CASE-162 repository keeps the 0.5.0 release contract and five full verification entries', () => {
@@ -508,7 +548,7 @@ test('CASE-164 historical empty AC cases stay warned without fabricated backfill
   assert.match(decisions, /不批量回填/u);
   assert.match(decisions, /不.*冒充历史来源/u);
   const library = await readCaseLibrary(repository);
-  assert.equal(library.cases.filter(item => item.criteria.length === 0).length, 100);
+  assert.equal(library.cases.filter(item => item.criteria.length === 0).length, 103);
 });
 
 test('CASE-165 project rules and context match 0.5.0 without stale workflow guidance', () => {
