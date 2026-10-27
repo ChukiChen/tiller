@@ -1,6 +1,6 @@
 # 合入证明绑定 PR head.sha
 
-<!-- tiller-task:v1 {"version":1,"id":"20261027-merge-proof-sha","type":"feature","size":"standard","created":"2026-10-27T15:20:31.820Z","base":"80f42f948821f2a6a58caf7befe6431398c5a5cc","scope":["src/platform-api.ts","src/flow.ts","src/init-baseline.ts","test"],"format":"structured"} -->
+<!-- tiller-task:v1 {"version":1,"id":"20261027-merge-proof-sha","type":"feature","size":"standard","created":"2026-10-27T15:20:31.820Z","base":"80f42f948821f2a6a58caf7befe6431398c5a5cc","scope":["src/platform-api.ts","src/flow.ts","src/init-baseline.ts","test",".tiller/cases/modules/workflow/behavior.md"],"format":"structured"} -->
 
 ## 需求
 
@@ -68,11 +68,11 @@
 
 | 部分 | 确认人 | 时间 | 短提交 | 原话 |
 | --- | --- | --- | --- | --- |
-| 需求 | boon yu | 2026-10-27T15:20:44.991Z | 80f42f948821 | — |
 | 设计 | boon yu | 2026-10-27T15:20:45.137Z | 20d6d6b2e952 | — |
+| 需求 | boon yu | 2026-10-27T15:26:27.203Z | 80f42f948821 | — |
 
-<!-- tiller-confirm:v1 {"gate":"requirements","object":"需求正文（目标、范围与验收条件）","subject":"17542a84ad47e114bb1e9cd1cddff377b80dcd0b2c8aa2b24cd87a6718165a50","commit":"80f42f948821f2a6a58caf7befe6431398c5a5cc","by":"boon yu","quote":"","at":"2026-10-27T15:20:44.991Z"} -->
 <!-- tiller-confirm:v1 {"gate":"design","object":"设计正文","subject":"69254af86f841853eacce321616435bb4e53b151b7402f46ba51f376ed01bc48","commit":"20d6d6b2e952578e0fc3134878fe8d6bd5bf53c3","by":"boon yu","quote":"","at":"2026-10-27T15:20:45.137Z"} -->
+<!-- tiller-confirm:v1 {"gate":"requirements","object":"需求正文（目标、范围与验收条件）","subject":"b7ad8dcc0a72d362db28e36fcbc9c649c7374d8db225032296af83e413698fe4","commit":"80f42f948821f2a6a58caf7befe6431398c5a5cc","by":"boon yu","quote":"","at":"2026-10-27T15:26:27.203Z"} -->
 
 ## 验证
 
