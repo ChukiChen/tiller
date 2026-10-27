@@ -53,7 +53,7 @@
 
 `draftPullRequest` 在生成草稿前先复用 `inspectFlow` 的 acceptance 状态；没有有效交付验收时以 `PR_NOT_ACCEPTED` 失败，并提示先 `accept`、提交任务记录再 `pr`。随后读取相对 HEAD 的 tracked 与 untracked 路径，命中本任务 `.tiller/task/<id>/` 或任务 scope 覆盖的 `.tiller/cases/`、`.tiller/specs/` 时以 `PR_TASK_RECORDS_DIRTY` 失败并列出工程相对路径；其他任务目录不在门禁范围，tiller 不自动提交。无 Git 或 Git 工作树不可读时跳过记录门禁，并在草稿 warnings 中保留提示；验收门禁仍生效。
 
-`pullRequestFlow` 默认在草稿后解析项目元信息与平台 token，调用既有 `pushBranch` 和 `createPullRequest`/`createMergeRequest` 创建真实 PR/MR，JSON 返回 `url`、`number`、`platform` 与推送结果；缺 token 以中文 `PR_TOKEN_MISSING` 失败，创建接口返回 422 时以 `PR_ALREADY_EXISTS` 提示核对既有 PR/MR。`--draft-only` 在草稿处返回，不解析远端、不联网。`pr`/`merge` 从任务 worktree 进入时先解析主工程根，草稿仍从当前检出读取 `base..HEAD`，平台操作和共享记录使用主工程根。
+`pullRequestFlow` 默认在草稿后解析项目元信息与平台 token，调用既有 `pushBranch` 和 `createPullRequest`/`createMergeRequest` 创建真实 PR/MR，JSON 返回 `url`、`number`、`platform` 与推送结果；缺 token 以中文 `PR_TOKEN_MISSING` 失败，创建接口返回 422 时以 `PR_ALREADY_EXISTS` 提示核对既有 PR/MR。`--draft-only` 在草稿处返回，不解析远端、不联网。`pr`/`merge` 从任务 worktree 进入时由 `resolveTaskCheckout` 同时解析主仓与任务读取根：任务记录、阶段、验收门禁与未提交记录检查优先使用含 `.tiller/task/<id>/task.md` 的当前相关检出，提交摘要与记录门禁使用该检出的 Git 状态；推送、平台 API 和元信息仍用主仓。任务在相关检出均缺失时回退主仓并保持 `TASK_NOT_FOUND`。
 
 ## 7. 范围与恢复
 
@@ -75,7 +75,7 @@
 
 建树前先校验任务容器、全部源仓和目标路径，任何一步失败都强制移除本次已建树，并清理本次产生的 worktree 容器、清单和开工前旁路；未知的本机文件保留，空任务目录一并移除，task.md 不落盘。成功后把相对路径与本机清单 `.tiller/local/<id>/worktrees.json` 写入；读取先新后旧，清单缺失或损坏时 close 回退 project/workspace 的新旧约定布局。所有目标都经安全路径校验并限制在新旧任务 worktree 容器内。
 
-已验收 close 不写共享关闭事实，直接按清单或约定布局执行 `git worktree remove --force` 与 prune；abandon 与历史已关闭任务先写共享记录再执行同一清理。路径已缺失记入 `missingWorktrees` 并继续。Git 移除失败时仅对该受管目录强制删除并返回 warning；随后删除整棵 `.tiller/local/<id>/`（含 logs 与旁路），并 best-effort 清理旧 `.tiller/local/worktrees|logs|tasks/<id>/`。`closeFlow` 与 `cleanupTaskBranches` 先经 `resolveProjectRoot` 从任务 worktree 解析主工程根，再在管理仓与各业务仓删除同名本地分支，并优先通过平台 API 删除远端分支；远端 404/422/已不存在视为已清理且不产生 warning，无 token、平台解析失败、其它远端 API 失败或当前分支无法安全切换只汇总 warning，不回滚本机清理。`--keep-branch` 跳过整段分支删除；重复 close 对缺失 worktree、local 与分支保持幂等。清理失败不阻断本机清理结果或放弃记录，其他任务路径不动。所有本机路径保持工程相对形式，不写入共享 task.md。
+已验收 close 不写共享关闭事实，直接按清单或约定布局执行 `git worktree remove --force` 与 prune；abandon 与历史已关闭任务先写共享记录再执行同一清理。路径已缺失记入 `missingWorktrees` 并继续。Git 移除失败时仅对该受管目录强制删除并返回 warning；随后删除整棵 `.tiller/local/<id>/`（含 logs 与旁路），并 best-effort 清理旧 `.tiller/local/worktrees|logs|tasks/<id>/`。`closeFlow` 经 `resolveTaskCheckout` 从任务 worktree 取得主仓与任务读取根：任务记录和 abandon 写回使用含 task.md 的检出，worktree 清理与 `cleanupTaskBranches` 继续使用主仓，在管理仓与各业务仓删除同名本地分支并优先通过平台 API 删除远端；远端 404/422/已不存在视为已清理且不产生 warning，无 token、平台解析失败、其它远端 API 失败或当前分支无法安全切换只汇总 warning，不回滚本机清理。`--keep-branch` 跳过整段分支删除；重复 close 对缺失 worktree、local 与分支保持幂等。清理失败不阻断本机清理结果或放弃记录，其他任务路径不动。所有本机路径保持工程相对形式，不写入共享 task.md。
 
 ## 11. 初始化基线门禁
 

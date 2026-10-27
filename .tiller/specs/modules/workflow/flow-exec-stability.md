@@ -23,8 +23,8 @@
 
 ## 关键行为
 
-1. `tiller pr <id>` 在已验收且任务记录已提交时：生成五段说明 → 推送任务分支（若需要）→ API 创建 PR/MR → 返回 URL 与编号；可选 `--draft-only` 仅输出草稿不联网。
-2. `tiller merge` / `tiller close` 在 cwd 为任务 worktree 根时：先拆 worktree，再从主仓删除本地分支；远端分支已不存在不失败。
+1. `tiller pr <id>` 在已验收且任务记录已提交时：生成五段说明 → 推送任务分支（若需要）→ API 创建 PR/MR → 返回 URL 与编号；可选 `--draft-only` 仅输出草稿不联网。从任务 worktree 根调用时，任务记录优先从当前相关检出读取；主仓工作树缺少 `.tiller/task/<id>/` 不构成 `TASK_NOT_FOUND`。
+2. `tiller merge` / `tiller close` 在 cwd 为任务 worktree 根时：先从当前相关检出读取任务记录，再拆 worktree 并从主仓删除本地分支；远端分支已不存在不失败。主仓仍承担平台操作、worktree 与分支清理。
 3. `tiller doctor [path]`（名称以实现为准）输出过程卫生结论；严重项非零退出，可供演示绿条。
 4. 文档不再把「只出草稿再手搓 API」写为主路径。
 
@@ -33,12 +33,13 @@
 - 缺 token / API 失败：pr 失败并提示配置 token；不静默降级为成功。
 - 分支已推送且 PR 已存在：幂等返回已有 PR 或给出明确中文提示（实现选一种并测稳）。
 - 重复 close：本机目录已不存在时成功或明确已清理。
+- 任务记录在主仓与当前相关检出均不存在：交付命令仍以 `TASK_NOT_FOUND` 失败，不因检出解析改变错误码。
 - 历史「验收条件（稳定）」标题仅作解析别名；新模板与示例只用「验收条件」。
 
 ## 验收条件
 
-- AC-1: tiller pr 在具备 token 时经平台 API 推送任务分支并创建真实 PR/MR，返回 URL；缺 token 有中文提示；--draft-only（或等价）可仅生成草稿；文档主路径不再要求手搓 API
+- AC-1: tiller pr 在具备 token 时经平台 API 推送任务分支并创建真实 PR/MR，返回 URL；缺 token 有中文提示；--draft-only（或等价）可仅生成草稿；从任务 worktree 调用且任务记录仅存在于该检出时可正常生成草稿，主仓缺目录不报 TASK_NOT_FOUND；文档主路径不再要求手搓 API
 - AC-2: 过程卫生与数据模型保持并强化：specs 经任务合入门禁、requirement-file/AC-n 导入、无 LIB-/对照/「验收条件（稳定）」新主路径写法；usage/rules/AGENTS/CLI 只描述主路径
-- AC-3: 在任务 worktree 根执行 merge/close 可干净删除本地与远端任务分支；远端已删安静处理；重复 close 安全；合入后 close 不改写共享 task.md
+- AC-3: 在任务 worktree 根执行 merge/close 可从仅存在于该检出的任务记录读取并干净删除本地与远端任务分支；远端已删安静处理；重复 close 安全；合入后 close 不改写共享 task.md；任务在所有相关检出均不存在时仍报 TASK_NOT_FOUND
 - AC-4: doctor（或等价自检）可扫描过程卫生（含基线状态、默认分支 specs 脏改、残留任务分支等可测项）并以退出码表达是否通过
 - AC-5: 全量 build/lint/typecheck/test 与 package smoke 通过，版本 0.5.0

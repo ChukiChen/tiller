@@ -13,7 +13,7 @@ import {
   resolvePlatformRepository, tokenGuidance,
 } from './platform-api.js';
 import type { MergeRequestResult, PlatformRepository, PullRequestResult, PushResult } from './platform-api.js';
-import { resolveProjectRoot } from './project-root.js';
+import { resolveTaskCheckout } from './project-root.js';
 import { taskBranchName } from './task-worktrees.js';
 
 const execFileAsync = promisify(execFile);
@@ -63,15 +63,15 @@ function fail(code: string, message: string): never {
   throw Object.assign(new Error(message), { code });
 }
 
-async function mergeTarget(root: string, id: string): Promise<{ branch: string; init: boolean }> {
+async function mergeTarget(root: string, taskRoot: string, id: string): Promise<{ branch: string; init: boolean }> {
   const metadata = await readProjectMetadata(root);
   if (isInitBaselineId(id)) {
     const baseline = metadata.initBaseline;
     if (!baseline || baseline.id !== id) fail('INIT_BASELINE_NOT_FOUND', `工程元信息中没有初始化基线 ${id}。`);
     return { branch: baseline.branch, init: true };
   }
-  const task = await readTask(root, id);
-  const stage = await taskStage(root, id);
+  const task = await readTask(taskRoot, id);
+  const stage = await taskStage(taskRoot, id);
   if (stage.stage !== '已验收') {
     fail('MERGE_NOT_ACCEPTED', `任务当前阶段为${stage.stage}；先完成验收并提交任务记录，再运行 tiller merge ${id}。`);
   }
@@ -218,24 +218,24 @@ export async function draftPullRequest(
   id: string,
   options: { slug?: string; summary?: string } = {},
 ): Promise<PullRequestDraft & { markdown: string }> {
-  const root = await resolveProjectRoot(rootInput);
+  const { taskRoot } = await resolveTaskCheckout(rootInput, id);
   const sourceRoot = path.resolve(rootInput);
-  const task = await readTask(root, id);
+  const task = await readTask(taskRoot, id);
   const type = commitTypeForTaskType(task.meta.type);
   if (!type) throw Object.assign(new Error(`无法从任务类型 ${task.meta.type} 推导提交类型。`), { code: 'PR_TYPE_UNKNOWN' });
-  const checked = await inspectFlow(root, id);
+  const checked = await inspectFlow(taskRoot, id);
   if (!checked.acceptance.confirmed) {
     throw Object.assign(new Error(`任务尚未通过交付验收；先运行 tiller accept ${id}，提交任务记录后再运行 pr。`), {
       code: 'PR_NOT_ACCEPTED',
     });
   }
-  const records = await uncommittedTaskRecords(root, task);
+  const records = await uncommittedTaskRecords(taskRoot, task);
   if (records.paths.length) {
     throw Object.assign(new Error(`任务记录尚未提交，先提交后再运行 pr：${records.paths.join('、')}`), {
       code: 'PR_TASK_RECORDS_DIRTY',
     });
   }
-  const available = await specModules(root);
+  const available = await specModules(taskRoot);
   const modules = new Set(referencedModules(task, available));
   const resolvedModules = [...modules];
   const branchDescription = options.slug === undefined
@@ -267,7 +267,7 @@ export async function pullRequestFlow(
   id: string,
   options: { slug?: string; summary?: string; draftOnly?: boolean } = {},
 ): Promise<PullRequestCreated | PullRequestPreview> {
-  const root = await resolveProjectRoot(rootInput);
+  const { primary: root } = await resolveTaskCheckout(rootInput, id);
   const draft = await draftPullRequest(rootInput, id, options);
   if (options.draftOnly) {
     return {
@@ -326,7 +326,7 @@ export async function pullRequestFlow(
 }
 
 export async function mergeFlow(rootInput: string, id: string, options: { keepBranch?: boolean } = {}): Promise<MergeResult> {
-  const root = await resolveProjectRoot(rootInput);
+  const { primary: root, taskRoot } = await resolveTaskCheckout(rootInput, id);
   const metadata = await readProjectMetadata(root);
   let repository;
   try {
@@ -337,7 +337,7 @@ export async function mergeFlow(rootInput: string, id: string, options: { keepBr
   const platform = repository.platform;
   const token = platformToken(platform);
   if (!token) fail('MERGE_TOKEN_MISSING', tokenGuidance(platform, repository.apiBase));
-  const target = await mergeTarget(root, id);
+  const target = await mergeTarget(root, taskRoot, id);
   let merged;
   try {
     merged = platform === 'github'
@@ -356,7 +356,7 @@ export async function mergeFlow(rootInput: string, id: string, options: { keepBr
 
   let closed: Awaited<ReturnType<typeof closeFlow>>;
   try {
-    closed = await closeFlow(root, id, '合入后自动清理', false, { keepBranch: options.keepBranch === true });
+    closed = await closeFlow(rootInput, id, '合入后自动清理', false, { keepBranch: options.keepBranch === true });
   } catch (error) {
     const metadataNote = metadataError ? `；初始化状态也未更新：${metadataError.message}` : '';
     fail('MERGE_CLOSE_FAILED', `远端已合入，但本机清理失败：${(error as Error).message}${metadataNote}；请手动运行 tiller close ${id} --reason "已合入"。`);

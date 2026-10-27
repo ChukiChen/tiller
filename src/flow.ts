@@ -20,7 +20,7 @@ import { assertInitBaselineReady, isInitBaselineId } from './init-baseline.js';
 import { planItemForAttachment, readPlanItem } from './plans.js';
 import { releaseChecklist, type ReleaseChecklist } from './release.js';
 import { taskIdWarnings, validateTaskId } from './task-id.js';
-import { resolveProjectRoot } from './project-root.js';
+import { resolveTaskCheckout } from './project-root.js';
 import { cleanupTaskWorktrees, createTaskWorktrees, rollbackTaskWorktrees, taskBranchName, taskLocalRoot, writeTaskWorktreeState } from './task-worktrees.js';
 import { namePattern, resolveVerifyTarget, runnerFor, type TestEvidence, type TestReference } from './test-output.js';
 import type { ProjectMetadata } from './types.js';
@@ -2104,7 +2104,7 @@ export async function releaseFlow(rootInput: string, id: string) {
 
 export async function closeFlow(rootInput: string, id: string, reasonInput: string, abandon = false,
   options: { keepBranch?: boolean } = {}) {
-  const root = await resolveProjectRoot(rootInput);
+  const { primary: root, taskRoot } = await resolveTaskCheckout(rootInput, id);
   const reason = safeInput(text(reasonInput, '关闭原因', 4000), '关闭原因');
   return withProjectLock(root, async () => {
     const metadata = await readProjectMetadata(root);
@@ -2121,10 +2121,10 @@ export async function closeFlow(rootInput: string, id: string, reasonInput: stri
         ...(warnings.length ? { warnings } : {}),
         next: '初始化基线本机目录已清理；共享 task 记录不受影响。' };
     }
-    const task = await readTask(root, id);
+    const task = await readTask(taskRoot, id);
     const ended = terminalStage(task);
     if (ended) fail('TASK_ENDED', `任务当前阶段为${ended.stage}；如需继续，先执行 reopen。`);
-    const current = await taskStageForTask(root, id, task);
+    const current = await taskStageForTask(taskRoot, id, task);
     if (current.stage === '已验收' && abandon) {
       fail('ALREADY_ACCEPTED', '任务已验收；请使用 close 收尾，不要用 --abandon 把已验收任务标为放弃。');
     }
@@ -2147,7 +2147,7 @@ export async function closeFlow(rootInput: string, id: string, reasonInput: stri
     };
     const next = { ...task, closures: [...task.closures, closure] };
     const { content: _content, path: _path, ...body } = next;
-    await writeTask(root, id, task.content, renderTask(body, sectionBody(task.content, '自检')), body.meta.preExisting);
+    await writeTask(taskRoot, id, task.content, renderTask(body, sectionBody(task.content, '自检')), body.meta.preExisting);
     const stage = terminalStage(next)!;
     const cleanup = await cleanupTaskWorktrees(root, id, metadata);
     const branchCleanup = await cleanupTaskBranches(root, metadata, taskBranchName(task.meta), options);
