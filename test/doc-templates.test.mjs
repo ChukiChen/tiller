@@ -154,6 +154,18 @@ test('CASE-193 CASE-270 requirements confirmation rejects blank or placeholder s
   assert.equal(blank.error.code, 'MISSING_REQUIREMENTS');
   for (const heading of ['使用场景', '业务范围', '关键行为', '异常与边界']) assert.match(blank.error.message, new RegExp(heading, 'u'));
 
+  put(taskRecordRoot(root, blankId), taskPath(blankId), replaceRequirement(read(taskRecordRoot(root, blankId), taskPath(blankId)), [
+    '### 使用场景', '', '编辑后的明确场景。', '',
+    '### 目标', '', 'Reject blank fields after editing.', '',
+    '### 业务范围', '', '- 做：待补充', '- 不做：TODO', '- 假设与待确认：待定', '',
+    '### 关键行为', '', '编辑后的可观察行为。', '',
+    '### 异常与边界', '', '编辑后的明确边界。', '',
+    '### 验收条件', '', '- AC-1: Blank sections are rejected',
+  ].join('\n')));
+  const placeholder = failure(cli(root, 'confirm', blankId, 'requirements'));
+  assert.equal(placeholder.error.code, 'MISSING_REQUIREMENTS');
+  assert.match(placeholder.error.message, /业务范围/u);
+
   const legacy = '20261024-legacy-scope';
   success(cli(root, 'start', legacy, '--title', 'Legacy scope', '--requirement', 'Keep old records valid.',
     '--criterion', 'AC-1=Legacy scope confirms', '--size', 'small', '--target', 'src'));
