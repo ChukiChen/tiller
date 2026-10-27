@@ -74,11 +74,11 @@ tokenized push 失败以 `PLATFORM_PUSH_FAILED` 中文说明；不回退到会�
 
 | 部分 | 确认人 | 时间 | 短提交 | 原话 |
 | --- | --- | --- | --- | --- |
-| 需求 | ChukiChen | 2026-10-27T06:08:28.317Z | 4fb72b6f07c2 | — |
-| 设计 | ChukiChen | 2026-10-27T06:08:28.407Z | 4fb72b6f07c2 | — |
+| 需求 | ChukiChen | 2026-10-27T06:44:29.599Z | dcb746d0e7d5 | — |
+| 设计 | ChukiChen | 2026-10-27T06:44:29.716Z | dcb746d0e7d5 | — |
 
-<!-- tiller-confirm:v1 {"gate":"requirements","object":"需求正文（目标、范围与验收条件）","subject":"fda1960605d3b7c4054983ef3433777e1e7b8ac6bf503f2caec621d67024ad46","commit":"4fb72b6f07c26d66ae067f6821ed12636ebcc1aa","by":"ChukiChen","quote":"","at":"2026-10-27T06:08:28.317Z"} -->
-<!-- tiller-confirm:v1 {"gate":"design","object":"设计正文","subject":"b316519bb6149a3552f35ece7ba0914f0abc1aecfcbca427a2d2d7faaf655bf8","commit":"4fb72b6f07c26d66ae067f6821ed12636ebcc1aa","by":"ChukiChen","quote":"","at":"2026-10-27T06:08:28.407Z"} -->
+<!-- tiller-confirm:v1 {"gate":"requirements","object":"需求正文（目标、范围与验收条件）","subject":"a5684fc43cbe6da278153a4cd7074c9682b063da5da7dbd77990585044345b23","commit":"dcb746d0e7d523ef99dc9e23057fa7fea3368c81","by":"ChukiChen","quote":"","at":"2026-10-27T06:44:29.599Z"} -->
+<!-- tiller-confirm:v1 {"gate":"design","object":"设计正文","subject":"9198c6251a7f40016416778aa50c24a32391033854af21055dc63b817a28e12f","commit":"dcb746d0e7d523ef99dc9e23057fa7fea3368c81","by":"ChukiChen","quote":"","at":"2026-10-27T06:44:29.716Z"} -->
 
 ## 验证
 
@@ -214,26 +214,137 @@ tokenized push 失败以 `PLATFORM_PUSH_FAILED` 中文说明；不回退到会�
 - 提交：4fb72b6f07c2
 - 时间：2026-10-27T06:43:58.573Z
 
+### run-12
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-298 GitHub pr prefers tokenized git push and keeps pull request creation on REST API$' \u002d\u002dtest-reporter=./.tiller/local/verify-e7eCjH/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-e7eCjH/report.jsonl test/pr.test.mjs","exitCode":0,"tree":"c93793e0c116d603235e8e6711a5306394804a6f8a804a8b5d1ff101528962f0","commit":"dcb746d0e7d523ef99dc9e23057fa7fea3368c81"} -->
+- 条件：AC-1
+- 测试：test/pr.test.mjs::CASE-298 GitHub pr prefers tokenized git push and keeps pull request creation on REST API
+- 用例：CASE-298
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/20261027-git-push-prefer/logs/run-12.log
+- 提交：dcb746d0e7d5
+- 时间：2026-10-27T06:44:29.909Z
+
+### run-13
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-299 init adds gitkeep when src and test directories are missing$' \u002d\u002dtest-reporter=./.tiller/local/verify-6rE8FX/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-6rE8FX/report.jsonl test/init-baseline.test.mjs","exitCode":0,"tree":"c93793e0c116d603235e8e6711a5306394804a6f8a804a8b5d1ff101528962f0","commit":"dcb746d0e7d523ef99dc9e23057fa7fea3368c81"} -->
+- 条件：AC-2
+- 测试：test/init-baseline.test.mjs::CASE-299 init adds gitkeep when src and test directories are missing
+- 用例：CASE-299
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/20261027-git-push-prefer/logs/run-13.log
+- 提交：dcb746d0e7d5
+- 时间：2026-10-27T06:44:32.240Z
+
+### run-14
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-300 stable requirement files suppress generic specs writeback warnings$' \u002d\u002dtest-reporter=./.tiller/local/verify-hnQget/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-hnQget/report.jsonl test/gap-closure.test.mjs","exitCode":0,"tree":"c93793e0c116d603235e8e6711a5306394804a6f8a804a8b5d1ff101528962f0","commit":"dcb746d0e7d523ef99dc9e23057fa7fea3368c81"} -->
+- 条件：AC-3
+- 测试：test/gap-closure.test.mjs::CASE-300 stable requirement files suppress generic specs writeback warnings
+- 用例：CASE-300
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/20261027-git-push-prefer/logs/run-14.log
+- 提交：dcb746d0e7d5
+- 时间：2026-10-27T06:44:33.619Z
+
+### run-15
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-301 pr identifies worktree records separately from primary residual copies$' \u002d\u002dtest-reporter=./.tiller/local/verify-fBcqgF/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-fBcqgF/report.jsonl test/pr.test.mjs","exitCode":0,"tree":"c93793e0c116d603235e8e6711a5306394804a6f8a804a8b5d1ff101528962f0","commit":"dcb746d0e7d523ef99dc9e23057fa7fea3368c81"} -->
+- 条件：AC-4
+- 测试：test/pr.test.mjs::CASE-301 pr identifies worktree records separately from primary residual copies
+- 用例：CASE-301
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/20261027-git-push-prefer/logs/run-15.log
+- 提交：dcb746d0e7d5
+- 时间：2026-10-27T06:44:35.194Z
+
+### run-16
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-301 repeated accept rechecks the current code tree$' \u002d\u002dtest-reporter=./.tiller/local/verify-qJskeT/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-qJskeT/report.jsonl test/pr.test.mjs","exitCode":0,"tree":"c93793e0c116d603235e8e6711a5306394804a6f8a804a8b5d1ff101528962f0","commit":"dcb746d0e7d523ef99dc9e23057fa7fea3368c81"} -->
+- 条件：AC-4
+- 测试：test/pr.test.mjs::CASE-301 repeated accept rechecks the current code tree
+- 用例：CASE-301
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/20261027-git-push-prefer/logs/run-16.log
+- 提交：dcb746d0e7d5
+- 时间：2026-10-27T06:44:35.194Z
+
+### run-17
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-301 multiline requirement points callers to requirement-file$' \u002d\u002dtest-reporter=./.tiller/local/verify-LsfAYk/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-LsfAYk/report.jsonl test/pr.test.mjs","exitCode":0,"tree":"c93793e0c116d603235e8e6711a5306394804a6f8a804a8b5d1ff101528962f0","commit":"dcb746d0e7d523ef99dc9e23057fa7fea3368c81"} -->
+- 条件：AC-4
+- 测试：test/pr.test.mjs::CASE-301 multiline requirement points callers to requirement-file
+- 用例：CASE-301
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/20261027-git-push-prefer/logs/run-17.log
+- 提交：dcb746d0e7d5
+- 时间：2026-10-27T06:44:35.194Z
+
+### run-18
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-162 repository keeps the 0\\.5\\.0 release contract and five full verification entries$' \u002d\u002dtest-reporter=./.tiller/local/verify-HtMDmi/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-HtMDmi/report.jsonl test/rules.test.mjs","exitCode":0,"tree":"c93793e0c116d603235e8e6711a5306394804a6f8a804a8b5d1ff101528962f0","commit":"dcb746d0e7d523ef99dc9e23057fa7fea3368c81"} -->
+- 条件：AC-5
+- 测试：test/rules.test.mjs::CASE-162 repository keeps the 0.5.0 release contract and five full verification entries
+- 用例：CASE-162
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/20261027-git-push-prefer/logs/run-18.log
+- 提交：dcb746d0e7d5
+- 时间：2026-10-27T06:44:40.502Z
+
+### run-19
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-241 CASE-245 CASE-252 API 远端操作保持 0\\.5\\.0 且打包模块同步$' \u002d\u002dtest-reporter=./.tiller/local/verify-uMrmse/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-uMrmse/report.jsonl test/merge.test.mjs","exitCode":0,"tree":"c93793e0c116d603235e8e6711a5306394804a6f8a804a8b5d1ff101528962f0","commit":"dcb746d0e7d523ef99dc9e23057fa7fea3368c81"} -->
+- 条件：AC-5
+- 测试：test/merge.test.mjs::CASE-241 CASE-245 CASE-252 API 远端操作保持 0.5.0 且打包模块同步
+- 用例：CASE-245
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/20261027-git-push-prefer/logs/run-19.log
+- 提交：dcb746d0e7d5
+- 时间：2026-10-27T06:44:41.018Z
+
+### run-20
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-245 全局用例库同步文档 CLI 名称与版本$' \u002d\u002dtest-reporter=./.tiller/local/verify-xgczC8/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-xgczC8/report.jsonl test/rules.test.mjs","exitCode":0,"tree":"c93793e0c116d603235e8e6711a5306394804a6f8a804a8b5d1ff101528962f0","commit":"dcb746d0e7d523ef99dc9e23057fa7fea3368c81"} -->
+- 条件：AC-5
+- 测试：test/rules.test.mjs::CASE-245 全局用例库同步文档 CLI 名称与版本
+- 用例：CASE-245
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/20261027-git-push-prefer/logs/run-20.log
+- 提交：dcb746d0e7d5
+- 时间：2026-10-27T06:44:41.018Z
+
 ## 自检
 
-- [x] 需求确认有效
+- [ ] 需求确认有效
 - [ ] 设计确认有效
 - [ ] 验收条件均有当前通过且绑定全局用例的测试引用
 - [ ] 每条验收条件均映射到本次验证引用的全局用例
 - [ ] 验收条件与用例通过 verify 的 AC→测试→CASE 记录关联
 - [ ] 验证命令已执行且测试输出已核实
 - [x] 全局用例结构与引用有效
-- [ ] 改动未超出范围
+- [x] 改动未超出范围
 - [x] 未弱化仍存在的测试
 - [x] 评审无未清除阻塞项
 - [x] 记录不含密钥或本机绝对路径
 
 阻塞项：
-- 过程卫生：需求、设计确认提交 4fb72b6f07c2 后，工作区仍有未提交业务改动：resources/entry.md、resources/rules/activities/delivery.md、resources/rules/activities/requirements.md、resources/usage.md、src/cli.ts、src/core.ts、src/flow.ts、src/init-baseline.ts 等 18 项。请先提交或移出本任务。
-- AC-5 的验证未实际执行（外部报告）：已在 worktree 执行 npm test：# tests 329 # pass 329 # fail 0；确认事实后使用 --allow-reported 放行。
+- 需求确认后需求正文、范围或验收条件已变化，需要重新确认。
+- 设计确认后需求或设计已变化，需要重新确认。
+- AC-1 的验证已过期：记录时的代码树与当前工作树不同（范围内代码已变化）。
+- AC-2 的验证已过期：记录时的代码树与当前工作树不同（范围内代码已变化）。
+- AC-3 的验证已过期：记录时的代码树与当前工作树不同（范围内代码已变化）。
+- AC-4 的验证已过期：记录时的代码树与当前工作树不同（范围内代码已变化）。
+- AC-5 的验证已过期：记录时的代码树与当前工作树不同（范围内代码已变化）。
 - AC-5 未绑定全局用例；验证测试名应引用 CASE-xxx。
-- 改动超出范围：AGENTS.md、README.md
-- 交付范围存在未提交改动：.tiller/cases/modules/standards/interface.md、.tiller/cases/modules/workflow/behavior.md、.tiller/cases/modules/workflow/interface.md、.tiller/project.json、.tiller/rules/activities/delivery.md、.tiller/rules/activities/requirements.md、.tiller/specs/decisions.md、.tiller/specs/design.md、.tiller/specs/modules/initialization/design.md、.tiller/specs/modules/workflow/design.md、.tiller/specs/modules/workflow/dogfood-hygiene.md、.tiller/specs/modules/workflow/flow-exec-stability.md、.tiller/specs/modules/workflow/git-push-prefer.md、.tiller/specs/modules/workflow/requirements.md、.tiller/usage.md、resources/entry.md、resources/rules/activities/delivery.md、resources/rules/activities/requirements.md、resources/usage.md、src/cli.ts、src/core.ts、src/flow.ts、src/init-baseline.ts、src/platform-api.ts、src/pr.ts、test/case-redesign.test.mjs、test/gap-closure.test.mjs、test/init-baseline.test.mjs、test/merge.test.mjs、test/platform-api-mock.mjs、test/pr.test.mjs、test/review-release.test.mjs、test/rules.test.mjs
 
 提示：
 - 172 条历史用例仍以 <任务>#AC-n 记录关联 AC；这是可迁移的历史债，不阻断当前覆盖。
