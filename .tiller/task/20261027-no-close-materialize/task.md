@@ -44,31 +44,45 @@ post-#44 狗粮仍软：合入/关闭后 `materializeSharedTaskRecord` 把任务
 
 ### 方案
 
-<!-- 写关键做法、接口与数据流；引用已有规格，不复制全文。 -->
+1. **删除 materialize**  
+   去掉 `materializeSharedTaskRecord` 及其在 `closeFlow` 已验收收尾与 abandon 两处调用。close/merge 只：读任务 →（abandon 时写关闭段到当前任务检出）→ `cleanupTaskWorktrees` → `cleanupTaskBranches`。不把 `.tiller/task/<id>/` 复制到 primary。
+
+2. **删除 closed 清理标记**  
+   删除 `FlowCleanupMarker`、`cleanupMarkerPath`、`readCleanupMarker`、`writeCleanupMarker`、`clearCleanupMarker`；去掉 close 开头的「已有标记则幂等返回」分支与 reopen 中的 `clearCleanupMarker`。重复 close：若任务记录仍可解析且阶段允许，清理路径对缺失 worktree/local/分支本身幂等；若记录已随 worktree 消失且 primary 无跟踪副本，则 `TASK_NOT_FOUND`（可接受）。
+
+3. **文档与测试**  
+   更新 `.tiller/specs/modules/workflow/design.md` §关闭、`usage`/CLI 帮助、`decisions` 一条；CASE-057 等改为断言 close 后 primary **无**因 materialize 产生的未跟踪 task；reopen 夹具先把已验收记录落到跟踪树（模拟合入后快进）再 close/reopen；新增 CASE 覆盖「无 closed 标记、重复 close 安全」。
 
 ### 失败处理
 
-<!-- 写失败、回滚与恢复方式。 -->
+- abandon 写回失败：不清理 worktree，保持现状。  
+- worktree/分支清理失败：只记 warning，不回滚已成功的本机清理；不为此写 closed 标记。  
+- 从未合入就 close：primary 无 task 属预期；后续命令找不到记录按现有错误码失败。
 
 ### 取舍
 
-<!-- 写备选方案与选择理由；没有备选时说明原因。 -->
+- 不保留「关任务往 primary 甩未跟踪副本」兜底。  
+- 不用 `.tiller/local/closed/` 做幂等；依赖清理 API 幂等 + Git 跟踪事实。  
+- 不改 `--requirement` 短目标；设计占位手填仍为流程要求。
 
 ### 影响与风险
 
-<!-- 写受影响范围、兼容性和风险缓解。 -->
+- 影响：`src/flow.ts`、workflow design/usage/decisions、依赖 materialize/closed 的测试（如 CASE-057、CASE-283）。  
+- 风险：旧脚本若依赖 close 后 primary 立刻有未跟踪 task，会失效——符合「先合入再读」模型。
 
 ### 验证入口
 
-<!-- 写可重跑的短测试入口；不塞长命令菜谱。 -->
+- `npm test`（全量）；重点 `test/first-batch.test.mjs`、`test/task-worktrees.test.mjs`、本任务新增 CASE。
 
 ## 确认
 
 | 部分 | 确认人 | 时间 | 短提交 | 原话 |
 | --- | --- | --- | --- | --- |
 | 需求 | boon yu | 2026-10-27T11:06:43.805Z | db6bf6a01452 | 优化吧 |
+| 设计 | boon yu | 2026-10-27T11:06:50.531Z | 72b05a9f836c | 优化吧 |
 
 <!-- tiller-confirm:v1 {"gate":"requirements","object":"需求正文（目标、范围与验收条件）","subject":"6ce8305503830e035bc822902cda22e6f6addbf403e3ce25479a8b005165c07e","commit":"db6bf6a01452f3bb1f253f1182c4be841178b7b8","by":"boon yu","quote":"优化吧","at":"2026-10-27T11:06:43.805Z"} -->
+<!-- tiller-confirm:v1 {"gate":"design","object":"设计正文","subject":"8a65bf342b06dabe52902da22e8fd182affd441eebbe22b782961a1de52d8b4f","commit":"72b05a9f836cfe1cf50c6750ed1412a9e8109243","by":"boon yu","quote":"优化吧","at":"2026-10-27T11:06:50.531Z"} -->
 
 ## 验证
 
