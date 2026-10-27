@@ -48,6 +48,7 @@ export async function startPlatformMock(t, options = {}) {
     remoteCommits: new Set(options.remoteHead ? [options.remoteHead] : []),
     refs: new Map(),
     mergedBranches: new Set(options.mergedBranches ?? []),
+    mergedHeads: new Map(),
     branchDeletes: [],
   };
 
@@ -132,9 +133,13 @@ export async function startPlatformMock(t, options = {}) {
           if (url.searchParams.get('state') === 'all') {
             const head = url.searchParams.get('head') ?? '';
             const branch = head.includes(':') ? head.slice(head.indexOf(':') + 1) : head;
-            return json(response, 200, state.mergedBranches.has(branch)
-              ? [{ number: 1, state: 'closed', merged: true, merged_at: '2026-10-26T00:00:00Z', head: { ref: branch } }]
-              : []);
+            if (!state.mergedBranches.has(branch)) return json(response, 200, []);
+            const tip = state.refs.get(`refs/heads/${branch}`);
+            const heads = state.mergedHeads.get(branch) ?? (tip ? [tip] : []);
+            return json(response, 200, heads.map((sha, index) => ({
+              number: index + 1, state: 'closed', merged: true, merged_at: '2026-10-26T00:00:00Z',
+              head: { ref: branch, ...(sha ? { sha } : {}) },
+            })));
           }
           return json(response, 200, [{ number: 1 }]);
         }
@@ -231,9 +236,13 @@ export async function startPlatformMock(t, options = {}) {
           }
           if (url.searchParams.get('state') === 'all') {
             const branch = url.searchParams.get('source_branch') ?? '';
-            return json(response, 200, state.mergedBranches.has(branch)
-              ? [{ iid: 7, state: 'merged', merged_at: '2026-10-26T00:00:00Z', source_branch: branch }]
-              : []);
+            if (!state.mergedBranches.has(branch)) return json(response, 200, []);
+            const tip = state.refs.get(`refs/heads/${branch}`);
+            const heads = state.mergedHeads.get(branch) ?? (tip ? [tip] : []);
+            return json(response, 200, heads.map((sha, index) => ({
+              iid: index + 1, state: 'merged', merged_at: '2026-10-26T00:00:00Z', source_branch: branch,
+              ...(sha ? { sha } : {}),
+            })));
           }
           return json(response, 200, [{ iid: 7 }]);
         }
@@ -283,6 +292,10 @@ export async function startPlatformMock(t, options = {}) {
     gitRepo,
     state,
     addRemoteCommit(sha) { state.remoteCommits.add(sha); },
+    setMergedHeads(branch, heads) {
+      state.mergedBranches.add(branch);
+      state.mergedHeads.set(branch, [...heads]);
+    },
     setMode(mode) { state.mode = mode; },
     resetRequests() { state.requests.length = 0; },
   };

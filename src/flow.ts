@@ -2319,14 +2319,20 @@ async function proveTaskMerged(root: string, taskRoot: string, id: string, metad
   }
 
   let detail = '平台未确认该任务分支已合入';
+  if (!tip.ok) {
+    detail = `无法读取任务分支 ${branch} 的当前 tip，不能证明合入`;
+    return { merged: false, detail };
+  }
   try {
     const repository = await resolvePlatformRepository(root, metadata.platform ?? 'github');
     const token = platformToken(repository.platform);
     if (!token) {
       detail = `缺少 ${repository.platform === 'github' ? 'GITHUB_TOKEN/GH_TOKEN' : 'GITLAB_TOKEN/GL_TOKEN'}，无法确认平台合入状态`;
     } else {
-      const merged = await findMergedIntegration(repository, token, branch);
-      if (merged) return { merged: true, detail: `平台已确认任务分支 ${branch} 的 PR/MR #${merged.number} 合入。` };
+      const merged = await findMergedIntegration(repository, token, branch, tip.stdout.trim());
+      if (merged) {
+        return { merged: true, detail: `平台已确认任务分支 ${branch} 当前 tip 的 PR/MR #${merged.number} 合入。` };
+      }
     }
   } catch (error) {
     detail = `平台合入状态查询失败：${(error as Error).message}`;

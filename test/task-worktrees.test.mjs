@@ -430,7 +430,7 @@ test('CASE-316 close reports no executable reopen when only platform merge evide
   assert.ok(branchExists(root, branch));
 
   const mock = await startPlatformMock(t, { platform: 'github' });
-  mock.state.mergedBranches.add(branch);
+  mock.setMergedHeads(branch, [git(root, 'rev-parse', branch)]);
   git(root, 'remote', 'add', 'origin', `${mock.origin}/owner/repo.git`);
   const environment = { GITHUB_TOKEN: 'mock-token', GH_TOKEN: '', GITLAB_TOKEN: '', GL_TOKEN: '' };
   const closed = success(await cliWithEnv(worktree, environment, 'close', id, '--reason', '平台已合入'));
@@ -438,6 +438,33 @@ test('CASE-316 close reports no executable reopen when only platform merge evide
   assert.equal(existsSync(join(root, `.tiller/task/${id}`)), false);
   assert.doesNotMatch(closed.next, /tiller reopen/u);
   assert.ok(mock.state.requests.some(item => item.method === 'GET' && item.path.endsWith('/pulls')));
+});
+
+test('CASE-318 close rejects historical same-branch merges until the current tip matches', async t => {
+  const root = project(t);
+  const id = '20261027-reused-branch-proof';
+  const started = startTask(root, id);
+  const worktree = join(root, started.worktreeRoot);
+  const branch = started.worktrees[0].branch;
+  acceptTask(root, id);
+  const currentTip = git(root, 'rev-parse', branch);
+
+  const mock = await startPlatformMock(t, { platform: 'github' });
+  mock.setMergedHeads(branch, ['2'.repeat(40), '3'.repeat(40)]);
+  git(root, 'remote', 'add', 'origin', `${mock.origin}/owner/repo.git`);
+  const environment = { GITHUB_TOKEN: 'mock-token', GH_TOKEN: '', GITLAB_TOKEN: '', GL_TOKEN: '' };
+
+  const refused = failure(await cliWithEnv(worktree, environment, 'close', id, '--reason', '历史同名分支不应放行'));
+  assert.equal(refused.error.code, 'CLOSE_MERGE_PROOF_MISSING');
+  assert.ok(existsSync(worktree));
+  assert.ok(existsSync(join(root, taskLocalPath(id))));
+  assert.ok(branchExists(root, branch));
+
+  mock.setMergedHeads(branch, ['2'.repeat(40), currentTip]);
+  const closed = success(await cliWithEnv(worktree, environment, 'close', id, '--reason', '当前 tip 已合入'));
+  assert.deepEqual(closed.worktrees, [started.worktreeRoot]);
+  assert.equal(existsSync(worktree), false);
+  assert.equal(branchExists(root, branch), false);
 });
 
 test('CASE-317 abandon refuses to erase a worktree-only task and persists when primary has a record', async t => {

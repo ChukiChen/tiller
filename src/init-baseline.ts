@@ -314,6 +314,11 @@ export async function proveInitBaselineMerged(rootInput: string, metadata: Proje
     }
   }
   let detail = '平台未找到该分支已合入的 PR/MR';
+  const tip = await git(root, ['rev-parse', '--verify', `refs/heads/${baseline.branch}^{commit}`]);
+  if (!tip.ok) {
+    detail = `无法读取初始化基线分支 ${baseline.branch} 的当前 tip，不能证明合入`;
+    return { merged: false, detail, marked: false };
+  }
   try {
     const configured = metadata.platform ?? 'github';
     const repository = await resolvePlatformRepository(root, configured);
@@ -321,7 +326,7 @@ export async function proveInitBaselineMerged(rootInput: string, metadata: Proje
     if (!token) {
       detail = `缺少 ${repository.platform === 'github' ? 'GITHUB_TOKEN/GH_TOKEN' : 'GITLAB_TOKEN/GL_TOKEN'}，无法确认平台合入状态`;
     } else {
-      const merged = await findMergedIntegration(repository, token, baseline.branch, fetchImpl);
+      const merged = await findMergedIntegration(repository, token, baseline.branch, tip.stdout.trim(), fetchImpl);
       if (merged) {
         await markInitBaselineMerged(root, baseline.id);
         return { merged: true, detail: `初始化基线 ${baseline.id} 已由平台确认合入。`, marked: true };

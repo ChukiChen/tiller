@@ -2497,3 +2497,29 @@ doctor 发现并检查 worktree 任务，报告未覆盖 AC，不因 primary 缺
 ### 预期结果
 
 无法持久化时拒绝清理；持久化后可放弃并清理，放弃状态仍可读取和 reopen。
+
+## CASE-318 合入证明绑定当前分支 tip
+
+- 类型：behavior
+- 优先级：high
+- 模块：workflow
+- 关联 AC：无
+- 需求：`.tiller/specs/modules/workflow/requirements.md`
+
+### 前置条件
+
+- 任务已验收，平台保留同 head 分支的多次历史 merged PR/MR
+- 本地任务分支与当前 tip 可读取
+
+### 步骤
+
+1. 查询同分支 merged PR/MR 时逐条比对 head tip 与当前任务分支 tip
+2. 历史 merged tip 均未命中时运行 close，随后提供命中当前 tip 的 merged 记录
+
+### 输入
+
+- 同分支多个旧 head.sha 或 GitLab 等价 tip，以及当前分支 tip
+
+### 预期结果
+
+仅当前 tip 命中 merged PR/MR 时关闭成功；无命中时返回 CLOSE_MERGE_PROOF_MISSING 并保留 worktree、本机目录和分支

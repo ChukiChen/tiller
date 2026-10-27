@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import { spawn, spawnSync } from 'node:child_process';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
+import { findMergedIntegration, parsePlatformRemote } from '../dist/platform-api.js';
 import { cli, cliPath, commitFixtures, confirmTask, failure, fixture, put, settleInitBaseline, success, read } from './helpers.mjs';
 import { startPlatformMock } from './platform-api-mock.mjs';
 
@@ -388,6 +389,29 @@ test('CASE-290 已不存在的远端分支按已清理处理且不产生警告',
     assert.ok(cleanup.remoteDeleted.includes(`工程根:${branch}`), JSON.stringify(cleanup));
     assert.ok(!cleanup.warnings.some(warning => warning.includes('远端分支')), cleanup.warnings.join('\n'));
     assert.ok(!result.warnings?.some(warning => warning.includes('远端分支')), result.warnings?.join('\n'));
+  }
+});
+
+test('CASE-318 merged integration matches only the current branch tip', async t => {
+  const branch = 'feat/20261027-reused-name';
+  const currentTip = '1'.repeat(40);
+  const historicalTips = ['2'.repeat(40), '3'.repeat(40)];
+  for (const platform of ['github', 'gitlab']) {
+    const mock = await startPlatformMock(t, { platform });
+    const repository = parsePlatformRemote(`${mock.origin}${platform === 'github' ? '/owner/repo.git' : '/group/project.git'}`, platform);
+    const token = { platform, name: platform === 'github' ? 'GITHUB_TOKEN' : 'GITLAB_TOKEN', value: 'mock-token' };
+
+    mock.setMergedHeads(branch, historicalTips);
+    assert.equal(await findMergedIntegration(repository, token, branch, currentTip), null,
+      `${platform} must reject historical merges from the same branch name`);
+
+    mock.setMergedHeads(branch, [historicalTips[0], undefined]);
+    assert.equal(await findMergedIntegration(repository, token, branch, currentTip), null,
+      `${platform} must fail closed when a merged integration has no comparable tip`);
+
+    mock.setMergedHeads(branch, [historicalTips[0], currentTip]);
+    const merged = await findMergedIntegration(repository, token, branch, currentTip);
+    assert.equal(merged?.number, 2, `${platform} must accept the merged integration whose tip matches`);
   }
 });
 

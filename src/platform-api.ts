@@ -331,24 +331,37 @@ export async function findMergedIntegration(
   repository: PlatformRepository,
   token: PlatformToken,
   branch: string,
+  tip: string,
   fetchImpl: FetchLike = globalThis.fetch,
 ): Promise<MergedIntegration | null> {
+  const expectedTip = commitTip(tip);
+  if (!expectedTip) return null;
   if (repository.platform === 'github') {
     const endpoint = `${githubRepoPath(repository)}/pulls?state=all&head=${encodeURIComponent(`${repository.owner}:${branch}`)}`;
     const pulls = await api<Array<{
-      number?: number; state?: string; merged?: boolean; merged_at?: string | null; head?: { ref?: string };
+      number?: number; state?: string; merged?: boolean; merged_at?: string | null; head?: { ref?: string; sha?: string };
     }>>(repository, token, fetchImpl, 'GET', endpoint);
     const merged = pulls?.find(item => typeof item.number === 'number'
-      && (item.merged === true || (item.state === 'closed' && Boolean(item.merged_at))));
+      && (item.merged === true || (item.state === 'closed' && Boolean(item.merged_at)))
+      && commitTip(item.head?.sha) === expectedTip);
     return merged ? { number: merged.number!, command: `github-api GET ${endpoint}` } : null;
   }
 
   const endpoint = `/projects/${gitlabProjectPath(repository)}/merge_requests?state=all&source_branch=${encodeURIComponent(branch)}`;
-  const mergeRequests = await api<Array<{ iid?: number; state?: string; merged_at?: string | null }>>(
+  const mergeRequests = await api<Array<{
+    iid?: number; state?: string; merged_at?: string | null; sha?: string; diff_refs?: { head_sha?: string };
+  }>>(
     repository, token, fetchImpl, 'GET', endpoint);
   const merged = mergeRequests?.find(item => typeof item.iid === 'number'
-    && (item.state === 'merged' || Boolean(item.merged_at)));
+    && (item.state === 'merged' || Boolean(item.merged_at))
+    && commitTip(item.sha ?? item.diff_refs?.head_sha) === expectedTip);
   return merged ? { number: merged.iid!, command: `gitlab-api GET ${endpoint}` } : null;
+}
+
+function commitTip(value: unknown): string | null {
+  if (typeof value !== 'string') return null;
+  const normalized = value.trim().toLowerCase();
+  return /^(?:[a-f0-9]{40}|[a-f0-9]{64})$/u.test(normalized) ? normalized : null;
 }
 
 function tokenizedGitEnvironment(repository: PlatformRepository, token: PlatformToken): NodeJS.ProcessEnv {
