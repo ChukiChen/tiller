@@ -5,7 +5,7 @@ import { spawn, spawnSync } from 'node:child_process';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 import { cliPath, failure, fixture, put, success } from './helpers.mjs';
-import { fakeGitForTokenizedPush, realGitPath, startPlatformMock } from './platform-api-mock.mjs';
+import { startPlatformMock } from './platform-api-mock.mjs';
 
 const repository = fileURLToPath(new URL('../', import.meta.url));
 const read = (root, relative) => readFileSync(join(root, relative), 'utf8');
@@ -60,18 +60,17 @@ async function initialize(t, options = {}) {
   configure(root);
   const mock = await startPlatformMock(t, {
     platform, mode: options.mode ?? 'success', remoteHead: okGit(root, 'rev-parse', 'HEAD'),
+    git: options.gitPush !== false,
   });
   okGit(root, 'remote', 'add', 'origin', `${mock.origin}${platform === 'github' ? '/owner/repo.git' : '/group/project.git'}`);
-  const wrapper = platform === 'gitlab' && options.token !== false ? fakeGitForTokenizedPush(t, root, realGitPath()) : null;
-  if (platform === 'gitlab' && options.token !== false && wrapper === null) return null;
   const tokenEnvironment = options.token === false
     ? emptyTokens
     : platform === 'github'
       ? { GITHUB_TOKEN: 'mock-token', GH_TOKEN: '', GITLAB_TOKEN: '', GL_TOKEN: '' }
       : { GITHUB_TOKEN: '', GH_TOKEN: '', GITLAB_TOKEN: 'mock-token', GL_TOKEN: '' };
-  const environment = { ...tokenEnvironment, ...(wrapper?.environment ?? {}) };
+  const environment = tokenEnvironment;
   const result = await cliAt(root, environment, 'init', '--platform', platform);
-  return { root, result, mock, wrapper, environment };
+  return { root, result, mock, environment };
 }
 
 test('CASE-228 init creates a committed initialization worktree and creates the titled PR through GitHub API', async t => {
@@ -98,7 +97,7 @@ test('CASE-228 init creates a committed initialization worktree and creates the 
   });
   assert.deepEqual(JSON.parse(read(worktree, '.tiller/project.json')).initBaseline, metadata.initBaseline);
   const initRequests = mock.state.requests;
-  assert.ok(initRequests.some(item => item.method === 'POST' && item.path.endsWith('/git/refs')));
+  assert.ok(!initRequests.some(item => item.path.includes('/git/')));
   assert.ok(initRequests.some(item => item.method === 'POST' && item.path.endsWith('/pulls')));
   assert.ok(initRequests.filter(item => /\/git\/|pulls/u.test(item.path)).every(item => item.hasAuthorization));
   assert.deepEqual(data.warnings.filter(warning => warning.includes('回退')), []);
@@ -127,18 +126,21 @@ test('CASE-229 failed PR creation keeps the worktree and commit and returns API/
   assert.ok(existsSync(join(root, '.tiller/project.json')));
 });
 
-test('CASE-247 init without platform CLI pushes and creates a PR through GitHub REST API', async t => {
-  const initialized = await initialize(t);
+test('CASE-247 init without platform CLI falls back to GitHub API push and REST PR', async t => {
+  const initialized = await initialize(t, { gitPush: false });
   if (!initialized) return;
   const { root, result, mock } = initialized;
-  const baseline = success(result).initBaseline;
+  const data = success(result);
+  const baseline = data.initBaseline;
   assert.equal(baseline.prUrl, 'https://example.invalid/tiller/pr/1');
   assert.equal(mock.state.refs.get('refs/heads/chore/tiller-init'), okGit(root, 'rev-parse', baseline.head));
   const requests = mock.state.requests;
   assert.ok(requests.some(item => item.method === 'POST' && item.path.endsWith('/git/commits')));
   assert.ok(requests.some(item => item.method === 'POST' && item.path.endsWith('/git/refs')));
   assert.ok(requests.some(item => item.method === 'POST' && item.path.endsWith('/pulls')));
-  assert.ok(requests.every(item => item.path.startsWith('/api/v3/') && item.hasAuthorization));
+  assert.ok(requests.filter(item => item.path.startsWith('/api/v3/')).every(item => item.hasAuthorization));
+  assert.ok(requests.some(item => item.path.includes('.git/')), 'tokenized git push is attempted before fallback');
+  assert.ok(data.warnings.some(warning => warning.includes('回退到 Git Data API')), data.warnings.join('\n'));
   assert.ok(baseline.next.every(command => !/github pr create|\bgh\b/u.test(command)));
 });
 
@@ -258,6 +260,20 @@ test('CASE-291 init includes gitkeeps for empty src and test in the baseline com
   const files = okGit(root, 'show', '--name-only', '--format=', '--no-renames', baseline.commit).split(/\r?\n/u).filter(Boolean);
   for (const relative of ['.tiller/cases/modules/.gitkeep', '.tiller/cases/scenarios/.gitkeep', 'src/.gitkeep', 'test/.gitkeep']) {
     assert.ok(files.includes(relative), `${relative} should be in ${baseline.commit}`);
+    assert.equal(okGit(join(root, baseline.worktree), 'show', `${baseline.commit}:${relative}`), '');
+  }
+});
+
+test('CASE-299 init adds gitkeep when src and test directories are missing', async t => {
+  const initialized = await initialize(t);
+  if (!initialized) return;
+  const { root, result } = initialized;
+  const baseline = success(result).initBaseline;
+  assert.ok(baseline);
+  const files = okGit(root, 'show', '--name-only', '--format=', '--no-renames', baseline.commit)
+    .split(/\r?\n/u).filter(Boolean);
+  for (const relative of ['src/.gitkeep', 'test/.gitkeep']) {
+    assert.ok(files.includes(relative), `${relative} should be created in ${baseline.commit}`);
     assert.equal(okGit(join(root, baseline.worktree), 'show', `${baseline.commit}:${relative}`), '');
   }
 });

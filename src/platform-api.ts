@@ -538,12 +538,20 @@ export async function pushBranch(
     ]);
   }
   try {
-    return await pushGitHubApi(root, repository, token, branch, fetchImpl);
+    return await tokenizedPush(root, repository, token, branch, []);
   } catch (error) {
-    if ((error as { code?: string }).code !== 'PLATFORM_PUSH_FALLBACK') throw error;
-    const detail = redact((error as Error).message, token.value);
-    return tokenizedPush(root, repository, token, branch, [
-      `GitHub Git Data API 推送不可用，已回退到 tokenized HTTPS git push：${truncated(detail)}`,
-    ]);
+    if ((error as { code?: string }).code !== 'PLATFORM_PUSH_FAILED') throw error;
+    const tokenizedDetail = truncated(redact((error as Error).message, token.value));
+    try {
+      const pushed = await pushGitHubApi(root, repository, token, branch, fetchImpl);
+      return {
+        ...pushed,
+        warnings: [...pushed.warnings,
+          `GitHub tokenized HTTPS git push 失败，已回退到 Git Data API：${tokenizedDetail}`],
+      };
+    } catch (fallbackError) {
+      const fallbackDetail = truncated(redact((fallbackError as Error).message, token.value));
+      fail('PLATFORM_PUSH_FAILED', `tokenized HTTPS git push 失败：${tokenizedDetail}；GitHub Git Data API 回退也失败：${fallbackDetail}`);
+    }
   }
 }

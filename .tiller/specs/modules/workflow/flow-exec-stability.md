@@ -38,7 +38,7 @@
 
 ## 验收条件
 
-- AC-1: tiller pr 在具备 token 时经平台 API 推送任务分支并创建真实 PR/MR，返回 URL；缺 token 有中文提示；--draft-only（或等价）可仅生成草稿；从任务 worktree 调用且任务记录仅存在于该检出时可正常生成草稿，主仓缺目录不报 TASK_NOT_FOUND；文档主路径不再要求手搓 API
+- AC-1: tiller pr 在具备 token 时用 tokenized HTTPS git push 推送任务分支并经平台 API 创建真实 PR/MR，返回 URL；缺 token 有中文提示；--draft-only（或等价）可仅生成草稿；从任务 worktree 调用且任务记录仅存在于该检出时可正常生成草稿，主仓缺目录不报 TASK_NOT_FOUND；文档主路径不再要求手搓 API
 - AC-2: 过程卫生与数据模型保持并强化：specs 经任务合入门禁、requirement-file/AC-n 导入、无 LIB-/对照/「验收条件（稳定）」新主路径写法；usage/rules/AGENTS/CLI 只描述主路径
 - AC-3: 在任务 worktree 根执行 merge/close 可从仅存在于该检出的任务记录读取并干净删除本地与远端任务分支；远端已删安静处理；重复 close 安全；合入后 close 不改写共享 task.md；任务在所有相关检出均不存在时仍报 TASK_NOT_FOUND
 - AC-4: doctor（或等价自检）可扫描过程卫生（含基线状态、默认分支 specs 脏改、残留任务分支等可测项）并以退出码表达是否通过

@@ -60,7 +60,7 @@
 
 - 提交主题使用 `类型(模块): 中文摘要`，类型限 feat/fix/docs/refactor/test/chore；PR/MR 标题末尾加 `[任务编号]`，主模块按范围声明顺序取首个，说明固定五段。
 - 分支使用 `类型/任务编号[-简短描述]`，不再使用 `codex/` 前缀；main/master 与 detached HEAD 跳过检查。
-- `pr <task-id>` 默认从本地 `task.md` 和 Git 生成五段说明，再经平台 API 推送任务分支并创建真实 PR/MR；`--draft-only` 才只生成离线草稿。标题摘要依次取 `pr --summary`、任务元数据、最早规范 feat/fix 提交摘要和任务标题；分支描述依次取 `--slug`、任务元数据、当前分支；变更内容按提交时间正序，验证按 AC 用普通嵌套列表保留全部记录。
+- `pr <task-id>` 默认从本地 `task.md` 和 Git 生成五段说明，再用 tokenized HTTPS git push 推送任务分支，并经平台 API 创建真实 PR/MR；`--draft-only` 才只生成离线草稿。标题摘要依次取 `pr --summary`、任务元数据、最早规范 feat/fix 提交摘要和任务标题；分支描述依次取 `--slug`、任务元数据、当前分支；变更内容按提交时间正序，验证按 AC 用普通嵌套列表保留全部记录。
 - 关联任务输出纯文本路径，避免相对链接在 PR/MR 页面被错误解析；不引入仓库网页地址配置。
 - `platform` 取 github、gitlab 或 both，缺省 github；init 按平台生成同内容模板，upgrade 只补齐当前平台，GitHub 项目不得新增 GitLab 模板。
 - 提交与分支格式检查只提示，不阻塞交付。
@@ -134,9 +134,9 @@
 - 合入即交付完成；合入后 `close` 清理任务 worktree、`.tiller/local/<id>/`，并默认删除本地与远端任务分支，不调用共享 `task.md` 写入，不要求补 `accept` 或另作收尾提交。
 - 旧只认共享“已关闭”段的任务可由已验收或 local 已清理推导完成；`abandon` 发生在合入前，继续写共享放弃事实。重开是显式写操作，不进入合入后主路径。
 
-## 2026-10-26 远端操作改走平台 HTTP API
+## 2026-10-26 远端操作走 Git 传输与平台 HTTP API
 
-- GitHub 生产路径使用 REST API：初始化分支优先通过 Git Data API 上传 blob/tree/commit 并更新 ref，保留本地提交 SHA；PR 创建与 squash 合入使用 pulls API。若父对象缺失、历史非单父线性或对象校验不一致，才回退到 tokenized HTTPS `git push`。
+- GitHub 与 GitLab 的分支传输优先使用 tokenized HTTPS `git push`，保留本地提交 SHA；PR/MR 创建与 squash 合入使用平台 REST API。GitHub Git Data API 仅作为 git 推送失败时的可选回退，不再默认串行上传整树 blob。
 - GitLab 公共 REST 没有导入原始 Git 对象并保留本地 SHA 的接口，因此分支传输使用 tokenized HTTPS `git push`（Basic 凭据经 `GIT_CONFIG_*` 环境传入，不进入 URL、argv 或日志）；MR 创建与 squash 合入仍使用 REST API。
 - 生产路径不再调用 github/gh/gitlab/glab 等平台 CLI。Token 只从 `GITHUB_TOKEN`/`GH_TOKEN`、`GITLAB_TOKEN`/`GL_TOKEN` 读取，错误与记录不得输出其值。
 - `pr` 与 `init` 使用同一平台 HTTP API 通道；人工验收、合入和发布授权边界不变。
@@ -195,7 +195,7 @@
 
 - start 在任务 worktree 建立后同步 `.tiller/task/<id>/`，失败回滚；后续任务记录只传播到原本已有该记录的检出，旧“仅 worktree 记录”路径不被强行复制回主树。
 - doctor 与 close init-id 复用 start 的祖先/status/API 合入证明，squash 不要求 SHA 祖先；证据不足仍保持 pending，不伪造 merged。
-- init 以初始化 worktree 提交为事实源，成功后精确删除主树本次写入且仍未跟踪的受管文件，仅保留 `.tiller/project.json`；不使用 `git clean`。空 `src/`/`test/` 在同一初始化变更中补 `.gitkeep`，不强造缺失业务目录。
+- init 以初始化 worktree 提交为事实源，成功后精确删除主树本次写入且仍未跟踪的受管文件，仅保留 `.tiller/project.json`；不使用 `git clean`。缺失或空的 `src/`/`test/` 在同一初始化变更中补 `.gitkeep`，不覆盖非空目录中的用户文件。
 - `pr` 的 TTY 默认保持 Markdown，显式 `--json` 或非 TTY 默认稳定 JSON；draft-only 仍不联网。远端分支 404/422/不存在语义统一计入已清理且不进 warnings。
 
 ## 2026-10-27 worktree 为任务真相
@@ -203,3 +203,7 @@
 - `resolveTaskCheckout` 先识别 cwd 或显式路径所在的本任务 worktree，再考虑 primary 副本；双份 `task.md` 并存时以当前任务检出为任务根。
 - `case add`、`confirm`、`verify`、`check`、`accept`、`review`、`release`、`reopen`、`resume <id>`、`attach` 与 `pr` 统一经该入口，任务 worktree 缺记录时清晰失败而不静默读取 primary。
 - 从任务 worktree 写任务记录不镜像 primary；primary 只承担 push、平台 PR/MR API、拆树和删除本地/远端分支。显式 `--path primary` 保留读取主仓副本的能力。
+
+## 2026-10-27 GitHub 推送优先 tokenized git
+
+- 产品边界是 Git 做 commit、push 与删分支，平台 API 只做开 PR/MR、merge 和读远端状态。GitHub `pushBranch` 因此先走 tokenized HTTPS `git push`；Git Data API 不再是默认主路径，只在 git 推送失败时作为可选回退，避免整树 blob 串行上传拖慢 `tiller pr`。

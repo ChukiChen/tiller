@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import test from 'node:test';
@@ -102,7 +102,7 @@ test('CASE-098 case add registers a complete test design before any test exists'
   for (const expected of ['### 前置条件', '### 步骤', '### 输入', '### 预期结果', '- 类型：behavior',
     '- 优先级：medium', '- 关联 AC：无']) assert.ok(content.includes(expected), expected);
   assert.doesNotMatch(content, /test_ref|文件::测试名/u);
-  assert.equal(existsSync(join(root, 'test')), false);
+  assert.deepEqual(readdirSync(join(root, 'test')), ['.gitkeep']);
 
   put(root, path, `${content.trimEnd()}\n\n<!-- 手工示例引用 CASE-999 不应占用编号。 -->\n`);
   const second = addCase(root, taskId, { title: '第二条用例' });
@@ -290,7 +290,7 @@ ${sourceTest('staged coverage without a case id', 'undefined')}
 test('CASE-103 CASE-156 repository history and docs use the new case model', async () => {
   const library = await readCaseLibrary(repository);
   assert.deepEqual(library.issues, []);
-  assert.equal(library.cases.length, 297);
+  assert.equal(library.cases.length, 301);
   assert.ok(library.cases.every(item => item.preconditions.length && item.steps.length && item.inputs.length && item.expected));
   assert.ok(library.cases.every(item => item.tests.length > 0), 'every case should be referenced by a test');
   assert.ok(library.cases.every(item => item.tests.every(reference => reference.name?.includes(item.id))));

@@ -70,7 +70,7 @@
 
 提交类型限定 `feat/fix/docs/refactor/test/chore`，主题格式为 `类型(模块): 中文摘要`；模块名必须来自 `.tiller/specs/modules/`，任务类型到提交类型由固定映射推导。检查范围是任务 `base` 到 `HEAD` 的非合并提交，只产生提示。
 
-分支建议为 `类型/任务编号[-简短描述]`；描述依次取 `--slug`、任务元数据、当前分支，且必须匹配当前任务编号。main/master 与 detached HEAD 跳过检查。PR/MR 标题为提交格式加 `[任务编号]`，摘要依次取 `pr --summary`、任务元数据、最早规范 feat/fix 提交摘要和任务标题，主模块取范围首个；正文固定五段，关联任务为纯文本，变更内容按提交时间正序，验证按 AC 用普通嵌套列表保留全部记录。`pr` 默认经平台 API 推送任务分支并创建真实 PR/MR，返回 URL 与编号；`--draft-only` 才只输出本地草稿。`merge` 继续经 REST API squash，合入后自动 close；文档与 CLI 主路径为 `accept → pr → merge`，不提供手搓 API 的第二通道。
+分支建议为 `类型/任务编号[-简短描述]`；描述依次取 `--slug`、任务元数据、当前分支，且必须匹配当前任务编号。main/master 与 detached HEAD 跳过检查。PR/MR 标题为提交格式加 `[任务编号]`，摘要依次取 `pr --summary`、任务元数据、最早规范 feat/fix 提交摘要和任务标题，主模块取范围首个；正文固定五段，关联任务为纯文本，变更内容按提交时间正序，验证按 AC 用普通嵌套列表保留全部记录。`pr` 默认用 tokenized HTTPS git push 推送任务分支，并经平台 API 创建真实 PR/MR，返回 URL 与编号；GitHub Git Data API 只在 git 推送失败时可选回退；`--draft-only` 才只输出本地草稿。`merge` 继续经 REST API squash，合入后自动 close；文档与 CLI 主路径为 `accept → pr → merge`，不提供手搓 API 的第二通道。
 
 ## 8. 初始化与升级
 
@@ -78,7 +78,7 @@
 
 `upgrade --plan` 只读预览，`upgrade --apply <plan-id>` 应用；读取当前或兼容上一资源契约，按记录摘要判断受管文件是否被用户修改。未修改文件按分发资源或固定区段重建；修改、缺失和异常区段只报告冲突，并给出首个差异位置。`upgrade --adopt <受管文件>` 不重写文件，只把当前受管内容摘要写回元信息，供有意保留本地修改的工程消除漂移。`plan attach <task> --plan <id> --item <id>` 为已有任务补充规划归属；它只校验已确认规划与条目存在，不依赖条目的完成状态，也不改任务确认。预览摘要绑定输入、期望结果和元信息；应用时在锁内重新预览并原子写入，成功后更新摘要与 `resourceVersion`，保留 `verify` 等用户配置。事务失败保留恢复依据，可由 `recover` 恢复。
 
-有 Git HEAD 时，`init` 在受管文件落盘后调用 `src/init-baseline.ts`，从当时 HEAD 建 `chore/tiller-init` 和 `.tiller/local/<YYYYMMDD-tiller-init>/worktrees`。第一笔同标题提交承载受管改动并成为 `initBaseline.commit`，第二笔把引用该提交的元信息写入分支，避免自引用；随后由 `src/platform-api.ts` 推送并创建 PR/MR：GitHub 优先 Git Data API，GitLab 传输层使用 tokenized HTTPS `git push`，PR/MR 与 merge 操作均走 REST API。远端失败只告警并返回 token/API 下一步，保留 worktree 与提交；本地建树或提交失败则回滚元信息并清理由本次创建的本机目录与分支。`start` 在初始化提交未成为 HEAD 祖先且未标记 merged 时阻断，`--skip-init-gate` 可显式跳过；存量工程没有标记时放行。init-id 的 `close` 只复用本机清理路径。
+有 Git HEAD 时，`init` 在受管文件落盘后调用 `src/init-baseline.ts`，从当时 HEAD 建 `chore/tiller-init` 和 `.tiller/local/<YYYYMMDD-tiller-init>/worktrees`。第一笔同标题提交承载受管改动并成为 `initBaseline.commit`，第二笔把引用该提交的元信息写入分支，避免自引用；随后由 `src/platform-api.ts` 推送并创建 PR/MR：GitHub 与 GitLab 都优先 tokenized HTTPS `git push`，GitHub 仅在其失败时回退 Git Data API，PR/MR 与 merge 操作均走 REST API。远端失败只告警并返回 token/API 下一步，保留 worktree 与提交；本地建树或提交失败则回滚元信息并清理由本次创建的本机目录与分支。`start` 在初始化提交未成为 HEAD 祖先且未标记 merged 时阻断，`--skip-init-gate` 可显式跳过；存量工程没有标记时放行。init-id 的 `close` 只复用本机清理路径。
 
 ## 9. 错误与恢复
 

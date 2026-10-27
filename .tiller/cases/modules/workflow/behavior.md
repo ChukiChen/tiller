@@ -2089,6 +2089,31 @@ init 分支经 squash/合入后 doctor init-baseline 通过；close init-id 在�
 
 init/骨架同一变更集含 cases 空目录 gitkeep；若存在空 src/test 则含对应 .gitkeep，无需额外仅 gitkeep 的 main 提交
 
+## CASE-299 init 在缺少源码或测试目录时也补 gitkeep
+
+- 类型：behavior
+- 优先级：medium
+- 模块：workflow
+- 关联 AC：无
+- 需求：`.tiller/specs/modules/workflow/git-push-prefer.md`, `.tiller/specs/modules/workflow/requirements.md`
+
+### 前置条件
+
+- 待 init 工程没有 `src/` 或 `test/` 目录
+
+### 步骤
+
+1. 执行 `tiller init` 并检查初始化基线提交
+2. 核对两个目录的占位文件内容
+
+### 输入
+
+- 仅有根文件与 Git 基线的空工程
+
+### 预期结果
+
+同一初始化变更集包含 `src/.gitkeep` 与 `test/.gitkeep`，内容为空；不覆盖或删除已有用户文件
+
 ## CASE-293 worktree 根默认读写当前任务记录
 
 - 类型：behavior

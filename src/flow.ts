@@ -118,7 +118,7 @@ export interface FlowVerifyInput {
   reported?: boolean; reason?: string; expectFail?: boolean; verbose?: boolean;
 }
 export interface FlowConfirmInput { quote?: string; commit?: string; by?: string; allowReported?: boolean }
-export interface FlowCheckOptions { allowReported?: boolean }
+export interface FlowCheckOptions { allowReported?: boolean; ignoreAcceptance?: boolean }
 export interface FlowReviewInput { findings?: string[]; blocking?: string[]; resolve?: string[]; by?: string }
 
 function fail(code: string, message: string): never {
@@ -848,6 +848,10 @@ function writebackWarning(task: FlowTask, changed: string[], library: CaseLibrar
       ];
   return `未检测到任务基线后的 \`.tiller/specs/\` 或 \`.tiller/context/\` 回写；如本次形成长期结论，建议回写：${suggestions.join('；')}。纯过程性变更可忽略。`;
 }
+function requirementBackedBySpecs(task: FlowTask): boolean {
+  return codeType(task.meta) && task.meta.requirementFile !== undefined
+    && task.meta.requirementFile.startsWith(STABLE_REQUIREMENT_PREFIX);
+}
 async function moduleDesignThinWarnings(root: string, changed: string[], library: CaseLibrary): Promise<string[]> {
   const warnings: string[] = [];
   for (const module of changedModuleNames(changed, library)) {
@@ -930,6 +934,9 @@ export async function startFlow(rootInput: string, idInput: string, input: FlowS
   const title = safeInput(text(input.title, '标题', 200), '标题');
   if ((input.requirement === undefined) === (input.requirementFile === undefined)) {
     fail('INVALID_FLOW_INPUT', 'start 需要 --requirement 或 --requirement-file，两者只能选一个。');
+  }
+  if (input.requirement !== undefined && /[\r\n]/u.test(input.requirement)) {
+    fail('INVALID_FLOW_INPUT', '--requirement 只接受单行；多行或结构化需求请使用 --requirement-file。');
   }
   const type = flowType(input.type);
   const slug = input.slug === undefined ? undefined : normalizeBranchSlug(input.slug);
@@ -1145,7 +1152,10 @@ export async function confirmFlow(rootInput: string, id: string, gateInput: stri
       if (safety.length) fail('UNSAFE_RECORD', `设计正文${safety.join('；')}`);
     }
     if (gate === 'acceptance') {
-      const checked = await inspectFlow(root, id, { allowReported: input.allowReported === true });
+      const checked = await inspectFlow(root, id, {
+        allowReported: input.allowReported === true,
+        ignoreAcceptance: true,
+      });
       if (!checked.ready) fail('NOT_READY', `技术自检未通过：${checked.issues.join('；')}`);
     }
     const commit = await currentCommit(root, input.commit);
@@ -1416,8 +1426,9 @@ function confirmedAcceptance(task: FlowTask): FlowConfirmation | undefined {
 
 interface EvaluationContext { tree: string; commit?: string; warning?: string }
 
-async function evaluationContext(root: string, id: string, task: FlowTask): Promise<EvaluationContext> {
-  const acceptance = confirmedAcceptance(task);
+async function evaluationContext(root: string, id: string, task: FlowTask,
+  ignoreAcceptance = false): Promise<EvaluationContext> {
+  const acceptance = ignoreAcceptance ? undefined : confirmedAcceptance(task);
   if (acceptance && acceptance.commit !== 'no-git') {
     const available = await git(root, ['cat-file', '-e', `${acceptance.commit}^{commit}`]);
     if (available.ok) {
@@ -1668,9 +1679,9 @@ async function evaluateFlow(root: string, id: string, task: FlowTask, options: F
   const issues: string[] = []; const warnings: string[] = [];
   const acceptance = latestAcceptance(task);
   const acceptanceConfirmed = acceptance !== undefined && acceptance.subject === expectedSubject(task, 'acceptance', acceptance.commit);
-  const historicalAccepted = acceptanceConfirmed;
+  const historicalAccepted = acceptanceConfirmed && options.ignoreAcceptance !== true;
   const requirement = [...task.confirmations].reverse().find(item => item.gate === 'requirements');
-  const context = await evaluationContext(root, id, task);
+  const context = await evaluationContext(root, id, task, options.ignoreAcceptance === true);
   const currentTree = context.tree;
   if (context.warning) warnings.push(context.warning);
   if (task.preExistingIssue) warnings.push(task.preExistingIssue);
@@ -1770,7 +1781,8 @@ async function evaluateFlow(root: string, id: string, task: FlowTask, options: F
   const decisionsWarning = await decisionsThinWarning(root);
   if (decisionsWarning) warnings.push(decisionsWarning);
   warnings.push(...await moduleDesignThinWarnings(root, changed ?? task.meta.scope, library));
-  if (changed !== null && !changed.some(relative => relative.startsWith('.tiller/specs/') || relative.startsWith('.tiller/context/'))) {
+  if (changed !== null && !requirementBackedBySpecs(task)
+      && !changed.some(relative => relative.startsWith('.tiller/specs/') || relative.startsWith('.tiller/context/'))) {
     warnings.push(writebackWarning(task, changed, library));
   }
   if (changedOutsideScope.length) issues.push(`改动超出范围：${changedOutsideScope.join('、')}`);
@@ -2106,7 +2118,10 @@ function flowResult(value: string): FlowResult {
 export async function acceptFlow(rootInput: string, id: string, input: FlowConfirmInput = {}) {
   const root = (await resolveTaskCheckout(rootInput, id)).taskRoot;
   assertTaskOpen(await readTask(root, id));
-  const checked = await checkFlow(root, id, { allowReported: input.allowReported === true });
+  const checked = await checkFlow(root, id, {
+    allowReported: input.allowReported === true,
+    ignoreAcceptance: true,
+  });
   if (!checked.ready) fail('NOT_READY', `技术自检未通过：${checked.issues.join('；')}`);
   return confirmFlow(root, id, 'acceptance', input);
 }

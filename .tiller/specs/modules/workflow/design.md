@@ -55,6 +55,8 @@
 
 `pullRequestFlow` 默认在草稿后解析项目元信息与平台 token，调用既有 `pushBranch` 和 `createPullRequest`/`createMergeRequest` 创建真实 PR/MR，JSON 返回 `url`、`number`、`platform` 与推送结果；缺 token 以中文 `PR_TOKEN_MISSING` 失败，创建接口返回 422 时以 `PR_ALREADY_EXISTS` 提示核对既有 PR/MR。`--draft-only` 在草稿处返回，不解析远端、不联网。`pr`/`merge` 从任务 worktree 进入时由 `resolveTaskCheckout` 同时解析主仓与任务读取根：任务记录、阶段、验收门禁与未提交记录检查优先使用当前任务检出，提交摘要与记录门禁使用该检出的 Git 状态；推送、平台 API 和元信息仍用主仓。任务 worktree 缺少记录时保持 `TASK_NOT_FOUND`，不静默回退 primary 副本。
 
+推送传输与平台能力分开：`pushBranch` 对 GitHub/GitLab 都先执行 tokenized HTTPS `git push`，GitHub 只在 git 失败时回退 Git Data API；PR/MR 创建、合并状态读取和 squash merge 仍走 REST API。初始化在 `src/`、`test/` 缺失或为空时都写入对应 `.gitkeep`。`check` 对以稳定 specs 的 `--requirement-file` 为实现来源且未改 specs/context 的代码任务不输出泛化回写提示；PR 记录门禁同时检查当前任务检出与 primary 的残留副本。重复 `accept` 忽略旧验收提交的评估上下文，按当前工作区重新核实。
+
 ## 7. 范围与恢复
 
 范围是工程相对路径集合；默认 `.`。排除任务自己的记录、`.tiller/local/`、`.git/` 和依赖目录。无 Git 时跳过依赖提交差分的检查，但保留文件级代码树摘要。写入使用统一事务，失败可用 `recover`。

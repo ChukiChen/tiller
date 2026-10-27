@@ -121,7 +121,7 @@ function pendingNext(id: string, repository?: PlatformRepository): string[] {
   }
   return [
     tokenExport(repository),
-    `设置 token 后重新运行 tiller init；它会经 ${repository.platform === 'github' ? 'GitHub' : 'GitLab'} REST API 推送 ${INIT_BRANCH} 并按同一任务创建 PR/MR，无需手写 API 请求。`,
+    `设置 token 后重新运行 tiller init；它会用 tokenized HTTPS git push 推送 ${INIT_BRANCH}，并经 ${repository.platform === 'github' ? 'GitHub' : 'GitLab'} REST API 创建 PR/MR，无需手写 API 请求。`,
     close,
   ];
 }

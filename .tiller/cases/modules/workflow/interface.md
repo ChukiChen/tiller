@@ -1233,3 +1233,80 @@ json 或非 TTY 输出含 url/number/branch 等稳定字段；TTY 可读；draft
 ### 预期结果
 
 任务根与 --path/cwd 解析集中在 resolveTaskCheckout，相关任务命令源码均引用该入口且不再自行 path.resolve(rootInput)
+
+## CASE-298 GitHub 推送默认优先 tokenized git
+
+- 类型：interface
+- 优先级：high
+- 模块：workflow
+- 关联 AC：无
+- 需求：`.tiller/specs/modules/workflow/git-push-prefer.md`, `.tiller/specs/modules/workflow/requirements.md`
+
+### 前置条件
+
+- GitHub origin 可解析，token 已设置，任务已验收且记录已提交
+
+### 步骤
+
+1. 运行 `tiller pr <id>`，观察本地 Git 推送与平台 HTTP 请求
+2. 检查推送结果和 PR 创建通道
+
+### 输入
+
+- 本地任务分支、GitHub mock 与 tokenized git push
+
+### 预期结果
+
+推送结果为 `tokenized-git` 且远端分支与本地提交一致；不调用 Git Data API 的 blob/tree/commit/ref 上传；PR 创建仍走 GitHub REST API；仅 git 推送失败时才尝试 Git Data API 回退
+
+## CASE-300 已有稳定 specs 的实现任务不产生泛化回写提示
+
+- 类型：interface
+- 优先级：medium
+- 模块：workflow
+- 关联 AC：无
+- 需求：`.tiller/specs/modules/workflow/git-push-prefer.md`, `.tiller/specs/modules/workflow/requirements.md`
+
+### 前置条件
+
+- feature 任务通过 `--requirement-file` 引用已有 `.tiller/specs/` 稳定需求
+
+### 步骤
+
+1. 基线后只修改实现文件并提交
+2. 运行 `tiller check <id>` 并读取 warnings
+
+### 输入
+
+- 已有稳定需求文件、实现改动与任务记录
+
+### 预期结果
+
+check 不出现“未检测到任务基线后 .tiller/specs/ 或 .tiller/context/ 回写”的泛化提示；未引用稳定需求的普通任务仍保留 CASE-186 的可定位回写提醒
+
+## CASE-301 PR 脏记录区分 worktree 与 primary 且重复验收重查当前树
+
+- 类型：interface
+- 优先级：high
+- 模块：workflow
+- 关联 AC：无
+- 需求：`.tiller/specs/modules/workflow/git-push-prefer.md`, `.tiller/specs/modules/workflow/requirements.md`
+
+### 前置条件
+
+- 任务已在 worktree 验收，primary 可能存在残留任务记录副本
+
+### 步骤
+
+1. 在 worktree 留下任务范围内的未提交记录，并在 primary 留下残留副本
+2. 运行 `tiller pr <id> --draft-only` 检查错误信息并确认副本仍存在
+3. 修改已验收代码后重复运行 `tiller accept <id>`
+4. 用多行 `--requirement` 启动任务
+
+### 输入
+
+- worktree/primary 双份记录、验收后代码改动与多行需求文本
+
+### 预期结果
+
+`PR_TASK_RECORDS_DIRTY` 分别标明当前任务检出（worktree）与 primary 主检出（残留副本），提示人工提交或清理且不删除文件；重复验收按当前代码树重新核实并阻断过期验证；多行 `--requirement` 明确指向 `--requirement-file`
