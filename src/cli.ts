@@ -17,6 +17,12 @@ import { mergeFlow, pullRequestFlow } from './pr.js';
 
 export const CLI_VERSION = '0.5.0';
 
+export type PrOutputFormat = 'markdown' | 'json';
+
+export function prOutputFormat(options: { json: boolean; tty: boolean | undefined }): PrOutputFormat {
+  return !options.json && options.tty === true ? 'markdown' : 'json';
+}
+
 const HELP = `tiller ${CLI_VERSION} — 默认工作流
 
 用法：
@@ -79,6 +85,7 @@ async function bindAfterSetup(root: string) {
 
 export async function runCli(rawArgs = process.argv.slice(2)): Promise<void> {
   const wantsJson = rawArgs.includes('--json');
+  const machineJson = wantsJson || process.stdout.isTTY !== true;
   const commandIndex = rawArgs.findIndex(value => !value.startsWith('-'));
   const normalizedArgs = [...rawArgs];
   if (commandIndex >= 0 && rawArgs[commandIndex] === 'upgrade') {
@@ -88,7 +95,7 @@ export async function runCli(rawArgs = process.argv.slice(2)): Promise<void> {
     }
   }
   function output(value: unknown): void {
-    process.stdout.write(JSON.stringify(value, null, wantsJson ? undefined : 2) + '\n');
+    process.stdout.write(JSON.stringify(value, null, machineJson ? undefined : 2) + '\n');
   }
 
   try {
@@ -346,7 +353,9 @@ export async function runCli(rawArgs = process.argv.slice(2)): Promise<void> {
         ready = runtime.ready;
         result = { runtime, entry: runtime.ready ? 'node .tiller/run.cjs' : null, entryRoot: resolve(root) };
       } else usage(`未知命令：${command ?? ''}`);
-      if (markdownOutput !== null && !wantsJson) process.stdout.write(markdownOutput);
+      if (markdownOutput !== null && prOutputFormat({ json: wantsJson, tty: process.stdout.isTTY }) === 'markdown') {
+        process.stdout.write(markdownOutput);
+      }
       else output({ ok: ready, ...result as object });
       if (!ready) process.exitCode = 1;
     }
@@ -355,7 +364,7 @@ export async function runCli(rawArgs = process.argv.slice(2)): Promise<void> {
     const rawCode = item.code ?? 'OPERATION_FAILED';
     const code = rawCode.startsWith('ERR_PARSE_ARGS') ? 'INVALID_ARGUMENT' : rawCode;
     const message = item.message ?? String(error);
-    if (wantsJson) output({ ok: false, error: { code, message }, ...(Array.isArray(item.blockingReasons) ? { blockingReasons: item.blockingReasons } : {}) });
+    if (machineJson) output({ ok: false, error: { code, message }, ...(Array.isArray(item.blockingReasons) ? { blockingReasons: item.blockingReasons } : {}) });
     else process.stderr.write(`${code}: ${message}\n`);
     process.exitCode = code === 'INVALID_ARGUMENT' || code.startsWith('ERR_PARSE_ARGS') ? 2 : 1;
   }

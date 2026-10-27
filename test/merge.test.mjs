@@ -308,6 +308,28 @@ test('CASE-262 branch deletion failure is reported as a warning without failing 
     merged.warnings.join('\n'));
 });
 
+test('CASE-290 已不存在的远端分支按已清理处理且不产生警告', async t => {
+  const initialized = await initialize(t, 'github');
+  if (!initialized) return;
+  const { root, environment, mock } = initialized;
+  for (const [mode, id, action] of [
+    ['branch-delete-missing', '20261027-deleted-remote-422', 'merge'],
+    ['branch-delete-not-found', '20261027-deleted-remote-404', 'close'],
+  ]) {
+    await acceptTask(root, id);
+    const branch = `feat/${id}`;
+    mock.state.refs.set(`refs/heads/${branch}`, git(root, 'rev-parse', branch));
+    mock.setMode(mode);
+    mock.resetRequests();
+
+    const result = success(await cliAt(root, environment, action, id, ...(action === 'close' ? ['--reason', '已合入'] : [])));
+    const cleanup = action === 'merge' ? result.close.branch : result.branch;
+    assert.ok(cleanup.remoteDeleted.includes(`工程根:${branch}`), JSON.stringify(cleanup));
+    assert.ok(!cleanup.warnings.some(warning => warning.includes('远端分支')), cleanup.warnings.join('\n'));
+    assert.ok(!result.warnings?.some(warning => warning.includes('远端分支')), result.warnings?.join('\n'));
+  }
+});
+
 test('CASE-244 远端操作只调用平台 REST API 与 tokenized git transport', () => {
   const sources = ['src/platform-api.ts', 'src/init-baseline.ts', 'src/pr.ts'].map(relative => read(repository, relative)).join('\n');
   assert.doesNotMatch(sources, /resolvePlatformCli|platform-cli|platformCliUnavailable/u);

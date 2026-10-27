@@ -3,14 +3,15 @@ import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import test from 'node:test';
-import { initialize, parseMetadata } from '../dist/core.js';
+import { parseMetadata } from '../dist/core.js';
 import { readTask, verifyFlow } from '../dist/flow.js';
 import { namePattern, runnerFor, TEST_RUNNERS } from '../dist/test-output.js';
 import { applyUpgrade, planUpgrade } from '../dist/upgrade.js';
-import { cli, confirmTask, failure, fixture, put, success } from './helpers.mjs';
+import { cli, confirmTask, failure, fixture, initializeSettled, put, success } from './helpers.mjs';
 
 const read = (root, relative) => readFileSync(join(root, relative), 'utf8');
 const taskFile = (id) => `.tiller/task/${id}/task.md`;
+const initialize = initializeSettled;
 
 function verificationSidecars(content) {
   return [...content.matchAll(/^<!-- tiller-verify:v1 (\{.*\}) -->$/gmu)].map(match => JSON.parse(match[1]));

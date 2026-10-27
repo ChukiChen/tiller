@@ -4,6 +4,7 @@ import path from 'node:path';
 import { promisify } from 'node:util';
 import { readProjectMetadata } from './core.js';
 import { inspectFlow, readTask, taskStage } from './flow.js';
+import { proveInitBaselineMerged } from './init-baseline.js';
 import { resolveProjectRoot } from './project-root.js';
 import { taskBranchName } from './task-worktrees.js';
 
@@ -60,10 +61,12 @@ async function initCheck(root: string): Promise<DoctorCheck> {
   const metadata = await readProjectMetadata(root);
   const baseline = metadata.initBaseline;
   if (!baseline) return { id: 'init-baseline', status: 'pass', message: '无初始化基线记录，按存量工程放行。' };
-  if (baseline.status === 'merged') return { id: 'init-baseline', status: 'pass', message: `初始化基线 ${baseline.id} 已合入。` };
-  const ancestor = await git(root, ['merge-base', '--is-ancestor', baseline.commit, 'HEAD']);
-  if (ancestor.ok) return { id: 'init-baseline', status: 'pass', message: `初始化基线 ${baseline.id} 的提交已在当前历史中。` };
-  return { id: 'init-baseline', status: 'fail', message: `初始化基线 ${baseline.id} 尚未确认合入；先合入 ${baseline.branch} 的 PR/MR 并更新主干。` };
+  const proof = await proveInitBaselineMerged(root, metadata);
+  if (proof.merged) return { id: 'init-baseline', status: 'pass', message: proof.detail };
+  return {
+    id: 'init-baseline', status: 'fail',
+    message: `初始化基线 ${baseline.id} 尚未确认合入；${proof.detail}。先合入 ${baseline.branch} 的 PR/MR 并更新主干。`,
+  };
 }
 
 async function defaultSpecsCheck(root: string, branch: string | null): Promise<DoctorCheck> {

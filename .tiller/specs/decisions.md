@@ -190,3 +190,10 @@
 - `merge`/`close` 从任务 worktree 根解析主工程根，先拆 worktree 再在主仓和各业务仓删除本地任务分支；远端 404/422 视为已清理，重复 close 幂等，已验收 close 不改共享 `task.md`。
 - 交付命令从任务 worktree 调用时，任务记录优先从含 `.tiller/task/<id>/task.md` 的当前相关检出读取；主仓只承担推送、平台 API、worktree 与分支清理。任务在所有相关检出均不存在时保持 `TASK_NOT_FOUND`。
 - `doctor [path]` 独立检查初始化基线、默认分支 specs 脏改、残留任务分支与进行中 AC 缺口；严重项非零退出，warning 不阻断。`check` 的任务级门禁与单一 AC/CASE 数据模型保持不变。
+
+## 2026-10-27 狗粮路径卫生
+
+- start 在任务 worktree 建立后同步 `.tiller/task/<id>/`，失败回滚；后续任务记录只传播到原本已有该记录的检出，旧“仅 worktree 记录”路径不被强行复制回主树。
+- doctor 与 close init-id 复用 start 的祖先/status/API 合入证明，squash 不要求 SHA 祖先；证据不足仍保持 pending，不伪造 merged。
+- init 以初始化 worktree 提交为事实源，成功后精确删除主树本次写入且仍未跟踪的受管文件，仅保留 `.tiller/project.json`；不使用 `git clean`。空 `src/`/`test/` 在同一初始化变更中补 `.gitkeep`，不强造缺失业务目录。
+- `pr` 的 TTY 默认保持 Markdown，显式 `--json` 或非 TTY 默认稳定 JSON；draft-only 仍不联网。远端分支 404/422/不存在语义统一计入已清理且不进 warnings。

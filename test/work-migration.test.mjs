@@ -3,12 +3,13 @@ import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import test from 'node:test';
-import { initialize, RESOURCE_VERSION } from '../dist/core.js';
+import { RESOURCE_VERSION } from '../dist/core.js';
 import { CLI_VERSION } from '../dist/cli.js';
-import { fixture } from './helpers.mjs';
+import { fixture, initializeSettled } from './helpers.mjs';
 
 const repository = fileURLToPath(new URL('../', import.meta.url));
 const read = relative => readFileSync(join(repository, relative), 'utf8');
+const initialize = initializeSettled;
 
 const migrated = {
   '20261015-isolated-delivery': '隔离开发与评审合入',

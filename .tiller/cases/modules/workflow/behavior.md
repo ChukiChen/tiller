@@ -1965,3 +1965,126 @@ tiller doctor 扫描基线/默认分支 specs 脏改/残留任务分支等并给
 ### 预期结果
 
 仍以 TASK_NOT_FOUND 失败，错误码不因检出解析改变
+
+## CASE-287 start 后 worktree 可读 task.md
+
+- 类型：behavior
+- 优先级：medium
+- 模块：workflow
+- 关联 AC：无
+- 需求：`.tiller/specs/modules/workflow/dogfood-hygiene.md`
+
+### 前置条件
+
+- 干净工程已 init 且基线已合入
+
+### 步骤
+
+1. 执行 tiller start 创建任务与 worktree
+2. 检查 worktree 内任务记录路径
+
+### 输入
+
+- 按用例描述准备正常输入及必要的边界输入。
+
+### 预期结果
+
+start 返回后任务 worktree 内存在 .tiller/task/<id>/task.md，无需从 primary 拷贝即可继续流程
+
+## CASE-288 合入后 doctor 认 init 基线
+
+- 类型：behavior
+- 优先级：medium
+- 模块：workflow
+- 关联 AC：无
+- 需求：`.tiller/specs/modules/workflow/dogfood-hygiene.md`
+
+### 前置条件
+
+- initBaseline pending 且平台 PR 已合入（祖先或 API）
+
+### 步骤
+
+1. 运行 tiller doctor
+2. 必要时 tiller close <init-id>
+
+### 输入
+
+- 按用例描述准备正常输入及必要的边界输入。
+
+### 预期结果
+
+init 分支经 squash/合入后 doctor init-baseline 通过；close init-id 在可证明合入时写回 merged
+
+## CASE-289 init 后 main 无未跟踪受管残留
+
+- 类型：behavior
+- 优先级：medium
+- 模块：workflow
+- 关联 AC：无
+- 需求：`.tiller/specs/modules/workflow/dogfood-hygiene.md`
+
+### 前置条件
+
+- 空仓或可 init 的工程
+
+### 步骤
+
+1. 执行 tiller init
+2. 检查默认分支 git status 受管路径
+
+### 输入
+
+- 按用例描述准备正常输入及必要的边界输入。
+
+### 预期结果
+
+首次 init 成功后默认分支工作区对受管文件无未跟踪残留（除文档化的 META 最小例外），无需 hard reset
+
+## CASE-290 已删远端分支 close 安静
+
+- 类型：behavior
+- 优先级：medium
+- 模块：workflow
+- 关联 AC：无
+- 需求：`.tiller/specs/modules/workflow/dogfood-hygiene.md`
+
+### 前置条件
+
+- 远端任务分支已被平台删除
+
+### 步骤
+
+1. 执行 tiller close 或 merge 触发删远端
+
+### 输入
+
+- 按用例描述准备正常输入及必要的边界输入。
+
+### 预期结果
+
+远端分支 404/422/不存在时 close/merge 无 warnings 且视为已清理
+
+## CASE-291 init 同变更含必要 gitkeep
+
+- 类型：behavior
+- 优先级：medium
+- 模块：workflow
+- 关联 AC：无
+- 需求：`.tiller/specs/modules/workflow/dogfood-hygiene.md`
+
+### 前置条件
+
+- 待 init 工程含空 src/ 与 test/ 或不含
+
+### 步骤
+
+1. 执行 tiller init 并检查初始化提交/变更集
+
+### 输入
+
+- 按用例描述准备正常输入及必要的边界输入。
+
+### 预期结果
+
+init/骨架同一变更集含 cases 空目录 gitkeep；若存在空 src/test 则含对应 .gitkeep，无需额外仅 gitkeep 的 main 提交

@@ -19,11 +19,17 @@ const runtime = createRequire(import.meta.url)('../resources/run.cjs') as {
 };
 
 async function runtimeProject(root: string): Promise<string> {
-  const launcher = await readTextIfExists(root, '.tiller/run.cjs');
-  if (launcher === null) throw new Error('共享启动器不存在；保留现有工程，先核对当前资源安装。');
   const metadataText = await readTextIfExists(root, '.tiller/project.json');
   if (!metadataText) throw new Error('工程元信息不存在，无法验证共享启动器。');
-  const digest = parseMetadata(metadataText).managedFiles['.tiller/run.cjs'];
+  const metadata = parseMetadata(metadataText);
+  const launcher = await readTextIfExists(root, '.tiller/run.cjs');
+  if (launcher === null) {
+    if (metadata.initBaseline && metadata.initBaseline.status !== 'merged') {
+      return JSON.stringify({ metadataText, launcher: null });
+    }
+    throw new Error('共享启动器不存在；保留现有工程，先核对当前资源安装。');
+  }
+  const digest = metadata.managedFiles['.tiller/run.cjs'];
   if (!digest || !matchesManagedDigest('.tiller/run.cjs', launcher, digest)) {
     throw new Error('共享启动器与工程登记摘要不符；请核对修改后通过恢复修复，保留当前文件。');
   }

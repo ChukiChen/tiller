@@ -3,12 +3,12 @@ import { appendFileSync, existsSync, readFileSync, writeFileSync } from 'node:fs
 import { join } from 'node:path';
 import test from 'node:test';
 import * as core from '../dist/core.js';
-import { fixture, gitRepository, put } from './helpers.mjs';
+import { fixture, gitRepository, initializeSettled, put } from './helpers.mjs';
 
 async function project(t) {
   const root = fixture(t);
   gitRepository(root, '.');
-  await core.initialize({ root });
+  await initializeSettled({ root });
   return root;
 }
 async function countGit(root, action) {

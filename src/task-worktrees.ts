@@ -1,5 +1,5 @@
 import { execFile } from 'node:child_process';
-import { lstat, mkdir, realpath, rmdir, rm, writeFile } from 'node:fs/promises';
+import { lstat, mkdir, readFile, readdir, realpath, rmdir, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { promisify } from 'node:util';
 import { suggestedBranchNameFor } from './branch-conventions.js';
@@ -246,6 +246,48 @@ export async function createTaskWorktrees(rootInput: string, metadata: ProjectMe
       branch,
     })),
   };
+}
+
+async function copyTaskDirectory(sourceRoot: string, targetRoot: string, relative: string): Promise<void> {
+  const source = await assertSafePath(sourceRoot, relative);
+  const entries = await readdir(source, { withFileTypes: true });
+  await mkdir(await assertSafePath(targetRoot, relative), { recursive: true });
+  for (const entry of entries) {
+    const child = `${relative}/${entry.name}`;
+    if (entry.isSymbolicLink()) fail('WORKTREE_TASK_SYNC_FAILED', `任务记录不能同步符号链接：\`${child}\`。`);
+    if (entry.isDirectory()) {
+      await copyTaskDirectory(sourceRoot, targetRoot, child);
+      continue;
+    }
+    if (!entry.isFile()) fail('WORKTREE_TASK_SYNC_FAILED', `任务记录包含不支持的路径：\`${child}\`。`);
+    const target = await assertSafePath(targetRoot, child);
+    await writeFile(target, await readFile(await assertSafePath(sourceRoot, child)));
+  }
+}
+
+/** Copy a freshly written task record into every worktree created for that task. */
+export async function syncTaskRecordsToWorktrees(rootInput: string, state: TaskWorktreeState): Promise<void> {
+  const root = path.resolve(rootInput);
+  const relative = relativePath('.tiller/task', state.id);
+  const source = await assertSafePath(root, relative);
+  const stat = await lstat(source);
+  if (!stat.isDirectory()) fail('WORKTREE_TASK_SYNC_FAILED', `任务记录不是目录：\`${relative}\`。`);
+  try {
+    for (const entry of state.worktrees) {
+      const target = await assertSafePath(root, entry.path);
+      await copyTaskDirectory(root, target, relative);
+    }
+  } catch (error) {
+    if ((error as { code?: string }).code === 'WORKTREE_TASK_SYNC_FAILED') throw error;
+    fail('WORKTREE_TASK_SYNC_FAILED', `任务记录同步到 worktree 失败：${(error as Error).message}`);
+  }
+}
+
+export async function taskWorktreePaths(rootInput: string, id: string): Promise<string[]> {
+  const root = path.resolve(rootInput);
+  const loaded = await readState(root, id);
+  if (!loaded.state) return [];
+  return loaded.state.worktrees.map(entry => path.resolve(root, ...entry.path.split('/')));
 }
 
 export async function writeTaskWorktreeState(rootInput: string, state: TaskWorktreeState): Promise<void> {

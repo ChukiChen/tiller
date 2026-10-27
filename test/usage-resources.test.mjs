@@ -4,14 +4,19 @@ import { join } from 'node:path';
 import test from 'node:test';
 import { equivalentManagedContent, initialize, inspectProject, matchesManagedDigest, parseMetadata, PR_TEMPLATE, RESOURCE_VERSION, sha256, SHARED_RESOURCES } from '../dist/core.js';
 import { applyUpgrade, planUpgrade } from '../dist/upgrade.js';
-import { fixture, gitRepository, put, snapshot } from './helpers.mjs';
+import { fixture, gitRepository, put, settleInitBaseline, snapshot } from './helpers.mjs';
 
 const read = (root, name) => readFileSync(join(root, name), 'utf8');
 const added = ['.tiller/usage.md', '.tiller/run.cjs'];
 
+async function initialized(options) {
+  const result = await initialize(options);
+  return settleInitBaseline(options.root, result);
+}
+
 test('CASE-050 initialization supplies current usage and launcher with discoverable links and no machine paths', async t => {
   const root = fixture(t);
-  const result = await initialize({ root });
+  const result = await initialized({ root });
   assert.equal(RESOURCE_VERSION, '0.5.0');
   assert.equal(result.metadata.resourceVersion, RESOURCE_VERSION);
   assert.equal(Object.keys(result.metadata.managedFiles).length, SHARED_RESOURCES.length + 4);
@@ -32,13 +37,13 @@ test('CASE-050 initialization supplies current usage and launcher with discovera
   assert.match(usage, /--size small/u);
   assert.match(usage, /standard 另生成/u);
   const before = snapshot(root);
-  assert.equal((await initialize({ root })).changed, false);
+  assert.equal((await initialized({ root })).changed, false);
   assert.deepEqual(snapshot(root), before);
 });
 
 test('CASE-084 current entry and rules retain default-flow stage, scope, context and compatibility navigation', async t => {
   const root = fixture(t);
-  await initialize({ root });
+  await initialized({ root });
   const rules = read(root, '.tiller/rules/core.md');
   for (const heading of ['任务记录约定', '按目标选择流程', '范围与卡住', 'context 更新', '兼容与升级']) {
     assert.ok(rules.includes(`## ${heading}`), heading);
@@ -54,7 +59,7 @@ test('CASE-084 current entry and rules retain default-flow stage, scope, context
 for (const workspace of [false, true]) test(`CASE-140 current noop preserves index surroundings and explicit mappings (${workspace})`, async t => {
   const root = fixture(t);
   if (workspace) gitRepository(root, 'repositories/service-a');
-  await initialize({ root, mode: workspace ? 'workspace' : 'project', repositories: workspace ? ['repositories/service-a'] : [] });
+  await initialized({ root, mode: workspace ? 'workspace' : 'project', repositories: workspace ? ['repositories/service-a'] : [] });
   const index = '前文\r\n' + read(root, '.tiller/index.md') + '\r\n用户导航\r\n';
   put(root, '.tiller/index.md', index);
   const metadata = JSON.parse(read(root, '.tiller/project.json'));
@@ -82,7 +87,7 @@ for (const name of added) test(`CASE-141 existing customized ${name} is protecte
   await assert.rejects(initialize({ root: fresh }), /冲突/u);
   assert.deepEqual(snapshot(fresh), before);
   const root = fixture(t);
-  await initialize({ root });
+  await initialized({ root });
   put(root, name, '用户原文\n');
   const modified = snapshot(root);
   const plan = await planUpgrade(root);
@@ -93,7 +98,7 @@ for (const name of added) test(`CASE-141 existing customized ${name} is protecte
 
 test('CASE-142 current noop binds raw shared-resource bytes even across permitted EOL conversion', async t => {
   const root = fixture(t);
-  await initialize({ root });
+  await initialized({ root });
   const plan = await planUpgrade(root);
   const usage = read(root, '.tiller/usage.md');
   const alternate = usage.includes('\r\n') ? usage.replace(/\r\n/gu, '\n') : usage.replace(/\n/gu, '\r\n');
@@ -114,7 +119,7 @@ test('CASE-142 current noop binds raw shared-resource bytes even across permitte
 
 test('CASE-028 current metadata requires the complete managed set and rejects historical versions', async t => {
   const root = fixture(t);
-  await initialize({ root });
+  await initialized({ root });
   const metadata = JSON.parse(read(root, '.tiller/project.json'));
   for (const relative of Object.keys(metadata.managedFiles)) {
     if (relative === PR_TEMPLATE) continue;
@@ -146,7 +151,7 @@ test('CASE-028 current metadata requires the complete managed set and rejects hi
 test('CASE-036 ignored current entry paths block inspection and noop without changing originals', async t => {
   const root = fixture(t);
   gitRepository(root, '.');
-  await initialize({ root });
+  await initialized({ root });
   put(root, '.gitignore', read(root, '.gitignore') + '\n/.tiller/run.cjs\n');
   assert.equal((await inspectProject(root)).ready, false);
   const before = snapshot(root);
@@ -179,7 +184,7 @@ test('CASE-143 managed resource EOL equivalence is bidirectional and restricted 
 test('CASE-144 resource checkout EOL conversion keeps inspection ready and preserves bytes on repeated init', async t => {
   for (const eol of ['\n', '\r\n']) {
     const root = fixture(t);
-    await initialize({ root });
+    await initialized({ root });
     const metadata = JSON.parse(read(root, '.tiller/project.json'));
     for (const name of SHARED_RESOURCES) {
       const relative = `.tiller/${name}`;
@@ -190,7 +195,7 @@ test('CASE-144 resource checkout EOL conversion keeps inspection ready and prese
     put(root, '.tiller/project.json', JSON.stringify(metadata));
     assert.equal((await inspectProject(root)).ready, true);
     const before = snapshot(root);
-    assert.equal((await initialize({ root })).changed, false);
+    assert.equal((await initialized({ root })).changed, false);
     assert.deepEqual(snapshot(root), before);
     put(root, '.tiller/run.cjs', read(root, '.tiller/run.cjs') + '// modified\n');
     assert.equal((await inspectProject(root)).ready, false);
@@ -204,10 +209,10 @@ test('CASE-145 initialization and upgrade accept existing distributed resources 
   }));
   const fresh = fixture(t);
   for (const [relative, text] of Object.entries(files)) put(fresh, relative, text);
-  assert.equal((await initialize({ root: fresh })).ready, true);
+  assert.equal((await initialized({ root: fresh })).ready, true);
   for (const [relative, text] of Object.entries(files)) assert.equal(read(fresh, relative), text);
   const root = fixture(t);
-  await initialize({ root });
+  await initialized({ root });
   for (const [relative, text] of Object.entries(files)) put(root, relative, text);
   const plan = await planUpgrade(root);
   assert.equal(plan.ready, true, plan.conflicts.join('\n'));

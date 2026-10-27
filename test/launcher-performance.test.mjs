@@ -3,11 +3,11 @@ import assert from 'node:assert/strict';
 import { cpSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { initialize } from '../dist/core.js';
 import { bindRuntime } from '../dist/runtime.js';
-import { fixture, put, spawnCaptured } from './helpers.mjs';
+import { fixture, initializeSettled, put, spawnCaptured } from './helpers.mjs';
 
 const cli = fileURLToPath(new URL('../dist/cli.js', import.meta.url));
+const initialize = initializeSettled;
 function launch(root, args, options = {}) {
   return spawnCaptured(process.execPath, [join(root, '.tiller/run.cjs'), ...args], {
     cwd: root, encoding: 'utf8', windowsHide: true, ...options,

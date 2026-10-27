@@ -74,6 +74,9 @@ export interface TaskCheckout {
 export async function resolveTaskCheckout(input: string, id: string): Promise<TaskCheckout> {
   validateTaskId(id);
   const primary = await resolveProjectRoot(input);
+  if (await exists(path.join(primary, '.tiller/task', id, 'task.md'))) {
+    return { primary, taskRoot: primary };
+  }
   const candidate = await projectCandidate(input);
   if (candidate && await exists(path.join(candidate, '.tiller/task', id, 'task.md'))) {
     return { primary, taskRoot: await resolvedPath(candidate) };
