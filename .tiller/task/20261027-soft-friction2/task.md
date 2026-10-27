@@ -1,6 +1,6 @@
 # init只写worktree与verify/基线卫生
 
-<!-- tiller-task:v1 {"version":1,"id":"20261027-soft-friction2","type":"feature","size":"standard","created":"2026-10-27T10:07:39.310Z","base":"c2e25c5868ddc052b747a8bd2f3f8dd30411f4b2","scope":["src","test",".tiller","resources"],"format":"structured","summary":"init只写worktree、基线不脏project.json、设计前拒verify","requirementFile":".tiller/specs/modules/workflow/soft-friction2-init-verify.md"} -->
+<!-- tiller-task:v1 {"version":1,"id":"20261027-soft-friction2","type":"feature","size":"standard","created":"2026-10-27T10:07:39.310Z","base":"c2e25c5868ddc052b747a8bd2f3f8dd30411f4b2","scope":["src","test","scripts",".tiller","resources"],"format":"structured","summary":"init只写worktree、基线不脏project.json、设计前拒verify","requirementFile":".tiller/specs/modules/workflow/soft-friction2-init-verify.md"} -->
 
 ## 需求
 
@@ -16,7 +16,7 @@ post-#43 狗粮后仍有三项软摩擦：设计确认前误跑 `verify` 会写�
 
 ### 业务范围
 
-- 做：改 `src/` 中 `initialize` / `createInitBaseline` / `markInitBaselineMerged` / `proveInitBaselineMerged` / `verifyFlow` / 可选 clear 子命令或 confirm 修复路径；更新受管文档一句、initialization/workflow specs 与 decisions；CASE + 测试；必要 CLI/usage。
+- 做：改 `src/` 中 `initialize` / `createInitBaseline` / `markInitBaselineMerged` / `proveInitBaselineMerged` / `verifyFlow` / 可选 clear 子命令或 confirm 修复路径；更新受管文档一句、initialization/workflow specs 与 decisions；CASE + 测试；必要 CLI/usage；按 worktree-only 同步 `scripts/package-smoke.mjs`。
 - 不做：升版本；放开 `--requirement` 多行完整需求；给 `pr`/`pull` 加“忽略未跟踪”特判作为主修复；CloudAgent；合入本 PR（由人审阅）；扩大到无关重构。
 - 假设：init 后、人工合入前，primary 可以没有完整 `.tiller/` 骨架；门禁可从 init worktree 或 `.tiller/local/` 读取 pending 基线。merged 证明优先 git 祖先 / 平台 API，本地标记仅缓存且不修改已跟踪 `project.json`。
 
@@ -88,16 +88,72 @@ post-#43 狗粮后仍有三项软摩擦：设计确认前误跑 `verify` 会写�
 
 | 部分 | 确认人 | 时间 | 短提交 | 原话 |
 | --- | --- | --- | --- | --- |
-| 需求 | boon yu | 2026-10-27T10:08:15.082Z | c2e25c5868dd | 一起修改吧，是否还有别的问题 |
 | 设计 | boon yu | 2026-10-27T10:08:17.674Z | 7739eed68eb8 | 一起修改吧，是否还有别的问题 |
+| 需求 | boon yu | 2026-10-27T10:43:56.730Z | f46a1564da22 | 一起修改吧，是否还有别的问题 |
 
-<!-- tiller-confirm:v1 {"gate":"requirements","object":"需求正文（目标、范围与验收条件）","subject":"5791147763f4e714c04295097adec6812eb44485a6e4dac8745f6b98919681ec","commit":"c2e25c5868ddc052b747a8bd2f3f8dd30411f4b2","by":"boon yu","quote":"一起修改吧，是否还有别的问题","at":"2026-10-27T10:08:15.082Z"} -->
 <!-- tiller-confirm:v1 {"gate":"design","object":"设计正文","subject":"2f586f5ca5b1bb1b9c8ae3e9f8c1979eb2a49eb8ddba5a9b73a2c1e59bead4ed","commit":"7739eed68eb87baa093a39c388e1bf8b4f3ddeff","by":"boon yu","quote":"一起修改吧，是否还有别的问题","at":"2026-10-27T10:08:17.674Z"} -->
+<!-- tiller-confirm:v1 {"gate":"requirements","object":"需求正文（目标、范围与验收条件）","subject":"32de2c40162b300ae8b07368ec95f60bd830bee12827507a8e2f73c567c5f174","commit":"f46a1564da22d78ebbdc4a8893f7de85d294e7ad","by":"boon yu","quote":"一起修改吧，是否还有别的问题","at":"2026-10-27T10:43:56.730Z"} -->
 
 ## 验证
 
-尚无验证。
+### run-1
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-175 CASE-307 standard verify before design is rejected; clear-premature restores hygiene$' \u002d\u002dtest-reporter=./.tiller/local/verify-heiswO/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-heiswO/report.jsonl test/flow-hardening.test.mjs","exitCode":0,"tree":"c6485df55876c5fb178e778a07fb9db259e03e5bab3fd9a5eab5f9d41dcecbeb","commit":"f46a1564da22d78ebbdc4a8893f7de85d294e7ad"} -->
+- 条件：AC-1
+- 测试：test/flow-hardening.test.mjs::CASE-175 CASE-307 standard verify before design is rejected; clear-premature restores hygiene
+- 用例：CASE-307
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/20261027-soft-friction2/logs/run-1.log
+- 提交：f46a1564da22
+- 时间：2026-10-27T10:43:29.975Z
+
+### run-2
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-289 CASE-305 init leaves no untracked managed residue$' \u002d\u002dtest-reporter=./.tiller/local/verify-Xktt7Z/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-Xktt7Z/report.jsonl test/init-baseline.test.mjs","exitCode":0,"tree":"c6485df55876c5fb178e778a07fb9db259e03e5bab3fd9a5eab5f9d41dcecbeb","commit":"f46a1564da22d78ebbdc4a8893f7de85d294e7ad"} -->
+- 条件：AC-2
+- 测试：test/init-baseline.test.mjs::CASE-289 CASE-305 init leaves no untracked managed residue
+- 用例：CASE-305
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/20261027-soft-friction2/logs/run-2.log
+- 提交：f46a1564da22
+- 时间：2026-10-27T10:43:34.948Z
+
+### run-3
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-253 CASE-306 init baseline merged through the platform API unlocks start and records merged$' \u002d\u002dtest-reporter=./.tiller/local/verify-PCx1hq/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-PCx1hq/report.jsonl test/init-baseline.test.mjs","exitCode":0,"tree":"c6485df55876c5fb178e778a07fb9db259e03e5bab3fd9a5eab5f9d41dcecbeb","commit":"f46a1564da22d78ebbdc4a8893f7de85d294e7ad"} -->
+- 条件：AC-3
+- 测试：test/init-baseline.test.mjs::CASE-253 CASE-306 init baseline merged through the platform API unlocks start and records merged
+- 用例：CASE-306
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/20261027-soft-friction2/logs/run-3.log
+- 提交：f46a1564da22
+- 时间：2026-10-27T10:43:36.346Z
 
 ## 自检
 
-交付前运行 check；验收后运行 accept。
+- [x] 需求确认有效
+- [x] 设计确认有效
+- [x] 验收条件均有当前通过且绑定全局用例的测试引用
+- [x] 每条验收条件均映射到本次验证引用的全局用例
+- [x] 验收条件与用例通过 verify 的 AC→测试→CASE 记录关联
+- [x] 验证命令已执行且测试输出已核实
+- [x] 全局用例结构与引用有效
+- [ ] 改动未超出范围
+- [x] 未弱化仍存在的测试
+- [x] 评审无未清除阻塞项
+- [x] 记录不含密钥或本机绝对路径
+
+阻塞项：
+- 改动超出范围：scripts/package-smoke.mjs
+
+提示：
+- 172 条历史用例仍以 <任务>#AC-n 记录关联 AC；这是可迁移的历史债，不阻断当前覆盖。
+- 135 条用例的关联 AC 为无；覆盖以需求字段和 verify 的 AC→测试→CASE 记录为准。
+- 本次改动涉及模块 initialization：建议回归该模块 69 条用例及经过它的场景 CASE-055, CASE-001。
+- 本次改动涉及模块 standards：建议回归该模块 37 条用例及经过它的场景 CASE-055。
+- 本次改动涉及模块 verification：建议回归该模块 45 条用例及经过它的场景 CASE-055, CASE-001。
+- 本次改动涉及模块 workflow：建议回归该模块 154 条用例及经过它的场景 CASE-055, CASE-001。
+- 修改的测试文件移除了 3 个测试用例（请确认对应功能已删除；详情见 Git diff）。
