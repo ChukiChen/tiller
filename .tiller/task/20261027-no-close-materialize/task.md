@@ -80,14 +80,81 @@ post-#44 狗粮仍软：合入/关闭后 `materializeSharedTaskRecord` 把任务
 | --- | --- | --- | --- | --- |
 | 需求 | boon yu | 2026-10-27T11:06:43.805Z | db6bf6a01452 | 优化吧 |
 | 设计 | boon yu | 2026-10-27T11:06:50.531Z | 72b05a9f836c | 优化吧 |
+| 交付验收 | boon yu | 2026-10-27T11:24:15.829Z | 351011d846d1 | — |
 
 <!-- tiller-confirm:v1 {"gate":"requirements","object":"需求正文（目标、范围与验收条件）","subject":"6ce8305503830e035bc822902cda22e6f6addbf403e3ce25479a8b005165c07e","commit":"db6bf6a01452f3bb1f253f1182c4be841178b7b8","by":"boon yu","quote":"优化吧","at":"2026-10-27T11:06:43.805Z"} -->
 <!-- tiller-confirm:v1 {"gate":"design","object":"设计正文","subject":"8a65bf342b06dabe52902da22e8fd182affd441eebbe22b782961a1de52d8b4f","commit":"72b05a9f836cfe1cf50c6750ed1412a9e8109243","by":"boon yu","quote":"优化吧","at":"2026-10-27T11:06:50.531Z"} -->
+<!-- tiller-confirm:v1 {"gate":"acceptance","object":"当前交付（需求、设计、验证与提交）","subject":"abea75696bcb4f9ec85f166b7d3bce2816e9a96bd54863fac3b1e16816c96bb9","commit":"351011d846d126aa90fd6c9cdc6c805cf223d882","by":"boon yu","quote":"","at":"2026-10-27T11:24:15.829Z"} -->
 
 ## 验证
 
-尚无验证。
+### run-1
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-057 CASE-308 accepted close cleans local state without materializing; reopen after merge simulation$' \u002d\u002dtest-reporter=./.tiller/local/verify-Nzb0OG/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-Nzb0OG/report.jsonl test/first-batch.test.mjs","exitCode":0,"tree":"fcc3a758cd23b9a7d763e9c16bafb08e5ccc81444b6728543546d787099ba10e","commit":"351011d846d126aa90fd6c9cdc6c805cf223d882"} -->
+- 条件：AC-1
+- 测试：test/first-batch.test.mjs::CASE-057 CASE-308 accepted close cleans local state without materializing; reopen after merge simulation
+- 用例：CASE-308
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/20261027-no-close-materialize/logs/run-1.log
+- 提交：351011d846d1
+- 时间：2026-10-27T11:23:54.519Z
+
+### run-2
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-308 abandon does not materialize an untracked task onto primary$' \u002d\u002dtest-reporter=./.tiller/local/verify-AJgATa/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-AJgATa/report.jsonl test/first-batch.test.mjs","exitCode":0,"tree":"fcc3a758cd23b9a7d763e9c16bafb08e5ccc81444b6728543546d787099ba10e","commit":"351011d846d126aa90fd6c9cdc6c805cf223d882"} -->
+- 条件：AC-1
+- 测试：test/first-batch.test.mjs::CASE-308 abandon does not materialize an untracked task onto primary
+- 用例：CASE-308
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/20261027-no-close-materialize/logs/run-2.log
+- 提交：351011d846d1
+- 时间：2026-10-27T11:23:54.519Z
+
+### run-3
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-283 CASE-309 合入后 close 不改共享 task\\.md、无 closed 标记且重复 close 安全$' \u002d\u002dtest-reporter=./.tiller/local/verify-QTgsl1/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-QTgsl1/report.jsonl test/task-worktrees.test.mjs","exitCode":0,"tree":"fcc3a758cd23b9a7d763e9c16bafb08e5ccc81444b6728543546d787099ba10e","commit":"351011d846d126aa90fd6c9cdc6c805cf223d882"} -->
+- 条件：AC-2
+- 测试：test/task-worktrees.test.mjs::CASE-283 CASE-309 合入后 close 不改共享 task.md、无 closed 标记且重复 close 安全
+- 用例：CASE-309
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/20261027-no-close-materialize/logs/run-3.log
+- 提交：351011d846d1
+- 时间：2026-10-27T11:24:01.104Z
+
+### run-4
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-162 repository keeps the 0\\.5\\.0 release contract and five full verification entries$' \u002d\u002dtest-reporter=./.tiller/local/verify-O64XLt/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-O64XLt/report.jsonl test/rules.test.mjs","exitCode":0,"tree":"fcc3a758cd23b9a7d763e9c16bafb08e5ccc81444b6728543546d787099ba10e","commit":"351011d846d126aa90fd6c9cdc6c805cf223d882"} -->
+- 条件：AC-3
+- 测试：test/rules.test.mjs::CASE-162 repository keeps the 0.5.0 release contract and five full verification entries
+- 用例：CASE-162
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/20261027-no-close-materialize/logs/run-4.log
+- 提交：351011d846d1
+- 时间：2026-10-27T11:24:05.655Z
 
 ## 自检
 
-交付前运行 check；验收后运行 accept。
+- [x] 需求确认有效
+- [x] 设计确认有效
+- [x] 验收条件均有当前通过且绑定全局用例的测试引用
+- [x] 每条验收条件均映射到本次验证引用的全局用例
+- [x] 验收条件与用例通过 verify 的 AC→测试→CASE 记录关联
+- [x] 验证命令已执行且测试输出已核实
+- [x] 全局用例结构与引用有效
+- [x] 改动未超出范围
+- [x] 未弱化仍存在的测试
+- [x] 评审无未清除阻塞项
+- [x] 记录不含密钥或本机绝对路径
+
+提示：
+- 172 条历史用例仍以 <任务>#AC-n 记录关联 AC；这是可迁移的历史债，不阻断当前覆盖。
+- 137 条用例的关联 AC 为无；覆盖以需求字段和 verify 的 AC→测试→CASE 记录为准。
+- 本次改动涉及模块 initialization：建议回归该模块 69 条用例及经过它的场景 CASE-055, CASE-001。
+- 本次改动涉及模块 standards：建议回归该模块 37 条用例及经过它的场景 CASE-055。
+- 本次改动涉及模块 verification：建议回归该模块 45 条用例及经过它的场景 CASE-055, CASE-001。
+- 本次改动涉及模块 workflow：建议回归该模块 156 条用例及经过它的场景 CASE-055, CASE-001。
+- 修改的测试文件移除了 2 个测试用例（请确认对应功能已删除；详情见 Git diff）。
