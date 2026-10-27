@@ -10,7 +10,7 @@ post-#43 狗粮后仍有三项软摩擦：设计确认前误跑 `verify` 会写�
 
 ## 业务范围
 
-- 做：改 `src/` 中 `initialize` / `createInitBaseline` / `markInitBaselineMerged` / `proveInitBaselineMerged` / `verifyFlow` / 可选 clear 子命令或 confirm 修复路径；更新受管文档一句、initialization/workflow specs 与 decisions；CASE + 测试；必要 CLI/usage。
+- 做：改 `src/` 中 `initialize` / `createInitBaseline` / `markInitBaselineMerged` / `proveInitBaselineMerged` / `verifyFlow` / 可选 clear 子命令或 confirm 修复路径；更新受管文档一句、initialization/workflow specs 与 decisions；CASE + 测试；必要 CLI/usage；按 worktree-only 同步 `scripts/package-smoke.mjs`。
 - 不做：升版本；放开 `--requirement` 多行完整需求；给 `pr`/`pull` 加“忽略未跟踪”特判作为主修复；CloudAgent；合入本 PR（由人审阅）；扩大到无关重构。
 - 假设：init 后、人工合入前，primary 可以没有完整 `.tiller/` 骨架；门禁可从 init worktree 或 `.tiller/local/` 读取 pending 基线。merged 证明优先 git 祖先 / 平台 API，本地标记仅缓存且不修改已跟踪 `project.json`。
 
