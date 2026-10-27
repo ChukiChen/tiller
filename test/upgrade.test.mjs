@@ -2,12 +2,13 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import test from 'node:test';
-import { initialize, inspectProject, recoverProject, readProjectMetadata, RESOURCE_VERSION, sha256, trackedContent } from '../dist/core.js';
+import { inspectProject, recoverProject, readProjectMetadata, RESOURCE_VERSION, sha256, trackedContent } from '../dist/core.js';
 import { applyUpgrade, planUpgrade } from '../dist/upgrade.js';
 import { applyChanges, hasPendingTransaction, readTextIfExists, withProjectLock } from '../dist/files.js';
-import { cli, failure, fixture, gitRepository, put, snapshot, success } from './helpers.mjs';
+import { cli, failure, fixture, gitRepository, initializeSettled, put, snapshot, success } from './helpers.mjs';
 
 const read = (root, relative) => readFileSync(join(root, relative), 'utf8');
+const initialize = initializeSettled;
 const unsupportedVersions = ['0.1.0', '0.2.0', '0.3.0', '0.5.1', '99.0.0'];
 async function current(t, workspace = false) {
   const root = fixture(t);

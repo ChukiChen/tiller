@@ -147,6 +147,9 @@ export async function startPlatformMock(t, options = {}) {
           if (state.mode === 'branch-delete-missing') {
             return json(response, 422, { message: 'Reference does not exist' });
           }
+          if (state.mode === 'branch-delete-not-found') {
+            return json(response, 404, { message: 'Not Found' });
+          }
           if (state.mode === 'branch-delete-failure') {
             return json(response, 500, { message: `branch delete rejected ${request.headers.authorization ?? ''}` });
           }
@@ -190,6 +193,9 @@ export async function startPlatformMock(t, options = {}) {
         if (request.method === 'DELETE' && rest.startsWith('repository/branches/')) {
           if (state.mode === 'branch-delete-missing') {
             return json(response, 422, { message: 'Branch does not exist' });
+          }
+          if (state.mode === 'branch-delete-not-found') {
+            return json(response, 404, { message: 'Not Found' });
           }
           if (state.mode === 'branch-delete-failure') {
             return json(response, 500, { message: `branch delete rejected ${request.headers['private-token'] ?? ''}` });

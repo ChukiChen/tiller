@@ -121,7 +121,7 @@ function legacySidecarPath(id, relative = '') {
   return ['.tiller/local/tasks', id, relative].filter(Boolean).join('/');
 }
 
-test('CASE-196 CASE-209 project start creates a task-local worktree, sidecars and logs in one directory', async t => {
+test('CASE-196 CASE-209 CASE-287 project start creates a task-local worktree, sidecars and logs in one directory', async t => {
   const root = project(t);
   const id = '20261024-project-worktree';
   put(root, 'docs/pre-start.md', 'before the task\n');
@@ -133,7 +133,7 @@ test('CASE-196 CASE-209 project start creates a task-local worktree, sidecars an
   assert.equal(git(join(root, relative), 'branch', '--show-current'), `fix/${id}-fix-exit`);
   assert.match(git(root, 'worktree', 'list', '--porcelain'), new RegExp(relative.replace(/[.*+?^${}()|[\]\\]/gu, '\\$&'), 'u'));
   assert.ok(existsSync(join(root, `.tiller/task/${id}/task.md`)));
-  assert.equal(existsSync(join(root, relative, `.tiller/task/${id}/task.md`)), false);
+  assert.match(readFileSync(join(root, relative, `.tiller/task/${id}/task.md`), 'utf8'), new RegExp(id, 'u'));
   const state = JSON.parse(readFileSync(join(root, taskLocalPath(id, 'worktrees.json')), 'utf8'));
   assert.equal(state.root, relative);
   assert.deepEqual(state.worktrees.map(item => item.path), [relative]);
@@ -145,7 +145,7 @@ test('CASE-196 CASE-209 project start creates a task-local worktree, sidecars an
   assert.equal(existsSync(join(root, legacyLogPath(id))), false);
 });
 
-test('CASE-197 CASE-210 workspace start keeps management and registered repositories under the task worktree root', async t => {
+test('CASE-197 CASE-210 CASE-287 workspace start keeps management and registered repositories under the task worktree root', async t => {
   const root = workspace(t);
   const id = '20261024-workspace-worktree';
   const started = startTask(root, id, ['--type', 'feature', '--slug', 'workspace-layout']);
@@ -162,7 +162,7 @@ test('CASE-197 CASE-210 workspace start keeps management and registered reposito
     assert.equal(git(target, 'branch', '--show-current'), branch);
   }
   assert.ok(existsSync(join(root, `.tiller/task/${id}/task.md`)));
-  assert.equal(existsSync(join(root, worktreePath(id, 'management'), `.tiller/task/${id}/task.md`)), false);
+  assert.ok(existsSync(join(root, worktreePath(id, 'management'), `.tiller/task/${id}/task.md`)));
   assert.ok(existsSync(join(root, worktreePath(id, 'management'), '.tiller/project.json')));
   const state = JSON.parse(readFileSync(join(root, taskLocalPath(id, 'worktrees.json')), 'utf8'));
   assert.equal(state.root, worktreePath(id));
@@ -241,6 +241,7 @@ test('CASE-280 worktree 根 close 可读取仅存在于 worktree 的任务记录
   const id = '20261027-worktree-only-record-close';
   const started = startTask(root, id);
   const worktree = join(root, started.worktreeRoot);
+  rmSync(join(worktree, `.tiller/task/${id}`), { recursive: true, force: true });
   mkdirSync(join(worktree, '.tiller/task'), { recursive: true });
   renameSync(join(root, `.tiller/task/${id}`), join(worktree, `.tiller/task/${id}`));
   assert.equal(existsSync(join(root, `.tiller/task/${id}/task.md`)), false);

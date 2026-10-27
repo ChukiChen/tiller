@@ -380,6 +380,17 @@ async function skeletonChanges(root: string): Promise<FileChange[]> {
     const before = await readTextIfExists(root, item.path);
     if (before === null) changes.push({ path: item.path, before: null, after: item.content });
   }
+  for (const directory of ['src', 'test']) {
+    let stat: Awaited<ReturnType<typeof lstat>>;
+    try { stat = await lstat(path.join(root, directory)); }
+    catch (error) {
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') continue;
+      throw error;
+    }
+    if (!stat.isDirectory() || (await readdir(path.join(root, directory))).length) continue;
+    const relative = `${directory}/.gitkeep`;
+    if (await readTextIfExists(root, relative) === null) changes.push({ path: relative, before: null, after: '' });
+  }
   return changes;
 }
 
@@ -539,8 +550,12 @@ export async function initialize(options: InitializeOptions): Promise<Initialize
       if (!completed.ready) throw new Error(`补齐项目骨架后检查未通过：${completed.issues.join('\n')}`);
       const initialized = await createInitBaseline(root, completed.metadata!, effective, platform);
       warnings.push(...initialized.warnings, ...(initialized.baseline?.warnings ?? []));
-      completed = await inspectProject(root);
-      if (!completed.ready) throw new Error(`初始化集成后检查未通过：${completed.issues.join('\n')}`);
+      if (!initialized.baseline) {
+        completed = await inspectProject(root);
+        if (!completed.ready) throw new Error(`初始化集成后检查未通过：${completed.issues.join('\n')}`);
+      } else {
+        completed = { ...completed, metadata: initialized.metadata };
+      }
       return { ...completed, changed: true, warnings, firstCommit: firstCommitSuggestion(completed.metadata!),
         ...(initialized.baseline ? { initBaseline: initialized.baseline } : {}) };
     }
@@ -588,8 +603,12 @@ export async function initialize(options: InitializeOptions): Promise<Initialize
     const warnings = detected ? [`检测到 ${detected.file}，已写入 verify.runner=${detected.runner}。`] : [];
     const initialized = await createInitBaseline(root, inspection.metadata!, changes, platform);
     warnings.push(...initialized.warnings, ...(initialized.baseline?.warnings ?? []));
-    inspection = await inspectProject(root);
-    if (!inspection.ready) throw new Error(`初始化集成后检查未通过：${inspection.issues.join('\n')}`);
+    if (!initialized.baseline) {
+      inspection = await inspectProject(root);
+      if (!inspection.ready) throw new Error(`初始化集成后检查未通过：${inspection.issues.join('\n')}`);
+    } else {
+      inspection = { ...inspection, metadata: initialized.metadata };
+    }
     return { ...inspection, changed: true, warnings, firstCommit: firstCommitSuggestion(inspection.metadata!),
       ...(initialized.baseline ? { initBaseline: initialized.baseline } : {}) };
   });

@@ -4,10 +4,12 @@ import { join } from 'node:path';
 import fs from 'node:fs/promises';
 import { syncBuiltinESMExports } from 'node:module';
 import test from 'node:test';
-import { initialize, META } from '../dist/core.js';
+import { META } from '../dist/core.js';
 import { applyChanges, readTextIfExists, readTextInputs, verifyTextInputs, withProjectLock } from '../dist/files.js';
 import { assertSharedWritePaths, assertSharedWriteProofs } from '../dist/shared-paths.js';
-import { fixture, gitRepository, put, repositoryFreeFixture } from './helpers.mjs';
+import { fixture, gitRepository, initializeSettled, put, repositoryFreeFixture } from './helpers.mjs';
+
+const initialize = initializeSettled;
 
 async function project(t) {
   const root = fixture(t);

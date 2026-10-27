@@ -6,10 +6,11 @@ import os from 'node:os';
 import { spawnSync } from 'node:child_process';
 import { test } from 'node:test';
 import { bindRuntime, runtimeStatus } from '../dist/runtime.js';
-import { initialize, inspectProject, sha256 } from '../dist/core.js';
-import { spawnCaptured } from './helpers.mjs';
+import { inspectProject, sha256 } from '../dist/core.js';
+import { initializeSettled, spawnCaptured } from './helpers.mjs';
 
 const CLI_VERSION = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8')).version;
+const initialize = initializeSettled;
 
 async function fixture(t) {
   const base = await mkdtemp(path.join(os.tmpdir(), 'tiller-使用 空格-'));

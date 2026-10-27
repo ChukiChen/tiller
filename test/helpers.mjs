@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os';
 import { dirname, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
+import { initialize as initializeCore } from '../dist/core.js';
 
 export const cliPath = fileURLToPath(new URL('../dist/cli.js', import.meta.url));
 
@@ -142,7 +143,32 @@ export function cli(root, ...args) {
   let data;
   try { data = JSON.parse(result.stdout); }
   catch { assert.fail(`Expected JSON output: ${result.stdout}\n${result.stderr}`); }
+  if (result.status === 0 && args[0] === 'init' && data.initBaseline) settleInitBaseline(root, data);
   return { ...result, data };
+}
+
+export function settleInitBaseline(root, result) {
+  const baseline = result.initBaseline;
+  if (!baseline) return result;
+  const checkout = spawnSync('git', [
+    '-c', 'user.name=Tiller Test', '-c', 'user.email=tiller@example.invalid',
+    'checkout', baseline.commit, '--', '.',
+  ], { cwd: root, encoding: 'utf8', timeout: 20_000 });
+  assert.ifError(checkout.error && checkout.error.code !== 'EPERM' ? checkout.error : null);
+  assert.equal(checkout.status, 0, checkout.stderr);
+  const unstage = spawnSync('git', [
+    '-c', 'user.name=Tiller Test', '-c', 'user.email=tiller@example.invalid',
+    'reset', '--mixed', '--quiet', 'HEAD', '--', '.',
+  ], { cwd: root, encoding: 'utf8', timeout: 20_000 });
+  assert.ifError(unstage.error && unstage.error.code !== 'EPERM' ? unstage.error : null);
+  assert.equal(unstage.status, 0, unstage.stderr);
+  return result;
+}
+
+export async function initializeSettled(options) {
+  const result = await initializeCore(options);
+  if (result.initBaseline) settleInitBaseline(result.root ?? options.root, result);
+  return result;
 }
 
 export function success(result) {

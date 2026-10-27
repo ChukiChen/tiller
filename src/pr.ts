@@ -43,6 +43,7 @@ export interface PullRequestCreated extends PullRequestDraft {
 }
 
 export interface PullRequestPreview extends PullRequestDraft {
+  platform: 'github' | 'gitlab' | 'both';
   draftOnly: true;
   markdown: string;
   next: string;
@@ -270,8 +271,10 @@ export async function pullRequestFlow(
   const { primary: root } = await resolveTaskCheckout(rootInput, id);
   const draft = await draftPullRequest(rootInput, id, options);
   if (options.draftOnly) {
+    const metadata = await readProjectMetadata(root);
     return {
       ...draft,
+      platform: metadata.platform ?? 'github',
       draftOnly: true,
       next: `草稿已生成；确认后运行 tiller pr ${id} 推送分支并创建真实 PR/MR。`,
     };

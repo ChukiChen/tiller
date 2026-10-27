@@ -4,13 +4,20 @@ import { join } from 'node:path';
 import { spawn, spawnSync } from 'node:child_process';
 import test from 'node:test';
 import { branchDescriptionForTask, branchNameIssue, normalizeBranchSlug, suggestedBranchName, suggestedBranchNameFor } from '../dist/branch-conventions.js';
+import { prOutputFormat } from '../dist/cli.js';
 import { commitSubjectIssue } from '../dist/commit-conventions.js';
-import { GITLAB_TEMPLATE, initialize } from '../dist/core.js';
-import { cliPath, cli, completeDesign, confirmTask, failure, fixture, put, spawnCaptured, success } from './helpers.mjs';
+import { GITLAB_TEMPLATE, initialize as initializeCore } from '../dist/core.js';
+import { cliPath, cli, completeDesign, confirmTask, failure, fixture, put, settleInitBaseline, spawnCaptured, success } from './helpers.mjs';
 import { fakeGitForTokenizedPush, realGitPath, startPlatformMock } from './platform-api-mock.mjs';
 
 const read = (root, relative) => readFileSync(join(root, relative), 'utf8');
 const emptyTokens = { GITHUB_TOKEN: '', GH_TOKEN: '', GITLAB_TOKEN: '', GL_TOKEN: '' };
+
+async function initialize(options) {
+  const result = await initializeCore(options);
+  if (result.initBaseline) settleInitBaseline(result.root ?? options.root, result);
+  return result;
+}
 
 function git(root, ...args) {
   const result = spawnSync('git', ['-c', 'user.name=Tiller Test', '-c', 'user.email=tiller@example.invalid', ...args], {
@@ -50,6 +57,7 @@ function commitAll(root, message = 'chore(workflow): 同步验收夹具') {
 
 function moveTaskRecordTo(source, target, id) {
   mkdirSync(join(target, '.tiller/task'), { recursive: true });
+  rmSync(join(target, `.tiller/task/${id}`), { recursive: true, force: true });
   renameSync(join(source, `.tiller/task/${id}`), join(target, `.tiller/task/${id}`));
 }
 
@@ -114,7 +122,7 @@ function prepareTaskBranch(root, id) {
   return branch;
 }
 
-test('CASE-279 pr 经 API 创建真实 PR 并返回 URL', async t => {
+test('CASE-279 CASE-292 pr 经 API 创建真实 PR 并返回稳定字段', async t => {
   for (const platform of ['github', 'gitlab']) {
     const root = fixture(t);
     success(cli(root, 'init', '--platform', platform));
@@ -134,6 +142,7 @@ test('CASE-279 pr 经 API 创建真实 PR 并返回 URL', async t => {
     const created = success(await cliAt(root, environment, 'pr', id));
     assert.equal(created.platform, platform);
     assert.equal(created.branch, branch);
+    assert.match(created.title, new RegExp(`\\[${id}\\]$`, 'u'));
     assert.equal(created.draftOnly, false);
     assert.match(created.url, /^https:\/\/example\.invalid\/tiller\/(?:pr|mr)\/\d+$/u);
     assert.equal(created.number, platform === 'github' ? 1 : 7);
@@ -171,6 +180,36 @@ test('CASE-284 pr draft-only 仅输出草稿不联网', async t => {
   for (const heading of ['关联任务', '变更内容', '验收条件', '验证结果', '影响与风险']) {
     assert.equal(draft.body.split(`## ${heading}`).length - 1, 1, heading);
   }
+});
+
+test('CASE-292 pr 非 TTY 默认输出 JSON 且 TTY 保持 Markdown', async t => {
+  assert.equal(prOutputFormat({ json: false, tty: false }), 'json');
+  assert.equal(prOutputFormat({ json: false, tty: undefined }), 'json');
+  assert.equal(prOutputFormat({ json: false, tty: true }), 'markdown');
+  assert.equal(prOutputFormat({ json: true, tty: true }), 'json');
+
+  const root = fixture(t);
+  success(cli(root, 'init'));
+  setupRepository(root);
+  const id = '20261027-machine-output';
+  success(cli(root, 'start', id, '--title', '机器输出', '--requirement', '非 TTY 默认输出稳定 JSON。',
+    '--criterion', 'AC-1=默认 JSON 可解析', '--size', 'small', '--target', 'src', '--target', 'test',
+    '--target', '.tiller/cases', '--target', '.tiller/specs/modules/workflow'));
+  acceptTaskForPr(root, id);
+
+  const plain = spawnCaptured(process.execPath, [cliPath, 'pr', id, '--draft-only'], {
+    cwd: root, encoding: 'utf8', timeout: 60_000,
+  });
+  assert.equal(plain.status, 0, plain.stderr);
+  const data = JSON.parse(plain.stdout);
+  assert.equal(data.ok, true);
+  assert.equal(data.platform, 'github');
+  assert.equal(data.branch, `feat/${id}`);
+  assert.match(data.title, new RegExp(`\\[${id}\\]$`, 'u'));
+  assert.equal(data.draftOnly, true);
+  assert.equal(typeof data.markdown, 'string');
+  assert.equal(Object.hasOwn(data, 'url'), false);
+  assert.equal(Object.hasOwn(data, 'number'), false);
 });
 
 test('CASE-285 任务记录仅在 worktree 时 pr 不误报缺失', async t => {
@@ -281,7 +320,12 @@ test('CASE-068 pr draft derives title, five sections and current AC state', asyn
 
   const plain = spawnCaptured(process.execPath, [cliPath, 'pr', id, '--draft-only'], { cwd: root, encoding: 'utf8', timeout: 60_000 });
   assert.equal(plain.status, 0, plain.stderr);
-  assert.ok(plain.stdout.startsWith(`${draft.title}\n\n建议分支：\`${draft.branch}\`\n\n## 关联任务`), plain.stdout);
+  const machine = JSON.parse(plain.stdout);
+  assert.equal(machine.ok, true);
+  assert.equal(machine.title, draft.title);
+  assert.equal(machine.branch, draft.branch);
+  assert.equal(machine.draftOnly, true);
+  assert.ok(machine.markdown.startsWith(`${draft.title}\n\n建议分支：\`${draft.branch}\`\n\n## 关联任务`), machine.markdown);
 
   const checked = success(cli(root, 'check', id));
   assert.equal(checked.ready, true, checked.issues.join('\n'));

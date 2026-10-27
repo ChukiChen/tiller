@@ -86,3 +86,11 @@
 ## 12. 过程卫生自检
 
 `src/doctor.ts` 的 `doctorFlow` 先解析主工程根，再返回 `ready`、分支、逐项 `checks`、issues/warnings 与汇总。`init-baseline` 按祖先或 merged 状态检查初始化基线；`default-specs` 在当前为 main/master 时检查 `.tiller/specs` 的工作区脏改与相对 `origin/<branch>` 的未合入改动；`task-branches` 找出未挂载 worktree 的残留任务分支；`ac-coverage` 复用任务阶段与 `inspectFlow` 提示进行中任务缺口；`data-model` 扫描历史 `LIB-*` 与“验收条件（稳定）”标题。fail 项使 CLI 退出码为 1，warn 项只报告。
+
+## 13. 狗粮路径卫生
+
+`startFlow` 在 applyChanges 写主树任务记录后调用 `syncTaskRecordsToWorktrees`，递归同步 `.tiller/task/<id>/`，拒绝符号链接；同步失败先拆本次 worktree，再删除主树本次任务目录并保留原始错误。`writeTask` 只在其他检出原本已有该记录时传播更新，避免为旧“仅 worktree 记录”场景重新制造主树副本。
+
+`init-baseline.ts` 提供 `proveInitBaselineMerged`，统一祖先、status=merged 与平台已合入 PR/MR 三种证明；start、doctor 与 close init-id 共用。init 基线成功写入 worktree 并提交后，`createInitBaseline` 对本次 changes 中除 `.tiller/project.json` 外、主树仍未跟踪且字节匹配 after 的受管路径精确删除，不用 `git clean`；内容被用户改写或已跟踪时保留。`skeletonChanges` 在 `src/`、`test/` 已存在且为空时向同一事务追加对应 `.gitkeep`，文件事务仅额外放行这两个固定目录标记。
+
+`deleteRemoteBranch` 对 404、422 与 does not exist/not found 语义返回 `deleted: true`，`branch-cleanup` 因而计入 `remoteDeleted` 且不生成 warning。`cli.ts` 的 `prOutputFormat` 选择输出形态：显式 `--json` 或 stdout 非 TTY 使用稳定 JSON，TTY 保持 Markdown；draft-only 从工程元信息返回 platform，不解析远端或联网。

@@ -10,6 +10,7 @@ export type { FileChange } from './types.js';
 const LOCAL = '.tiller/local';
 const LOCK = `${LOCAL}/lock.json`;
 const JOURNAL = `${LOCAL}/transaction.json`;
+const ROOT_DIRECTORY_MARKERS = new Set(['src/.gitkeep', 'test/.gitkeep']);
 
 function isMissing(error: unknown): boolean {
   return (error as NodeJS.ErrnoException).code === 'ENOENT';
@@ -361,7 +362,8 @@ function validateChanges(value: unknown): asserts value is FileChange[] {
     }
     // Require the same canonical entry/root spelling on every supported filesystem.
     if (entry.path !== 'AGENTS.md' && entry.path !== '.gitignore' && entry.path !== PR_TEMPLATE
-      && entry.path !== GITLAB_TEMPLATE && !entry.path.startsWith('.tiller/')) {
+      && entry.path !== GITLAB_TEMPLATE && !ROOT_DIRECTORY_MARKERS.has(entry.path)
+      && !entry.path.startsWith('.tiller/')) {
       throw new Error('文件事务只允许修改 tiller 管理资料及工程入口。');
     }
     if (seen.has(key)) throw new Error(`重复文件事务路径：${entry.path}`);

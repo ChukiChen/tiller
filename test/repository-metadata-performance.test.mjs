@@ -3,9 +3,11 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import { syncBuiltinESMExports } from 'node:module';
 import { join } from 'node:path';
-import { initialize, readRepositoryMetadata, META } from '../dist/core.js';
+import { readRepositoryMetadata, META } from '../dist/core.js';
 import { readTextInputs, verifyTextInputs } from '../dist/files.js';
-import { fixture, gitRepository, put } from './helpers.mjs';
+import { fixture, gitRepository, initializeSettled, put } from './helpers.mjs';
+
+const initialize = initializeSettled;
 
 test('CASE-029 repository metadata has no hidden read round and observes each independent read', async t => {
   const root = fixture(t);

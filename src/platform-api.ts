@@ -372,21 +372,21 @@ export async function deleteRemoteBranch(
   const endpoint = repository.platform === 'github'
     ? `${githubRepoPath(repository)}/git/refs/heads/${branch.split('/').map(encodeURIComponent).join('/')}`
     : `/projects/${gitlabProjectPath(repository)}/repository/branches/${encodeURIComponent(branch)}`;
+  const command = `${repository.platform === 'github' ? 'github-api' : 'gitlab-api'} DELETE ${endpoint}`;
+  const missing = (error: unknown): boolean => {
+    const item = error as { status?: number; message?: string };
+    return item.status === 404 || item.status === 422
+      || /(?:does not exist|not found|不存在|reference.*missing|branch.*missing)/iu.test(item.message ?? '');
+  };
   try {
-    const result = await api<unknown>(repository, token, fetchImpl, 'DELETE', endpoint, undefined, true);
+    await api<unknown>(repository, token, fetchImpl, 'DELETE', endpoint, undefined, true);
     return {
-      deleted: result !== null,
-      command: `${repository.platform === 'github' ? 'github-api' : 'gitlab-api'} DELETE ${endpoint}`,
+      deleted: true,
+      command,
       method: 'platform-api',
     };
   } catch (error) {
-    if ((error as { status?: number }).status === 422) {
-      return {
-        deleted: false,
-        command: `${repository.platform === 'github' ? 'github-api' : 'gitlab-api'} DELETE ${endpoint}`,
-        method: 'platform-api',
-      };
-    }
+    if (missing(error)) return { deleted: true, command, method: 'platform-api' };
     if ((error as { code?: string }).code !== 'PLATFORM_API_UNREACHABLE') throw error;
     const remote = `${repository.webBase}/${repository.projectPath}.git`;
     try {
@@ -396,6 +396,9 @@ export async function deleteRemoteBranch(
     } catch (pushError) {
       const item = pushError as { stdout?: string; stderr?: string };
       const detail = item.stderr?.trim() || item.stdout?.trim() || (pushError as Error).message;
+      if (missing(pushError) || /remote ref does not exist/iu.test(detail)) {
+        return { deleted: true, command: `git push ${remote} --delete ${branch}`, method: 'tokenized-git' };
+      }
       fail('PLATFORM_BRANCH_DELETE_FAILED', `tokenized HTTPS git push 删除分支失败：${redact(detail, token.value)}`);
     }
     return { deleted: true, command: `git push ${remote} --delete ${branch}`, method: 'tokenized-git' };

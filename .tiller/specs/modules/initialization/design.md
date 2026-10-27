@@ -33,3 +33,5 @@
 由于元信息不能写入自身最终提交号，初始化在同一分支生成两个同标题提交：第一个提交承载受管改动并成为 `initBaseline.commit`，第二个提交把引用该提交的元信息写入 worktree。门禁先判断第一个提交是否为 HEAD 祖先；失败时再由 `src/platform-api.ts` 按固定分支查询已合入 PR/MR，确认后写回 `status=merged` 并放行 `start`，从而覆盖网页 squash 改写提交的情形。无 token、API 失败或没有已合入记录仍保持阻断。随后由 `src/platform-api.ts` 推送并创建 PR/MR：GitHub 优先 Git Data API，GitLab 传输层使用 tokenized HTTPS `git push`；PR/MR 与 squash 合入均走平台 REST API。失败只追加 token/API 下一步，不回滚 worktree、提交或主工作树元信息。分支/工作树创建或提交失败时回滚主工作树元信息并清理本次 init-id、分支与 Git worktree 登记。
 
 已有 `initBaseline` 的重复初始化只提示在原分支核对，不新建冲突分支。`close <init-id>` 复用任务 local 的受控清理逻辑，按 id 移除 worktree 登记与整棵本机目录，并默认删除本地与远端的 `chore/tiller-init`；`--keep-branch` 保留分支，删除失败只返回 warning。
+
+基线创建成功后，主树只保留 `.tiller/project.json` 作为待合入元信息；本次写入且内容仍匹配、仍为未跟踪的受管文件被精确删除，不使用 `git clean`，用户改写或已跟踪文件保留。`doctor` 与 `close <init-id>` 复用同一祖先/merged/平台 API 合入证明。初始化骨架发现根目录已有空 `src/` 或 `test/` 时，在同一受管变更集追加 `.gitkeep`；目录缺失或非空时不为业务目录强造骨架。

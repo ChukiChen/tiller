@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { spawn, spawnSync } from 'node:child_process';
 import test from 'node:test';
@@ -183,6 +183,62 @@ test('CASE-253 init baseline merged through the platform API unlocks start and r
       ? /head=owner%3Achore%2Ftiller-init/u
       : /source_branch=chore%2Ftiller-init/u);
     assert.ok(mock.state.requests.every(item => item.hasAuthorization || item.hasPrivateToken));
+  }
+});
+
+test('CASE-288 doctor and close use platform merge evidence for a pending init baseline', async t => {
+  const initialized = await initialize(t, { platform: 'github' });
+  if (!initialized) return;
+  const { root, environment, result, mock } = initialized;
+  const baseline = success(result).initBaseline;
+  mock.state.mergedBranches.add(baseline.branch);
+
+  const report = success(await cliAt(root, environment, 'doctor'));
+  assert.equal(report.ready, true, report.issues.join('\n'));
+  assert.ok(report.checks.some(check => check.id === 'init-baseline' && check.status === 'pass'));
+  assert.equal(JSON.parse(read(root, '.tiller/project.json')).initBaseline.status, 'merged');
+
+  const metadata = JSON.parse(read(root, '.tiller/project.json'));
+  metadata.initBaseline.status = 'pending';
+  put(root, '.tiller/project.json', `${JSON.stringify(metadata, null, 2)}\n`);
+  success(await cliAt(root, environment, 'close', baseline.id, '--reason', '初始化基线已合入'));
+  assert.equal(JSON.parse(read(root, '.tiller/project.json')).initBaseline.status, 'merged');
+});
+
+test('CASE-289 init leaves no untracked managed residue', async t => {
+  const root = fixture(t);
+  configure(root);
+  mkdirSync(join(root, 'src'));
+  mkdirSync(join(root, 'test'));
+  put(root, 'notes/user-file.txt', 'keep user data\n');
+  const mock = await startPlatformMock(t, { remoteHead: okGit(root, 'rev-parse', 'HEAD') });
+  okGit(root, 'remote', 'add', 'origin', `${mock.origin}/owner/repo.git`);
+  const environment = { ...emptyTokens, GITHUB_TOKEN: 'mock-token' };
+  const created = success(await cliAt(root, environment, 'init', '--platform', 'github'));
+  assert.ok(created.initBaseline);
+
+  const status = okGit(root, 'status', '--porcelain=v1', '--untracked-files=all').split(/\r?\n/u).filter(Boolean);
+  assert.deepEqual(status.filter(line => !line.endsWith('notes/user-file.txt')), ['?? .tiller/project.json']);
+  for (const relative of ['AGENTS.md', '.gitignore', '.tiller/usage.md', '.tiller/cases/index.md', 'src/.gitkeep', 'test/.gitkeep']) {
+    assert.equal(existsSync(join(root, relative)), false, relative);
+  }
+  assert.equal(read(root, 'notes/user-file.txt'), 'keep user data\n');
+});
+
+test('CASE-291 init includes gitkeeps for empty src and test in the baseline commit', async t => {
+  const root = fixture(t);
+  configure(root);
+  mkdirSync(join(root, 'src'));
+  mkdirSync(join(root, 'test'));
+  const mock = await startPlatformMock(t, { remoteHead: okGit(root, 'rev-parse', 'HEAD') });
+  okGit(root, 'remote', 'add', 'origin', `${mock.origin}/owner/repo.git`);
+  const created = success(await cliAt(root, { ...emptyTokens, GITHUB_TOKEN: 'mock-token' }, 'init', '--platform', 'github'));
+  const baseline = created.initBaseline;
+  assert.ok(baseline);
+  const files = okGit(root, 'show', '--name-only', '--format=', '--no-renames', baseline.commit).split(/\r?\n/u).filter(Boolean);
+  for (const relative of ['.tiller/cases/modules/.gitkeep', '.tiller/cases/scenarios/.gitkeep', 'src/.gitkeep', 'test/.gitkeep']) {
+    assert.ok(files.includes(relative), `${relative} should be in ${baseline.commit}`);
+    assert.equal(okGit(join(root, baseline.worktree), 'show', `${baseline.commit}:${relative}`), '');
   }
 });
 

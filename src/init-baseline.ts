@@ -38,6 +38,12 @@ export interface InitBaselineOutcome {
   warnings: string[];
 }
 
+export interface InitBaselineProof {
+  merged: boolean;
+  detail: string;
+  marked: boolean;
+}
+
 function fail(code: string, message: string): never {
   throw Object.assign(new Error(message), { code });
 }
@@ -172,6 +178,39 @@ async function copyChanges(root: string, worktree: string, changes: FileChange[]
   }
 }
 
+async function cleanupPrimaryInitChanges(root: string, changes: FileChange[]): Promise<string[]> {
+  const warnings: string[] = [];
+  for (const change of changes) {
+    if (change.path === META || change.before !== null || change.after === null || change.before === change.after) continue;
+    let target: string;
+    let current: string;
+    try {
+      target = await assertSafePath(root, change.path);
+      current = await readFile(target, 'utf8');
+    } catch (error) {
+      warnings.push(`初始化残留清理跳过 ${change.path}：${(error as Error).message}`);
+      continue;
+    }
+    if (current !== change.after) {
+      warnings.push(`初始化残留清理跳过 ${change.path}：内容已在初始化后变化。`);
+      continue;
+    }
+    const tracked = await git(root, ['ls-files', '--error-unmatch', '--', change.path]);
+    if (tracked.ok) {
+      warnings.push(`初始化残留清理跳过 ${change.path}：文件已被 Git 跟踪。`);
+      continue;
+    }
+    const untracked = await git(root, ['ls-files', '--others', '-z', '--', change.path]);
+    if (!untracked.ok || !untracked.stdout.split('\0').includes(change.path)) {
+      warnings.push(`初始化残留清理跳过 ${change.path}：文件不再是未跟踪状态。`);
+      continue;
+    }
+    try { await rm(target); }
+    catch (error) { warnings.push(`初始化残留清理失败 ${change.path}：${(error as Error).message}`); }
+  }
+  return warnings;
+}
+
 export function initBaselineId(at = new Date()): string {
   const parts = new Intl.DateTimeFormat('en-US', {
     timeZone: 'Asia/Shanghai', year: 'numeric', month: '2-digit', day: '2-digit',
@@ -200,17 +239,20 @@ export async function markInitBaselineMerged(rootInput: string, id: string): Pro
   return merged;
 }
 
-export async function assertInitBaselineReady(rootInput: string, metadata: ProjectMetadata,
-  fetchImpl: FetchLike = globalThis.fetch): Promise<void> {
+export async function proveInitBaselineMerged(rootInput: string, metadata: ProjectMetadata,
+  fetchImpl: FetchLike = globalThis.fetch): Promise<InitBaselineProof> {
   const baseline = metadata.initBaseline;
-  if (!initBaselinePending(baseline)) return;
+  if (!baseline) return { merged: true, detail: '无初始化基线记录。', marked: false };
+  if (baseline.status === 'merged') {
+    return { merged: true, detail: `初始化基线 ${baseline.id} 已合入。`, marked: false };
+  }
   const root = path.resolve(rootInput);
-  const repository = await git(root, ['rev-parse', '--is-inside-work-tree']);
-  if (repository.unavailable) fail('GIT_UNAVAILABLE', '无法执行 Git，start 不能创建任务 worktree。');
   const head = await gitHead(root);
-  if (head && /^[a-f0-9]{7,64}$/u.test(baseline!.commit)) {
-    const ancestor = await git(root, ['merge-base', '--is-ancestor', baseline!.commit, head]);
-    if (ancestor.ok) return;
+  if (head && /^[a-f0-9]{7,64}$/u.test(baseline.commit)) {
+    const ancestor = await git(root, ['merge-base', '--is-ancestor', baseline.commit, head]);
+    if (ancestor.ok) {
+      return { merged: true, detail: `初始化基线 ${baseline.id} 的提交已在当前历史中。`, marked: false };
+    }
   }
   let detail = '平台未找到该分支已合入的 PR/MR';
   try {
@@ -220,16 +262,28 @@ export async function assertInitBaselineReady(rootInput: string, metadata: Proje
     if (!token) {
       detail = `缺少 ${repository.platform === 'github' ? 'GITHUB_TOKEN/GH_TOKEN' : 'GITLAB_TOKEN/GL_TOKEN'}，无法确认平台合入状态`;
     } else {
-      const merged = await findMergedIntegration(repository, token, baseline!.branch, fetchImpl);
+      const merged = await findMergedIntegration(repository, token, baseline.branch, fetchImpl);
       if (merged) {
-        await markInitBaselineMerged(root, baseline!.id);
-        return;
+        await markInitBaselineMerged(root, baseline.id);
+        return { merged: true, detail: `初始化基线 ${baseline.id} 已由平台确认合入。`, marked: true };
       }
     }
   } catch (error) {
     detail = `平台合入状态查询失败：${(error as Error).message}`;
   }
-  fail('INIT_BASELINE_PENDING', `初始化基线 ${baseline!.id} 不是当前 HEAD 祖先，且${detail}。先合入 ${baseline!.branch} 的 PR/MR 并更新主干；确需跳过时使用 --skip-init-gate。`);
+  return { merged: false, detail, marked: false };
+}
+
+export async function assertInitBaselineReady(rootInput: string, metadata: ProjectMetadata,
+  fetchImpl: FetchLike = globalThis.fetch): Promise<void> {
+  const baseline = metadata.initBaseline;
+  if (!initBaselinePending(baseline)) return;
+  const root = path.resolve(rootInput);
+  const repository = await git(root, ['rev-parse', '--is-inside-work-tree']);
+  if (repository.unavailable) fail('GIT_UNAVAILABLE', '无法执行 Git，start 不能创建任务 worktree。');
+  const proof = await proveInitBaselineMerged(root, metadata, fetchImpl);
+  if (proof.merged) return;
+  fail('INIT_BASELINE_PENDING', `初始化基线 ${baseline!.id} 不是当前 HEAD 祖先，且${proof.detail}。先合入 ${baseline!.branch} 的 PR/MR 并更新主干；确需跳过时使用 --skip-init-gate。`);
 }
 
 export async function createInitBaseline(rootInput: string, metadata: ProjectMetadata,
@@ -272,7 +326,7 @@ export async function createInitBaseline(rootInput: string, metadata: ProjectMet
     await writeFile(rootMetadata, metadataText, 'utf8');
     await writeFile(worktreeMetadata, metadataText, 'utf8');
     const worktreeHead = await createCommit(target, INIT_COMMIT_MESSAGE);
-    const warnings: string[] = [];
+    const warnings = await cleanupPrimaryInitChanges(root, changes);
     const remote = await attemptRemote(id, target, platform, warnings);
     const next = remote.prUrl
       ? [`人工合入 ${INIT_BRANCH} 后运行：tiller close ${id} --reason "初始化基线已合入"`]

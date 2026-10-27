@@ -1184,3 +1184,27 @@ start --requirement-file 后 task 需求保留多行结构并含需求来源路�
 ### 预期结果
 
 draft-only 只生成五段草稿与建议分支，不调用创建 PR API
+
+## CASE-292 pr 机器友好输出
+
+- 类型：interface
+- 优先级：medium
+- 模块：workflow
+- 关联 AC：无
+- 需求：`.tiller/specs/modules/workflow/dogfood-hygiene.md`
+
+### 前置条件
+
+- 任务已验收且记录已提交
+
+### 步骤
+
+1. 执行 tiller pr 带 json 标志与 draft-only
+
+### 输入
+
+- 按用例描述准备正常输入及必要的边界输入。
+
+### 预期结果
+
+json 或非 TTY 输出含 url/number/branch 等稳定字段；TTY 可读；draft-only 不联网

@@ -4,14 +4,15 @@ import { tmpdir } from 'node:os';
 import { delimiter, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import test from 'node:test';
-import { initialize, parseMetadata } from '../dist/core.js';
+import { parseMetadata } from '../dist/core.js';
 import { readRepositoryRecords } from '../dist/repository-paths.js';
 import { normalizeVerifyConfig, resolveVerifyTarget, runnerFor } from '../dist/test-output.js';
 import { applyUpgrade, planUpgrade } from '../dist/upgrade.js';
-import { cli, failure, fixture, gitRepository, put, success } from './helpers.mjs';
+import { cli, failure, fixture, gitRepository, initializeSettled, put, success } from './helpers.mjs';
 
 const repository = fileURLToPath(new URL('..', import.meta.url));
 const read = (root, relative) => readFileSync(join(root, relative), 'utf8');
+const initialize = initializeSettled;
 const paths = {
   reporter: './.tiller/local/verify-x/reporter.mjs',
   report: '.tiller/local/verify-x/report.jsonl',

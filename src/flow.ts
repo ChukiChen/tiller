@@ -15,13 +15,19 @@ import { resolveConfirmer } from './confirmer.js';
 import { branchNameWarning, currentBranch, normalizeBranchSlug } from './branch-conventions.js';
 import { commitMessageWarnings } from './commit-conventions.js';
 import { readProjectMetadata } from './core.js';
-import { applyChanges, inspectSafePaths, readTextIfExists, validateRelativePath, withProjectLock, type ResolvedInputPath } from './files.js';
-import { assertInitBaselineReady, isInitBaselineId } from './init-baseline.js';
+import {
+  applyChanges, assertSafePath, inspectSafePaths, readTextIfExists, validateRelativePath, withProjectLock,
+  type ResolvedInputPath,
+} from './files.js';
+import { assertInitBaselineReady, isInitBaselineId, proveInitBaselineMerged } from './init-baseline.js';
 import { planItemForAttachment, readPlanItem } from './plans.js';
 import { releaseChecklist, type ReleaseChecklist } from './release.js';
 import { taskIdWarnings, validateTaskId } from './task-id.js';
-import { resolveTaskCheckout } from './project-root.js';
-import { cleanupTaskWorktrees, createTaskWorktrees, rollbackTaskWorktrees, taskBranchName, taskLocalRoot, writeTaskWorktreeState } from './task-worktrees.js';
+import { resolveProjectRoot, resolveTaskCheckout } from './project-root.js';
+import {
+  cleanupTaskWorktrees, createTaskWorktrees, rollbackTaskWorktrees, syncTaskRecordsToWorktrees,
+  taskBranchName, taskLocalRoot, taskWorktreePaths, writeTaskWorktreeState,
+} from './task-worktrees.js';
 import { namePattern, resolveVerifyTarget, runnerFor, type TestEvidence, type TestReference } from './test-output.js';
 import type { ProjectMetadata } from './types.js';
 
@@ -626,8 +632,24 @@ function renderTask(task: Omit<FlowTask, 'content' | 'path'>, selfCheck = ''): s
 async function writeTask(root: string, id: string, before: string, after: string,
   preExisting?: Record<string, string>): Promise<void> {
   if (preExisting) await writePreExisting(root, id, preExisting);
-  if (before === after) return;
-  await applyChanges(root, [{ path: taskPath(id), before, after }]);
+  const relative = taskPath(id);
+  if (before !== after) await applyChanges(root, [{ path: relative, before, after }]);
+  const primary = await resolveProjectRoot(root);
+  const targets = new Set([primary, ...await taskWorktreePaths(primary, id)]);
+  for (const target of targets) {
+    if (path.resolve(target) === path.resolve(root)) continue;
+    let stat: Awaited<ReturnType<typeof lstat>>;
+    try { stat = await lstat(target); }
+    catch (error) {
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') continue;
+      throw error;
+    }
+    const existing = await readTextIfExists(target, relative);
+    if (!stat.isDirectory() || existing === null || existing === after) continue;
+    const file = await assertSafePath(target, relative);
+    await mkdir(path.dirname(file), { recursive: true });
+    await writeFile(file, after, 'utf8');
+  }
 }
 
 function criteriaList(values: string[]): FlowCriterion[] {
@@ -972,8 +994,11 @@ export async function startFlow(rootInput: string, idInput: string, input: FlowS
       await mkdir(path.dirname(path.join(root, relative)), { recursive: true });
       await writePreExisting(root, idInput, preExisting);
       await applyChanges(root, [{ path: relative, before: null, after: content }]);
+      await syncTaskRecordsToWorktrees(root, worktrees);
     } catch (error) {
       await rollbackTaskWorktrees(root, worktrees);
+      try { await rm(await assertSafePath(root, `${TASK_DIRECTORY}/${idInput}`), { recursive: true, force: true }); }
+      catch { /* Preserve the original start failure; the local sidecar rollback already ran. */ }
       throw error;
     }
     try { await writeTaskWorktreeState(root, worktrees); }
@@ -2110,6 +2135,9 @@ export async function closeFlow(rootInput: string, id: string, reasonInput: stri
     const metadata = await readProjectMetadata(root);
     if (isInitBaselineId(id)) {
       if (abandon) fail('INIT_BASELINE_CLOSE', '初始化基线不是任务，不能使用 --abandon；直接 close 只清理本机目录。');
+      if (metadata.initBaseline && metadata.initBaseline.status !== 'merged') {
+        await proveInitBaselineMerged(root, metadata);
+      }
       const cleanup = await cleanupTaskWorktrees(root, id, metadata);
       const branchCleanup = metadata.initBaseline
         ? await cleanupTaskBranches(root, metadata, metadata.initBaseline.branch, options)

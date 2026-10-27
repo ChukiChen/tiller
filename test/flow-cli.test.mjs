@@ -4,10 +4,10 @@ import { existsSync, readFileSync, readdirSync, unlinkSync } from 'node:fs';
 import { join } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import test from 'node:test';
-import { initialize } from '../dist/core.js';
-import { cli, completeDesign, confirmTask, failure, fixture, put, success } from './helpers.mjs';
+import { cli, completeDesign, confirmTask, failure, fixture, initializeSettled, put, success } from './helpers.mjs';
 
 const read = (root, relative) => readFileSync(join(root, relative), 'utf8');
+const initialize = initializeSettled;
 const task = (root, id) => `.tiller/task/${id}/task.md`;
 const subSection = (content, title) => {
   const start = content.search(new RegExp(`^### ${title}\\s*$`, 'mu'));

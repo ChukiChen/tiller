@@ -5,10 +5,12 @@ import path from 'node:path';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { test } from 'node:test';
-import { initialize, inspectProject, recoverProject, parseMetadata, readProjectMetadata, RESOURCE_VERSION, trackedContent, sha256 } from '../dist/core.js';
+import { inspectProject, recoverProject, parseMetadata, readProjectMetadata, RESOURCE_VERSION, trackedContent, sha256 } from '../dist/core.js';
 import { assertSharedWritePaths } from '../dist/shared-paths.js';
 import { applyChanges, assertSafePath, readTextIfExists, withProjectLock } from '../dist/files.js';
-import { repositoryFreeFixture } from './helpers.mjs';
+import { initializeSettled, repositoryFreeFixture } from './helpers.mjs';
+
+const initialize = initializeSettled;
 
 async function project(t) {
   const root = await mkdtemp(path.join(os.tmpdir(), 'tiller-core-'));
