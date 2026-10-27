@@ -70,14 +70,81 @@
 | --- | --- | --- | --- | --- |
 | 需求 | boon yu | 2026-10-27T15:26:27.203Z | 80f42f948821 | — |
 | 设计 | boon yu | 2026-10-27T15:26:27.359Z | 20d6d6b2e952 | — |
+| 交付验收 | boon yu | 2026-10-27T15:35:26.102Z | 6973bb7ac7a3 | — |
 
 <!-- tiller-confirm:v1 {"gate":"requirements","object":"需求正文（目标、范围与验收条件）","subject":"b7ad8dcc0a72d362db28e36fcbc9c649c7374d8db225032296af83e413698fe4","commit":"80f42f948821f2a6a58caf7befe6431398c5a5cc","by":"boon yu","quote":"","at":"2026-10-27T15:26:27.203Z"} -->
 <!-- tiller-confirm:v1 {"gate":"design","object":"设计正文","subject":"de6aef675d6435a4a66a1323045f21d4e3f2f8bb0ef88d2ffd023ad59c5ae9ea","commit":"20d6d6b2e952578e0fc3134878fe8d6bd5bf53c3","by":"boon yu","quote":"","at":"2026-10-27T15:26:27.359Z"} -->
+<!-- tiller-confirm:v1 {"gate":"acceptance","object":"当前交付（需求、设计、验证与提交）","subject":"fa8ee87df4177132fbbb64baacbe62c6d90b805fddec74df641c3e370ec0db10","commit":"6973bb7ac7a35181cb64288150f89c747f827e37","by":"boon yu","quote":"","at":"2026-10-27T15:35:26.102Z"} -->
 
 ## 验证
 
-尚无验证。
+### run-1
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-318 merged integration matches only the current branch tip$' \u002d\u002dtest-reporter=./.tiller/local/verify-WJ8jBD/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-WJ8jBD/report.jsonl test/merge.test.mjs","exitCode":0,"tree":"d26b7e3ba997dc4af4a77137e58a3b1a71fd42f34863bba63ad32316620e7607","commit":"6973bb7ac7a35181cb64288150f89c747f827e37"} -->
+- 条件：AC-1
+- 测试：test/merge.test.mjs::CASE-318 merged integration matches only the current branch tip
+- 用例：CASE-318
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/20261027-merge-proof-sha/logs/run-1.log
+- 提交：6973bb7ac7a3
+- 时间：2026-10-27T15:35:11.901Z
+
+### run-2
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-318 close rejects historical same-branch merges until the current tip matches$' \u002d\u002dtest-reporter=./.tiller/local/verify-MCp6Mx/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-MCp6Mx/report.jsonl test/task-worktrees.test.mjs","exitCode":0,"tree":"d26b7e3ba997dc4af4a77137e58a3b1a71fd42f34863bba63ad32316620e7607","commit":"6973bb7ac7a35181cb64288150f89c747f827e37"} -->
+- 条件：AC-1
+- 测试：test/task-worktrees.test.mjs::CASE-318 close rejects historical same-branch merges until the current tip matches
+- 用例：CASE-318
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/20261027-merge-proof-sha/logs/run-2.log
+- 提交：6973bb7ac7a3
+- 时间：2026-10-27T15:35:11.901Z
+
+### run-3
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-318 merged integration matches only the current branch tip$' \u002d\u002dtest-reporter=./.tiller/local/verify-U06G3u/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-U06G3u/report.jsonl test/merge.test.mjs","exitCode":0,"tree":"d26b7e3ba997dc4af4a77137e58a3b1a71fd42f34863bba63ad32316620e7607","commit":"6973bb7ac7a35181cb64288150f89c747f827e37"} -->
+- 条件：AC-2
+- 测试：test/merge.test.mjs::CASE-318 merged integration matches only the current branch tip
+- 用例：CASE-318
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/20261027-merge-proof-sha/logs/run-3.log
+- 提交：6973bb7ac7a3
+- 时间：2026-10-27T15:35:17.210Z
+
+### run-4
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-318 close rejects historical same-branch merges until the current tip matches$' \u002d\u002dtest-reporter=./.tiller/local/verify-npsGY8/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-npsGY8/report.jsonl test/task-worktrees.test.mjs","exitCode":0,"tree":"d26b7e3ba997dc4af4a77137e58a3b1a71fd42f34863bba63ad32316620e7607","commit":"6973bb7ac7a35181cb64288150f89c747f827e37"} -->
+- 条件：AC-2
+- 测试：test/task-worktrees.test.mjs::CASE-318 close rejects historical same-branch merges until the current tip matches
+- 用例：CASE-318
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/20261027-merge-proof-sha/logs/run-4.log
+- 提交：6973bb7ac7a3
+- 时间：2026-10-27T15:35:17.210Z
 
 ## 自检
 
-交付前运行 check；验收后运行 accept。
+- [x] 需求确认有效
+- [x] 设计确认有效
+- [x] 验收条件均有当前通过且绑定全局用例的测试引用
+- [x] 每条验收条件均映射到本次验证引用的全局用例
+- [x] 验收条件与用例通过 verify 的 AC→测试→CASE 记录关联
+- [x] 验证命令已执行且测试输出已核实
+- [x] 全局用例结构与引用有效
+- [x] 改动未超出范围
+- [x] 未弱化仍存在的测试
+- [x] 评审无未清除阻塞项
+- [x] 记录不含密钥或本机绝对路径
+
+提示：
+- 172 条历史用例仍以 <任务>#AC-n 记录关联 AC；这是可迁移的历史债，不阻断当前覆盖。
+- 146 条用例的关联 AC 为无；覆盖以需求字段和 verify 的 AC→测试→CASE 记录为准。
+- 本次改动涉及模块 initialization：建议回归该模块 69 条用例及经过它的场景 CASE-055, CASE-001。
+- 本次改动涉及模块 standards：建议回归该模块 37 条用例及经过它的场景 CASE-055。
+- 本次改动涉及模块 verification：建议回归该模块 45 条用例及经过它的场景 CASE-055, CASE-001。
+- 本次改动涉及模块 workflow：建议回归该模块 165 条用例及经过它的场景 CASE-055, CASE-001。
+- 未检测到任务基线后的 `.tiller/specs/` 或 `.tiller/context/` 回写；如本次形成长期结论，建议回写：`.tiller/specs/modules/initialization/requirements.md`（“## <能力>” + 稳定行为/边界）；`.tiller/specs/modules/initialization/design.md`（“## <方案>” + 取舍与影响）；`.tiller/specs/modules/standards/requirements.md`（“## <能力>” + 稳定行为/边界）；`.tiller/specs/modules/standards/design.md`（“## <方案>” + 取舍与影响）。纯过程性变更可忽略。
