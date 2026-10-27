@@ -255,7 +255,7 @@ test('CASE-280 worktree 根 close 可删本地任务分支', async t => {
   assert.equal(repeated.stage, '已验收');
 });
 
-test('CASE-280 CASE-316 worktree-only close reads the record but requires merge proof', async t => {
+test('CASE-280 worktree 根 close 可读取仅存在于 worktree 的任务记录', async t => {
   const root = project(t);
   const id = '20261027-worktree-only-record-close';
   const started = startTask(root, id);
@@ -423,6 +423,11 @@ test('CASE-316 close reports no executable reopen when only platform merge evide
   const worktree = join(root, started.worktreeRoot);
   const branch = started.worktrees[0].branch;
   acceptTask(root, id);
+
+  const refused = failure(cli(worktree, 'close', id, '--reason', '尚无合入证明'));
+  assert.equal(refused.error.code, 'CLOSE_MERGE_PROOF_MISSING');
+  assert.ok(existsSync(worktree));
+  assert.ok(branchExists(root, branch));
 
   const mock = await startPlatformMock(t, { platform: 'github' });
   mock.state.mergedBranches.add(branch);
