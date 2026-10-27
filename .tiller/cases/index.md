@@ -26,7 +26,7 @@
 - 类型：interface
 - 优先级：medium
 - 模块：workflow
-- 关联 AC：20261022-task#AC-1
+- 关联 AC：无
 - 需求：`.tiller/specs/modules/workflow/requirements.md`
 
 ### 前置条件
@@ -46,7 +46,7 @@
 命令返回非零，记录与输出一致。
 ```
 
-每条用例必须有稳定编号、标题、前置条件、步骤、输入、预期结果、类型、优先级、模块、需求引用，以及来源 AC `criteria`。用例不保存源码路径；历史空来源只提示，不伪造。
+每条用例必须有稳定编号、标题、前置条件、步骤、输入、预期结果、类型、优先级、模块和稳定 specs 需求引用；新用例关联 AC 固定写“无”。覆盖由 `verify` 的 AC→测试→CASE 记录承担，用例不保存源码路径、测试引用字段或执行输出。
 
 ## 测试引用与用例先行
 
@@ -55,7 +55,7 @@
 ```sh
 tiller case add <task-id> --module workflow --kind behavior --title "流程行为" \
   --precondition "需求已确认" --step "运行流程" --input "正常输入" \
-  --expected "流程完成" --criterion AC-1
+  --expected "流程完成"
 ```
 
 `case add` 不要求测试文件，自动分配未占用的 `CASE-NNN`，返回待实现状态和骨架。随后让测试名或测试前紧邻注释引用用例编号；tiller 扫描 `test/**/*.test.*` 与 `*.spec.*` 建立 case→tests 反查。

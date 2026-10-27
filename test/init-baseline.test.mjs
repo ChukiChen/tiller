@@ -122,7 +122,7 @@ test('CASE-229 failed PR creation keeps the worktree and commit and returns API/
   assert.ok(data.warnings.some(warning => warning.includes('初始化分支推送或 PR/MR 创建失败')), data.warnings.join('\n'));
   assert.doesNotMatch(`${data.warnings.join('\n')}\n${baseline.next.join('\n')}`, /mock-token/u);
   assert.ok(baseline.next.some(command => command.includes('GITHUB_TOKEN')));
-  assert.ok(baseline.next.some(command => command.includes('curl') && command.includes('/pulls')));
+  assert.ok(baseline.next.some(command => command.includes('tiller init') && command.includes('创建 PR/MR')));
   assert.ok(baseline.next.every(command => !/github pr create|gitlab mr create|\bgh\b|\bglab\b/u.test(command)));
   assert.ok(existsSync(join(root, '.tiller/project.json')));
 });
@@ -154,7 +154,7 @@ test('CASE-248 init without token keeps local state and gives API/token guidance
     assert.ok(data.warnings.some(warning => warning.includes('缺少') && warning.includes('token')), data.warnings.join('\n'));
     const next = baseline.next.join('\n');
     assert.match(next, platform === 'github' ? /GITHUB_TOKEN/u : /GITLAB_TOKEN/u);
-    assert.match(next, /REST API|curl/u);
+    assert.match(next, /tiller init|REST API/u);
     assert.doesNotMatch(next, /github pr create|gitlab mr create|\bgh\b|\bglab\b/u);
   }
 });

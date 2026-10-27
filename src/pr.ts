@@ -8,7 +8,12 @@ import { readProjectMetadata } from './core.js';
 import { closeFlow, inspectFlow, readTask, taskStage } from './flow.js';
 import type { FlowTask } from './flow.js';
 import { isInitBaselineId, markInitBaselineMerged } from './init-baseline.js';
-import { mergeMergeRequest, mergePullRequest, platformToken, resolvePlatformRepository, tokenGuidance } from './platform-api.js';
+import {
+  createMergeRequest, createPullRequest, mergeMergeRequest, mergePullRequest, platformToken, pushBranch,
+  resolvePlatformRepository, tokenGuidance,
+} from './platform-api.js';
+import type { MergeRequestResult, PlatformRepository, PullRequestResult, PushResult } from './platform-api.js';
+import { resolveProjectRoot } from './project-root.js';
 import { taskBranchName } from './task-worktrees.js';
 
 const execFileAsync = promisify(execFile);
@@ -24,6 +29,23 @@ export interface PullRequestDraft {
   branch: string;
   commits: TaskCommit[];
   warnings: string[];
+}
+
+export interface PullRequestCreated extends PullRequestDraft {
+  platform: 'github' | 'gitlab';
+  url: string;
+  number: number;
+  base: string;
+  pushed: PushResult;
+  draftOnly: false;
+  markdown: string;
+  next: string;
+}
+
+export interface PullRequestPreview extends PullRequestDraft {
+  draftOnly: true;
+  markdown: string;
+  next: string;
 }
 
 export interface MergeResult {
@@ -196,7 +218,8 @@ export async function draftPullRequest(
   id: string,
   options: { slug?: string; summary?: string } = {},
 ): Promise<PullRequestDraft & { markdown: string }> {
-  const root = path.resolve(rootInput);
+  const root = await resolveProjectRoot(rootInput);
+  const sourceRoot = path.resolve(rootInput);
   const task = await readTask(root, id);
   const type = commitTypeForTaskType(task.meta.type);
   if (!type) throw Object.assign(new Error(`无法从任务类型 ${task.meta.type} 推导提交类型。`), { code: 'PR_TYPE_UNKNOWN' });
@@ -216,20 +239,20 @@ export async function draftPullRequest(
   const modules = new Set(referencedModules(task, available));
   const resolvedModules = [...modules];
   const branchDescription = options.slug === undefined
-    ? task.meta.slug ?? branchDescriptionForTask((await currentBranch(root)) ?? '', task.meta.id)
+    ? task.meta.slug ?? branchDescriptionForTask((await currentBranch(sourceRoot)) ?? '', task.meta.id)
     : normalizeBranchSlug(options.slug);
   if (options.slug !== undefined && !branchDescription) {
     throw Object.assign(new Error('--slug 必须是 1-64 位英文、数字或连字符组成的简短描述。'), { code: 'INVALID_SLUG' });
   }
   const module = resolvedModules[0] ?? null;
-  const commits = await taskCommits(root, task.meta.base);
+  const branch = suggestedBranchNameFor(type, task.meta.id, branchDescription);
+  const commits = await taskCommits(sourceRoot, task.meta.base);
   const summary = options.summary !== undefined
     ? explicitSummary(options.summary)
     : task.meta.summary ?? earliestCommitSummary(commits.commits, available) ?? task.title;
   const warnings: string[] = records.warning ? [records.warning] : [];
   if (resolvedModules.length > 1) warnings.push(`任务涉及多个模块（${resolvedModules.join(', ')}），PR/MR 标题使用首个主模块 ${module}，请人工确认。`);
   const title = `${type}${module ? `(${module})` : ''}: ${summary} [${task.meta.id}]`;
-  const branch = suggestedBranchNameFor(type, task.meta.id, branchDescription);
   if (commits.warning) warnings.push(commits.warning);
   const covered = new Map(checked.criteria.map(item => [item.id, item.covered]));
   const body = bodyMarkdown(task, commits.commits, covered);
@@ -239,8 +262,71 @@ export async function draftPullRequest(
   };
 }
 
+export async function pullRequestFlow(
+  rootInput: string,
+  id: string,
+  options: { slug?: string; summary?: string; draftOnly?: boolean } = {},
+): Promise<PullRequestCreated | PullRequestPreview> {
+  const root = await resolveProjectRoot(rootInput);
+  const draft = await draftPullRequest(rootInput, id, options);
+  if (options.draftOnly) {
+    return {
+      ...draft,
+      draftOnly: true,
+      next: `草稿已生成；确认后运行 tiller pr ${id} 推送分支并创建真实 PR/MR。`,
+    };
+  }
+
+  const metadata = await readProjectMetadata(root);
+  let repository: PlatformRepository;
+  try {
+    repository = await resolvePlatformRepository(root, metadata.platform ?? 'github');
+  } catch (error) {
+    fail('PR_PLATFORM_UNKNOWN', (error as Error).message);
+  }
+  const platform = repository.platform;
+  const token = platformToken(platform);
+  if (!token) fail('PR_TOKEN_MISSING', tokenGuidance(platform, repository.apiBase));
+
+  let pushed: PushResult;
+  try {
+    pushed = await pushBranch(root, repository, token, draft.branch);
+  } catch (error) {
+    fail('PR_PUSH_FAILED', `推送任务分支 ${draft.branch} 失败：${(error as Error).message}`);
+  }
+
+  let created: PullRequestResult | MergeRequestResult;
+  try {
+    created = platform === 'github'
+      ? await createPullRequest(repository, token, { branch: draft.branch, title: draft.title, body: draft.body })
+      : await createMergeRequest(repository, token, { branch: draft.branch, title: draft.title, body: draft.body });
+  } catch (error) {
+    const item = error as { status?: number; message?: string };
+    const label = platform === 'github' ? 'PR' : 'MR';
+    if (item.status === 422 || /already exists|已存在/iu.test(item.message ?? '')) {
+      fail('PR_ALREADY_EXISTS', `${label} 可能已存在：${item.message ?? '平台返回 422'}。请打开分支 ${draft.branch} 的 PR/MR 核对；合入使用 tiller merge ${id}。`);
+    }
+    fail('PR_CREATE_FAILED', `${label} 创建失败：${item.message ?? String(error)}`);
+  }
+
+  const label = platform === 'github' ? 'PR' : 'MR';
+  const markdown = `${draft.title}\n\n${label} #${created.number}：${created.url}\n分支：\`${draft.branch}\`\n\n${draft.body}\n`;
+  return {
+    ...draft,
+    platform,
+    url: created.url,
+    number: created.number,
+    base: created.base,
+    pushed,
+    warnings: [...draft.warnings, ...pushed.warnings],
+    draftOnly: false,
+    markdown,
+    next: `已创建 ${label} #${created.number}：${created.url}；审阅后用 tiller merge ${id} 合入。`,
+  };
+}
+
 export async function mergeFlow(rootInput: string, id: string, options: { keepBranch?: boolean } = {}): Promise<MergeResult> {
-  const root = path.resolve(rootInput);
+  const root = await resolveProjectRoot(rootInput);
   const metadata = await readProjectMetadata(root);
   let repository;
   try {

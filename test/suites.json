@@ -22,6 +22,7 @@
     "doc-templates.test.mjs",
     "flow-cli.test.mjs",
     "flow-hardening.test.mjs",
+    "doctor.test.mjs",
     "gap-closure.test.mjs",
     "task-worktrees.test.mjs",
     "first-batch.test.mjs",

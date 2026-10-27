@@ -60,7 +60,7 @@
 
 - 提交主题使用 `类型(模块): 中文摘要`，类型限 feat/fix/docs/refactor/test/chore；PR/MR 标题末尾加 `[任务编号]`，主模块按范围声明顺序取首个，说明固定五段。
 - 分支使用 `类型/任务编号[-简短描述]`，不再使用 `codex/` 前缀；main/master 与 detached HEAD 跳过检查。
-- `pr <task-id>` 只从本地 `task.md` 和 Git 生成草稿，不调用托管平台、不联网；标题摘要依次取 `pr --summary`、任务元数据、最早规范 feat/fix 提交摘要和任务标题；分支描述依次取 `--slug`、任务元数据、当前分支；变更内容按提交时间正序，验证按 AC 用普通嵌套列表保留全部记录。
+- `pr <task-id>` 默认从本地 `task.md` 和 Git 生成五段说明，再经平台 API 推送任务分支并创建真实 PR/MR；`--draft-only` 才只生成离线草稿。标题摘要依次取 `pr --summary`、任务元数据、最早规范 feat/fix 提交摘要和任务标题；分支描述依次取 `--slug`、任务元数据、当前分支；变更内容按提交时间正序，验证按 AC 用普通嵌套列表保留全部记录。
 - 关联任务输出纯文本路径，避免相对链接在 PR/MR 页面被错误解析；不引入仓库网页地址配置。
 - `platform` 取 github、gitlab 或 both，缺省 github；init 按平台生成同内容模板，upgrade 只补齐当前平台，GitHub 项目不得新增 GitLab 模板。
 - 提交与分支格式检查只提示，不阻塞交付。
@@ -139,14 +139,14 @@
 - GitHub 生产路径使用 REST API：初始化分支优先通过 Git Data API 上传 blob/tree/commit 并更新 ref，保留本地提交 SHA；PR 创建与 squash 合入使用 pulls API。若父对象缺失、历史非单父线性或对象校验不一致，才回退到 tokenized HTTPS `git push`。
 - GitLab 公共 REST 没有导入原始 Git 对象并保留本地 SHA 的接口，因此分支传输使用 tokenized HTTPS `git push`（Basic 凭据经 `GIT_CONFIG_*` 环境传入，不进入 URL、argv 或日志）；MR 创建与 squash 合入仍使用 REST API。
 - 生产路径不再调用 github/gh/gitlab/glab 等平台 CLI。Token 只从 `GITHUB_TOKEN`/`GH_TOKEN`、`GITLAB_TOKEN`/`GL_TOKEN` 读取，错误与记录不得输出其值。
-- 这是 MC-10「托管平台调用的唯一新例外」的替代实现；`pr` 仍只读本地事实生成草稿，人工验收、合入和发布授权边界不变。
+- `pr` 与 `init` 使用同一平台 HTTP API 通道；人工验收、合入和发布授权边界不变。
 
 ## 2026-10-26 初始化集成基线与 start 门禁
 
 - 有 Git HEAD 时，`init` 在独立初始化 worktree 提交受管基线并尝试创建同标题 PR/MR；远端失败保留本地和可复制命令，任何路径都不自动合入。
 - 基线使用两笔同标题提交：首笔承载受管改动并写入 `initBaseline.commit`，次笔写入引用首笔的元信息。门禁先看首笔是否为 HEAD 祖先，再通过平台 API 查询同分支已合入 PR/MR；确认后写回 merged，覆盖网页 squash 改写提交的情形。
 - `start` 对仍无合入证据的基线返回 `INIT_BASELINE_PENDING`，`--skip-init-gate` 放行并警告；无标记的存量工程默认放行。`close <init-id>` 清理该初始化本机目录、本地分支与远端分支，不改共享任务记录。
-- 这是托管平台调用的唯一新例外；`pr` 仍只读本地事实生成草稿，人工合入和发布授权不变。
+- `pr` 与 `init` 使用同一平台 HTTP API 通道；人工合入和发布授权不变。
 
 ## 2026-10-26 specs 只经任务 worktree 合入
 
@@ -183,3 +183,9 @@
 - `start --requirement-file` 与任务“需求来源”只允许 `.tiller/specs/` 下相对路径；`.tiller/local/` 等临时或其它路径明确失败，并提示先写入或拷贝进 specs。
 - `start --requirement-file` 保留多行/结构化需求并始终写“需求来源”路径；文件“验收条件”（历史“验收条件（稳定）”仅作读取别名）中的 `- AC-n: ...` 导入任务并以文件为准，可省略 `--criterion`；文件无 AC 时仍要求命令行条件。新渲染只写“验收条件”。
 - 资源契约保持 0.5.0；CLI、usage、rules、初始化模板和 decisions 同步“task→需求、用例→需求、无来源 AC 回指”。
+
+## 2026-10-27 单一交付通道与过程卫生
+
+- `tiller pr` 默认经既有 `pushBranch` + `createPullRequest`/`createMergeRequest` 推送并创建真实 PR/MR，JSON 返回 URL/编号；`--draft-only` 只作离线预览。主路径统一为 `accept → pr → merge`，不再把草稿后手搓 API 作为第二通道。
+- `merge`/`close` 从任务 worktree 根解析主工程根，先拆 worktree 再在主仓和各业务仓删除本地任务分支；远端 404/422 视为已清理，重复 close 幂等，已验收 close 不改共享 `task.md`。
+- `doctor [path]` 独立检查初始化基线、默认分支 specs 脏改、残留任务分支与进行中 AC 缺口；严重项非零退出，warning 不阻断。`check` 的任务级门禁与单一 AC/CASE 数据模型保持不变。

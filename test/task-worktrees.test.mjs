@@ -1,10 +1,11 @@
 import assert from 'node:assert/strict';
-import { existsSync, mkdirSync, readFileSync, rmSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, rmSync, statSync } from 'node:fs';
 import { join } from 'node:path';
-import { spawnSync } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import test from 'node:test';
 import { cleanupTaskWorktrees } from '../dist/task-worktrees.js';
 import { cli, cliPath, confirmTask, failure, fixture, put, spawnCaptured, success } from './helpers.mjs';
+import { startPlatformMock } from './platform-api-mock.mjs';
 
 function git(root, ...args) {
   const result = spawnSync('git', ['-c', 'user.name=Tiller Test', '-c', 'user.email=tiller@example.invalid', ...args], {
@@ -18,6 +19,12 @@ function git(root, ...args) {
 function commit(root, message) {
   git(root, 'add', '-A');
   git(root, 'commit', '--quiet', '--allow-empty', '-m', message);
+}
+
+function branchExists(root, branch) {
+  return spawnSync('git', ['show-ref', '--verify', '--quiet', `refs/heads/${branch}`], {
+    cwd: root, encoding: 'utf8', timeout: 20_000,
+  }).status === 0;
 }
 
 function initializeGit(root) {
@@ -68,6 +75,30 @@ function acceptTask(root, id) {
   success(cli(root, 'verify', id, '--criterion', 'AC-1', '--test', `${testFile}::${added.id} accepted task fixture`));
   git(root, 'checkout', '--quiet', '-b', `fix/${id}-fixture`);
   success(cli(root, 'accept', id, '--by', 'Tiller Test'));
+}
+
+async function cliWithEnv(root, environment, ...args) {
+  return await new Promise((resolve, reject) => {
+    const child = spawn(process.execPath, [cliPath, ...args, '--json'], {
+      cwd: root, env: { ...process.env, ...environment }, windowsHide: true,
+    });
+    let stdout = '';
+    let stderr = '';
+    child.stdout.setEncoding('utf8');
+    child.stderr.setEncoding('utf8');
+    child.stdout.on('data', chunk => { stdout += chunk; });
+    child.stderr.on('data', chunk => { stderr += chunk; });
+    const timeout = setTimeout(() => child.kill('SIGTERM'), 60_000);
+    child.once('error', error => { clearTimeout(timeout); reject(error); });
+    child.once('close', (status, signal) => {
+      clearTimeout(timeout);
+      assert.equal(signal, null, stderr || stdout);
+      let data;
+      try { data = JSON.parse(stdout); }
+      catch { assert.fail(`Expected JSON output: ${stdout}\n${stderr}`); }
+      resolve({ status, signal, stdout, stderr, data });
+    });
+  });
 }
 
 function worktreePath(id, relative = '') {
@@ -176,6 +207,52 @@ test('CASE-198 CASE-211 close and abandon remove the whole task-local directory 
   assert.equal(abandoned.logsRemoved, true);
   assert.equal(existsSync(join(root, taskLocalPath(abandonedId))), false);
   assert.equal(existsSync(join(root, taskLocalPath(bystanderId, 'logs/run-1.log'))), true);
+});
+
+test('CASE-280 worktree 根 close 可删本地任务分支', async t => {
+  const root = project(t);
+  const id = '20261027-worktree-root-close';
+  const started = startTask(root, id);
+  const branch = started.worktrees[0].branch;
+  const worktree = join(root, started.worktreeRoot);
+  acceptTask(root, id);
+  const mock = await startPlatformMock(t, { platform: 'github' });
+  mock.setMode('branch-delete-missing');
+  git(root, 'remote', 'add', 'origin', `${mock.origin}/owner/repo.git`);
+  const environment = { GITHUB_TOKEN: 'mock-token', GH_TOKEN: '', GITLAB_TOKEN: '', GL_TOKEN: '' };
+  assert.ok(branchExists(root, branch));
+
+  const closed = success(await cliWithEnv(worktree, environment, 'close', id, '--reason', '从任务 worktree 收尾'));
+  assert.deepEqual(closed.worktrees, [started.worktreeRoot]);
+  assert.equal(existsSync(worktree), false);
+  assert.equal(branchExists(root, branch), false);
+  assert.ok(mock.state.requests.some(item => item.method === 'DELETE' && item.path.includes(branch)));
+  assert.ok(!closed.warnings?.some(warning => warning.includes('远端分支')), closed.warnings?.join('\n'));
+
+  const repeated = success(await cliWithEnv(root, environment, 'close', id, '--reason', '重复收尾'));
+  assert.equal(existsSync(join(root, `.tiller/local/${id}`)), false);
+  assert.equal(branchExists(root, branch), false);
+  assert.ok(!repeated.warnings?.some(warning => warning.includes('远端分支')), repeated.warnings?.join('\n'));
+  assert.equal(repeated.stage, '已验收');
+});
+
+test('CASE-283 合入后 close 不改共享 task.md 且重复 close 安全', async t => {
+  const root = project(t);
+  const id = '20261027-repeat-close';
+  const started = startTask(root, id);
+  acceptTask(root, id);
+  commit(root, 'chore(workflow): 固化交付验收');
+  const taskPath = join(root, `.tiller/task/${id}/task.md`);
+  const before = readFileSync(taskPath, 'utf8');
+  const mtime = statSync(taskPath).mtimeMs;
+
+  const first = success(cli(root, 'close', id, '--reason', '合入后收尾'));
+  assert.equal(first.stage, '已验收');
+  assert.equal(existsSync(join(root, started.worktreeRoot)), false);
+  const second = success(cli(root, 'close', id, '--reason', '重复收尾'));
+  assert.equal(second.stage, '已验收');
+  assert.equal(readFileSync(taskPath, 'utf8'), before);
+  assert.equal(statSync(taskPath).mtimeMs, mtime);
 });
 
 test('CASE-199 tasks without worktrees still close or abandon and clear task-local logs', async t => {

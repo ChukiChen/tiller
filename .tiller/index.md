@@ -9,7 +9,7 @@
 ## 资料分类
 
 - `specs/`：总体与模块需求、设计及长期决定。
-- `cases/`：产品级测试设计与回归事实，保存编号、前置条件、步骤、输入、预期结果、来源 AC 和需求/模块引用；关联只靠测试名引用 CASE 编号。
+- `cases/`：产品级测试设计与回归事实，保存编号、前置条件、步骤、输入、预期结果和稳定 specs 需求引用；关联 AC 对新用例为“无”，AC 覆盖由 verify 的 AC→测试→CASE 记录承担。
 - `plans/`：大功能的规划与任务拆分，按需建立；单次任务仍以 `task.md` 为准。
 - `rules/`：通用规则及已有项目约定。
 - `context/`：项目背景、现状与资料索引。
@@ -26,6 +26,7 @@
 
 - [总体需求](specs/requirements.md)、[总体设计](specs/design.md)、[决策记录](specs/decisions.md)
 - [初始化规格](specs/modules/initialization/requirements.md)、[工作流规格](specs/modules/workflow/requirements.md)、[验证规格](specs/modules/verification/requirements.md)、[规范规格](specs/modules/standards/requirements.md)
+- [流程稳定执行规格](specs/modules/workflow/flow-exec-stability.md)
 - [规则索引](rules/index.md)、[项目规则](rules/project.md)、[项目背景](context/project.md)
 - [全局用例](cases/index.md)
 
@@ -62,6 +63,7 @@
 - [关键节点人工确认](task/human-confirmation/task.md)
 - [首个可用交付](task/initial-delivery/task.md)
 - [多仓库验证与 Java 运行器](task/20261023-multi-repo-verify/task.md)
+- [流程稳定执行](task/20261027-flow-exec-stability/task.md)
 
 ## 历史任务资料精简
 

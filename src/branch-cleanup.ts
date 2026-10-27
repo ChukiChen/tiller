@@ -2,6 +2,7 @@ import { execFile } from 'node:child_process';
 import path from 'node:path';
 import { promisify } from 'node:util';
 import { deleteRemoteBranch, platformToken, resolvePlatformRepository } from './platform-api.js';
+import { resolveProjectRoot } from './project-root.js';
 import type { ProjectMetadata } from './types.js';
 
 const execFileAsync = promisify(execFile);
@@ -91,7 +92,6 @@ async function deleteRemote(root: string, metadata: ProjectMetadata, branch: str
   try {
     const deleted = await deleteRemoteBranch(root, repository, token, branch);
     if (deleted.deleted) result.remoteDeleted.push(`${label}:${branch}`);
-    else result.warnings.push(`${label}远端分支 ${branch} 已不存在，无需删除。`);
   } catch (error) {
     result.warnings.push(`${label}删除远端分支 ${branch} 失败：${(error as Error).message}`);
   }
@@ -99,7 +99,7 @@ async function deleteRemote(root: string, metadata: ProjectMetadata, branch: str
 
 export async function cleanupTaskBranches(rootInput: string, metadata: ProjectMetadata, branch: string,
   options: { keepBranch?: boolean } = {}): Promise<BranchCleanupResult> {
-  const root = path.resolve(rootInput);
+  const root = await resolveProjectRoot(rootInput);
   const result: BranchCleanupResult = {
     branch, kept: options.keepBranch === true, localDeleted: [], remoteDeleted: [], warnings: [],
   };

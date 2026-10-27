@@ -1,14 +1,16 @@
 import assert from 'node:assert/strict';
 import { existsSync, readFileSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
-import { spawnSync } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import test from 'node:test';
 import { branchDescriptionForTask, branchNameIssue, normalizeBranchSlug, suggestedBranchName, suggestedBranchNameFor } from '../dist/branch-conventions.js';
 import { commitSubjectIssue } from '../dist/commit-conventions.js';
 import { GITLAB_TEMPLATE, initialize } from '../dist/core.js';
 import { cliPath, cli, completeDesign, confirmTask, failure, fixture, put, spawnCaptured, success } from './helpers.mjs';
+import { fakeGitForTokenizedPush, realGitPath, startPlatformMock } from './platform-api-mock.mjs';
 
 const read = (root, relative) => readFileSync(join(root, relative), 'utf8');
+const emptyTokens = { GITHUB_TOKEN: '', GH_TOKEN: '', GITLAB_TOKEN: '', GL_TOKEN: '' };
 
 function git(root, ...args) {
   const result = spawnSync('git', ['-c', 'user.name=Tiller Test', '-c', 'user.email=tiller@example.invalid', ...args], {
@@ -71,6 +73,101 @@ function acceptTaskForPr(root, id) {
   commitAll(root, 'chore(workflow): 记录交付验收');
 }
 
+async function cliAt(root, environment, ...args) {
+  return await new Promise((resolve, reject) => {
+    const child = spawn(process.execPath, [cliPath, ...args, '--json'], {
+      cwd: root, env: { ...process.env, ...environment }, windowsHide: true,
+    });
+    let stdout = '';
+    let stderr = '';
+    child.stdout.setEncoding('utf8');
+    child.stderr.setEncoding('utf8');
+    child.stdout.on('data', chunk => { stdout += chunk; });
+    child.stderr.on('data', chunk => { stderr += chunk; });
+    const timeout = setTimeout(() => child.kill('SIGTERM'), 60_000);
+    child.once('error', error => { clearTimeout(timeout); reject(error); });
+    child.once('close', (status, signal) => {
+      clearTimeout(timeout);
+      assert.equal(signal, null, stderr || stdout);
+      let data;
+      try { data = JSON.parse(stdout); }
+      catch { assert.fail(`Expected JSON output: ${stdout}\n${stderr}`); }
+      resolve({ status, signal, stdout, stderr, data });
+    });
+  });
+}
+
+function prepareTaskBranch(root, id) {
+  const started = success(cli(root, 'start', id, '--title', '真实 PR 交付', '--requirement', '默认创建真实 PR/MR。',
+    '--criterion', 'AC-1=PR/MR 返回 URL 与编号', '--size', 'small', '--target', 'src', '--target', 'test',
+    '--target', '.tiller/cases', '--target', '.tiller/specs/modules/workflow'));
+  const worktree = join(root, started.worktreeRoot);
+  const branch = started.worktrees[0].branch;
+  git(root, 'worktree', 'remove', '--force', worktree);
+  git(root, 'worktree', 'prune');
+  git(root, 'checkout', '--quiet', branch);
+  return branch;
+}
+
+test('CASE-279 pr 经 API 创建真实 PR 并返回 URL', async t => {
+  for (const platform of ['github', 'gitlab']) {
+    const root = fixture(t);
+    success(cli(root, 'init', '--platform', platform));
+    setupRepository(root);
+    const id = `20261027-real-${platform}-pr`;
+    const branch = prepareTaskBranch(root, id);
+    const remoteHead = git(root, 'rev-parse', 'HEAD').trim();
+    const mock = await startPlatformMock(t, { platform, remoteHead });
+    git(root, 'remote', 'add', 'origin', `${mock.origin}${platform === 'github' ? '/owner/repo.git' : '/group/project.git'}`);
+    acceptTaskForPr(root, id);
+    const wrapper = platform === 'gitlab' ? fakeGitForTokenizedPush(t, root, realGitPath()) : null;
+    if (platform === 'gitlab' && wrapper === null) continue;
+    const environment = platform === 'github'
+      ? { ...emptyTokens, GITHUB_TOKEN: 'mock-token' }
+      : { ...emptyTokens, GITLAB_TOKEN: 'mock-token', ...wrapper.environment };
+
+    const created = success(await cliAt(root, environment, 'pr', id));
+    assert.equal(created.platform, platform);
+    assert.equal(created.branch, branch);
+    assert.equal(created.draftOnly, false);
+    assert.match(created.url, /^https:\/\/example\.invalid\/tiller\/(?:pr|mr)\/\d+$/u);
+    assert.equal(created.number, platform === 'github' ? 1 : 7);
+    assert.match(created.markdown, new RegExp(created.url.replace(/[.*+?^${}()|[\]\\]/gu, '\\$&'), 'u'));
+    const createPath = platform === 'github' ? '/pulls' : '/merge_requests';
+    assert.ok(mock.state.requests.some(item => item.method === 'POST' && item.path.endsWith(createPath)));
+    assert.ok(mock.state.requests.some(item => platform === 'github' ? item.hasAuthorization : item.hasPrivateToken));
+
+    const missing = failure(await cliAt(root, emptyTokens, 'pr', id));
+    assert.equal(missing.error.code, 'PR_TOKEN_MISSING');
+    assert.match(missing.error.message, platform === 'github' ? /缺少 GitHub token/u : /缺少 GitLab token/u);
+
+    mock.setMode('pr-exists');
+    const existing = failure(await cliAt(root, environment, 'pr', id));
+    assert.equal(existing.error.code, 'PR_ALREADY_EXISTS');
+    assert.match(existing.error.message, /已存在|already exists/u);
+  }
+});
+
+test('CASE-284 pr draft-only 仅输出草稿不联网', async t => {
+  const root = fixture(t);
+  success(cli(root, 'init'));
+  setupRepository(root);
+  const id = '20261027-draft-only';
+  success(cli(root, 'start', id, '--title', '草稿预览', '--requirement', '只输出五段草稿。',
+    '--criterion', 'AC-1=草稿不联网', '--size', 'small', '--target', 'src', '--target', 'test',
+    '--target', '.tiller/cases', '--target', '.tiller/specs/modules/workflow'));
+  acceptTaskForPr(root, id);
+
+  const draft = success(cli(root, 'pr', id, '--draft-only'));
+  assert.equal(draft.draftOnly, true);
+  assert.equal(Object.hasOwn(draft, 'url'), false);
+  assert.equal(Object.hasOwn(draft, 'number'), false);
+  assert.match(draft.markdown, /^feat\(workflow\): 草稿预览 \[20261027-draft-only\]/u);
+  for (const heading of ['关联任务', '变更内容', '验收条件', '验证结果', '影响与风险']) {
+    assert.equal(draft.body.split(`## ${heading}`).length - 1, 1, heading);
+  }
+});
+
 test('CASE-070 branch names follow type and task prefix rules', () => {
   assert.equal(suggestedBranchName('feat', '20261022-round11'), 'feat/20261022-round11');
   for (const branch of ['feat/20261022-round11', 'feat/20261022-round11-pr-conventions', 'fix/bug-1']) {
@@ -127,7 +224,7 @@ test('CASE-068 pr draft derives title, five sections and current AC state', asyn
   git(root, 'checkout', '--quiet', '-b', `feat/${id}-pr-draft`);
   acceptTaskForPr(root, id);
 
-  const draft = success(cli(root, 'pr', id));
+  const draft = success(cli(root, 'pr', id, '--draft-only'));
   assert.equal(draft.title, `feat(workflow): 生成固定五段 PR 草稿 [${id}]`);
   assert.equal(draft.module, 'workflow');
   assert.equal(draft.branch, `feat/${id}`);
@@ -143,7 +240,7 @@ test('CASE-068 pr draft derives title, five sections and current AC state', asyn
   assert.match(draft.body, /当前有效/u);
   assert.match(draft.body, /PR\/MR 标题和说明需要人工复核/u);
 
-  const plain = spawnCaptured(process.execPath, [cliPath, 'pr', id], { cwd: root, encoding: 'utf8', timeout: 60_000 });
+  const plain = spawnCaptured(process.execPath, [cliPath, 'pr', id, '--draft-only'], { cwd: root, encoding: 'utf8', timeout: 60_000 });
   assert.equal(plain.status, 0, plain.stderr);
   assert.ok(plain.stdout.startsWith(`${draft.title}\n\n建议分支：\`${draft.branch}\`\n\n## 关联任务`), plain.stdout);
 
@@ -202,7 +299,7 @@ test('CASE-075 pr title selects first declared module and omits unknown modules'
     '--target', '.tiller/specs/modules/initialization', '--target', '.tiller/specs/modules/workflow',
     '--target', 'src', '--target', 'test', '--target', '.tiller/cases'));
   acceptTaskForPr(root, id);
-  const draft = success(cli(root, 'pr', id));
+  const draft = success(cli(root, 'pr', id, '--draft-only'));
   assert.equal(draft.module, 'initialization');
   assert.equal(draft.title, `feat(initialization): 模块标题 [${id}]`);
   assert.match(draft.warnings.join('\n'), /多个模块.*首个主模块 initialization/u);
@@ -214,7 +311,7 @@ test('CASE-075 pr title selects first declared module and omits unknown modules'
   success(cli(unknown, 'start', unknownId, '--title', '未知模块标题', '--requirement', '没有可推导模块。',
     '--criterion', 'AC-1=标题省略模块', '--size', 'small', '--target', 'src', '--target', 'test', '--target', '.tiller/cases'));
   acceptTaskForPr(unknown, unknownId);
-  const fallback = success(cli(unknown, 'pr', unknownId));
+  const fallback = success(cli(unknown, 'pr', unknownId, '--draft-only'));
   assert.equal(fallback.module, null);
   assert.equal(fallback.title, `feat: 未知模块标题 [${unknownId}]`);
 });
@@ -229,8 +326,8 @@ test('CASE-076 branch slug precedence uses flag then task metadata then current 
     '--target', '.tiller/cases', '--slug', 'Structured Task'));
   assert.equal(started.slug, 'structured-task');
   acceptTaskForPr(root, metadataTask);
-  assert.equal(success(cli(root, 'pr', metadataTask)).branch, `feat/${metadataTask}-structured-task`);
-  assert.equal(success(cli(root, 'pr', metadataTask, '--slug', 'PR_Draft 2')).branch, `feat/${metadataTask}-pr-draft-2`);
+  assert.equal(success(cli(root, 'pr', metadataTask, '--draft-only')).branch, `feat/${metadataTask}-structured-task`);
+  assert.equal(success(cli(root, 'pr', metadataTask, '--slug', 'PR_Draft 2', '--draft-only')).branch, `feat/${metadataTask}-pr-draft-2`);
 
   const branchTask = '20261022-slug-branch';
   success(cli(root, 'start', branchTask, '--title', '当前分支描述', '--requirement', '从当前分支读取描述。',
@@ -238,7 +335,7 @@ test('CASE-076 branch slug precedence uses flag then task metadata then current 
     '--target', '.tiller/cases'));
   git(root, 'checkout', '--quiet', '-b', `fix/${branchTask}-from-current`);
   acceptTaskForPr(root, branchTask);
-  assert.equal(success(cli(root, 'pr', branchTask)).branch, `feat/${branchTask}-from-current`);
+  assert.equal(success(cli(root, 'pr', branchTask, '--draft-only')).branch, `feat/${branchTask}-from-current`);
 });
 
 test('CASE-077 pr verification section lists every recorded run in order', async t => {
@@ -258,7 +355,7 @@ test('CASE-077 pr verification section lists every recorded run in order', async
   const second = secondRun.entries[0].command;
 
   acceptTaskForPr(root, id);
-  const draft = success(cli(root, 'pr', id));
+  const draft = success(cli(root, 'pr', id, '--draft-only'));
   assert.ok(draft.body.indexOf(`命令：\`${first}\``) >= 0, draft.body);
   assert.ok(draft.body.indexOf(`命令：\`${second}\``) > draft.body.indexOf(`命令：\`${first}\``), draft.body);
   assert.match(draft.body, new RegExp(`${added.id}`, 'u'));
@@ -279,8 +376,8 @@ test('CASE-081 pr summary prefers flag then metadata then earliest conventional 
     '--target', '.tiller/specs/modules/workflow', '--target', '.tiller/cases'));
   assert.equal(started.summary, '元数据中文摘要');
   acceptTaskForPr(root, metadataId);
-  assert.equal(success(cli(root, 'pr', metadataId)).title, `feat(workflow): 元数据中文摘要 [${metadataId}]`);
-  assert.equal(success(cli(root, 'pr', metadataId, '--summary', '命令行中文摘要')).title,
+  assert.equal(success(cli(root, 'pr', metadataId, '--draft-only')).title, `feat(workflow): 元数据中文摘要 [${metadataId}]`);
+  assert.equal(success(cli(root, 'pr', metadataId, '--summary', '命令行中文摘要', '--draft-only')).title,
     `feat(workflow): 命令行中文摘要 [${metadataId}]`);
 
   const commitId = '20261022-summary-commit';
@@ -297,7 +394,7 @@ test('CASE-081 pr summary prefers flag then metadata then earliest conventional 
   git(root, 'add', '.');
   git(root, 'commit', '--quiet', '-m', 'fix(workflow): 后续中文摘要');
   acceptTaskForPr(root, commitId);
-  assert.equal(success(cli(root, 'pr', commitId)).title, `feat(workflow): 最早中文摘要 [${commitId}]`);
+  assert.equal(success(cli(root, 'pr', commitId, '--draft-only')).title, `feat(workflow): 最早中文摘要 [${commitId}]`);
 
   const fallbackRoot = fixture(t);
   success(cli(fallbackRoot, 'init'));
@@ -306,7 +403,7 @@ test('CASE-081 pr summary prefers flag then metadata then earliest conventional 
   success(cli(fallbackRoot, 'start', fallbackId, '--title', '任务标题回退', '--requirement', '没有提交摘要时使用任务标题。',
     '--criterion', 'AC-1=使用任务标题', '--size', 'small', '--target', 'src', '--target', 'test', '--target', '.tiller/cases'));
   acceptTaskForPr(fallbackRoot, fallbackId);
-  assert.equal(success(cli(fallbackRoot, 'pr', fallbackId)).title, `feat: 任务标题回退 [${fallbackId}]`);
+  assert.equal(success(cli(fallbackRoot, 'pr', fallbackId, '--draft-only')).title, `feat: 任务标题回退 [${fallbackId}]`);
 });
 
 test('CASE-082 pr change list orders commits from oldest to newest', async t => {
@@ -325,7 +422,7 @@ test('CASE-082 pr change list orders commits from oldest to newest', async t => 
   git(root, 'commit', '--quiet', '-m', 'fix(workflow): 较晚提交');
   acceptTaskForPr(root, id);
 
-  const draft = success(cli(root, 'pr', id));
+  const draft = success(cli(root, 'pr', id, '--draft-only'));
   const changeSection = draft.body.split('## 变更内容\n\n')[1].split('\n\n## 验收条件')[0];
   assert.ok(changeSection.indexOf('- feat(workflow): 较早提交') < changeSection.indexOf('- fix(workflow): 较晚提交'), changeSection);
   const subjects = draft.commits.map(commit => commit.subject);
@@ -347,7 +444,7 @@ test('CASE-083 pr verification section uses plain nested records without numbere
   const command = verified.entries[0].command;
 
   acceptTaskForPr(root, id);
-  const draft = success(cli(root, 'pr', id));
+  const draft = success(cli(root, 'pr', id, '--draft-only'));
   assert.match(draft.body, /^- AC-1：每条记录单独一行（当前有效）$/mu);
   assert.ok(draft.body.includes(`  - 测试：\`test/workflow.test.mjs::CASE-001 workflow behavior\`；命令：\`${command}\`；结果：passed；提交：\`${verified.entries[0].commit}\`；用例：${added.id}`), draft.body);
   assert.doesNotMatch(draft.body, /^\s*- \d+\./mu);
@@ -444,11 +541,11 @@ test('CASE-080 pr task section is plain text and PR MR neutral', async t => {
     '--criterion', 'AC-1=输出纯文本记录路径', '--size', 'small', '--target', 'src', '--target', 'test',
     '--target', '.tiller/cases'));
   acceptTaskForPr(root, id);
-  const draft = success(cli(root, 'pr', id));
+  const draft = success(cli(root, 'pr', id, '--draft-only'));
   assert.match(draft.body, new RegExp(`^## 关联任务\\n\\n任务 ${id}，记录见 \`\\.tiller/task/${id}/task\\.md\`$`, 'mu'));
   assert.doesNotMatch(draft.body, /\[[^\]]+\]\(\.tiller\/task\//u);
   const help = success(cli(root, '--help')).help;
-  assert.match(help, /五段 PR\/MR 草稿/u);
+  assert.match(help, /五段 PR\/MR 说明/u);
   const githubTemplate = readFileSync(new URL('../resources/pull_request_template.md', import.meta.url), 'utf8');
   const gitlabTemplate = readFileSync(new URL('../resources/merge_request_template.md', import.meta.url), 'utf8');
   assert.equal(gitlabTemplate, githubTemplate);
@@ -467,7 +564,7 @@ test('CASE-216 pr blocks uncommitted task records and lists relative paths', asy
 
   const taskPath = `.tiller/task/${id}/task.md`;
   put(root, taskPath, `${read(root, taskPath)}\n<!-- 临时任务记录改动 -->\n`);
-  const taskDirty = failure(cli(root, 'pr', id));
+  const taskDirty = failure(cli(root, 'pr', id, '--draft-only'));
   assert.equal(taskDirty.error.code, 'PR_TASK_RECORDS_DIRTY');
   assert.ok(taskDirty.error.message.includes(taskPath), taskDirty.error.message);
 
@@ -476,7 +573,7 @@ test('CASE-216 pr blocks uncommitted task records and lists relative paths', asy
 
   const casePath = '.tiller/cases/modules/workflow/behavior.md';
   put(root, casePath, '# workflow behavior\n\n## CASE-900 临时用例\n');
-  const caseDirty = failure(cli(root, 'pr', id));
+  const caseDirty = failure(cli(root, 'pr', id, '--draft-only'));
   assert.equal(caseDirty.error.code, 'PR_TASK_RECORDS_DIRTY');
   assert.ok(caseDirty.error.message.includes(casePath), caseDirty.error.message);
 
@@ -485,7 +582,7 @@ test('CASE-216 pr blocks uncommitted task records and lists relative paths', asy
 
   const specPath = '.tiller/specs/modules/workflow/requirements.md';
   put(root, specPath, `${read(root, specPath)}\n临时规格改动。\n`);
-  const specDirty = failure(cli(root, 'pr', id));
+  const specDirty = failure(cli(root, 'pr', id, '--draft-only'));
   assert.equal(specDirty.error.code, 'PR_TASK_RECORDS_DIRTY');
   assert.ok(specDirty.error.message.includes(specPath), specDirty.error.message);
   assert.equal(Object.hasOwn(specDirty, 'body'), false);
@@ -505,7 +602,7 @@ test('CASE-217 pr generates the five-section draft after task records are commit
   git(root, 'add', `.tiller/task/${id}`, specPath);
   git(root, 'commit', '--quiet', '-m', 'feat(workflow): 记录 PR 前同步');
 
-  const draft = success(cli(root, 'pr', id));
+  const draft = success(cli(root, 'pr', id, '--draft-only'));
   assert.ok(draft.title.endsWith(`[${id}]`));
   for (const heading of ['关联任务', '变更内容', '验收条件', '验证结果', '影响与风险']) {
     assert.equal(draft.body.split(`## ${heading}`).length - 1, 1, heading);
@@ -524,7 +621,7 @@ test('CASE-218 another dirty task does not block this task pr', async t => {
   acceptTaskForPr(root, id);
   put(root, '.tiller/task/20261026-pr-records-other/task.md', '# 其他任务\n\n未提交记录。\n');
 
-  const draft = success(cli(root, 'pr', id));
+  const draft = success(cli(root, 'pr', id, '--draft-only'));
   assert.ok(draft.body.includes(`.tiller/task/${id}/task.md`));
   assert.doesNotMatch(draft.body, /20261026-pr-records-other/u);
 });
@@ -540,7 +637,7 @@ test('CASE-219 pr skips the record gate with a warning when Git is unavailable',
   acceptTaskForPr(root, id);
   rmSync(join(root, '.git'), { recursive: true, force: true });
 
-  const draft = success(cli(root, 'pr', id));
+  const draft = success(cli(root, 'pr', id, '--draft-only'));
   assert.ok(draft.warnings.some(item => /无法读取.*未提交改动.*跳过/u.test(item)), draft.warnings.join('\n'));
   assert.match(draft.body, /^## 关联任务$/mu);
 });
@@ -600,7 +697,7 @@ test('CASE-223 pr blocks a task without a valid delivery acceptance', async t =>
   success(cli(root, 'verify', id, '--criterion', 'AC-1', '--test', `${testPath}::${testName}`));
   commitAll(root, 'test(workflow): 准备未验收 PR 夹具');
 
-  const blocked = failure(cli(root, 'pr', id));
+  const blocked = failure(cli(root, 'pr', id, '--draft-only'));
   assert.equal(blocked.error.code, 'PR_NOT_ACCEPTED');
   assert.match(blocked.error.message, new RegExp(`accept ${id}`, 'u'));
   assert.match(blocked.error.message, /提交任务记录/u);

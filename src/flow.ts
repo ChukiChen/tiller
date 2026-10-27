@@ -20,6 +20,7 @@ import { assertInitBaselineReady, isInitBaselineId } from './init-baseline.js';
 import { planItemForAttachment, readPlanItem } from './plans.js';
 import { releaseChecklist, type ReleaseChecklist } from './release.js';
 import { taskIdWarnings, validateTaskId } from './task-id.js';
+import { resolveProjectRoot } from './project-root.js';
 import { cleanupTaskWorktrees, createTaskWorktrees, rollbackTaskWorktrees, taskBranchName, taskLocalRoot, writeTaskWorktreeState } from './task-worktrees.js';
 import { namePattern, resolveVerifyTarget, runnerFor, type TestEvidence, type TestReference } from './test-output.js';
 import type { ProjectMetadata } from './types.js';
@@ -2103,7 +2104,7 @@ export async function releaseFlow(rootInput: string, id: string) {
 
 export async function closeFlow(rootInput: string, id: string, reasonInput: string, abandon = false,
   options: { keepBranch?: boolean } = {}) {
-  const root = path.resolve(rootInput);
+  const root = await resolveProjectRoot(rootInput);
   const reason = safeInput(text(reasonInput, '关闭原因', 4000), '关闭原因');
   return withProjectLock(root, async () => {
     const metadata = await readProjectMetadata(root);
