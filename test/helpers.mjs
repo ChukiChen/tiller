@@ -237,9 +237,13 @@ export function cli(root, ...args) {
 export function settleInitBaseline(root, result) {
   const baseline = result.initBaseline;
   if (!baseline) return result;
+  // Materialize init tree onto primary as unstaged/untracked files so legacy fixtures
+  // can assert "managed but not yet in Git". Gate tests that need a clean pending
+  // primary must not call this helper (see init-baseline.test.mjs).
+  const commit = baseline.head || baseline.commit;
   const checkout = spawnSync('git', [
     '-c', 'user.name=Tiller Test', '-c', 'user.email=tiller@example.invalid',
-    'checkout', baseline.commit, '--', '.',
+    'checkout', commit, '--', '.',
   ], { cwd: root, encoding: 'utf8', timeout: 20_000 });
   assert.ifError(checkout.error && checkout.error.code !== 'EPERM' ? checkout.error : null);
   assert.equal(checkout.status, 0, checkout.stderr);

@@ -1,5 +1,5 @@
 import { execFile } from 'node:child_process';
-import { mkdir, readFile, realpath, rm, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, readdir, realpath, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { promisify } from 'node:util';
 import { assertSafePath } from './files.js';
@@ -17,6 +17,16 @@ const INIT_COMMIT_MESSAGE = 'chore(tiller): 完成工程初始化';
 const INIT_PR_TITLE = INIT_COMMIT_MESSAGE;
 const INIT_PR_BODY = '初始化 tiller 工程结构。';
 const INIT_ID = /^[0-9]{8}-tiller-init$/u;
+const LOCAL_MERGED_RELATIVE = '.tiller/local/init-baseline-merged.json';
+const LOCAL_BASELINE_FILE = 'baseline.json';
+
+interface LocalMergedMarker {
+  id: string;
+  status: 'merged';
+  at: string;
+  commit?: string;
+  branch?: string;
+}
 
 interface CommandResult { ok: boolean; stdout: string; stderr: string; unavailable: boolean }
 
@@ -168,26 +178,62 @@ async function cleanupCreated(root: string, worktreeRelative: string): Promise<v
   catch { /* Local cleanup is best-effort after a failed initialization. */ }
 }
 
-async function copyChanges(root: string, worktree: string, changes: FileChange[]): Promise<void> {
+async function writeChanges(worktree: string, changes: FileChange[]): Promise<void> {
   for (const change of changes) {
     if (change.after === null) continue;
-    const source = await assertSafePath(root, change.path);
     const target = await assertSafePath(worktree, change.path);
     await mkdir(path.dirname(target), { recursive: true });
-    await writeFile(target, await readFile(source));
+    await writeFile(target, change.after, 'utf8');
   }
+}
+
+async function writeLocalBaseline(root: string, baseline: InitBaseline): Promise<void> {
+  const dir = await assertSafePath(root, `.tiller/local/${baseline.id}`);
+  await mkdir(dir, { recursive: true });
+  await writeFile(path.join(dir, LOCAL_BASELINE_FILE), `${JSON.stringify(baseline, null, 2)}\n`, 'utf8');
+}
+
+async function readLocalMergedMarker(root: string): Promise<LocalMergedMarker | null> {
+  try {
+    const text = await readFile(await assertSafePath(root, LOCAL_MERGED_RELATIVE), 'utf8');
+    const value = JSON.parse(text) as LocalMergedMarker;
+    if (!value || typeof value !== 'object' || value.status !== 'merged' || typeof value.id !== 'string') return null;
+    return value;
+  } catch {
+    return null;
+  }
+}
+
+export async function readLocalInitBaseline(rootInput: string): Promise<InitBaseline | null> {
+  const root = path.resolve(rootInput);
+  const localRoot = path.join(root, '.tiller/local');
+  let entries: string[] = [];
+  try { entries = await readdir(localRoot); }
+  catch { return null; }
+  for (const name of entries) {
+    if (!INIT_ID.test(name)) continue;
+    try {
+      const text = await readFile(path.join(localRoot, name, LOCAL_BASELINE_FILE), 'utf8');
+      const value = JSON.parse(text) as InitBaseline;
+      if (value && typeof value.id === 'string' && value.id === name) return value;
+    } catch { /* keep scanning */ }
+  }
+  return null;
 }
 
 async function cleanupPrimaryInitChanges(root: string, changes: FileChange[]): Promise<string[]> {
   const warnings: string[] = [];
   for (const change of changes) {
-    if (change.path === META || change.before !== null || change.after === null || change.before === change.after) continue;
+    // Clean newly introduced managed files on primary, including META — init must not leave untracked seeds.
+    if (change.before !== null || change.after === null || change.before === change.after) continue;
     let target: string;
     let current: string;
     try {
       target = await assertSafePath(root, change.path);
       current = await readFile(target, 'utf8');
     } catch (error) {
+      // Missing on primary is the desired post-init state when artifacts lived only in the worktree.
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') continue;
       warnings.push(`初始化残留清理跳过 ${change.path}：${(error as Error).message}`);
       continue;
     }
@@ -229,13 +275,24 @@ export function initBaselinePending(baseline: InitBaseline | undefined): boolean
 
 export async function markInitBaselineMerged(rootInput: string, id: string): Promise<InitBaseline> {
   const root = path.resolve(rootInput);
-  const target = await assertSafePath(root, META);
-  const metadata = parseMetadata(await readFile(target, 'utf8'));
-  const baseline = metadata.initBaseline;
+  let baseline: InitBaseline | undefined;
+  try {
+    const metadata = parseMetadata(await readFile(await assertSafePath(root, META), 'utf8'));
+    baseline = metadata.initBaseline;
+  } catch {
+    baseline = await readLocalInitBaseline(root) ?? undefined;
+  }
   if (!baseline || baseline.id !== id) fail('INIT_BASELINE_NOT_FOUND', `工程元信息中没有初始化基线 ${id}。`);
-  if (baseline.status === 'merged') return baseline;
   const merged: InitBaseline = { ...baseline, status: 'merged' };
-  await writeFile(target, `${JSON.stringify({ ...metadata, initBaseline: merged }, null, 2)}\n`, 'utf8');
+  const marker: LocalMergedMarker = {
+    id: merged.id, status: 'merged', at: new Date().toISOString(),
+    ...(merged.commit ? { commit: merged.commit } : {}),
+    ...(merged.branch ? { branch: merged.branch } : {}),
+  };
+  const target = await assertSafePath(root, LOCAL_MERGED_RELATIVE);
+  await mkdir(path.dirname(target), { recursive: true });
+  await writeFile(target, `${JSON.stringify(marker, null, 2)}\n`, 'utf8');
+  await writeLocalBaseline(root, merged);
   return merged;
 }
 
@@ -243,10 +300,11 @@ export async function proveInitBaselineMerged(rootInput: string, metadata: Proje
   fetchImpl: FetchLike = globalThis.fetch): Promise<InitBaselineProof> {
   const baseline = metadata.initBaseline;
   if (!baseline) return { merged: true, detail: '无初始化基线记录。', marked: false };
-  if (baseline.status === 'merged') {
+  const root = path.resolve(rootInput);
+  const local = await readLocalMergedMarker(root);
+  if (baseline.status === 'merged' || local?.id === baseline.id) {
     return { merged: true, detail: `初始化基线 ${baseline.id} 已合入。`, marked: false };
   }
-  const root = path.resolve(rootInput);
   const head = await gitHead(root);
   if (head && /^[a-f0-9]{7,64}$/u.test(baseline.commit)) {
     const ancestor = await git(root, ['merge-base', '--is-ancestor', baseline.commit, head]);
@@ -310,24 +368,27 @@ export async function createInitBaseline(rootInput: string, metadata: ProjectMet
   const branch = await git(root, ['rev-parse', '--verify', `refs/heads/${INIT_BRANCH}`]);
   if (branch.ok) fail('INIT_BASELINE_BRANCH_EXISTS', `初始化分支 ${INIT_BRANCH} 已存在但 project.json 没有 initBaseline；请人工核对或清理后重试。`);
   await mkdir(path.dirname(target), { recursive: true });
-  let rootMetadata: string | null = null;
-  let originalMetadataText: string | null = null;
 
   try {
     const added = await git(root, ['worktree', 'add', '-b', INIT_BRANCH, target, head]);
     if (!added.ok) fail('INIT_BASELINE_WORKTREE_FAILED', `初始化 worktree 创建失败：${commandError(added, 'git worktree add 失败')}`);
-    await copyChanges(root, target, changes);
+    // Write all init artifacts only into the init worktree — never seed primary.
+    const skeleton = changes.filter(change => change.path !== META);
+    await writeChanges(target, skeleton);
+    const seedMetadata: ProjectMetadata = { ...metadata };
+    delete (seedMetadata as { initBaseline?: InitBaseline }).initBaseline;
+    await writeChanges(target, [{ path: META, before: null, after: `${JSON.stringify(seedMetadata, null, 2)}\n` }]);
     const commit = await createCommit(target, INIT_COMMIT_MESSAGE);
     const baseline: InitBaseline = { id, branch: INIT_BRANCH, commit, status: 'pending' };
     const nextMetadata: ProjectMetadata = { ...metadata, initBaseline: baseline };
-    const metadataText = `${JSON.stringify(nextMetadata, null, 2)}\n`;
-    rootMetadata = await assertSafePath(root, META);
-    const worktreeMetadata = await assertSafePath(target, META);
-    originalMetadataText = await readFile(rootMetadata, 'utf8');
-    await writeFile(rootMetadata, metadataText, 'utf8');
-    await writeFile(worktreeMetadata, metadataText, 'utf8');
+    await writeChanges(target, [{ path: META, before: null, after: `${JSON.stringify(nextMetadata, null, 2)}\n` }]);
     const worktreeHead = await createCommit(target, INIT_COMMIT_MESSAGE);
-    const warnings = await cleanupPrimaryInitChanges(root, changes);
+    await writeLocalBaseline(root, baseline);
+    // Safety net: remove any accidental primary untracked managed copies (including META).
+    const warnings = await cleanupPrimaryInitChanges(root, [
+      ...changes,
+      { path: META, before: null, after: `${JSON.stringify(nextMetadata, null, 2)}\n` },
+    ]);
     const remote = await attemptRemote(id, target, platform, warnings);
     const next = remote.prUrl
       ? [`人工合入 ${INIT_BRANCH} 后运行：tiller close ${id} --reason "初始化基线已合入"`]
@@ -341,10 +402,6 @@ export async function createInitBaseline(rootInput: string, metadata: ProjectMet
       warnings: [],
     };
   } catch (error) {
-    if (rootMetadata && originalMetadataText !== null) {
-      try { await writeFile(rootMetadata, originalMetadataText, 'utf8'); }
-      catch { /* Preserve the original failure; the caller can run recover. */ }
-    }
     await cleanupCreated(root, worktree);
     throw error;
   }

@@ -387,7 +387,7 @@ export async function mergeFlow(rootInput: string, id: string, options: { keepBr
     fail('MERGE_CLOSE_FAILED', `远端已合入，但本机清理失败：${(error as Error).message}${metadataNote}；请手动运行 tiller close ${id} --reason "已合入"。`);
   }
   if (metadataError) {
-    fail('MERGE_METADATA_FAILED', `远端已合入且本机已清理，但初始化状态写入失败：${metadataError.message}；请手动将 project.json 的 initBaseline.status 改为 merged。`);
+    fail('MERGE_METADATA_FAILED', `远端已合入且本机已清理，但初始化 merged 本地标记写入失败：${metadataError.message}；请检查 .tiller/local/init-baseline-merged.json。`);
   }
   return {
     id, platform, branch: target.branch, merged: true,

@@ -19,11 +19,11 @@
     ".tiller/rules/activities/requirements.md": "d422ee8e9595ada1da5dab372a772d4788e07cdd3c1e430cd5efea148d8191f5",
     ".tiller/rules/activities/design.md": "093e38a3e2f8b1b5bbcc833955e7900205829585d88422c3d5680c391bfe4483",
     ".tiller/rules/activities/implementation.md": "10e4e1e6692243fe2facd80829ee1fd5a13a1128ff70276b26789227f8593e45",
-    ".tiller/rules/activities/delivery.md": "bcc1380109ff545770c7c5b10b3414767d42f26e07103bee75b9e883b2a1d888",
+    ".tiller/rules/activities/delivery.md": "9b6d8d729c40ffcadbe5244c0f1202b2249580d668e6397f46e72cc40434494b",
     ".tiller/rules/quality/documents.md": "b3368483a9ca6c2a45ff142b6fa37455ade64dca17f004a195f6c01748ffc74b",
     ".tiller/rules/quality/code.md": "d316f24ed06a13194ab03aa1b2a3beedda23d92a1a04c3b6587954e0c3e09b82",
     ".tiller/rules/quality/verification.md": "dc8ceb8c067025d027976de4ad31f8d9ff9c1871b8f09b5238f562107e2bf86c",
-    ".tiller/usage.md": "f1696a87b5f36774adce15c522ab5307a312468e2d69fb19decf464a103d4ff9",
+    ".tiller/usage.md": "65f418a9c0dc53167746799e4b0eb67441d82fe6aefe723fc415a3bc7896b39e",
     ".tiller/run.cjs": "b760046bf12723a7f040877ad19bd26de5d94e02a918df832196e64361cac24a",
     ".github/pull_request_template.md": "76169f57652bd136127ac9cec64c29293bd5b6d92039948a01963c4e043aafd4"
   },

@@ -213,3 +213,10 @@
 ## 2026-10-27 GitHub 推送优先 tokenized git
 
 - 产品边界是 Git 做 commit、push 与删分支，平台 API 只做开 PR/MR、merge 和读远端状态。GitHub `pushBranch` 因此先走 tokenized HTTPS `git push`；Git Data API 不再是默认主路径，只在 git 推送失败时作为可选回退，避免整树 blob 串行上传拖慢 `tiller pr`。
+
+## init 只写 worktree 与基线 merged 本地标记（2026-10-27）
+
+- 决定：`tiller init` 在可创建初始化基线时，受管文档只提交到 init worktree；primary 不预建未跟踪 `.tiller/` 种子。合入证明后的 `merged` 写入 `.tiller/local/init-baseline-merged.json`，不把跟踪的 `project.json` 改成仅工作区脏。
+- 代价：合入前 primary 可能尚无完整骨架，须先合入 init PR；测试夹具用 settle 物化文件。
+- standard 过早 `verify` 以 `VERIFY_BEFORE_DESIGN` 拒绝；历史错序段用 `verify --clear-premature` 清除。
+

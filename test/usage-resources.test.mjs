@@ -4,14 +4,26 @@ import { join } from 'node:path';
 import test from 'node:test';
 import { equivalentManagedContent, initialize, inspectProject, matchesManagedDigest, parseMetadata, PR_TEMPLATE, RESOURCE_VERSION, sha256, SHARED_RESOURCES } from '../dist/core.js';
 import { applyUpgrade, planUpgrade } from '../dist/upgrade.js';
+import { spawnSync } from 'node:child_process';
 import { fixture, gitRepository, put, settleInitBaseline, snapshot } from './helpers.mjs';
 
 const read = (root, name) => readFileSync(join(root, name), 'utf8');
 const added = ['.tiller/usage.md', '.tiller/run.cjs'];
 
+function mergeInitBaseline(root, result) {
+  const baseline = result.initBaseline;
+  if (!baseline?.branch) return settleInitBaseline(root, result);
+  const merge = spawnSync('git', [
+    '-c', 'user.name=Tiller Test', '-c', 'user.email=tiller@example.invalid',
+    'merge', '--quiet', '--no-edit', baseline.branch,
+  ], { cwd: root, encoding: 'utf8', timeout: 20_000 });
+  if (merge.status === 0) return result;
+  return settleInitBaseline(root, result);
+}
+
 async function initialized(options) {
   const result = await initialize(options);
-  return settleInitBaseline(options.root, result);
+  return mergeInitBaseline(options.root, result);
 }
 
 test('CASE-050 initialization supplies current usage and launcher with discoverable links and no machine paths', async t => {

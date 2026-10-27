@@ -116,6 +116,7 @@ export interface FlowStartInput {
 export interface FlowVerifyInput {
   criteria?: string[]; test?: string; case?: string; command?: string; result?: string;
   reported?: boolean; reason?: string; expectFail?: boolean; verbose?: boolean;
+  clearPremature?: boolean;
 }
 export interface FlowConfirmInput { quote?: string; commit?: string; by?: string; allowReported?: boolean }
 export interface FlowCheckOptions { allowReported?: boolean; ignoreAcceptance?: boolean }
@@ -2080,6 +2081,37 @@ export async function verifyFlow(rootInput: string, id: string, input: FlowVerif
   return withProjectLock(root, async () => {
     const task = await readTask(root, id);
     assertTaskOpen(task);
+    if (input.clearPremature) {
+      if (input.test || input.case || input.reported || input.expectFail || (input.criteria?.length ?? 0)) {
+        fail('INVALID_FLOW_INPUT', '--clear-premature 不能与 --test/--case/--criterion/--reported/--expect-fail 同用。');
+      }
+      const design = requiresDesign(task)
+        ? [...task.confirmations].reverse().find(item => item.gate === 'design' && item.subject === designSubject(task))
+        : undefined;
+      const kept = design
+        ? task.verifications.filter(run => Date.parse(run.at) >= Date.parse(design.at))
+        : [];
+      const removed = task.verifications.length - kept.length;
+      if (!removed) {
+        return { ok: true, id, cleared: 0, path: task.path, next: '没有可清除的过早 verify 段。' };
+      }
+      const next: FlowTask = { ...task, verifications: kept };
+      await writeTask(root, id, task.content, renderTask(next));
+      const committed = await commitTaskRecords(root, id, 'chore: 清除过早验证');
+      return {
+        ok: true, id, cleared: removed, path: task.path,
+        ...(committed.commit ? { recordsCommit: committed.commit } : {}),
+        ...(committed.warning ? { warnings: [committed.warning] } : {}),
+        next: `已清除 ${removed} 条设计确认前的 verify 段；可继续 confirm design 或按序重新 verify。`,
+      };
+    }
+    if (requiresDesign(task)) {
+      const design = [...task.confirmations].reverse().find(item => item.gate === 'design' && item.subject === designSubject(task));
+      if (!design) {
+        fail('VERIFY_BEFORE_DESIGN',
+          `standard 任务须先确认设计再 verify；请运行 tiller confirm ${id} design。若历史已有错序 verify 段，可用 tiller verify ${id} --clear-premature 清除。`);
+      }
+    }
     const library = await readCaseLibrary(root);
     const requested = [...new Set((input.criteria ?? []).map(value => value.trim()).filter(Boolean))];
     if (Boolean(input.test) === Boolean(input.case)) fail('INVALID_FLOW_INPUT', 'verify 需要 --test "<文件::测试名>" 或 --case CASE-xxx，两者只能选一个。');

@@ -14,7 +14,7 @@ import {
   GITHUB_TEMPLATE, GITLAB_TEMPLATE, META, REQUIRED_MANAGED, RESOURCE_VERSION, SCHEMA_VERSION, SHARED_RESOURCES,
   managedFilesForPlatform, normalizePlatform, parseMetadata, templatePathsForPlatform,
 } from './project-metadata.js';
-import { createInitBaseline, type InitBaselineResult } from './init-baseline.js';
+import { createInitBaseline, readLocalInitBaseline, type InitBaselineResult } from './init-baseline.js';
 import { assertSharedWritePaths } from './shared-paths.js';
 
 export {
@@ -480,11 +480,27 @@ export async function inspectProject(root: string): Promise<ProjectInspection> {
   return inspectProjectState(root);
 }
 
-/** Read only the current metadata contract. Whole-project health is an explicit inspection. */
+/** Read only the current metadata contract. Whole-project health is an explicit inspection.
+ * After worktree-only init, primary may lack META until the init PR merges; resolve from the
+ * init worktree / `.tiller/local/<id>/baseline.json` so start/doctor gates stay observable.
+ */
 export async function readProjectMetadata(root: string, inputs?: TextReadInput): Promise<ProjectMetadata> {
-  const metadata = await readRepositoryMetadata(root, inputs);
-  if (metadata === null) throw new Error('工程尚未初始化。');
-  return metadata;
+  const absolute = path.resolve(root);
+  const metadata = await readRepositoryMetadata(absolute, inputs);
+  if (metadata !== null) {
+    if (metadata.initBaseline) return metadata;
+    const local = await readLocalInitBaseline(absolute);
+    return local ? { ...metadata, initBaseline: local } : metadata;
+  }
+  const local = await readLocalInitBaseline(absolute);
+  if (!local) throw new Error('工程尚未初始化。');
+  const worktreeRoot = path.join(absolute, '.tiller', 'local', local.id, 'worktrees');
+  const worktreeText = await readTextIfExists(worktreeRoot, META, inputs);
+  if (worktreeText === null) {
+    throw new Error('工程尚未初始化。');
+  }
+  const fromWorktree = parseMetadata(worktreeText);
+  return { ...fromWorktree, initBaseline: fromWorktree.initBaseline ?? local };
 }
 
 /** Optional metadata for repository positioning; no retained results or hidden inspection. */
@@ -546,19 +562,21 @@ export async function initialize(options: InitializeOptions): Promise<Initialize
       }
       if (!effective.length) return { ...inspection, changed: false, warnings,
         firstCommit: firstCommitSuggestion(inspection.metadata!) };
-      await applyChanges(root, effective);
-      let completed = await inspectProject(root);
-      if (!completed.ready) throw new Error(`补齐项目骨架后检查未通过：${completed.issues.join('\n')}`);
-      const initialized = await createInitBaseline(root, completed.metadata!, effective, platform);
+      // Prefer writing patch-up artifacts only into the init worktree when a baseline can be created.
+      const initialized = await createInitBaseline(root, inspection.metadata!, effective, platform);
       warnings.push(...initialized.warnings, ...(initialized.baseline?.warnings ?? []));
-      if (!initialized.baseline) {
-        completed = await inspectProject(root);
-        if (!completed.ready) throw new Error(`初始化集成后检查未通过：${completed.issues.join('\n')}`);
-      } else {
-        completed = { ...completed, metadata: initialized.metadata };
+      if (initialized.baseline) {
+        return {
+          root, initialized: true, ready: true, metadata: initialized.metadata, issues: [],
+          hostVerification: 'not-verified' as const, compatibility: 'read-write' as const,
+          changed: true, warnings, firstCommit: firstCommitSuggestion(initialized.metadata),
+          initBaseline: initialized.baseline,
+        };
       }
-      return { ...completed, changed: true, warnings, firstCommit: firstCommitSuggestion(completed.metadata!),
-        ...(initialized.baseline ? { initBaseline: initialized.baseline } : {}) };
+      await applyChanges(root, effective);
+      const completed = await inspectProject(root);
+      if (!completed.ready) throw new Error(`补齐项目骨架后检查未通过：${completed.issues.join('\n')}`);
+      return { ...completed, changed: true, warnings, firstCommit: firstCommitSuggestion(completed.metadata!) };
     }
     if (await hasPendingTransaction(root)) throw new Error('存在未完成事务，请先执行 tiller recover。');
     const changes: FileChange[] = await skeletonChanges(root);
@@ -598,20 +616,22 @@ export async function initialize(options: InitializeOptions): Promise<Initialize
       managedFiles: orderedManagedFiles(managedFiles, platform), createdAt: new Date().toISOString(),
     };
     changes.push({ path: META, before: null, after: `${JSON.stringify(metadata, null, 2)}\n` });
-    await applyChanges(root, changes);
-    let inspection = await inspectProject(root);
-    if (!inspection.ready) throw new Error(`文件接入后检查未通过：${inspection.issues.join('\n')}`);
     const warnings = detected ? [`检测到 ${detected.file}，已写入 verify.runner=${detected.runner}。`] : [];
-    const initialized = await createInitBaseline(root, inspection.metadata!, changes, platform);
+    // With Git HEAD, seed only the init worktree; primary stays clean until the init PR merges.
+    const initialized = await createInitBaseline(root, metadata, changes, platform);
     warnings.push(...initialized.warnings, ...(initialized.baseline?.warnings ?? []));
-    if (!initialized.baseline) {
-      inspection = await inspectProject(root);
-      if (!inspection.ready) throw new Error(`初始化集成后检查未通过：${inspection.issues.join('\n')}`);
-    } else {
-      inspection = { ...inspection, metadata: initialized.metadata };
+    if (initialized.baseline) {
+      return {
+        root, initialized: true, ready: true, metadata: initialized.metadata, issues: [],
+        hostVerification: 'not-verified' as const, compatibility: 'read-write' as const,
+        changed: true, warnings, firstCommit: firstCommitSuggestion(initialized.metadata),
+        initBaseline: initialized.baseline,
+      };
     }
-    return { ...inspection, changed: true, warnings, firstCommit: firstCommitSuggestion(inspection.metadata!),
-      ...(initialized.baseline ? { initBaseline: initialized.baseline } : {}) };
+    await applyChanges(root, changes);
+    const inspection = await inspectProject(root);
+    if (!inspection.ready) throw new Error(`文件接入后检查未通过：${inspection.issues.join('\n')}`);
+    return { ...inspection, changed: true, warnings, firstCommit: firstCommitSuggestion(inspection.metadata!) };
   });
 }
 

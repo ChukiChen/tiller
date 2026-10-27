@@ -74,7 +74,7 @@ test('CASE-174 start warns on a missing task date prefix without rewriting it', 
   }
 });
 
-test('CASE-175 standard check flags verification recorded before design confirmation', async t => {
+test('CASE-175 CASE-307 standard verify before design is rejected; clear-premature restores hygiene', async t => {
   const root = fixture(t);
   success(cli(root, 'init'));
   baseline(root);
@@ -82,18 +82,44 @@ test('CASE-175 standard check flags verification recorded before design confirma
   success(cli(root, 'start', id, '--title', 'Process order', '--requirement', 'Keep verification ordered after design.',
     '--criterion', 'AC-1=Ordering is visible', '--type', 'feature', '--size', 'standard', '--target', 'src', '--target', 'test'));
   success(confirmTask(root, id, 'requirements'));
-  const early = success(cli(root, 'verify', id, '--criterion', 'AC-1', '--test', 'test/baseline.test.mjs::CASE-001 baseline'));
-  assert.equal(early.entries[0].evidence, 'verified');
+  const early = failure(cli(root, 'verify', id, '--criterion', 'AC-1', '--test', 'test/baseline.test.mjs::CASE-001 baseline'));
+  assert.equal(early.error.code, 'VERIFY_BEFORE_DESIGN');
+  assert.match(early.error.message, /confirm .* design|clear-premature/u);
+  const taskBefore = read(taskRecordRoot(root, id), `.tiller/task/${id}/task.md`);
+  assert.doesNotMatch(taskBefore, /### run-/u);
 
+  // Plant a historical premature verify segment, then confirm design — hygiene still blocks.
+  const plantedAt = '2020-01-01T00:00:00.000Z';
+  const planted = taskBefore.replace(
+    '## 验证\n\n尚无验证。',
+    [
+      '## 验证',
+      '',
+      '### run-1',
+      '<!-- tiller-verify:v1 {"command":"node --test","exitCode":0,"tree":"' + 'a'.repeat(64) + '","commit":"' + 'b'.repeat(40) + '"} -->',
+      '- 条件：AC-1',
+      '- 测试：test/baseline.test.mjs::CASE-001 baseline',
+      '- 用例：无',
+      '- 结果：passed',
+      '- 来源：executed',
+      '- 核实：已核实',
+      `- 时间：${plantedAt}`,
+      '',
+    ].join('\n'),
+  );
+  put(taskRecordRoot(root, id), `.tiller/task/${id}/task.md`, planted);
   completeDesign(root, id);
   success(confirmTask(root, id, 'design'));
-
   const checked = cli(root, 'check', id);
   assert.equal(checked.status, 1, JSON.stringify(checked.data));
   assert.ok(checked.data.issues.some(issue => issue.includes('过程卫生') && issue.includes('设计确认前')), checked.data.issues.join('\n'));
-  const accepted = failure(cli(root, 'accept', id, '--by', 'Tiller Test'));
-  assert.equal(accepted.error.code, 'NOT_READY');
-  assert.match(accepted.error.message, /过程卫生/u);
+
+  const cleared = success(cli(root, 'verify', id, '--clear-premature'));
+  assert.equal(cleared.cleared, 1);
+  const taskAfter = read(taskRecordRoot(root, id), `.tiller/task/${id}/task.md`);
+  assert.doesNotMatch(taskAfter, /### run-1/u);
+  const checkedClean = cli(root, 'check', id);
+  assert.ok(!checkedClean.data.issues.some(issue => issue.includes('设计确认前')), checkedClean.data.issues.join('\n'));
 });
 
 test('CASE-175 confirmations expose uncommitted business changes but ignore tiller metadata', async t => {
@@ -197,8 +223,9 @@ test('CASE-178 hardening regression names and version stay linked at 0.5.0', () 
   assert.equal(JSON.parse(read(repository, 'package.json')).version, '0.5.0');
   assert.equal(JSON.parse(read(repository, '.tiller/project.json')).resourceVersion, '0.5.0');
   for (const relative of ['resources/usage.md', '.tiller/usage.md']) {
-    assert.match(read(repository, relative), /`verify` 本身不要求设计确认/u, relative);
-    assert.match(read(repository, relative), /骨架.*runner.*生成/u, relative);
+    assert.match(read(repository, relative), /VERIFY_BEFORE_DESIGN|须先设计确认再 `verify`/u, relative);
+    assert.match(read(repository, relative), /clear-premature/u, relative);
+    assert.match(read(repository, relative), /骨架.*runner.*生成|init` → 初始化/u, relative);
   }
 });
 
