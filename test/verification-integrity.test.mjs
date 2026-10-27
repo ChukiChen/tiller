@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { existsSync, readFileSync } from 'node:fs';
+import {  existsSync, readFileSync , readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import test from 'node:test';
@@ -7,9 +7,8 @@ import { parseMetadata } from '../dist/core.js';
 import { readTask, verifyFlow } from '../dist/flow.js';
 import { namePattern, runnerFor, TEST_RUNNERS } from '../dist/test-output.js';
 import { applyUpgrade, planUpgrade } from '../dist/upgrade.js';
-import { cli, confirmTask, failure, fixture, initializeSettled, put, success } from './helpers.mjs';
+import {    cli, confirmTask, failure, fixture, initializeSettled, put, success, taskRecordRoot, read, commitFixtures } from './helpers.mjs';
 
-const read = (root, relative) => readFileSync(join(root, relative), 'utf8');
 const taskFile = (id) => `.tiller/task/${id}/task.md`;
 const initialize = initializeSettled;
 
@@ -57,13 +56,20 @@ function addCase(root, id, _testRef, name = 'value behavior') {
 }
 
 function commitAll(root, message) {
-  git(root, 'add', '.');
-  git(root, 'commit', '--quiet', '-m', message);
+  commitFixtures(root, message);
 }
 
 function setVerifyConfig(root, verify) {
   const metadata = JSON.parse(read(root, '.tiller/project.json'));
-  put(root, '.tiller/project.json', `${JSON.stringify({ ...metadata, verify }, null, 2)}\n`);
+  const next = `${JSON.stringify({ ...metadata, verify }, null, 2)}\n`;
+  put(root, '.tiller/project.json', next);
+  const local = join(root, '.tiller/local');
+  if (existsSync(local)) {
+    for (const id of readdirSync(local)) {
+      const wt = join(local, id, 'worktrees');
+      if (existsSync(join(wt, '.tiller/project.json'))) put(wt, '.tiller/project.json', next);
+    }
+  }
 }
 
 function reportLine(values) {
@@ -96,11 +102,11 @@ test('CASE-086 verify executes the recorded command, rejects legacy inputs and r
   assert.match(verified.entries[0].command, /--test-name-pattern=\^CASE-001 value behavior\$/u);
   assert.match(verified.entries[0].command, /--test-reporter=\.\/\.tiller\/local\/verify-/u);
   assert.match(verified.entries[0].command, /test\/value\.test\.mjs$/u);
-  const content = read(root, taskFile(id));
+  const content = read(taskRecordRoot(root, id), taskFile(id));
   assert.equal(verificationSidecars(content)[0].command, verified.entries[0].command);
   assert.doesNotMatch(content, /^- 命令：/mu);
   assert.equal(verified.log, `.tiller/local/${id}/logs/run-1.log`);
-  assert.ok(existsSync(join(root, verified.log)));
+  assert.ok(existsSync(join(taskRecordRoot(root, id), verified.log)));
 
   const fileId = '20261022-file-level-report';
   prepareTask(root, fileId);
@@ -108,7 +114,7 @@ test('CASE-086 verify executes the recorded command, rejects legacy inputs and r
   assert.equal(fileLevel.entries[0].evidence, 'verified');
   assert.doesNotMatch(fileLevel.entries[0].command, /--test-name-pattern/u);
 
-  put(root, taskFile(id), read(root, taskFile(id)).replace('\n- 核实：已核实', ''));
+  put(taskRecordRoot(root, id), taskFile(id), read(taskRecordRoot(root, id), taskFile(id)).replace('\n- 核实：已核实', ''));
   const legacyRecord = success(cli(root, 'check', id));
   assert.equal(legacyRecord.ready, true, legacyRecord.issues.join('\n'));
   assert.ok(!legacyRecord.issues.some(issue => issue.includes('未核实')), legacyRecord.issues.join('\n'));
@@ -124,7 +130,7 @@ test('CASE-201 verification records keep a concise human summary and a complete 
 
   const verified = success(cli(root, 'verify', id, '--criterion', 'AC-1',
     '--test', 'test/value.test.mjs::CASE-001 value behavior'));
-  const content = read(root, taskFile(id));
+  const content = read(taskRecordRoot(root, id), taskFile(id));
   const sidecars = verificationSidecars(content);
   assert.deepEqual(sidecars, [{
     command: verified.entries[0].command,
@@ -150,7 +156,7 @@ test('CASE-201 verification records keep a concise human summary and a complete 
   assert.doesNotMatch(human, /--test-reporter=|verify-[^/]+\/reporter\.mjs/u);
   assert.ok(!human.includes(verified.commit));
   assert.equal(verified.log, `.tiller/local/${id}/logs/run-1.log`);
-  assert.ok(existsSync(join(root, verified.log)));
+  assert.ok(existsSync(join(taskRecordRoot(root, id), verified.log)));
   assert.equal(success(cli(root, 'check', id)).ready, true);
 });
 
@@ -165,7 +171,7 @@ test('CASE-202 legacy verification bullets remain parseable and are rewritten in
   const verified = success(cli(root, 'verify', id, '--criterion', 'AC-1',
     '--test', 'test/value.test.mjs::CASE-001 value behavior'));
   const run = verified.entries[0];
-  const content = read(root, taskFile(id));
+  const content = read(taskRecordRoot(root, id), taskFile(id));
   const legacy = [
     '### run-1',
     `- 条件：${run.criterion}`,
@@ -179,7 +185,7 @@ test('CASE-202 legacy verification bullets remain parseable and are rewritten in
     '- 来源：executed',
     `- 时间：${run.at}`,
   ].join('\n');
-  put(root, taskFile(id), content.replace(/### run-1[\s\S]*?(?=\n## 自检)/u, () => `${legacy}\n`));
+  put(taskRecordRoot(root, id), taskFile(id), content.replace(/### run-1[\s\S]*?(?=\n## 自检)/u, () => `${legacy}\n`));
 
   const parsed = await readTask(root, id);
   assert.equal(parsed.verifications.length, 1);
@@ -193,7 +199,7 @@ test('CASE-202 legacy verification bullets remain parseable and are rewritten in
   assert.equal(success(cli(root, 'check', id)).ready, true);
 
   success(cli(root, 'review', id, '--by', 'Tiller Test'));
-  const rendered = read(root, taskFile(id));
+  const rendered = read(taskRecordRoot(root, id), taskFile(id));
   assert.deepEqual(verificationSidecars(rendered)[0], {
     command: run.command, exitCode: 0, tree: run.tree, commit: run.commit, legacyEvidence: true,
   });
@@ -212,16 +218,16 @@ test('CASE-203 verification sidecars do not relax corrupt or unverified evidence
   commitAll(root, 'feat(workflow): 准备证据检查');
   success(cli(root, 'verify', id, '--criterion', 'AC-1', '--test', 'test/value.test.mjs::CASE-001 value behavior'));
 
-  const original = read(root, taskFile(id));
-  put(root, taskFile(id), original.replace(/^<!-- tiller-verify:v1 .* -->$/mu, '<!-- tiller-verify:v1 {broken -->'));
+  const original = read(taskRecordRoot(root, id), taskFile(id));
+  put(taskRecordRoot(root, id), taskFile(id), original.replace(/^<!-- tiller-verify:v1 .* -->$/mu, '<!-- tiller-verify:v1 {broken -->'));
   const corrupt = failure(cli(root, 'check', id));
   assert.ok(corrupt.issues.some(issue => issue.includes('AC-1 尚无验证')), corrupt.issues.join('\n'));
 
-  put(root, taskFile(id), original.replace('- 核实：已核实', '- 核实：未核实'));
+  put(taskRecordRoot(root, id), taskFile(id), original.replace('- 核实：已核实', '- 核实：未核实'));
   const unverified = failure(cli(root, 'check', id));
   assert.ok(unverified.issues.some(issue => issue.includes('AC-1 的验证未核实')), unverified.issues.join('\n'));
 
-  put(root, taskFile(id), original);
+  put(taskRecordRoot(root, id), taskFile(id), original);
   assert.equal(success(cli(root, 'check', id)).ready, true);
 });
 
@@ -313,8 +319,9 @@ test('CASE-093 a failed private report cannot pass when the test process exits z
   assert.ok(runner);
   const originalBuild = runner.build;
   runner.build = (reference, paths) => {
+    const checkout = taskRecordRoot(root, id);
     const report = JSON.stringify({
-      type: 'fail', name: reference.name ?? 'value behavior', path: reference.name ?? 'value behavior', outcome: 'failed', file: join(root, reference.path),
+      type: 'fail', name: reference.name ?? 'value behavior', path: reference.name ?? 'value behavior', outcome: 'failed', file: join(checkout, reference.path),
     });
     const summary = JSON.stringify({ type: 'summary', success: false });
     const script = `const fs = require('node:fs'); fs.writeFileSync(${JSON.stringify(paths.report)}, ${JSON.stringify(`${report}\n${summary}\n`)}); process.exit(0);`;
@@ -463,7 +470,7 @@ test('CASE-095 verify runner configuration and prepare are enforced', async t =>
   prepareTask(root, id);
   const verified = success(cli(root, 'verify', id, '--criterion', 'AC-1', '--test', 'test/prepared.test.mjs::prepared behavior'));
   assert.equal(verified.entries[0].evidence, 'verified');
-  assert.equal(read(root, 'prepared.txt'), 'yes');
+  assert.equal(read(taskRecordRoot(root, id), 'prepared.txt'), 'yes');
 
   setVerifyConfig(root, { runner: 'node-test', prepare: ['node', 'prepare-fail.mjs'] });
   const failed = failure(cli(root, 'verify', id, '--criterion', 'AC-1', '--test', 'test/prepared.test.mjs::prepared behavior'));
@@ -488,7 +495,7 @@ test('CASE-096 CASE-181 CASE-213 verify writes a readable command summary and ve
   prepareTask(root, id);
   const quiet = success(cli(root, 'verify', id, '--criterion', 'AC-1', '--test', 'test/value.test.mjs::logging behavior'));
   assert.equal(quiet.log, `.tiller/local/${id}/logs/run-1.log`);
-  const quietLog = read(root, quiet.log);
+  const quietLog = read(taskRecordRoot(root, id), quiet.log);
   assert.ok(quietLog.includes('TILLER_LOG_MARKER'), quietLog);
   assert.match(quietLog, /\[tiller\] command: node .*--test-name-pattern=/u);
   assert.match(quietLog, /\[tiller\] started: \d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z/u);

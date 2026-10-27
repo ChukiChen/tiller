@@ -2213,3 +2213,53 @@ worktree 内确认与验证写入只修改当前任务检出，primary 任务记
 ### 预期结果
 
 cwd=worktree 创建真实 PR 时推送和平台 API 使用 primary；close 仍从 primary 拆除 worktree 与删除本地分支
+
+## CASE-302 start 不在 primary 留任务记录种子
+
+- 类型：behavior
+- 优先级：medium
+- 模块：workflow
+- 关联 AC：无
+- 需求：`.tiller/specs/modules/workflow/soft-friction-rootfixes.md`
+
+### 前置条件
+
+- 已 init 的 Git 工程
+
+### 步骤
+
+1. 运行 tiller start
+2. 检查 primary 与 worktree 任务目录
+
+### 输入
+
+- 标准 small/standard start 参数
+
+### 预期结果
+
+start 后 primary 无 .tiller/task/<id>/，worktree 内可读 task.md 并可继续 confirm
+
+## CASE-303 confirm/accept 自动提交任务记录
+
+- 类型：behavior
+- 优先级：medium
+- 模块：workflow
+- 关联 AC：无
+- 需求：`.tiller/specs/modules/workflow/soft-friction-rootfixes.md`
+
+### 前置条件
+
+- 任务已 start，交付物已提交或可接受空提交场景
+
+### 步骤
+
+1. 运行 tiller confirm/accept
+2. 检查 git status 中任务记录已干净且有 chore 提交
+
+### 输入
+
+- requirements/design/acceptance 门禁
+
+### 预期结果
+
+confirm/accept 后本任务 .tiller/task/<id>/ 已提交，无需手搓即可通过 pr 记录干净门禁

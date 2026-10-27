@@ -12,7 +12,7 @@
 
 - 做：统一任务记录读写入口；任务 worktree 优先；worktree 写入不静默镜像 primary；CASE 与测试；相关规格和决策。
 - 不做：升版本；整仓分层重写；修改 CASE 与 AC 数据模型；改变平台 API 协议。
-- 假设：start 仍先把任务记录写入 primary，再同步到新建任务 worktree；双份并存时以 cwd/显式路径所在检出为准。
+- 假设：start 在创建任务 worktree 后只把任务记录写入该 worktree（多仓时由管理 worktree 再同步到兄弟 worktree），primary 不留存活种子；若历史残留导致双份并存，以 cwd/显式路径所在检出为准。
 
 ## 关键行为
 
@@ -26,7 +26,7 @@
 ## 异常与边界
 
 - cwd 在 primary 或普通仓库时保持原解析。
-- 双份任务记录内容漂移时以当前 worktree 为准；primary 副本允许过期，需由后续合入或显式主仓命令处理。
+- 新 start 不再制造 primary 种子；历史双份漂移时以当前 worktree 为准，close 会尝试清理 primary 残留目录。
 - 任务 worktree 已建立但记录同步缺失时，优先只信当前树并失败，不静默消费 primary 副本。
 - 解析逻辑只保留一个公开入口；命令层不再各自用 `path.resolve(rootInput)` 猜测任务根。
 

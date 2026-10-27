@@ -20,13 +20,13 @@ node .tiller/run.cjs close <id> --reason "已合入"
 node .tiller/run.cjs doctor
 ```
 
-`start` 生成需求，standard 另生成设计；worktree 在 `.tiller/local/<id>/worktrees/`。`--requirement` 单行；多行用 `--requirement-file`（限 `.tiller/specs/`）。“验收条件”的 `- AC-n: …` 会自动导入；有 AC 可省略 `--criterion`，无 AC 仍须提供。验收条件按路径作用域用 AC-n，不写模块前缀/对照列表。`--quote` 可选，`--by` 默认取 `git config user.name`。首次 `init` → 初始化 PR/MR → 人工合入 → `start`；pending 基线须 API 证明合入，`--skip-init-gate` 例外。`specs` 经任务 worktree，随任务 PR/MR 合入；禁止默认分支直改/直推。
+`start` 生成需求，standard 另生成设计；worktree 在 `.tiller/local/<id>/worktrees/`，任务记录只写入该 worktree（primary 不留种子）。`--requirement` 仅短目标单行；完整需求与 AC-n 用 `--requirement-file`（限 `.tiller/specs/`）。“验收条件”的 `- AC-n: …` 会自动导入；有 AC 可省略 `--criterion`，无 AC 仍须提供。验收条件按路径作用域用 AC-n，不写模块前缀/对照列表。`--quote` 可选，`--by` 默认取 `git config user.name`。首次 `init` → 初始化 PR/MR → 人工合入 → `start`；pending 基线须 API 证明合入，`--skip-init-gate` 例外。`specs` 经任务 worktree，随任务 PR/MR 合入；禁止默认分支直改/直推。
 
 `review` 阻塞 `check`/`accept`；`release` 与已验收任务钉在验收提交。未验收终止用 `close --abandon`；再交付用 `reopen`。
 
 `standard` 在有效设计确认前 verify，或确认后有未提交业务改动时，`check` 阻断 `accept`；`verify` 本身不要求设计确认。
 
-accept 须在 pr 前，先提交任务记录（含 acceptance）；`PR_NOT_ACCEPTED`/`PR_TASK_RECORDS_DIRTY` 阻断。重复 accept 重查当前树，改码先 verify。`pr <id>` 默认 tokenized git push 并经平台 API 创建真实 PR/MR；Git Data API 仅失败回退。返回 URL/编号；`--draft-only` 仅五段草稿。审阅后 `merge <id>` 经 GitHub/GitLab REST API squash 后 close；合入即交付完成。merge/close 默认删本地与远端分支，`--keep-branch` 保留；不存在/422 已清理，其它失败 warning；worktree 根先拆树并删分支。网页合入手动 close，失败不清理，收尾不改 `task.md`，兼容清理旧。
+accept 须在 pr 前；`confirm`/`accept` 写入确认后自动提交本任务记录（含 acceptance），一般无需再手搓一轮；`PR_NOT_ACCEPTED`/`PR_TASK_RECORDS_DIRTY` 仍阻断未验收或未提交记录。重复 accept 重查当前树，改码先 verify。`pr <id>` 默认 tokenized git push 并经平台 API 创建真实 PR/MR；Git Data API 仅失败回退。返回 URL/编号；`--draft-only` 仅五段草稿。审阅后 `merge <id>` 经 GitHub/GitLab REST API squash 后 close；合入即交付完成。merge/close 默认删本地与远端分支，`--keep-branch` 保留；不存在/422 已清理，其它失败 warning；worktree 根先拆树并删分支。网页合入手动 close，失败不清理，收尾不改 `task.md`，兼容清理旧。
 
 `doctor [path]` 查基线、默认分支 specs 脏改、残留任务分支与 AC 缺口；严重失败。
 

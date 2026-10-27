@@ -127,7 +127,7 @@
 
 - 标准交付链为 `verify` → `check` → `accept` → 提交任务记录（其中含 acceptance）→ `pr` → 人工合入 → `close`（清理 local 与分支）。accept 必须在 pr 前完成并进入任务分支。
 - `pr` 无有效交付验收时以 `PR_NOT_ACCEPTED` 硬阻断，提示先 `accept`、提交任务记录再生成草稿；记录未提交仍以 `PR_TASK_RECORDS_DIRTY` 阻断并列出本任务 id 与 scope 覆盖的路径。
-- 门禁只检查本任务 id 与 scope；其他任务 `.tiller/task/<other>/` 不阻断，本版不自动 `git commit`，也不提供 `--allow-dirty-records`。无 Git 或无法读工作树时仅跳过记录门禁并提示，验收门禁仍生效。
+- 门禁只检查本任务 id 与 scope；其他任务 `.tiller/task/<other>/` 不阻断，也不提供 `--allow-dirty-records`。`confirm`/`accept` 写入确认后自动提交本任务记录；其它路径仍不自动 `git commit`。无 Git 或无法读工作树时仅跳过记录门禁并提示，验收门禁仍生效。
 
 ## 2026-10-26 合入后冻结共享任务记录
 
@@ -193,7 +193,7 @@
 
 ## 2026-10-27 狗粮路径卫生
 
-- start 在任务 worktree 建立后同步 `.tiller/task/<id>/`，失败回滚；后续任务记录只传播到原本已有该记录的检出，旧“仅 worktree 记录”路径不被强行复制回主树。
+- start 在任务 worktree 建立后只向该 worktree 写入 `.tiller/task/<id>/`（多仓再同步兄弟 worktree），失败回滚且清理 primary 残留；后续任务记录只传播到原本已有该记录的检出，不写回 primary。
 - doctor 与 close init-id 复用 start 的祖先/status/API 合入证明，squash 不要求 SHA 祖先；证据不足仍保持 pending，不伪造 merged。
 - init 以初始化 worktree 提交为事实源，成功后精确删除主树本次写入且仍未跟踪的受管文件，仅保留 `.tiller/project.json`；不使用 `git clean`。缺失或空的 `src/`/`test/` 在同一初始化变更中补 `.gitkeep`，不覆盖非空目录中的用户文件。
 - `pr` 的 TTY 默认保持 Markdown，显式 `--json` 或非 TTY 默认稳定 JSON；draft-only 仍不联网。远端分支 404/422/不存在语义统一计入已清理且不进 warnings。
@@ -203,6 +203,12 @@
 - `resolveTaskCheckout` 先识别 cwd 或显式路径所在的本任务 worktree，再考虑 primary 副本；双份 `task.md` 并存时以当前任务检出为任务根。
 - `case add`、`confirm`、`verify`、`check`、`accept`、`review`、`release`、`reopen`、`resume <id>`、`attach` 与 `pr` 统一经该入口，任务 worktree 缺记录时清晰失败而不静默读取 primary。
 - 从任务 worktree 写任务记录不镜像 primary；primary 只承担 push、平台 PR/MR API、拆树和删除本地/远端分支。显式 `--path primary` 保留读取主仓副本的能力。
+
+## 2026-10-27 start/confirm/requirement 软摩擦根因
+
+- `start` 只把 `.tiller/task/<id>/` 写入任务 worktree，不再在 primary 留存活种子；close 会清理 primary 残留目录。
+- `confirm`/`accept` 在绑定确认对象并写入 `task.md` 后自动提交本任务记录（`chore: …确认`）；验收仍绑定写入前 HEAD。
+- `--requirement` 仅短目标单行；完整需求与 AC-n 只走 `--requirement-file`（`.tiller/specs/`），不放开多行完整需求。
 
 ## 2026-10-27 GitHub 推送优先 tokenized git
 

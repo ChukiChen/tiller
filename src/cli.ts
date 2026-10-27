@@ -59,8 +59,9 @@ const HELP = `tiller ${CLI_VERSION} — 默认工作流
 - small：需求确认 → 实现 → 验证；standard：需求 → 设计 → 实现 → 验证。确认记录人、时间、摘要和提交，原话可选。
 - 默认人工节点只有需求、设计和交付验收；规划、合入、发布按需确认，没有阶段或审计命令。
 - 大功能可先写 .tiller/plans/<id>.md 并确认；start 挂到条目时默认继承粒度，依赖未验收会阻塞。
-- task.md 是唯一任务记录：start 生成结构化需求，并引用所实现的稳定 specs；--requirement 只接受单行，多行或结构化需求用 --requirement-file（必须位于 .tiller/specs/），文件“验收条件”中的 - AC-n: 正文会导入任务，因此可省略 --criterion；文件无 AC-n 时仍须提供。任务只引用同一 specs 路径与 AC-n，不写模块前缀或“对照”平行列表；确认前校验正文，原话只作可选附注。verify 自主执行测试并从私有报告核实。
+- task.md 是唯一任务记录：start 生成结构化需求，并引用所实现的稳定 specs；--requirement 仅短目标单行，完整需求正文与 AC-n 只用 --requirement-file（必须位于 .tiller/specs/），文件“验收条件”中的 - AC-n: 正文会导入任务，因此可省略 --criterion；文件无 AC-n 时仍须提供。确认（含 accept）写入后自动提交本任务记录。任务只引用同一 specs 路径与 AC-n，不写模块前缀或“对照”平行列表；确认前校验正文，原话只作可选附注。verify 自主执行测试并从私有报告核实。
 - review 记录独立评审发现；未解决阻塞项会阻断 check/accept。release 只做发布门禁，不发布包。check 汇总发布清单；已验收任务按验收提交读取代码树与测试，之后代码漂移不误报过期。
+- start 只把任务记录写入任务 worktree，不在 primary 留种子；confirm/accept 写确认后自动提交本任务 .tiller/task/<id>/。
 - 阶段由 task.md 事实推导；accept 须在 pr 前；pr 默认用 tokenized HTTPS git push 推送任务分支并经平台 API 创建真实 PR/MR，GitHub Git Data API 只在 git 推送失败时可选回退；返回 URL 与编号；--draft-only 仅输出五段草稿。重复 accept 按当前工作区重新核实，改代码后先重新 verify。审阅后用 merge 经 REST API squash 合入并自动 close；merge/close 默认删除本地与远端任务分支，close init-id 同样清理 chore/tiller-init；--keep-branch 保留，分支已不存在或 422 视为已清理，其它删除失败只记 warning。token 从 GITHUB_TOKEN/GH_TOKEN 或 GITLAB_TOKEN/GL_TOKEN 读取，不依赖平台 CLI；网页合入后仍需手动 close；未验收终止用 --abandon，必要时 reopen。
 - start 对 pending 初始化基线先判祖先，再通过平台 API 查同分支已合入 PR/MR；确认后写回 merged 并放行，无 token、API 失败或无记录仍阻断，--skip-init-gate 例外。
 - specs 变更只走 start → 任务 worktree 修改 → 随任务 PR/MR 合入；禁止在 main/master 默认分支直改或直推。默认分支上相对任务基线触及 .tiller/specs/ 时，check 按过程卫生阻断；任务分支与已验收历史快照不触发。

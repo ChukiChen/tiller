@@ -25,8 +25,8 @@ import { releaseChecklist, type ReleaseChecklist } from './release.js';
 import { taskIdWarnings, validateTaskId } from './task-id.js';
 import { resolveProjectRoot, resolveTaskCheckout } from './project-root.js';
 import {
-  cleanupTaskWorktrees, createTaskWorktrees, rollbackTaskWorktrees, syncTaskRecordsToWorktrees,
-  taskBranchName, taskLocalRoot, taskWorktreePaths, writeTaskWorktreeState,
+  cleanupTaskWorktrees, createTaskWorktrees, managementWorktreePath, rollbackTaskWorktrees,
+  syncTaskRecordsToWorktrees, taskBranchName, taskLocalRoot, taskWorktreePaths, writeTaskWorktreeState,
 } from './task-worktrees.js';
 import { namePattern, resolveVerifyTarget, runnerFor, type TestEvidence, type TestReference } from './test-output.js';
 import type { ProjectMetadata } from './types.js';
@@ -539,12 +539,14 @@ function parseTask(content: string, id: string, relative: string): FlowTask {
 }
 export async function readTask(root: string, id: string): Promise<FlowTask> {
   validateTaskId(id);
-  await readProjectMetadata(root);
+  const { primary, taskRoot } = await resolveTaskCheckout(root, id);
+  await readProjectMetadata(primary);
   const relative = taskPath(id);
-  const content = await readTextIfExists(root, relative);
+  const content = await readTextIfExists(taskRoot, relative);
   if (content === null) fail('TASK_NOT_FOUND', `任务 ${id} 不存在；请先执行 start。`);
   const task = parseTask(content, id, relative);
-  const sidecar = await readPreExisting(root, id);
+  // Sidecars live under primary `.tiller/local/<id>/`, not inside the worktree checkout.
+  const sidecar = await readPreExisting(primary, id);
   task.meta = { ...task.meta, preExisting: { ...task.meta.preExisting, ...sidecar.values } };
   if (sidecar.issue) task.preExistingIssue = sidecar.issue;
   return task;
@@ -640,11 +642,13 @@ function renderTask(task: Omit<FlowTask, 'content' | 'path'>, selfCheck = ''): s
 }
 async function writeTask(root: string, id: string, before: string, after: string,
   preExisting?: Record<string, string>): Promise<void> {
-  if (preExisting) await writePreExisting(root, id, preExisting);
+  const primary = await resolveProjectRoot(root);
+  // Sidecars stay on primary `.tiller/local/<id>/`; task.md stays on the active checkout.
+  if (preExisting) await writePreExisting(primary, id, preExisting);
   const relative = taskPath(id);
   if (before !== after) await applyChanges(root, [{ path: relative, before, after }]);
-  const primary = await resolveProjectRoot(root);
   const targets = new Set(await taskWorktreePaths(primary, id));
+  // Do not recreate a primary task seed when the active checkout is a worktree.
   if (path.resolve(root) === path.resolve(primary)) targets.add(primary);
   for (const target of targets) {
     if (path.resolve(target) === path.resolve(root)) continue;
@@ -936,7 +940,7 @@ export async function startFlow(rootInput: string, idInput: string, input: FlowS
     fail('INVALID_FLOW_INPUT', 'start 需要 --requirement 或 --requirement-file，两者只能选一个。');
   }
   if (input.requirement !== undefined && /[\r\n]/u.test(input.requirement)) {
-    fail('INVALID_FLOW_INPUT', '--requirement 只接受单行；多行或结构化需求请使用 --requirement-file。');
+    fail('INVALID_FLOW_INPUT', '--requirement 仅接受短目标单行；完整需求正文与 AC-n 请使用 --requirement-file（必须位于 .tiller/specs/）。');
   }
   const type = flowType(input.type);
   const slug = input.slug === undefined ? undefined : normalizeBranchSlug(input.slug);
@@ -1007,15 +1011,19 @@ export async function startFlow(rootInput: string, idInput: string, input: FlowS
       confirmations: [], verifications: [], closures: [], review: null };
     const content = renderTask(task);
     const worktrees = await createTaskWorktrees(root, metadata, { id: idInput, type, ...(slug ? { slug } : {}) });
+    const recordRoot = managementWorktreePath(root, worktrees);
     try {
-      await mkdir(path.dirname(path.join(root, relative)), { recursive: true });
       await writePreExisting(root, idInput, preExisting);
-      await applyChanges(root, [{ path: relative, before: null, after: content }]);
+      await mkdir(path.dirname(path.join(recordRoot, relative)), { recursive: true });
+      await applyChanges(recordRoot, [{ path: relative, before: null, after: content }]);
+      await mirrorPrimaryDirtyIntoWorktree(root, recordRoot, idInput);
       await syncTaskRecordsToWorktrees(root, worktrees);
     } catch (error) {
       await rollbackTaskWorktrees(root, worktrees);
       try { await rm(await assertSafePath(root, `${TASK_DIRECTORY}/${idInput}`), { recursive: true, force: true }); }
-      catch { /* Preserve the original start failure; the local sidecar rollback already ran. */ }
+      catch { /* Preserve the original start failure; primary must not keep a seed. */ }
+      try { await rm(await assertSafePath(recordRoot, `${TASK_DIRECTORY}/${idInput}`), { recursive: true, force: true }); }
+      catch { /* Worktree may already be removed by rollback. */ }
       throw error;
     }
     try { await writeTaskWorktreeState(root, worktrees); }
@@ -1054,6 +1062,34 @@ export async function attachFlowTask(rootInput: string, id: string, plan: string
   });
 }
 
+
+/** Task records live in the task worktree while open; after close they may sit on primary. */
+export async function discoverTaskIds(primary: string): Promise<string[]> {
+  const ids = new Set<string>();
+  try {
+    for (const entry of await readdir(path.join(primary, TASK_DIRECTORY), { withFileTypes: true })) {
+      if (entry.isDirectory()) ids.add(entry.name);
+    }
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
+  }
+  try {
+    for (const entry of await readdir(path.join(primary, '.tiller/local'), { withFileTypes: true })) {
+      if (!entry.isDirectory() || entry.name.startsWith('.')) continue;
+      const id = entry.name;
+      for (const rel of [
+        path.join('.tiller/local', id, 'worktrees', TASK_DIRECTORY, id, TASK_FILE),
+        path.join('.tiller/local', id, 'worktrees', 'management', TASK_DIRECTORY, id, TASK_FILE),
+      ]) {
+        if (await readTextIfExists(primary, rel) !== null) { ids.add(id); break; }
+      }
+    }
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
+  }
+  return [...ids].sort((a, b) => a.localeCompare(b));
+}
+
 export async function resumeFlow(rootInput: string, id?: string) {
   const root = id ? (await resolveTaskCheckout(rootInput, id)).taskRoot : await resolveProjectRoot(rootInput);
   await readProjectMetadata(root);
@@ -1068,19 +1104,15 @@ export async function resumeFlow(rootInput: string, id?: string) {
       requirement: task.requirement, criteria: task.criteria, confirmations: task.confirmations, verifications: task.verifications,
       closures: task.closures, review: task.review };
   }
-  const directory = path.join(root, TASK_DIRECTORY);
-  let entries;
-  try { entries = await readdir(directory, { withFileTypes: true }); }
-  catch (error) { if ((error as NodeJS.ErrnoException).code === 'ENOENT') return { tasks: [] }; throw error; }
   const tasks = [];
-  for (const entry of entries.sort((a, b) => a.name.localeCompare(b.name))) {
-    if (!entry.isDirectory()) continue;
+  for (const taskId of await discoverTaskIds(await resolveProjectRoot(rootInput))) {
     try {
-      const content = await readTextIfExists(root, taskPath(entry.name));
+      const checkout = (await resolveTaskCheckout(rootInput, taskId)).taskRoot;
+      const content = await readTextIfExists(checkout, taskPath(taskId));
       if (content?.includes(MARKER_PREFIX)) {
-        const task = parseTask(content, entry.name, taskPath(entry.name));
-        const stage = await taskStageForTask(root, entry.name, task);
-        tasks.push({ id: entry.name, title: task.title, type: task.meta.type, size: task.meta.size, path: task.path,
+        const task = parseTask(content, taskId, taskPath(taskId));
+        const stage = await taskStageForTask(checkout, taskId, task);
+        tasks.push({ id: taskId, title: task.title, type: task.meta.type, size: task.meta.size, path: task.path,
           ...(task.meta.plan && task.meta.item ? { plan: task.meta.plan, item: task.meta.item } : {}),
           ...(task.meta.slug ? { slug: task.meta.slug } : {}), ...(task.meta.summary ? { summary: task.meta.summary } : {}),
           stage: stage.stage, stageReason: stage.reason,
@@ -1121,6 +1153,41 @@ function designFieldIssues(task: FlowTask): { missing: string[]; tradeoffsMissin
     if (!markdownMeaningfulLines(subSectionBody(task.design, field)).length) missing.push(field);
   }
   return { missing, tradeoffsMissing: !markdownMeaningfulLines(subSectionBody(task.design, '取舍')).length };
+}
+
+const CONFIRM_COMMIT_MESSAGES: Record<FlowGate, string> = {
+  requirements: 'chore: 需求确认',
+  design: 'chore: 设计确认',
+  acceptance: 'chore: 验收确认',
+};
+
+/** Stage and commit only this task's record directory after a confirmation write. */
+async function commitTaskRecords(root: string, id: string, message: string): Promise<{ commit?: string; warning?: string }> {
+  const relative = `${TASK_DIRECTORY}/${id}`;
+  if (!(await head(root))) {
+    return { warning: '当前检出不是 Git 仓库，确认已写入但未能自动提交任务记录。' };
+  }
+  const status = await git(root, ['status', '--porcelain', '--', relative]);
+  if (!status.ok) {
+    return { warning: `无法检查任务记录状态，确认已写入但未自动提交：${status.stderr.trim() || 'git status 失败'}` };
+  }
+  if (!status.stdout.trim()) return {};
+  const added = await git(root, ['add', '--', relative]);
+  if (!added.ok) {
+    return { warning: `任务记录暂存失败，确认已写入但未自动提交：${added.stderr.trim() || 'git add 失败'}` };
+  }
+  const [name, email] = await Promise.all([
+    git(root, ['config', 'user.name']),
+    git(root, ['config', 'user.email']),
+  ]);
+  const author = name.ok && name.stdout.trim() ? name.stdout.trim() : 'tiller';
+  const address = email.ok && email.stdout.trim() ? email.stdout.trim() : 'tiller@localhost';
+  const committed = await git(root, ['-c', `user.name=${author}`, '-c', `user.email=${address}`, 'commit', '--quiet', '-m', message]);
+  if (!committed.ok) {
+    return { warning: `任务记录提交失败，确认已写入但未自动提交：${committed.stderr.trim() || 'git commit 失败'}` };
+  }
+  const after = await head(root);
+  return after ? { commit: after } : { warning: '任务记录提交后无法读取 HEAD。' };
 }
 
 export async function confirmFlow(rootInput: string, id: string, gateInput: string, input: FlowConfirmInput = {}) {
@@ -1165,8 +1232,12 @@ export async function confirmFlow(rootInput: string, id: string, gateInput: stri
     const next = { ...task, confirmations: [...task.confirmations.filter(item => item.gate !== gate), confirmation] };
     const { content: _content, path: _path, ...body } = next;
     await writeTask(root, id, task.content, renderTask(body, sectionBody(task.content, '自检')), body.meta.preExisting);
+    const committed = await commitTaskRecords(root, id, CONFIRM_COMMIT_MESSAGES[gate]);
+    if (committed.warning) warnings.push(committed.warning);
     return { id, gate, confirmed: true, object, by, ...(confirmation.quote ? { quote: confirmation.quote } : {}),
-      commit, subject, path: task.path, ...(warnings.length ? { warnings } : {}) };
+      commit, subject, path: task.path,
+      ...(committed.commit ? { recordsCommit: committed.commit } : {}),
+      ...(warnings.length ? { warnings } : {}) };
   });
 }
 
@@ -1255,6 +1326,25 @@ function recordSafety(content: string): string[] {
   ];
   for (const [index, line] of lines.entries()) for (const [pattern, message] of patterns) if (pattern.test(line)) issues.push(`第 ${index + 1} 行${message}`);
   return [...new Set(issues)];
+}
+
+
+async function mirrorPrimaryDirtyIntoWorktree(primaryRoot: string, worktreeRoot: string, id: string): Promise<void> {
+  if (path.resolve(primaryRoot) === path.resolve(worktreeRoot)) return;
+  const changed = await changedFiles(primaryRoot, 'HEAD');
+  if (!changed?.length) return;
+  for (const relative of changed) {
+    if (excludedPath(relative, id) || relative.startsWith(`${TASK_DIRECTORY}/`) || relative.startsWith(`${LEGACY_TASK_DIRECTORY}/`)) continue;
+    if (relative.startsWith('.tiller/local/')) continue;
+    try {
+      const source = await assertSafePath(primaryRoot, relative);
+      const target = await assertSafePath(worktreeRoot, relative);
+      await mkdir(path.dirname(target), { recursive: true });
+      await copyFile(source, target);
+    } catch {
+      /* Skip deleted or unreadable dirty paths; worktree keeps HEAD version. */
+    }
+  }
 }
 
 async function changedFiles(root: string, base: string, endpoint?: string): Promise<string[] | null> {
@@ -2179,6 +2269,19 @@ export async function releaseFlow(rootInput: string, id: string) {
     ...(acceptance?.commit ? { acceptanceCommit: acceptance.commit } : {}), ...checklist };
 }
 
+
+/** After delivery, keep the shared task record on primary so close can remove the worktree. */
+async function materializeSharedTaskRecord(primary: string, taskRoot: string, id: string): Promise<void> {
+  if (path.resolve(primary) === path.resolve(taskRoot)) return;
+  const relative = taskPath(id);
+  const content = await readTextIfExists(taskRoot, relative);
+  if (content === null) return;
+  const existing = await readTextIfExists(primary, relative);
+  if (existing === content) return;
+  await mkdir(path.dirname(path.join(primary, relative)), { recursive: true });
+  await applyChanges(primary, [{ path: relative, before: existing, after: content }]);
+}
+
 export async function closeFlow(rootInput: string, id: string, reasonInput: string, abandon = false,
   options: { keepBranch?: boolean } = {}) {
   const { primary: root, taskRoot } = await resolveTaskCheckout(rootInput, id);
@@ -2219,6 +2322,7 @@ export async function closeFlow(rootInput: string, id: string, reasonInput: stri
     }
     if (!abandon) {
       const at = new Date().toISOString();
+      await materializeSharedTaskRecord(root, taskRoot, id);
       const cleanup = await cleanupTaskWorktrees(root, id, metadata);
       const branchCleanup = await cleanupTaskBranches(root, metadata, taskBranchName(task.meta), options);
       const warnings = [...cleanup.warnings, ...branchCleanup.warnings];
@@ -2239,6 +2343,7 @@ export async function closeFlow(rootInput: string, id: string, reasonInput: stri
     const { content: _content, path: _path, ...body } = next;
     await writeTask(taskRoot, id, task.content, renderTask(body, sectionBody(task.content, '自检')), body.meta.preExisting);
     const stage = terminalStage(next)!;
+    await materializeSharedTaskRecord(root, taskRoot, id);
     const cleanup = await cleanupTaskWorktrees(root, id, metadata);
     const branchCleanup = await cleanupTaskBranches(root, metadata, taskBranchName(task.meta), options);
     const warnings = [...cleanup.warnings, ...branchCleanup.warnings];

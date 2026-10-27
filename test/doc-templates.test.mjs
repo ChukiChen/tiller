@@ -5,9 +5,8 @@ import { join } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import test from 'node:test';
 import { readTask } from '../dist/flow.js';
-import { cli, completeDesign, completeRequirement, confirmTask, failure, fixture, put, success } from './helpers.mjs';
+import {  cli, completeDesign, completeRequirement, confirmTask, failure, fixture, put, success, taskRecordRoot, read } from './helpers.mjs';
 
-const read = (root, relative) => readFileSync(join(root, relative), 'utf8');
 const hash = text => createHash('sha256').update(text).digest('hex');
 const taskPath = (id, name = 'task.md') => `.tiller/task/${id}/${name}`;
 
@@ -63,7 +62,7 @@ test('CASE-190 new task marker omits preExisting and keeps the snapshot in the l
   success(cli(root, 'start', id, '--title', 'Marker sidecar', '--requirement', 'Keep comments small.',
     '--criterion', 'AC-1=Marker stays compact', '--size', 'small', '--target', 'src'));
 
-  const content = read(root, taskPath(id));
+  const content = read(taskRecordRoot(root, id), taskPath(id));
   const meta = marker(content);
   assert.equal(Object.hasOwn(meta, 'preExisting'), false);
   const sidecarPath = `.tiller/local/${id}/pre-existing.json`;
@@ -82,10 +81,10 @@ test('CASE-191 legacy marker preExisting is still loaded and does not report an 
   success(cli(root, 'start', id, '--title', 'Legacy marker', '--requirement', 'Read old snapshots.',
     '--criterion', 'AC-1=Legacy marker remains readable', '--size', 'small', '--target', 'src'));
 
-  const content = read(root, taskPath(id));
+  const content = read(taskRecordRoot(root, id), taskPath(id));
   const meta = marker(content);
   meta.preExisting = { 'docs/legacy-dirty.md': hash('legacy dirty file\n') };
-  put(root, taskPath(id), content.replace(/<!-- tiller-task:v1 \{.*\} -->/u,
+  put(taskRecordRoot(root, id), taskPath(id), content.replace(/<!-- tiller-task:v1 \{.*\} -->/u,
     `<!-- tiller-task:v1 ${JSON.stringify(meta)} -->`));
   rmSync(join(root, `.tiller/local/${id}/pre-existing.json`), { force: true });
 
@@ -119,7 +118,7 @@ test('CASE-192 CASE-270 structured requirements keep business scope separate fro
   success(cli(root, 'start', id, '--title', 'Requirement template', '--requirement', 'Write complete requirements.',
     '--criterion', 'AC-1=Template is complete', '--size', 'standard', '--target', 'src', '--target', 'test'));
 
-  const content = read(root, taskPath(id));
+  const content = read(taskRecordRoot(root, id), taskPath(id));
   const requirement = section(content, '需求');
   for (const heading of ['使用场景', '目标', '业务范围', '关键行为', '异常与边界', '验收条件']) {
     assert.match(requirement, new RegExp(`^### ${heading}$`, 'mu'));
@@ -143,7 +142,7 @@ test('CASE-193 CASE-270 requirements confirmation rejects blank or placeholder s
   for (const heading of ['使用场景', '业务范围', '关键行为', '异常与边界']) assert.match(blank.error.message, new RegExp(heading, 'u'));
 
   completeRequirement(root, id);
-  put(root, taskPath(id), read(root, taskPath(id)).replace(
+  put(taskRecordRoot(root, id), taskPath(id), read(taskRecordRoot(root, id), taskPath(id)).replace(
     '- 做：实现确认的验收条件。\n- 不做：范围外变更。\n- 假设与待确认：无。',
     '- 做：待补充\n- 不做：TODO\n- 假设与待确认：待定'));
   const placeholder = failure(cli(root, 'confirm', id, 'requirements'));
@@ -154,7 +153,7 @@ test('CASE-193 CASE-270 requirements confirmation rejects blank or placeholder s
   const legacy = '20261024-legacy-scope';
   success(cli(root, 'start', legacy, '--title', 'Legacy scope', '--requirement', 'Keep old records valid.',
     '--criterion', 'AC-1=Legacy scope confirms', '--size', 'small', '--target', 'src'));
-  put(root, taskPath(legacy), replaceRequirement(read(root, taskPath(legacy)), [
+  put(taskRecordRoot(root, legacy), taskPath(legacy), replaceRequirement(read(taskRecordRoot(root, legacy), taskPath(legacy)), [
     '### 目标', '', 'Keep old records valid.', '',
     '### 范围', '', '- 做：`src`', '',
     '### 验收条件', '', '- AC-1: Legacy scope confirms',
@@ -170,7 +169,7 @@ test('CASE-194 design template covers failure handling and verification entry wi
     '--target', 'src', '--target', 'test'));
   success(confirmTask(root, id, 'requirements'));
 
-  const content = read(root, taskPath(id));
+  const content = read(taskRecordRoot(root, id), taskPath(id));
   for (const heading of ['方案', '失败处理', '取舍', '影响与风险', '验证入口']) {
     assert.match(content, new RegExp(`^### ${heading}$`, 'mu'));
   }
@@ -178,11 +177,11 @@ test('CASE-194 design template covers failure handling and verification entry wi
   for (const heading of ['方案', '失败处理', '影响与风险', '验证入口']) assert.match(blank.error.message, new RegExp(heading, 'u'));
 
   completeDesign(root, id);
-  put(root, taskPath(id), read(root, taskPath(id)).replace('### 取舍\n\n不新增并行入口，保持现有接口。', '### 取舍\n\n'));
+  put(taskRecordRoot(root, id), taskPath(id), read(taskRecordRoot(root, id), taskPath(id)).replace('### 取舍\n\n不新增并行入口，保持现有接口。', '### 取舍\n\n'));
   const design = success(cli(root, 'confirm', id, 'design'));
   assert.ok(design.warnings.some(item => item.includes('取舍')));
 
-  put(root, taskPath(id), read(root, taskPath(id))
+  put(taskRecordRoot(root, id), taskPath(id), read(taskRecordRoot(root, id), taskPath(id))
     .replace('失败时返回明确结果并保留原记录。', 'TODO')
     .replace('运行引用本用例的具名测试。', ''));
   const checked = failure(cli(root, 'check', id));
@@ -228,7 +227,7 @@ test('CASE-273 acceptance heading is always 验收条件 without the legacy stab
   const id = '20261026-acceptance-heading';
   success(cli(root, 'start', id, '--title', 'Acceptance heading', '--requirement', 'Render the canonical heading.',
     '--criterion', 'AC-1=Heading has no legacy suffix', '--size', 'small', '--target', 'src'));
-  const content = read(root, taskPath(id));
+  const content = read(taskRecordRoot(root, id), taskPath(id));
   assert.match(content, /^### 验收条件$/mu);
   assert.match(content, /^- AC-1: Heading has no legacy suffix$/mu);
   assert.doesNotMatch(content, /验收条件（稳定）/u);
@@ -239,7 +238,7 @@ test('CASE-207 requirement and design guidance reduces noise while confirmation 
   const id = '20261024-doc-noise';
   success(cli(root, 'start', id, '--title', 'Documentation noise', '--requirement', 'Keep business constraints prominent.',
     '--criterion', 'AC-1=Guidance stays focused', '--type', 'feature', '--size', 'standard', '--target', 'src', '--target', 'test'));
-  const content = read(root, taskPath(id));
+  const content = read(taskRecordRoot(root, id), taskPath(id));
   assert.match(content, /业务做\/不做\/假设和防跑偏约束.*交付路径.*不在此枚举/u);
   assert.match(content, /不复制规格全文/u);
   assert.match(content, /不塞长命令/u);

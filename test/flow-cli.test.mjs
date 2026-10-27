@@ -4,9 +4,8 @@ import { existsSync, readFileSync, readdirSync, unlinkSync } from 'node:fs';
 import { join } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import test from 'node:test';
-import { cli, completeDesign, confirmTask, failure, fixture, initializeSettled, put, success } from './helpers.mjs';
+import { cli, completeDesign, confirmTask, failure, fixture, initializeSettled, put, success, read, taskRecordRoot, commitFixtures } from './helpers.mjs';
 
-const read = (root, relative) => readFileSync(join(root, relative), 'utf8');
 const initialize = initializeSettled;
 const task = (root, id) => `.tiller/task/${id}/task.md`;
 const subSection = (content, title) => {
@@ -74,16 +73,16 @@ async function project(t) {
 
 function editTask(root, id, change) {
   const relative = task(root, id);
+  const checkout = taskRecordRoot(root, id);
   const before = read(root, relative);
   const after = change(before);
   assert.notEqual(after, before);
-  put(root, relative, after);
+  put(checkout, relative, after);
 }
 
 function addCaseLibrary(root, files) {
   for (const [name, content] of Object.entries(files)) put(root, `.tiller/cases/${name}`, content);
-  git(root, 'add', '.tiller/cases');
-  git(root, 'commit', '--quiet', '-m', 'test(workflow): 更新全局用例');
+  commitFixtures(root, 'test(workflow): 更新全局用例');
 }
 
 function caseMarkdown({ id, title, kind = 'behavior', module = 'workflow', modules = [module], criteria = [],
@@ -152,7 +151,7 @@ test('CASE-001 CASE-066 small flow produces one task file and records verified a
   const started = success(cli(root, 'start', id, '--title', 'Small flow', '--requirement', 'Keep the command reliable.',
     '--criterion', 'AC-1=Command exits successfully', '--size', 'small', '--target', 'src', '--target', 'test'));
   assert.equal(started.next.includes('confirm'), true);
-  assert.deepEqual(readdirSync(join(root, '.tiller/task', id)), ['task.md']);
+  assert.deepEqual(readdirSync(join(taskRecordRoot(root, id), '.tiller/task', id)), ['task.md']);
   const confirmed = success(confirmTask(root, id, 'requirements', '--quote', '确认这个范围和验收条件'));
   assert.equal(confirmed.object, '需求正文（目标、范围与验收条件）');
   assert.equal(confirmed.by, 'Tiller Test');
@@ -163,8 +162,7 @@ test('CASE-001 CASE-066 small flow produces one task file and records verified a
   assert.equal(verified.result, 'passed');
   assert.equal(verified.entries[0].source, 'executed');
   assert.deepEqual(verified.entries[0].cases, ['CASE-001']);
-  git(root, 'add', 'src/value.txt', 'test/baseline.test.mjs');
-  git(root, 'commit', '--quiet', '-m', 'implement small change');
+  commitFixtures(root, 'implement small change');
 
   const checked = success(cli(root, 'check', id));
   assert.equal(checked.ready, true, checked.issues.join('\n'));
@@ -197,9 +195,9 @@ test('CASE-001 CASE-066 small flow produces one task file and records verified a
   assert.match(content, /^<!-- tiller-verify:v1 .*"tree":"[a-f0-9]{64}".* -->$/mu);
   assert.doesNotMatch(content, /^- 代码树摘要：/mu);
   assert.match(content, /^- 用例：CASE-001$/mu);
-  assert.deepEqual(readdirSync(join(root, '.tiller/task', id)), ['task.md']);
-  assert.equal(existsSync(join(root, '.tiller/task', id, 'reviews')), false);
-  assert.equal(existsSync(join(root, '.tiller/task', id, 'verification')), false);
+  assert.deepEqual(readdirSync(join(taskRecordRoot(root, id), '.tiller/task', id)), ['task.md']);
+  assert.equal(existsSync(join(taskRecordRoot(root, id), '.tiller/task', id, 'reviews')), false);
+  assert.equal(existsSync(join(taskRecordRoot(root, id), '.tiller/task', id, 'verification')), false);
 });
 
 test('CASE-013 requirements confirmation binds the written requirement rather than the quote', async t => {
@@ -249,9 +247,8 @@ test('CASE-002 CASE-067 standard flow blocks before design confirmation and acce
   completeDesign(root, id);
   success(confirmTask(root, id, 'design', '--quote', '设计确认'));
   put(root, 'src/value.txt', 'standard\n');
+  commitFixtures(root, 'feat(workflow): standard 实现');
   success(cli(root, 'verify', id, '--criterion', 'AC-1', '--test', 'test/baseline.test.mjs::CASE-001 baseline'));
-  git(root, 'add', 'src/value.txt');
-  git(root, 'commit', '--quiet', '-m', 'standard implementation');
   const checked = success(cli(root, 'check', id));
   assert.equal(checked.ready, true, checked.issues.join('\n'));
 });
@@ -275,7 +272,7 @@ test('CASE-060 CASE-062 structured task template validates written requirements 
   const incomplete = failure(cli(root, 'confirm', id, 'requirements'));
   assert.equal(incomplete.error.code, 'MISSING_REQUIREMENTS');
   assert.match(incomplete.error.message, /目标/u);
-  put(root, task(root, id), original);
+  put(taskRecordRoot(root, id), task(root, id), original);
 
   const confirmed = success(confirmTask(root, id, 'requirements'));
   assert.equal(confirmed.by, 'Tiller Test');
@@ -365,7 +362,7 @@ test('CASE-064 CASE-205 legacy task text and quoted confirmation remain readable
     type: meta.type, size: meta.size, scope: meta.scope,
     requirement: normalize(requirement), criteria: criteria.map(item => [item.id, normalize(item.text)]),
   }), 'utf8').digest('hex');
-  put(root, task(root, id), [
+  put(taskRecordRoot(root, id), task(root, id), [
     '# Legacy record',
     `<!-- tiller-task:v1 ${JSON.stringify(meta)} -->`,
     '',
@@ -418,9 +415,9 @@ test('CASE-064 CASE-205 legacy task text and quoted confirmation remain readable
     '- 对象：需求正文（目标与验收条件）', '- 用户原话：旧格式确认', '- 原话用途：确认凭证，不替代已写明的正文',
     `- 提交：${meta.base}`, `- 对象摘要：${subject}`, '- 时间：2026-10-22T00:00:00.000Z',
   ].join('\n'));
-  put(root, task(root, id), mixed);
+  put(taskRecordRoot(root, id), task(root, id), mixed);
   assert.equal(success(cli(root, 'resume', id)).stage, '需求已确认');
-  put(root, task(root, id), mixed.replace(`- 对象摘要：${subject}\n`, ''));
+  put(taskRecordRoot(root, id), task(root, id), mixed.replace(`- 对象摘要：${subject}\n`, ''));
   const missingField = success(cli(root, 'resume', id));
   assert.deepEqual(missingField.confirmations, []);
   assert.equal(missingField.stage, '已开始');
@@ -450,8 +447,7 @@ test('CASE-006 verification becomes stale after an in-scope change', async t => 
   success(confirmTask(root, id, 'requirements', '--quote', '确认'));
   success(cli(root, 'verify', id, '--criterion', 'AC-1', '--test', 'test/baseline.test.mjs::CASE-001 baseline'));
   put(root, 'src/value.txt', 'changed after verification\n');
-  git(root, 'add', 'src/value.txt');
-  git(root, 'commit', '--quiet', '-m', 'change after verification');
+  commitFixtures(root, 'change after verification');
   const checked = failure(cli(root, 'check', id));
   assert.ok(checked.issues.some(issue => issue.startsWith('AC-1 的验证已过期')));
 });
@@ -475,13 +471,11 @@ test('CASE-004 scope checks report committed and uncommitted out-of-scope change
   success(confirmTask(root, id, 'requirements', '--quote', '确认'));
   put(root, 'src/value.txt', 'scoped\n');
   success(cli(root, 'verify', id, '--criterion', 'AC-1', '--test', 'test/baseline.test.mjs::CASE-001 baseline'));
-  git(root, 'add', 'src/value.txt');
-  git(root, 'commit', '--quiet', '-m', 'scoped change');
+  commitFixtures(root, 'scoped change');
   put(root, 'docs/outside.md', 'outside\n');
   const outside = failure(cli(root, 'check', id));
   assert.ok(outside.issues.some(issue => issue.includes('改动超出范围：docs/outside.md')));
-  git(root, 'add', 'docs/outside.md');
-  git(root, 'commit', '--quiet', '-m', 'outside change');
+  commitFixtures(root, 'outside change');
   put(root, 'src/value.txt', 'uncommitted scoped change\n');
   const uncommitted = failure(cli(root, 'check', id));
   assert.ok(uncommitted.issues.some(issue => issue.includes('未提交改动：src/value.txt')));
@@ -498,8 +492,7 @@ test('CASE-005 pre-existing changes are excluded from scope findings only while 
   success(confirmTask(root, id, 'requirements', '--quote', '确认'));
   put(root, 'src/value.txt', 'implemented\n');
   success(cli(root, 'verify', id, '--criterion', 'AC-1', '--test', 'test/baseline.test.mjs::CASE-001 baseline'));
-  git(root, 'add', 'src/value.txt');
-  git(root, 'commit', '--quiet', '-m', 'implement scoped change');
+  commitFixtures(root, 'implement scoped change');
   const checked = success(cli(root, 'check', id));
   assert.equal(checked.ready, true, checked.issues.join('\n'));
   assert.equal(checked.changedOutsideScope.includes('docs/outside.md'), false);
@@ -516,8 +509,7 @@ test('CASE-007 test weakening and skipped tests block the delivery self-check', 
   success(confirmTask(root, id, 'requirements', '--quote', '确认'));
   put(root, 'test/baseline.test.mjs', "import test from 'node:test';\ntest('CASE-001 baseline', () => {});\ntest.skip('skipped baseline', () => {});\n");
   success(cli(root, 'verify', id, '--criterion', 'AC-1', '--test', 'test/baseline.test.mjs::CASE-001 baseline'));
-  git(root, 'add', 'test/baseline.test.mjs');
-  git(root, 'commit', '--quiet', '-m', 'weaken test');
+  commitFixtures(root, 'weaken test');
   const checked = failure(cli(root, 'check', id));
   assert.ok(checked.issues.some(issue => issue.includes('弱化测试断言')));
   assert.ok(checked.issues.some(issue => issue.includes('新增跳过或独占测试')));
@@ -526,21 +518,22 @@ test('CASE-007 test weakening and skipped tests block the delivery self-check', 
 test('CASE-008 removing a test with its retired feature is reported without masking retained assertion loss', async t => {
   const root = await project(t);
   put(root, 'test/legacy.test.mjs', "import test from 'node:test';\ntest('legacy', () => {});\n");
-  git(root, 'add', 'test/legacy.test.mjs');
-  git(root, 'commit', '--quiet', '-m', 'old feature test');
+  commitFixtures(root, 'old feature test');
   const id = '20261022-test-removal';
   success(cli(root, 'start', id, '--title', 'Review test removal', '--requirement', 'Keep retained tests intact.',
     '--criterion', 'AC-1=The retained test proves behavior', '--size', 'small', '--target', 'test'));
   success(confirmTask(root, id, 'requirements', '--quote', '确认'));
   unlinkSync(join(root, 'test/legacy.test.mjs'));
+  const removalCheckout = taskRecordRoot(root, id);
+  if (removalCheckout !== root && existsSync(join(removalCheckout, 'test/legacy.test.mjs'))) {
+    unlinkSync(join(removalCheckout, 'test/legacy.test.mjs'));
+  }
   success(cli(root, 'verify', id, '--criterion', 'AC-1', '--test', 'test/baseline.test.mjs::CASE-001 baseline'));
-  git(root, 'add', '-A');
-  git(root, 'commit', '--quiet', '-m', 'remove old feature test');
+  commitFixtures(root, 'remove old feature test');
   const removed = success(cli(root, 'check', id));
   assert.ok(removed.warnings.some(issue => issue.includes('删除 1 个测试文件')));
   put(root, 'test/baseline.test.mjs', "import test from 'node:test';\ntest('CASE-001 baseline', () => {});\n");
-  git(root, 'add', 'test/baseline.test.mjs');
-  git(root, 'commit', '--quiet', '-m', 'weaken retained test');
+  commitFixtures(root, 'weaken retained test');
   const weakened = failure(cli(root, 'check', id));
   assert.ok(weakened.issues.some(issue => issue.includes('弱化测试断言：test/baseline.test.mjs::CASE-001 baseline')));
 });
@@ -585,8 +578,7 @@ test('CASE-012 check blocks a criterion whose verification test has no global ca
   put(root, 'src/value.txt', 'mapped\n');
   const verified = success(cli(root, 'verify', id, '--criterion', 'AC-1', '--test', 'test/other.test.mjs::other'));
   assert.deepEqual(verified.cases, []);
-  git(root, 'add', 'src/value.txt');
-  git(root, 'commit', '--quiet', '-m', 'mapped change');
+  commitFixtures(root, 'mapped change');
   const checked = failure(cli(root, 'check', id));
   assert.equal(checked.cases.matched, 0);
   assert.ok(checked.issues.some(item => item.includes('未绑定全局用例')));
@@ -601,8 +593,7 @@ test('CASE-154 file-level verification references do not bind every test in the 
   put(root, 'src/value.txt', 'file-level\n');
   const verified = success(cli(root, 'verify', id, '--criterion', 'AC-1', '--test', 'test/baseline.test.mjs'));
   assert.deepEqual(verified.cases, []);
-  git(root, 'add', 'src/value.txt');
-  git(root, 'commit', '--quiet', '-m', 'file-level verification');
+  commitFixtures(root, 'file-level verification');
   const checked = failure(cli(root, 'check', id));
   assert.ok(checked.issues.some(item => item.includes('AC-1 未绑定全局用例')));
 });
@@ -610,15 +601,13 @@ test('CASE-154 file-level verification references do not bind every test in the 
 test('CASE-047 module cases and scenarios report counts and regression hints', async t => {
   const root = await project(t);
   put(root, 'test/baseline.test.mjs', "import assert from 'node:assert/strict';\nimport test from 'node:test';\ntest('CASE-001 baseline', () => assert.equal(1, 1));\ntest('CASE-002 scenario baseline', () => assert.equal(1, 1));\n");
-  git(root, 'add', 'test/baseline.test.mjs');
-  git(root, 'commit', '--quiet', '-m', 'test(workflow): 增加场景测试');
+  commitFixtures(root, 'test(workflow): 增加场景测试');
   addCaseLibrary(root, {
     'scenarios/value-round.md': scenarioMarkdown({ id: 'CASE-002', title: 'A value change crosses the workflow', modules: ['workflow'] }),
   });
   // The scenario test name must contain its CASE id; rewrite the fixture test accordingly.
   put(root, 'test/baseline.test.mjs', "import assert from 'node:assert/strict';\nimport test from 'node:test';\ntest('CASE-001 baseline', () => assert.equal(1, 1));\ntest('CASE-002 A value change crosses the workflow', () => assert.equal(1, 1));\n");
-  git(root, 'add', 'test/baseline.test.mjs');
-  git(root, 'commit', '--quiet', '-m', 'test(workflow): 对齐场景用例编号');
+  commitFixtures(root, 'test(workflow): 对齐场景用例编号');
   const id = '20261022-case-summary';
   success(cli(root, 'start', id, '--title', 'Case summary', '--requirement', 'Report module coverage.',
     '--criterion', 'AC-1=The scenario is visible', '--size', 'small', '--target', 'src', '--target', 'test'));
@@ -626,8 +615,7 @@ test('CASE-047 module cases and scenarios report counts and regression hints', a
   put(root, 'src/value.txt', 'summary\n');
   put(root, 'test/baseline.test.mjs', `${read(root, 'test/baseline.test.mjs').trimEnd()}\n// CASE-001 CASE-002 module regression fixture.\n`);
   success(cli(root, 'verify', id, '--criterion', 'AC-1', '--test', 'test/baseline.test.mjs::CASE-001 baseline'));
-  git(root, 'add', 'src/value.txt', 'test/baseline.test.mjs');
-  git(root, 'commit', '--quiet', '-m', 'feat(workflow): 汇总用例');
+  commitFixtures(root, 'feat(workflow): 汇总用例');
   const checked = success(cli(root, 'check', id));
   assert.equal(checked.cases.count, 2);
   assert.equal(checked.cases.matched, 1);
@@ -651,8 +639,7 @@ test('CASE-045 check rejects a recorded case whose referenced test no longer mat
   put(root, 'src/value.txt', 'mismatch\n');
   success(cli(root, 'verify', id, '--criterion', 'AC-1', '--test', 'test/baseline.test.mjs::CASE-001 baseline'));
   editTask(root, id, content => content.replace('- 用例：CASE-001', '- 用例：CASE-003'));
-  git(root, 'add', 'src/value.txt');
-  git(root, 'commit', '--quiet', '-m', 'fix(workflow): 制造用例错配');
+  commitFixtures(root, 'fix(workflow): 制造用例错配');
   const checked = failure(cli(root, 'check', id));
   assert.ok(checked.issues.some(item => item.includes('与全局用例 CASE-003 的测试引用不一致')), checked.issues.join('\n'));
 });
@@ -674,8 +661,7 @@ test('CASE-046 global cases block legacy layout, unknown kinds, missing modules 
   success(confirmTask(root, id, 'requirements', '--quote', '确认'));
   put(root, 'src/value.txt', 'broken cases\n');
   success(cli(root, 'verify', id, '--criterion', 'AC-1', '--test', 'test/baseline.test.mjs::CASE-001 baseline'));
-  git(root, 'add', 'src/value.txt');
-  git(root, 'commit', '--quiet', '-m', 'fix(workflow): 检查用例结构');
+  commitFixtures(root, 'fix(workflow): 检查用例结构');
   const checked = failure(cli(root, 'check', id));
   assert.ok(checked.issues.some(item => item.includes('id 重复')));
   assert.ok(checked.issues.some(item => item.includes('旧式全局用例')));

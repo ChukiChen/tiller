@@ -244,9 +244,13 @@ export async function draftPullRequest(
     });
   }
   if (path.resolve(taskRoot) !== path.resolve(primary)) {
+    // Only the task record seed is a primary residual; cases/specs dirty on primary
+    // are unrelated to the start-seed problem and must not block pr.
     const primaryRecords = await uncommittedTaskRecords(primary, task);
-    if (primaryRecords.paths.length) {
-      dirty.push({ label: 'primary 主检出（残留副本）', paths: primaryRecords.paths });
+    const residual = primaryRecords.paths.filter(relative =>
+      relative === `.tiller/task/${id}/task.md` || relative.startsWith(`.tiller/task/${id}/`));
+    if (residual.length) {
+      dirty.push({ label: 'primary 主检出（残留副本）', paths: residual });
     }
   }
   if (dirty.length) {

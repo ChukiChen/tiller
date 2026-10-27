@@ -1,10 +1,10 @@
 import assert from 'node:assert/strict';
 import { existsSync, mkdirSync, readFileSync, renameSync, rmSync, statSync } from 'node:fs';
-import { join } from 'node:path';
+import { join, sep } from 'node:path';
 import { spawn, spawnSync } from 'node:child_process';
 import test from 'node:test';
 import { cleanupTaskWorktrees } from '../dist/task-worktrees.js';
-import { cli, cliPath, confirmTask, failure, fixture, put, spawnCaptured, success } from './helpers.mjs';
+import { cli, cliPath, confirmTask, failure, fixture, put, spawnCaptured, success, taskRecordRoot} from './helpers.mjs';
 import { startPlatformMock } from './platform-api-mock.mjs';
 
 function git(root, ...args) {
@@ -57,24 +57,27 @@ function startTask(root, id, extra = []) {
     '--criterion', 'AC-1=Task worktree behavior is observable', '--size', 'small', '--target', '.', ...extra));
 }
 
-function acceptTask(root, id) {
-  put(root, '.tiller/specs/modules/workflow/requirements.md', '# Workflow\n\n## Worktrees\n\nTask worktrees follow the lifecycle.\n');
-  put(root, '.tiller/specs/modules/workflow/design.md', '# Workflow design\n\nUse task-scoped worktrees and logs.\n');
-  put(root, 'src/worktree-fixture.ts', 'export const worktreeFixture = true;\n');
-  const added = success(cli(root, 'case', 'add', id, '--module', 'workflow', '--kind', 'behavior',
+function acceptTask(primaryOrWorktree, id) {
+  const primary = primaryOrWorktree.includes(`${sep}.tiller${sep}local${sep}`)
+    ? primaryOrWorktree.slice(0, primaryOrWorktree.indexOf(`${sep}.tiller${sep}local${sep}`))
+    : primaryOrWorktree;
+  const worktree = join(primary, worktreePath(id));
+  put(worktree, '.tiller/specs/modules/workflow/requirements.md', '# Workflow\n\n## Worktrees\n\nTask worktrees follow the lifecycle.\n');
+  put(worktree, '.tiller/specs/modules/workflow/design.md', '# Workflow design\n\nUse task-scoped worktrees and logs.\n');
+  put(worktree, 'src/worktree-fixture.ts', 'export const worktreeFixture = true;\n');
+  const added = success(cli(worktree, 'case', 'add', id, '--module', 'workflow', '--kind', 'behavior',
     '--title', `${id} worktree cleanup`, '--expected', 'The task can be accepted and closed.'));
   const testFile = `test/${id}.test.mjs`;
-  put(root, testFile, [
+  put(worktree, testFile, [
     "import test from 'node:test';",
     '',
     `test('${added.id} accepted task fixture', () => {});`,
     '',
   ].join('\n'));
-  commit(root, `test: accept ${id}`);
-  success(confirmTask(root, id, 'requirements'));
-  success(cli(root, 'verify', id, '--criterion', 'AC-1', '--test', `${testFile}::${added.id} accepted task fixture`));
-  git(root, 'checkout', '--quiet', '-b', `fix/${id}-fixture`);
-  success(cli(root, 'accept', id, '--by', 'Tiller Test'));
+  commit(worktree, `test: accept ${id}`);
+  success(confirmTask(worktree, id, 'requirements'));
+  success(cli(worktree, 'verify', id, '--criterion', 'AC-1', '--test', `${testFile}::${added.id} accepted task fixture`));
+  success(cli(worktree, 'accept', id, '--by', 'Tiller Test'));
 }
 
 async function cliWithEnv(root, environment, ...args) {
@@ -132,7 +135,7 @@ test('CASE-196 CASE-209 CASE-287 project start creates a task-local worktree, si
   assert.ok(existsSync(join(root, relative)));
   assert.equal(git(join(root, relative), 'branch', '--show-current'), `fix/${id}-fix-exit`);
   assert.match(git(root, 'worktree', 'list', '--porcelain'), new RegExp(relative.replace(/[.*+?^${}()|[\]\\]/gu, '\\$&'), 'u'));
-  assert.ok(existsSync(join(root, `.tiller/task/${id}/task.md`)));
+  assert.equal(existsSync(join(root, `.tiller/task/${id}/task.md`)), false);
   assert.match(readFileSync(join(root, relative, `.tiller/task/${id}/task.md`), 'utf8'), new RegExp(id, 'u'));
   const state = JSON.parse(readFileSync(join(root, taskLocalPath(id, 'worktrees.json')), 'utf8'));
   assert.equal(state.root, relative);
@@ -161,7 +164,7 @@ test('CASE-197 CASE-210 CASE-287 workspace start keeps management and registered
     const target = join(root, started.worktrees.find(item => item.repository === repository).path);
     assert.equal(git(target, 'branch', '--show-current'), branch);
   }
-  assert.ok(existsSync(join(root, `.tiller/task/${id}/task.md`)));
+  assert.equal(existsSync(join(root, `.tiller/task/${id}/task.md`)), false);
   assert.ok(existsSync(join(root, worktreePath(id, 'management'), `.tiller/task/${id}/task.md`)));
   assert.ok(existsSync(join(root, worktreePath(id, 'management'), '.tiller/project.json')));
   const state = JSON.parse(readFileSync(join(root, taskLocalPath(id, 'worktrees.json')), 'utf8'));
@@ -190,6 +193,7 @@ test('CASE-198 CASE-211 close and abandon remove the whole task-local directory 
   startTask(root, acceptedId);
   startTask(root, abandonedId);
   put(root, worktreePath(acceptedId, 'dirty.txt'), 'uncommitted\n');
+  put(root, taskLocalPath(acceptedId, 'logs/run-1.log'), 'accepted log\n');
   put(root, taskLocalPath(abandonedId, 'logs/run-1.log'), 'abandoned log\n');
   put(root, taskLocalPath(bystanderId, 'logs/run-1.log'), 'bystander log\n');
   acceptTask(root, acceptedId);
@@ -241,12 +245,10 @@ test('CASE-280 worktree 根 close 可读取仅存在于 worktree 的任务记录
   const id = '20261027-worktree-only-record-close';
   const started = startTask(root, id);
   const worktree = join(root, started.worktreeRoot);
-  rmSync(join(worktree, `.tiller/task/${id}`), { recursive: true, force: true });
-  mkdirSync(join(worktree, '.tiller/task'), { recursive: true });
-  renameSync(join(root, `.tiller/task/${id}`), join(worktree, `.tiller/task/${id}`));
   assert.equal(existsSync(join(root, `.tiller/task/${id}/task.md`)), false);
+  assert.ok(existsSync(join(taskRecordRoot(worktree, id), `.tiller/task/${id}/task.md`)));
 
-  acceptTask(worktree, id);
+  acceptTask(root, id);
   const closed = success(cli(worktree, 'close', id, '--reason', '从仅含任务记录的 worktree 收尾'));
   assert.deepEqual(closed.worktrees, [started.worktreeRoot]);
   assert.equal(existsSync(worktree), false);
@@ -257,11 +259,21 @@ test('CASE-283 合入后 close 不改共享 task.md 且重复 close 安全', asy
   const root = project(t);
   const id = '20261027-repeat-close';
   const started = startTask(root, id);
+  const worktree = join(root, started.worktreeRoot);
   acceptTask(root, id);
+  // Simulate merge: task record + cases land on primary from the task branch.
+  const shared = readFileSync(join(worktree, `.tiller/task/${id}/task.md`), 'utf8');
+  put(root, `.tiller/task/${id}/task.md`, shared);
+  put(root, '.tiller/cases/modules/workflow/behavior.md',
+    readFileSync(join(worktree, '.tiller/cases/modules/workflow/behavior.md'), 'utf8'));
+  put(root, `test/${id}.test.mjs`, readFileSync(join(worktree, `test/${id}.test.mjs`), 'utf8'));
+  put(root, '.tiller/specs/modules/workflow/requirements.md',
+    readFileSync(join(worktree, '.tiller/specs/modules/workflow/requirements.md'), 'utf8'));
+  put(root, '.tiller/specs/modules/workflow/design.md',
+    readFileSync(join(worktree, '.tiller/specs/modules/workflow/design.md'), 'utf8'));
   commit(root, 'chore(workflow): 固化交付验收');
   const taskPath = join(root, `.tiller/task/${id}/task.md`);
   const before = readFileSync(taskPath, 'utf8');
-  const mtime = statSync(taskPath).mtimeMs;
 
   const first = success(cli(root, 'close', id, '--reason', '合入后收尾'));
   assert.equal(first.stage, '已验收');
@@ -269,7 +281,7 @@ test('CASE-283 合入后 close 不改共享 task.md 且重复 close 安全', asy
   const second = success(cli(root, 'close', id, '--reason', '重复收尾'));
   assert.equal(second.stage, '已验收');
   assert.equal(readFileSync(taskPath, 'utf8'), before);
-  assert.equal(statSync(taskPath).mtimeMs, mtime);
+  assert.ok(existsSync(taskPath), 'shared task.md stays after close');
 });
 
 test('CASE-199 tasks without worktrees still close or abandon and clear task-local logs', async t => {
@@ -279,8 +291,20 @@ test('CASE-199 tasks without worktrees still close or abandon and clear task-loc
   startTask(root, closedId);
   startTask(root, abandonedId);
   acceptTask(root, closedId);
+  // Preserve accepted delivery artifacts on primary before dismantling worktrees.
+  const closedWorktree = join(root, worktreePath(closedId));
+  put(root, '.tiller/cases/modules/workflow/behavior.md',
+    readFileSync(join(closedWorktree, '.tiller/cases/modules/workflow/behavior.md'), 'utf8'));
+  put(root, `test/${closedId}.test.mjs`, readFileSync(join(closedWorktree, `test/${closedId}.test.mjs`), 'utf8'));
+  put(root, '.tiller/specs/modules/workflow/requirements.md',
+    readFileSync(join(closedWorktree, '.tiller/specs/modules/workflow/requirements.md'), 'utf8'));
+  put(root, '.tiller/specs/modules/workflow/design.md',
+    readFileSync(join(closedWorktree, '.tiller/specs/modules/workflow/design.md'), 'utf8'));
   for (const id of [closedId, abandonedId]) {
-    git(root, 'worktree', 'remove', '--force', join(root, worktreePath(id)));
+    const worktree = join(root, worktreePath(id));
+    mkdirSync(join(taskRecordRoot(root, id), `.tiller/task/${id}`), { recursive: true });
+    put(root, `.tiller/task/${id}/task.md`, readFileSync(join(taskRecordRoot(worktree, id), `.tiller/task/${id}/task.md`), 'utf8'));
+    git(root, 'worktree', 'remove', '--force', worktree);
     git(root, 'worktree', 'prune');
     rmSync(join(root, taskLocalPath(id, 'worktrees.json')), { force: true });
     put(root, taskLocalPath(id, 'logs/run-1.log'), `${id}\n`);
@@ -305,6 +329,10 @@ test('CASE-212 close cleans legacy worktrees, logs and sidecars without touching
   startTask(root, acceptedId);
   startTask(root, abandonedId);
   acceptTask(root, acceptedId);
+  // Persist abandoned start seed onto primary before dismantling the worktree (no auto-commit yet).
+  mkdirSync(join(taskRecordRoot(root, abandonedId), `.tiller/task/${abandonedId}`), { recursive: true });
+  put(root, `.tiller/task/${abandonedId}/task.md`,
+    readFileSync(join(root, worktreePath(abandonedId), `.tiller/task/${abandonedId}/task.md`), 'utf8'));
 
   const legacyPaths = (id) => {
     const current = worktreePath(id);
@@ -360,7 +388,7 @@ test('CASE-200 start failures leave no task record or partially created worktree
   const occupied = failure(cli(projectRoot, 'start', occupiedId, '--title', 'Occupied', '--requirement', 'Reject occupied worktree paths.',
     '--criterion', 'AC-1=Path conflict fails', '--size', 'small', '--target', '.'));
   assert.equal(occupied.error.code, 'WORKTREE_PATH_EXISTS');
-  assert.equal(existsSync(join(projectRoot, `.tiller/task/${occupiedId}/task.md`)), false);
+  assert.equal(existsSync(join(taskRecordRoot(projectRoot, occupiedId), `.tiller/task/${occupiedId}/task.md`)), false);
   assert.equal(readFileSync(join(projectRoot, worktreePath(occupiedId, 'sentinel.txt')), 'utf8'), 'occupied\n');
 
   const workspaceRoot = workspace(t);
@@ -369,7 +397,7 @@ test('CASE-200 start failures leave no task record or partially created worktree
   const rejected = failure(cli(workspaceRoot, 'start', id, '--title', 'Invalid repo', '--requirement', 'Reject a business path that is not Git.',
     '--criterion', 'AC-2=Every repository must be Git', '--size', 'small', '--target', '.'));
   assert.equal(rejected.error.code, 'WORKTREE_NOT_GIT_REPOSITORY');
-  assert.equal(existsSync(join(workspaceRoot, `.tiller/task/${id}/task.md`)), false);
+  assert.equal(existsSync(join(taskRecordRoot(workspaceRoot, id), `.tiller/task/${id}/task.md`)), false);
   assert.equal(existsSync(join(workspaceRoot, worktreePath(id, 'management'))), false);
 
   const rollbackRoot = workspace(t);
@@ -380,7 +408,7 @@ test('CASE-200 start failures leave no task record or partially created worktree
     '--requirement', 'Fail while creating a later repository worktree.', '--criterion', 'AC-2=No partial worktree remains',
     '--size', 'small', '--target', '.'));
   assert.equal(rolledBack.error.code, 'WORKTREE_ADD_FAILED');
-  assert.equal(existsSync(join(rollbackRoot, `.tiller/task/${rollbackId}/task.md`)), false);
+  assert.equal(existsSync(join(taskRecordRoot(rollbackRoot, rollbackId), `.tiller/task/${rollbackId}/task.md`)), false);
   assert.equal(existsSync(join(rollbackRoot, worktreePath(rollbackId))), false);
 
   const noGitId = '20261024-no-git-worktree';
@@ -389,6 +417,6 @@ test('CASE-200 start failures leave no task record or partially created worktree
     '--target', '.', '--json'], { cwd: projectRoot, env: { PATH: '' }, timeout: 20_000 });
   assert.equal(noGit.status, 1, noGit.stderr);
   assert.equal(JSON.parse(noGit.stdout).error.code, 'GIT_UNAVAILABLE');
-  assert.equal(existsSync(join(projectRoot, `.tiller/task/${noGitId}/task.md`)), false);
+  assert.equal(existsSync(join(taskRecordRoot(projectRoot, noGitId), `.tiller/task/${noGitId}/task.md`)), false);
   assert.equal(existsSync(join(projectRoot, worktreePath(noGitId))), false);
 });

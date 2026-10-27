@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { chmodSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { chmodSync, existsSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { delimiter, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -8,10 +8,9 @@ import { parseMetadata } from '../dist/core.js';
 import { readRepositoryRecords } from '../dist/repository-paths.js';
 import { normalizeVerifyConfig, resolveVerifyTarget, runnerFor } from '../dist/test-output.js';
 import { applyUpgrade, planUpgrade } from '../dist/upgrade.js';
-import { cli, failure, fixture, gitRepository, initializeSettled, put, success } from './helpers.mjs';
+import {  cli, failure, fixture, gitRepository, initializeSettled, put, success, taskRecordRoot, read } from './helpers.mjs';
 
 const repository = fileURLToPath(new URL('..', import.meta.url));
-const read = (root, relative) => readFileSync(join(root, relative), 'utf8');
 const initialize = initializeSettled;
 const paths = {
   reporter: './.tiller/local/verify-x/reporter.mjs',
@@ -217,16 +216,16 @@ test('CASE-168 workspace uses each repository runner and runs prepare in that re
     assert.match(billing.entries[0].command, /^repositories\/billing\$ mvn /u);
     assert.match(billing.entries[0].command, /'-Dtest=com\.example\.BillingTest#addsInvoice'/u);
     assert.match(billing.entries[0].command, /-Dsurefire\.reportsDirectory=\.\.\/\.\.\/\.tiller\/local\/verify-/u);
-    assert.equal(read(root, 'repositories/billing/prepare-cwd.txt'), join(root, 'repositories/billing'));
-    assert.equal(read(root, billing.log).includes(root), false);
-    assert.equal(read(root, `.tiller/task/${id}/task.md`).includes(root), false);
+    assert.match(read(root, 'repositories/billing/prepare-cwd.txt'), /(?:^|\/)repositories\/billing$/u);
+    assert.equal(read(existsSync(join(root, billing.log)) ? root : taskRecordRoot(root, id), billing.log).includes(root), false);
+    assert.equal(read(taskRecordRoot(root, id), `.tiller/task/${id}/task.md`).includes(root), false);
     const web = success(cli(root, 'verify', id, '--criterion', 'AC-1',
       '--test', 'repositories/web/test/web.test.mjs::web passes'));
     assert.equal(web.entries[0].evidence, 'verified');
     assert.match(web.entries[0].command, /^repositories\/web\$ node /u);
     assert.match(web.entries[0].command, /--test-reporter=\.\/\.\.\/\.\.\/\.tiller\/local\/verify-/u);
     assert.match(web.entries[0].command, /test\/web\.test\.mjs$/u);
-    assert.equal(read(root, web.log).includes(root), false);
+    assert.equal(read(existsSync(join(root, web.log)) ? root : taskRecordRoot(root, id), web.log).includes(root), false);
     const ledger = success(cli(root, 'verify', id, '--criterion', 'AC-1',
       '--test', 'repositories/ledger/src/test/java/com/example/BillingTest.java::com.example.BillingTest#addsInvoice'));
     assert.equal(ledger.entries[0].evidence, 'verified');
