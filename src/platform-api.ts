@@ -97,12 +97,12 @@ export function tokenGuidance(platform: PlatformName, apiBase?: string): string 
   if (platform === 'github') {
     return [
       '缺少 GitHub token。请设置 GITHUB_TOKEN（或 GH_TOKEN）后重试；tiller 使用 GitHub REST API，不依赖平台 CLI。',
-      `可选校验：curl -fsS -H "Authorization: Bearer $GITHUB_TOKEN" ${apiBase ?? 'https://api.github.com'}/repos/<owner>/<repo>`,
+      `API 地址：${apiBase ?? 'https://api.github.com'}；设置后重新运行当前 tiller 命令。`,
     ].join('\n');
   }
   return [
     '缺少 GitLab token。请设置 GITLAB_TOKEN（或 GL_TOKEN）后重试；tiller 使用 GitLab REST API，不依赖平台 CLI。',
-    `可选校验：curl -fsS -H "PRIVATE-TOKEN: $GITLAB_TOKEN" ${apiBase ?? 'https://gitlab.com/api/v4'}/projects/<project-id>`,
+    `API 地址：${apiBase ?? 'https://gitlab.com/api/v4'}；设置后重新运行当前 tiller 命令。`,
   ].join('\n');
 }
 
@@ -380,6 +380,13 @@ export async function deleteRemoteBranch(
       method: 'platform-api',
     };
   } catch (error) {
+    if ((error as { status?: number }).status === 422) {
+      return {
+        deleted: false,
+        command: `${repository.platform === 'github' ? 'github-api' : 'gitlab-api'} DELETE ${endpoint}`,
+        method: 'platform-api',
+      };
+    }
     if ((error as { code?: string }).code !== 'PLATFORM_API_UNREACHABLE') throw error;
     const remote = `${repository.webBase}/${repository.projectPath}.git`;
     try {
@@ -536,13 +543,4 @@ export async function pushBranch(
       `GitHub Git Data API 推送不可用，已回退到 tokenized HTTPS git push：${truncated(detail)}`,
     ]);
   }
-}
-
-export function apiCurlForRequest(repository: PlatformRepository): string {
-  if (repository.platform === 'github') {
-    const endpoint = `${repository.apiBase}${githubRepoPath(repository)}/pulls`;
-    return `curl -fsS -X POST -H "Authorization: Bearer $GITHUB_TOKEN" -H "Accept: application/vnd.github+json" ${endpoint}`;
-  }
-  const endpoint = `${repository.apiBase}/projects/${gitlabProjectPath(repository)}/merge_requests`;
-  return `curl -fsS -X POST -H "PRIVATE-TOKEN: $GITLAB_TOKEN" ${endpoint}`;
 }

@@ -263,15 +263,15 @@ test('CASE-048 global cases use module kinds and scenarios with resolvable named
   const kinds = ['behavior', 'interface', 'performance', 'security'];
   const library = await readCaseLibrary(repository);
   assert.deepEqual(library.issues, []);
-  assert.equal(library.cases.length, 278);
+  assert.equal(library.cases.length, 286);
   assert.deepEqual(library.cases.map(item => item.id).sort(),
-    Array.from({ length: 278 }, (_, index) => `CASE-${String(index + 1).padStart(3, '0')}`));
+    Array.from({ length: 286 }, (_, index) => `CASE-${String(index + 1).padStart(3, '0')}`));
   assert.deepEqual(library.modules.map(item => ({ module: item.module, behavior: item.behavior, interface: item.interface,
     performance: item.performance, security: item.security })), [
     { module: 'initialization', behavior: 30, interface: 9, performance: 11, security: 17 },
-    { module: 'standards', behavior: 22, interface: 14, performance: 0, security: 0 },
+    { module: 'standards', behavior: 22, interface: 15, performance: 0, security: 0 },
     { module: 'verification', behavior: 13, interface: 13, performance: 15, security: 4 },
-    { module: 'workflow', behavior: 74, interface: 47, performance: 0, security: 7 },
+    { module: 'workflow', behavior: 80, interface: 48, performance: 0, security: 7 },
   ]);
   assert.equal(library.scenarios.length, 2);
   for (const item of library.scenarios) assert.ok(item.modules.length > 0 && item.modules.every(module => specs.includes(module)));
@@ -311,13 +311,13 @@ test('CASE-048 global cases use module kinds and scenarios with resolvable named
 test('CASE-245 全局用例库同步文档 CLI 名称与版本', async () => {
   const library = await readCaseLibrary(repository);
   assert.deepEqual(library.issues, []);
-  assert.equal(library.cases.length, 278);
+  assert.equal(library.cases.length, 286);
   const added = library.cases.filter(item => Number(item.id.slice(5)) >= 242 && Number(item.id.slice(5)) <= 245);
   assert.deepEqual(added.map(item => item.id), ['CASE-242', 'CASE-243', 'CASE-244', 'CASE-245']);
   const standards = library.modules.find(item => item.module === 'standards');
   assert.deepEqual({ behavior: standards?.behavior, interface: standards?.interface,
     performance: standards?.performance, security: standards?.security },
-  { behavior: 22, interface: 14, performance: 0, security: 0 });
+  { behavior: 22, interface: 15, performance: 0, security: 0 });
   for (const item of added) assert.ok(item.tests.some(reference => reference.name?.includes(item.id)));
   const sceneCases = library.cases.filter(item => Number(item.id.slice(5)) >= 270 && Number(item.id.slice(5)) <= 272)
     .sort((left, right) => left.id.localeCompare(right.id));
@@ -536,6 +536,35 @@ test('CASE-278 docs require specs changes through task worktrees and forbid dire
   }
 });
 
+test('CASE-282 docs use the real pr path without a hand-built API alternative', () => {
+  for (const pair of [
+    ['resources/usage.md', '.tiller/usage.md'],
+    ['resources/rules/core.md', '.tiller/rules/core.md'],
+    ['resources/rules/activities/delivery.md', '.tiller/rules/activities/delivery.md'],
+  ]) assert.equal(readFileSync(join(repository, pair[0]), 'utf8'), readFileSync(join(repository, pair[1]), 'utf8'), pair.join(' == '));
+
+  const help = success(cli(repository, '--help')).help;
+  const documents = [
+    ['resources/usage.md', readFileSync(join(repository, 'resources/usage.md'), 'utf8')],
+    ['resources/rules/core.md', readFileSync(join(repository, 'resources/rules/core.md'), 'utf8')],
+    ['resources/rules/activities/delivery.md', readFileSync(join(repository, 'resources/rules/activities/delivery.md'), 'utf8')],
+    ['AGENTS.md', readFileSync(join(repository, 'AGENTS.md'), 'utf8')],
+    ['--help', help],
+  ];
+  for (const [name, content] of documents) {
+    assert.match(content, /accept[^\n]*pr/u, name);
+    assert.match(content, /pr[^\n]*(?:平台 API|真实 PR\/MR)/u, name);
+    assert.match(content, /merge/u, name);
+    assert.match(content, /--draft-only/u, name);
+    assert.doesNotMatch(content, /curl[^\n]*(?:\/pulls|merge_requests)/iu, name);
+    assert.doesNotMatch(content, /`pr` 只(?:输出|生成)草稿/u, name);
+    assert.doesNotMatch(content, /^#{2,3}\s+验收条件（稳定）\s*$/mu, name);
+    assert.doesNotMatch(content, /LIB-AC|对照\s*(?:VER|FLOW|AC)/u, name);
+  }
+  assert.match(help, /tiller doctor \[path\]/u);
+  assert.match(help, /tiller pr <YYYYMMDD-task-id>[^\n]*--draft-only/u);
+});
+
 test('CASE-162 repository keeps the 0.5.0 release contract and five full verification entries', () => {
   const packageJson = JSON.parse(readFileSync(join(repository, 'package.json'), 'utf8'));
   assert.equal(packageJson.version, '0.5.0');
@@ -573,7 +602,7 @@ test('CASE-164 historical empty AC cases stay warned without fabricated backfill
   assert.match(decisions, /不批量回填/u);
   assert.match(decisions, /不.*冒充历史来源/u);
   const library = await readCaseLibrary(repository);
-  assert.equal(library.cases.filter(item => item.criteria.length === 0).length, 106);
+  assert.equal(library.cases.filter(item => item.criteria.length === 0).length, 114);
 });
 
 test('CASE-165 project rules and context match 0.5.0 without stale workflow guidance', () => {

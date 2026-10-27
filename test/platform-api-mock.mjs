@@ -64,6 +64,9 @@ export async function startPlatformMock(t, options = {}) {
         const rest = repo[1] ?? '';
         if (request.method === 'GET' && rest === '') return json(response, 200, { default_branch: 'main' });
         if (request.method === 'POST' && rest === 'pulls') {
+          if (state.mode === 'pr-exists') {
+            return json(response, 422, { message: 'A pull request already exists for this branch' });
+          }
           if (state.mode === 'pr-failure') {
             return json(response, 500, { message: `PR create rejected ${request.headers.authorization ?? ''}` });
           }
@@ -141,6 +144,9 @@ export async function startPlatformMock(t, options = {}) {
           return json(response, 200, { ref, object: { sha: value.sha } });
         }
         if (request.method === 'DELETE' && rest.startsWith('git/refs/heads/')) {
+          if (state.mode === 'branch-delete-missing') {
+            return json(response, 422, { message: 'Reference does not exist' });
+          }
           if (state.mode === 'branch-delete-failure') {
             return json(response, 500, { message: `branch delete rejected ${request.headers.authorization ?? ''}` });
           }
@@ -155,6 +161,9 @@ export async function startPlatformMock(t, options = {}) {
         const rest = project[1] ?? '';
         if (request.method === 'GET' && rest === '') return json(response, 200, { default_branch: 'main' });
         if (request.method === 'POST' && rest === 'merge_requests') {
+          if (state.mode === 'pr-exists') {
+            return json(response, 422, { message: 'Another open merge request already exists for this source branch' });
+          }
           if (state.mode === 'pr-failure') {
             return json(response, 500, { message: `MR create rejected ${request.headers['private-token'] ?? ''}` });
           }
@@ -179,6 +188,9 @@ export async function startPlatformMock(t, options = {}) {
           return json(response, 200, { state: 'merged' });
         }
         if (request.method === 'DELETE' && rest.startsWith('repository/branches/')) {
+          if (state.mode === 'branch-delete-missing') {
+            return json(response, 422, { message: 'Branch does not exist' });
+          }
           if (state.mode === 'branch-delete-failure') {
             return json(response, 500, { message: `branch delete rejected ${request.headers['private-token'] ?? ''}` });
           }

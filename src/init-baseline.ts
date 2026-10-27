@@ -4,7 +4,7 @@ import path from 'node:path';
 import { promisify } from 'node:util';
 import { assertSafePath } from './files.js';
 import {
-  apiCurlForRequest, createMergeRequest, createPullRequest, findMergedIntegration, platformToken, pushBranch,
+  createMergeRequest, createPullRequest, findMergedIntegration, platformToken, pushBranch,
   resolvePlatformRepository, tokenGuidance, type FetchLike, type PlatformRepository, type PlatformToken,
 } from './platform-api.js';
 import { META, parseMetadata } from './project-metadata.js';
@@ -115,7 +115,7 @@ function pendingNext(id: string, repository?: PlatformRepository): string[] {
   }
   return [
     tokenExport(repository),
-    `用平台 API 或 tokenized HTTPS git 推送 ${INIT_BRANCH}，再用 ${repository.platform === 'github' ? 'GitHub' : 'GitLab'} REST API 创建 PR/MR：${apiCurlForRequest(repository)}`,
+    `设置 token 后重新运行 tiller init；它会经 ${repository.platform === 'github' ? 'GitHub' : 'GitLab'} REST API 推送 ${INIT_BRANCH} 并按同一任务创建 PR/MR，无需手写 API 请求。`,
     close,
   ];
 }

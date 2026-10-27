@@ -358,7 +358,7 @@ test('CASE-087 reported verification is blocked by default and allowed explicitl
   assert.equal(failure(cli(root, 'accept', id, '--by', 'Tiller Test')).error.code, 'NOT_READY');
   assert.equal(success(cli(root, 'accept', id, '--by', 'Tiller Test', '--allow-reported')).gate, 'acceptance');
   commitAll(root, 'chore(workflow): 记录外部报告验收');
-  const draft = success(cli(root, 'pr', id));
+  const draft = success(cli(root, 'pr', id, '--draft-only'));
   assert.ok(draft.body.includes(`未执行（外部报告）：${reason}`), draft.body);
 });
 

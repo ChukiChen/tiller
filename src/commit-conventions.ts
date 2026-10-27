@@ -50,9 +50,9 @@ async function git(root: string, args: string[]): Promise<{ ok: boolean; stdout:
   }
 }
 
-export async function taskCommits(root: string, base: string): Promise<{ commits: TaskCommit[]; warning?: string }> {
+export async function taskCommits(root: string, base: string, head = 'HEAD'): Promise<{ commits: TaskCommit[]; warning?: string }> {
   if (base === 'no-git') return { commits: [] };
-  const range = `${base}..HEAD`;
+  const range = `${base}..${head}`;
   const result = await git(root, ['log', '--reverse', '--no-merges', '--format=%H%x09%s', range]);
   if (!result.ok) return { commits: [], warning: `无法读取任务基线后的提交：${result.stderr.trim()}` };
   const commits = result.stdout.split(/\r?\n/u).filter(Boolean).flatMap(line => {

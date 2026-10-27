@@ -1821,3 +1821,147 @@ check 在 main/master 且变更含 .tiller/specs/ 时返回含过程卫生/specs
 ### 预期结果
 
 在含任务编号的任务分支上改 .tiller/specs/ 时，check 不因本 specs 默认分支门禁失败
+
+## CASE-279 pr 经 API 创建真实 PR 并返回 URL
+
+- 类型：behavior
+- 优先级：high
+- 模块：workflow
+- 关联 AC：无
+- 需求：`.tiller/specs/modules/workflow/flow-exec-stability.md`
+
+### 前置条件
+
+- 任务已验收且任务记录已提交
+
+### 步骤
+
+1. 运行 tiller pr <id>（mock fetch）
+
+### 输入
+
+- 按用例描述准备正常输入及必要的边界输入。
+
+### 预期结果
+
+具备 token 时 tiller pr 推送分支并调用平台 API 创建 PR/MR，结果含 url/number；缺 token 中文失败
+
+## CASE-280 worktree 根 close 可删本地任务分支
+
+- 类型：behavior
+- 优先级：high
+- 模块：workflow
+- 关联 AC：无
+- 需求：`.tiller/specs/modules/workflow/flow-exec-stability.md`
+
+### 前置条件
+
+- 任务分支在 worktree 检出；任务记录可仅存在于该 worktree
+
+### 步骤
+
+1. 在 worktree 路径执行 close 或等价清理
+
+### 输入
+
+- 按用例描述准备正常输入及必要的边界输入。
+
+### 预期结果
+
+从任务 worktree 根执行 close/merge 时能读取仅存在于该检出的任务记录；清理后主仓不再残留该本地任务分支，远端已不存在不失败
+
+## CASE-281 doctor 过程卫生扫描与退出码
+
+- 类型：behavior
+- 优先级：high
+- 模块：workflow
+- 关联 AC：无
+- 需求：`.tiller/specs/modules/workflow/flow-exec-stability.md`
+
+### 前置条件
+
+- 对应模块与运行环境可用。
+
+### 步骤
+
+1. 在临时仓构造脏改与干净状态分别运行 doctor
+
+### 输入
+
+- 按用例描述准备正常输入及必要的边界输入。
+
+### 预期结果
+
+tiller doctor 扫描基线/默认分支 specs 脏改/残留任务分支等并给出通过与否退出码
+
+## CASE-283 重复 close 与合入后不改共享 task.md
+
+- 类型：behavior
+- 优先级：medium
+- 模块：workflow
+- 关联 AC：无
+- 需求：`.tiller/specs/modules/workflow/flow-exec-stability.md`
+
+### 前置条件
+
+- 对应模块与运行环境可用。
+
+### 步骤
+
+1. 模拟已验收合入后 close 两次并检查 task.md mtime/内容
+
+### 输入
+
+- 按用例描述准备正常输入及必要的边界输入。
+
+### 预期结果
+
+合入后 close 不改写共享 task.md；对本机已清理任务重复 close 安全成功或明确已清理
+
+## CASE-285 任务记录仅在 worktree 时 pr 不误报缺失
+
+- 类型：behavior
+- 优先级：high
+- 模块：workflow
+- 关联 AC：无
+- 需求：`.tiller/specs/modules/workflow/flow-exec-stability.md`
+
+### 前置条件
+
+- 任务在任务 worktree 中完成验收并提交，主仓工作树没有 .tiller/task/<id>/
+
+### 步骤
+
+1. 在任务 worktree 根运行 tiller pr <id> --draft-only
+
+### 输入
+
+- worktree 内存在已提交的 task.md，主仓对应目录不存在
+
+### 预期结果
+
+成功生成草稿，不因主仓缺少任务目录而 TASK_NOT_FOUND
+
+## CASE-286 任务在所有相关检出均不存在时 pr 仍报缺失
+
+- 类型：behavior
+- 优先级：medium
+- 模块：workflow
+- 关联 AC：无
+- 需求：`.tiller/specs/modules/workflow/flow-exec-stability.md`
+
+### 前置条件
+
+- 主仓与当前 worktree 均不存在 .tiller/task/<id>/task.md
+
+### 步骤
+
+1. 在 worktree 根运行 tiller pr <id> --draft-only
+
+### 输入
+
+- 任务编号在两个检出都没有对应记录
+
+### 预期结果
+
+仍以 TASK_NOT_FOUND 失败，错误码不因检出解析改变

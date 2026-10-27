@@ -1160,3 +1160,27 @@ start --requirement-file 后 task 需求保留多行结构并含需求来源路�
 ### 预期结果
 
 标题为「验收条件」，不出现「验收条件（稳定）」
+
+## CASE-284 pr draft-only 仅输出草稿不联网
+
+- 类型：interface
+- 优先级：medium
+- 模块：workflow
+- 关联 AC：无
+- 需求：`.tiller/specs/modules/workflow/flow-exec-stability.md`
+
+### 前置条件
+
+- 对应模块与运行环境可用。
+
+### 步骤
+
+1. 运行 tiller pr <id> --draft-only
+
+### 输入
+
+- 按用例描述准备正常输入及必要的边界输入。
+
+### 预期结果
+
+draft-only 只生成五段草稿与建议分支，不调用创建 PR API
