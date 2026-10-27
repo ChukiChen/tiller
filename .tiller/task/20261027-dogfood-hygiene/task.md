@@ -89,138 +89,123 @@
 | --- | --- | --- | --- | --- |
 | 需求 | boon yu | 2026-10-27T03:51:27.070Z | 27f7d619b5fc | — |
 | 设计 | boon yu | 2026-10-27T03:51:27.172Z | 27f7d619b5fc | — |
+| 交付验收 | boon yu | 2026-10-27T03:52:58.726Z | 296389494c1c | — |
 
 <!-- tiller-confirm:v1 {"gate":"requirements","object":"需求正文（目标、范围与验收条件）","subject":"023caef346b6526bbb7cbe3c470d24df1c3b6770f15506ed819ba0587bed7d7f","commit":"27f7d619b5fc071bc2782a9340872734672e7f21","by":"boon yu","quote":"","at":"2026-10-27T03:51:27.070Z"} -->
 <!-- tiller-confirm:v1 {"gate":"design","object":"设计正文","subject":"ed87ee8df01a9b0572ee5c01e171dbd3ca6a99dc6a50de3de2e091c657da1cd0","commit":"27f7d619b5fc071bc2782a9340872734672e7f21","by":"boon yu","quote":"","at":"2026-10-27T03:51:27.172Z"} -->
+<!-- tiller-confirm:v1 {"gate":"acceptance","object":"当前交付（需求、设计、验证与提交）","subject":"304510b9cb24c2cdaff3f2418067c8382d1939b07dc55bbcef3bd68ebf73655f","commit":"296389494c1c842a81d439e78b82426f3f79668c","by":"boon yu","quote":"","at":"2026-10-27T03:52:58.726Z"} -->
 
 ## 验证
 
-### run-1
-<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-196 CASE-209 CASE-287 project start creates a task-local worktree, sidecars and logs in one directory$' \u002d\u002dtest-reporter=./.tiller/local/verify-yKry0Z/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-yKry0Z/report.jsonl test/task-worktrees.test.mjs","exitCode":0,"tree":"a1690c7ce8a29cf4bcef32843a90de594823b78e6b92ba6efd2c853d01b1ae2b","commit":"27f7d619b5fc071bc2782a9340872734672e7f21"} -->
+### run-9
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-196 CASE-209 CASE-287 project start creates a task-local worktree, sidecars and logs in one directory$' \u002d\u002dtest-reporter=./.tiller/local/verify-NuTdsP/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-NuTdsP/report.jsonl test/task-worktrees.test.mjs","exitCode":0,"tree":"5ccb191f22062c99602e058db3c3b2fc2bfb394ce561b3d336909b830d0dc358","commit":"296389494c1c842a81d439e78b82426f3f79668c"} -->
 - 条件：AC-1
 - 测试：test/task-worktrees.test.mjs::CASE-196 CASE-209 CASE-287 project start creates a task-local worktree, sidecars and logs in one directory
 - 用例：CASE-287
 - 结果：passed
 - 来源：executed
 - 核实：已核实
-- 日志：.tiller/local/20261027-dogfood-hygiene/logs/run-1.log
-- 提交：27f7d619b5fc
-- 时间：2026-10-27T03:50:25.439Z
+- 日志：.tiller/local/20261027-dogfood-hygiene/logs/run-9.log
+- 提交：296389494c1c
+- 时间：2026-10-27T03:51:40.506Z
 
-### run-2
-<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-197 CASE-210 CASE-287 workspace start keeps management and registered repositories under the task worktree root$' \u002d\u002dtest-reporter=./.tiller/local/verify-UT17k3/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-UT17k3/report.jsonl test/task-worktrees.test.mjs","exitCode":0,"tree":"a1690c7ce8a29cf4bcef32843a90de594823b78e6b92ba6efd2c853d01b1ae2b","commit":"27f7d619b5fc071bc2782a9340872734672e7f21"} -->
+### run-10
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-197 CASE-210 CASE-287 workspace start keeps management and registered repositories under the task worktree root$' \u002d\u002dtest-reporter=./.tiller/local/verify-wjfVFE/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-wjfVFE/report.jsonl test/task-worktrees.test.mjs","exitCode":0,"tree":"5ccb191f22062c99602e058db3c3b2fc2bfb394ce561b3d336909b830d0dc358","commit":"296389494c1c842a81d439e78b82426f3f79668c"} -->
 - 条件：AC-1
 - 测试：test/task-worktrees.test.mjs::CASE-197 CASE-210 CASE-287 workspace start keeps management and registered repositories under the task worktree root
 - 用例：CASE-287
 - 结果：passed
 - 来源：executed
 - 核实：已核实
-- 日志：.tiller/local/20261027-dogfood-hygiene/logs/run-2.log
-- 提交：27f7d619b5fc
-- 时间：2026-10-27T03:50:25.439Z
+- 日志：.tiller/local/20261027-dogfood-hygiene/logs/run-10.log
+- 提交：296389494c1c
+- 时间：2026-10-27T03:51:40.506Z
 
-### run-3
-<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-288 doctor and close use platform merge evidence for a pending init baseline$' \u002d\u002dtest-reporter=./.tiller/local/verify-dwr2uy/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-dwr2uy/report.jsonl test/init-baseline.test.mjs","exitCode":0,"tree":"a1690c7ce8a29cf4bcef32843a90de594823b78e6b92ba6efd2c853d01b1ae2b","commit":"27f7d619b5fc071bc2782a9340872734672e7f21"} -->
+### run-11
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-288 doctor and close use platform merge evidence for a pending init baseline$' \u002d\u002dtest-reporter=./.tiller/local/verify-ZkVK3g/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-ZkVK3g/report.jsonl test/init-baseline.test.mjs","exitCode":0,"tree":"5ccb191f22062c99602e058db3c3b2fc2bfb394ce561b3d336909b830d0dc358","commit":"296389494c1c842a81d439e78b82426f3f79668c"} -->
 - 条件：AC-2
 - 测试：test/init-baseline.test.mjs::CASE-288 doctor and close use platform merge evidence for a pending init baseline
 - 用例：CASE-288
 - 结果：passed
 - 来源：executed
 - 核实：已核实
-- 日志：.tiller/local/20261027-dogfood-hygiene/logs/run-3.log
-- 提交：27f7d619b5fc
-- 时间：2026-10-27T03:50:29.932Z
+- 日志：.tiller/local/20261027-dogfood-hygiene/logs/run-11.log
+- 提交：296389494c1c
+- 时间：2026-10-27T03:51:42.703Z
 
-### run-4
-<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-289 init leaves no untracked managed residue$' \u002d\u002dtest-reporter=./.tiller/local/verify-3idCQ6/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-3idCQ6/report.jsonl test/init-baseline.test.mjs","exitCode":0,"tree":"a1690c7ce8a29cf4bcef32843a90de594823b78e6b92ba6efd2c853d01b1ae2b","commit":"27f7d619b5fc071bc2782a9340872734672e7f21"} -->
+### run-12
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-289 init leaves no untracked managed residue$' \u002d\u002dtest-reporter=./.tiller/local/verify-uL6Hy6/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-uL6Hy6/report.jsonl test/init-baseline.test.mjs","exitCode":0,"tree":"5ccb191f22062c99602e058db3c3b2fc2bfb394ce561b3d336909b830d0dc358","commit":"296389494c1c842a81d439e78b82426f3f79668c"} -->
 - 条件：AC-3
 - 测试：test/init-baseline.test.mjs::CASE-289 init leaves no untracked managed residue
 - 用例：CASE-289
 - 结果：passed
 - 来源：executed
 - 核实：已核实
-- 日志：.tiller/local/20261027-dogfood-hygiene/logs/run-4.log
-- 提交：27f7d619b5fc
-- 时间：2026-10-27T03:50:31.552Z
+- 日志：.tiller/local/20261027-dogfood-hygiene/logs/run-12.log
+- 提交：296389494c1c
+- 时间：2026-10-27T03:51:44.414Z
 
-### run-5
-<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-279 CASE-292 pr 经 API 创建真实 PR 并返回稳定字段$' \u002d\u002dtest-reporter=./.tiller/local/verify-F4E1Ia/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-F4E1Ia/report.jsonl test/pr.test.mjs","exitCode":0,"tree":"a1690c7ce8a29cf4bcef32843a90de594823b78e6b92ba6efd2c853d01b1ae2b","commit":"27f7d619b5fc071bc2782a9340872734672e7f21"} -->
+### run-13
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-279 CASE-292 pr 经 API 创建真实 PR 并返回稳定字段$' \u002d\u002dtest-reporter=./.tiller/local/verify-2YVsEI/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-2YVsEI/report.jsonl test/pr.test.mjs","exitCode":0,"tree":"5ccb191f22062c99602e058db3c3b2fc2bfb394ce561b3d336909b830d0dc358","commit":"296389494c1c842a81d439e78b82426f3f79668c"} -->
 - 条件：AC-4
 - 测试：test/pr.test.mjs::CASE-279 CASE-292 pr 经 API 创建真实 PR 并返回稳定字段
 - 用例：CASE-292
 - 结果：passed
 - 来源：executed
 - 核实：已核实
-- 日志：.tiller/local/20261027-dogfood-hygiene/logs/run-5.log
-- 提交：27f7d619b5fc
-- 时间：2026-10-27T03:50:33.053Z
+- 日志：.tiller/local/20261027-dogfood-hygiene/logs/run-13.log
+- 提交：296389494c1c
+- 时间：2026-10-27T03:51:46.028Z
 
-### run-6
-<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-292 pr 非 TTY 默认输出 JSON 且 TTY 保持 Markdown$' \u002d\u002dtest-reporter=./.tiller/local/verify-qklkB7/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-qklkB7/report.jsonl test/pr.test.mjs","exitCode":0,"tree":"a1690c7ce8a29cf4bcef32843a90de594823b78e6b92ba6efd2c853d01b1ae2b","commit":"27f7d619b5fc071bc2782a9340872734672e7f21"} -->
+### run-14
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-292 pr 非 TTY 默认输出 JSON 且 TTY 保持 Markdown$' \u002d\u002dtest-reporter=./.tiller/local/verify-v8wMAA/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-v8wMAA/report.jsonl test/pr.test.mjs","exitCode":0,"tree":"5ccb191f22062c99602e058db3c3b2fc2bfb394ce561b3d336909b830d0dc358","commit":"296389494c1c842a81d439e78b82426f3f79668c"} -->
 - 条件：AC-4
 - 测试：test/pr.test.mjs::CASE-292 pr 非 TTY 默认输出 JSON 且 TTY 保持 Markdown
 - 用例：CASE-292
 - 结果：passed
 - 来源：executed
 - 核实：已核实
-- 日志：.tiller/local/20261027-dogfood-hygiene/logs/run-6.log
-- 提交：27f7d619b5fc
-- 时间：2026-10-27T03:50:33.053Z
+- 日志：.tiller/local/20261027-dogfood-hygiene/logs/run-14.log
+- 提交：296389494c1c
+- 时间：2026-10-27T03:51:46.028Z
 
-### run-7
-<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-290 已不存在的远端分支按已清理处理且不产生警告$' \u002d\u002dtest-reporter=./.tiller/local/verify-LxEQgF/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-LxEQgF/report.jsonl test/merge.test.mjs","exitCode":0,"tree":"a1690c7ce8a29cf4bcef32843a90de594823b78e6b92ba6efd2c853d01b1ae2b","commit":"27f7d619b5fc071bc2782a9340872734672e7f21"} -->
+### run-15
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-290 已不存在的远端分支按已清理处理且不产生警告$' \u002d\u002dtest-reporter=./.tiller/local/verify-L1N7x2/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-L1N7x2/report.jsonl test/merge.test.mjs","exitCode":0,"tree":"5ccb191f22062c99602e058db3c3b2fc2bfb394ce561b3d336909b830d0dc358","commit":"296389494c1c842a81d439e78b82426f3f79668c"} -->
 - 条件：AC-5
 - 测试：test/merge.test.mjs::CASE-290 已不存在的远端分支按已清理处理且不产生警告
 - 用例：CASE-290
 - 结果：passed
 - 来源：executed
 - 核实：已核实
-- 日志：.tiller/local/20261027-dogfood-hygiene/logs/run-7.log
-- 提交：27f7d619b5fc
-- 时间：2026-10-27T03:50:39.673Z
+- 日志：.tiller/local/20261027-dogfood-hygiene/logs/run-15.log
+- 提交：296389494c1c
+- 时间：2026-10-27T03:51:52.888Z
 
-### run-8
-<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-291 init includes gitkeeps for empty src and test in the baseline commit$' \u002d\u002dtest-reporter=./.tiller/local/verify-T1gc1I/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-T1gc1I/report.jsonl test/init-baseline.test.mjs","exitCode":0,"tree":"a1690c7ce8a29cf4bcef32843a90de594823b78e6b92ba6efd2c853d01b1ae2b","commit":"27f7d619b5fc071bc2782a9340872734672e7f21"} -->
+### run-16
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-291 init includes gitkeeps for empty src and test in the baseline commit$' \u002d\u002dtest-reporter=./.tiller/local/verify-tz73MK/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-tz73MK/report.jsonl test/init-baseline.test.mjs","exitCode":0,"tree":"5ccb191f22062c99602e058db3c3b2fc2bfb394ce561b3d336909b830d0dc358","commit":"296389494c1c842a81d439e78b82426f3f79668c"} -->
 - 条件：AC-6
 - 测试：test/init-baseline.test.mjs::CASE-291 init includes gitkeeps for empty src and test in the baseline commit
 - 用例：CASE-291
 - 结果：passed
 - 来源：executed
 - 核实：已核实
-- 日志：.tiller/local/20261027-dogfood-hygiene/logs/run-8.log
-- 提交：27f7d619b5fc
-- 时间：2026-10-27T03:50:42.868Z
+- 日志：.tiller/local/20261027-dogfood-hygiene/logs/run-16.log
+- 提交：296389494c1c
+- 时间：2026-10-27T03:51:55.991Z
 
 ## 自检
 
 - [x] 需求确认有效
-- [ ] 设计确认有效
-- [ ] 验收条件均有当前通过且绑定全局用例的测试引用
-- [ ] 每条验收条件均映射到本次验证引用的全局用例
-- [ ] 验收条件与用例通过 verify 的 AC→测试→CASE 记录关联
-- [ ] 验证命令已执行且测试输出已核实
+- [x] 设计确认有效
+- [x] 验收条件均有当前通过且绑定全局用例的测试引用
+- [x] 每条验收条件均映射到本次验证引用的全局用例
+- [x] 验收条件与用例通过 verify 的 AC→测试→CASE 记录关联
+- [x] 验证命令已执行且测试输出已核实
 - [x] 全局用例结构与引用有效
 - [x] 改动未超出范围
 - [x] 未弱化仍存在的测试
 - [x] 评审无未清除阻塞项
 - [x] 记录不含密钥或本机绝对路径
-
-阻塞项：
-- 过程卫生：standard 任务在有效设计确认前已有 verify（test/task-worktrees.test.mjs::CASE-196 CASE-209 CASE-287 project start creates a task-local worktree, sidecars and logs in one directory、test/task-worktrees.test.mjs::CASE-197 CASE-210 CASE-287 workspace start keeps management and registered repositories under the task worktree root、test/init-baseline.test.mjs::CASE-288 doctor and close use platform merge evidence for a pending init baseline 等）；请先完成设计确认，再记录实现侧验证。
-- 过程卫生：需求、设计确认提交 27f7d619b5fc 后，工作区仍有未提交业务改动：resources/rules/activities/delivery.md、src/cli.ts、src/core.ts、src/doctor.ts、src/files.ts、src/flow.ts、src/init-baseline.ts、src/platform-api.ts 等 33 项。请先提交或移出本任务。
-- AC-1 的用例 CASE-287：AC-1 的验证已过期：记录时的代码树与当前工作树不同（范围内代码已变化）。
-- AC-1 的验证已过期：记录时的代码树与当前工作树不同（范围内代码已变化）。
-- AC-2 的用例 CASE-288：AC-2 的验证已过期：记录时的代码树与当前工作树不同（范围内代码已变化）。
-- AC-2 的验证已过期：记录时的代码树与当前工作树不同（范围内代码已变化）。
-- AC-3 的用例 CASE-289：AC-3 的验证已过期：记录时的代码树与当前工作树不同（范围内代码已变化）。
-- AC-3 的验证已过期：记录时的代码树与当前工作树不同（范围内代码已变化）。
-- AC-4 的用例 CASE-292：AC-4 的验证已过期：记录时的代码树与当前工作树不同（范围内代码已变化）。
-- AC-4 的验证已过期：记录时的代码树与当前工作树不同（范围内代码已变化）。
-- AC-5 的用例 CASE-290：AC-5 的验证已过期：记录时的代码树与当前工作树不同（范围内代码已变化）。
-- AC-5 的验证已过期：记录时的代码树与当前工作树不同（范围内代码已变化）。
-- AC-6 的用例 CASE-291：AC-6 的验证已过期：记录时的代码树与当前工作树不同（范围内代码已变化）。
-- AC-6 的验证已过期：记录时的代码树与当前工作树不同（范围内代码已变化）。
-- 交付范围存在未提交改动：.tiller/cases/modules/workflow/behavior.md、.tiller/cases/modules/workflow/interface.md、.tiller/project.json、.tiller/rules/activities/delivery.md、.tiller/specs/decisions.md、.tiller/specs/modules/initialization/design.md、.tiller/specs/modules/initialization/requirements.md、.tiller/specs/modules/workflow/design.md、.tiller/specs/modules/workflow/dogfood-hygiene.md、.tiller/specs/modules/workflow/requirements.md、resources/rules/activities/delivery.md、src/cli.ts、src/core.ts、src/doctor.ts、src/files.ts、src/flow.ts、src/init-baseline.ts、src/platform-api.ts、src/pr.ts、src/project-root.ts、src/runtime.ts、src/task-worktrees.ts、test/case-redesign.test.mjs、test/core.test.mjs、test/flow-cli.test.mjs、test/helpers.mjs、test/init-baseline.test.mjs、test/java-runners.test.mjs、test/launcher-performance.test.mjs、test/merge.test.mjs、test/platform-api-mock.mjs、test/pr.test.mjs、test/project-inspection-performance.test.mjs、test/repository-metadata-performance.test.mjs、test/review-release.test.mjs、test/rules.test.mjs、test/runtime.test.mjs、test/shared-path-round-performance.test.mjs、test/task-worktrees.test.mjs、test/upgrade.test.mjs、test/usage-resources.test.mjs、test/verification-integrity.test.mjs、test/work-migration.test.mjs
 
 提示：
 - 172 条历史用例仍以 <任务>#AC-n 记录关联 AC；这是可迁移的历史债，不阻断当前覆盖。
