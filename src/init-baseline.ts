@@ -251,7 +251,8 @@ export async function proveInitBaselineMerged(rootInput: string, metadata: Proje
   if (head && /^[a-f0-9]{7,64}$/u.test(baseline.commit)) {
     const ancestor = await git(root, ['merge-base', '--is-ancestor', baseline.commit, head]);
     if (ancestor.ok) {
-      return { merged: true, detail: `初始化基线 ${baseline.id} 的提交已在当前历史中。`, marked: false };
+      await markInitBaselineMerged(root, baseline.id);
+      return { merged: true, detail: `初始化基线 ${baseline.id} 的提交已在当前历史中。`, marked: true };
     }
   }
   let detail = '平台未找到该分支已合入的 PR/MR';

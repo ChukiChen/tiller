@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { existsSync, mkdirSync, readFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import { spawn, spawnSync } from 'node:child_process';
 import test from 'node:test';
@@ -202,6 +202,26 @@ test('CASE-288 doctor and close use platform merge evidence for a pending init b
   metadata.initBaseline.status = 'pending';
   put(root, '.tiller/project.json', `${JSON.stringify(metadata, null, 2)}\n`);
   success(await cliAt(root, environment, 'close', baseline.id, '--reason', '初始化基线已合入'));
+  assert.equal(JSON.parse(read(root, '.tiller/project.json')).initBaseline.status, 'merged');
+});
+
+test('CASE-288 ancestor proof records merged for doctor and close init-id', async t => {
+  const initialized = await initialize(t, { platform: 'github' });
+  if (!initialized) return;
+  const { root, result } = initialized;
+  const baseline = success(result).initBaseline;
+  assert.notEqual(git(root, 'merge-base', '--is-ancestor', baseline.commit, 'HEAD').status, 0);
+
+  rmSync(join(root, '.tiller/project.json'), { force: true });
+  okGit(root, 'merge', '--quiet', '--no-edit', baseline.branch);
+  const report = success(await cliAt(root, emptyTokens, 'doctor'));
+  assert.equal(report.ready, true, report.issues?.join('\n'));
+  assert.equal(JSON.parse(read(root, '.tiller/project.json')).initBaseline.status, 'merged');
+
+  const metadata = JSON.parse(read(root, '.tiller/project.json'));
+  metadata.initBaseline.status = 'pending';
+  put(root, '.tiller/project.json', `${JSON.stringify(metadata, null, 2)}\n`);
+  success(await cliAt(root, emptyTokens, 'close', baseline.id, '--reason', '初始化基线已合入'));
   assert.equal(JSON.parse(read(root, '.tiller/project.json')).initBaseline.status, 'merged');
 });
 
