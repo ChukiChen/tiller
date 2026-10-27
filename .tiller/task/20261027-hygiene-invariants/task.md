@@ -52,17 +52,21 @@
 
 `src/flow.ts`、`src` check/commit 提示、`test/*`、usage/decisions、cases；**不**为 AC 去接 `markInitBaselineMerged`→bind。
 
-### 风险与回退
+### 影响与风险
 
-骨架生成不覆盖 requirement-file；去掉 bind 主路径不改变 PATH 安装行为。
+- 影响：改 `start` 骨架、check 的 commit scope 识别、合入后不变式测试与主路径文档；不引入 runtime bind 钩子。
+- 风险：骨架过短被当成可确认——须列出待补节；scope 白名单过宽可能漏报真缺模块——只豁免约定全局/工作流名。
+- 回退：骨架不覆盖 `--requirement-file`；去掉 bind 主路径不改变 PATH 安装行为。
 
 ## 确认
 
 | 部分 | 确认人 | 时间 | 短提交 | 原话 |
 | --- | --- | --- | --- | --- |
 | 需求 | boon yu | 2026-10-27T11:57:46.593Z | b963f40c861e | — |
+| 设计 | boon yu | 2026-10-27T11:57:51.992Z | e9b7c568316b | — |
 
 <!-- tiller-confirm:v1 {"gate":"requirements","object":"需求正文（目标、范围与验收条件）","subject":"d066360c18b0c252472bbe6e7c47004dbad445fc1d621a26e095cae9fd0d67b3","commit":"b963f40c861ecaa73f49e4220d787dbedb3e424c","by":"boon yu","quote":"","at":"2026-10-27T11:57:46.593Z"} -->
+<!-- tiller-confirm:v1 {"gate":"design","object":"设计正文","subject":"0ab84f469fe48421d8c93713cdcc4a5338a68dbf9d64c6c30cfec2a5702f1400","commit":"e9b7c568316b7f341d7bb6d1f1aa9ee7085d9b3d","by":"boon yu","quote":"","at":"2026-10-27T11:57:51.992Z"} -->
 
 ## 验证
 
