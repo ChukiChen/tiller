@@ -43,7 +43,8 @@ test('CASE-103 core and usage describe the only supported default-flow record pa
   assert.match(core, /版本号只在正式发布时修改/u);
   assert.doesNotMatch(core, /advanced|上一版本升级/u);
   const usage = read('usage.md');
-  for (const command of ['start', 'resume', 'confirm', 'verify', 'review', 'check', 'accept', 'release', 'close', 'pr']) assert.ok(usage.includes(`run.cjs ${command}`), command);
+  for (const command of ['start', 'resume', 'confirm', 'verify', 'review', 'check', 'accept', 'release', 'close', 'pr']) assert.ok(usage.includes(`tiller ${command}`), command);
+  assert.doesNotMatch(usage, /node \.tiller\/run\.cjs|tiller runtime (?:status|bind)/u);
   assert.match(usage, /reopen/u);
   assert.match(usage, /--size small/u);
   assert.match(usage, /standard 另生成/u);
@@ -82,7 +83,7 @@ test('CASE-049 CASE-074 CASE-085 required reading budget allows clear guidance w
 
 test('CASE-084 restored guidance keeps complete commands and explicit boundaries', () => {
   const usage = read('usage.md');
-  assert.match(usage, /node \.tiller\/run\.cjs resume/u);
+  assert.match(usage, /tiller resume/u);
   assert.match(usage, /--summary/u);
   assert.match(usage, /标题摘要优先取 `pr --summary`/u);
   assert.match(usage, /变更内容按提交时间正序/u);
@@ -263,15 +264,15 @@ test('CASE-048 global cases use module kinds and scenarios with resolvable named
   const kinds = ['behavior', 'interface', 'performance', 'security'];
   const library = await readCaseLibrary(repository);
   assert.deepEqual(library.issues, []);
-  assert.equal(library.cases.length, 309);
+  assert.equal(library.cases.length, 314);
   assert.deepEqual(library.cases.map(item => item.id).sort(),
-    Array.from({ length: 309 }, (_, index) => `CASE-${String(index + 1).padStart(3, '0')}`));
+    Array.from({ length: 314 }, (_, index) => `CASE-${String(index + 1).padStart(3, '0')}`));
   assert.deepEqual(library.modules.map(item => ({ module: item.module, behavior: item.behavior, interface: item.interface,
     performance: item.performance, security: item.security })), [
     { module: 'initialization', behavior: 31, interface: 10, performance: 11, security: 17 },
     { module: 'standards', behavior: 22, interface: 15, performance: 0, security: 0 },
     { module: 'verification', behavior: 13, interface: 13, performance: 15, security: 4 },
-    { module: 'workflow', behavior: 95, interface: 54, performance: 0, security: 7 },
+    { module: 'workflow', behavior: 98, interface: 56, performance: 0, security: 7 },
   ]);
   assert.equal(library.scenarios.length, 2);
   for (const item of library.scenarios) assert.ok(item.modules.length > 0 && item.modules.every(module => specs.includes(module)));
@@ -311,7 +312,7 @@ test('CASE-048 global cases use module kinds and scenarios with resolvable named
 test('CASE-245 全局用例库同步文档 CLI 名称与版本', async () => {
   const library = await readCaseLibrary(repository);
   assert.deepEqual(library.issues, []);
-  assert.equal(library.cases.length, 309);
+  assert.equal(library.cases.length, 314);
   const added = library.cases.filter(item => Number(item.id.slice(5)) >= 242 && Number(item.id.slice(5)) <= 245);
   assert.deepEqual(added.map(item => item.id), ['CASE-242', 'CASE-243', 'CASE-244', 'CASE-245']);
   const standards = library.modules.find(item => item.module === 'standards');
@@ -585,6 +586,23 @@ test('CASE-162 repository keeps the 0.5.0 release contract and five full verific
   assert.equal(metadata.resourceVersion, '0.5.0');
 });
 
+test('CASE-314 0.5.0 发布契约与完整质量门禁保持覆盖', () => {
+  const packageJson = JSON.parse(readFileSync(join(repository, 'package.json'), 'utf8'));
+  assert.equal(packageJson.version, '0.5.0');
+  assert.equal(packageJson.scripts.test, 'node scripts/test-suites.mjs all');
+  assert.equal(packageJson.scripts['test:package'], 'node scripts/package-smoke.mjs');
+  const cliSource = readFileSync(join(repository, 'src/cli.ts'), 'utf8');
+  assert.match(cliSource, /CLI_VERSION = '0\.5\.0'/u);
+  const suites = JSON.parse(readFileSync(join(repository, 'test/suites.json'), 'utf8'));
+  const covered = Object.values(suites).flat();
+  const testFiles = readdirSync(join(repository, 'test')).filter(name => name.endsWith('.test.mjs')).sort();
+  assert.deepEqual([...covered].sort(), testFiles);
+  const smoke = readFileSync(join(repository, 'scripts/package-smoke.mjs'), 'utf8');
+  assert.match(smoke, /npm, 'pack'/u);
+  assert.match(smoke, /node_modules\/tiller\/dist\/cli\.js/u);
+  assert.match(smoke, /Package smoke passed/u);
+});
+
 test('CASE-163 recent accepted tasks are closed without fabricating legacy acceptance', () => {
   const stages = new Map(success(cli(repository, 'resume')).tasks.map(item => [item.id, item.stage]));
   for (const id of [
@@ -602,7 +620,7 @@ test('CASE-164 historical empty AC cases stay warned without fabricated backfill
   assert.match(decisions, /不批量回填/u);
   assert.match(decisions, /不.*冒充历史来源/u);
   const library = await readCaseLibrary(repository);
-  assert.equal(library.cases.filter(item => item.criteria.length === 0).length, 137);
+  assert.equal(library.cases.filter(item => item.criteria.length === 0).length, 142);
 });
 
 test('CASE-165 project rules and context match 0.5.0 without stale workflow guidance', () => {

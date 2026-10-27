@@ -20,6 +20,8 @@ const section = (content, title) => {
   const rest = content.slice(start).replace(/^##[^\n]*\n?/u, '');
   return rest.split(/^##\s+/mu)[0];
 };
+const emptySubSection = (content, title) => content.replace(
+  new RegExp(`(^### ${title}\\s*\\n)([\\s\\S]*?)(?=^### )`, 'mu'), '$1\n');
 const confirmationSidecars = content => [...content.matchAll(/^<!-- tiller-confirm:v1 (\{.*\}) -->$/gmu)]
   .map(match => JSON.parse(match[1]));
 
@@ -216,7 +218,7 @@ test('CASE-014 an empty requirement cannot be confirmed by a user quote alone', 
   const id = '20261022-quote-is-not-requirement';
   success(cli(root, 'start', id, '--title', 'Quote evidence', '--requirement', 'Implement the documented behavior.',
     '--criterion', 'AC-1=Behavior exists', '--size', 'small', '--target', 'src'));
-  editTask(root, id, content => content.replace('Implement the documented behavior.', ''));
+  editTask(root, id, content => emptySubSection(content, '目标'));
   const rejected = failure(cli(root, 'confirm', id, 'requirements', '--quote', 'Implement the documented behavior.'));
   assert.equal(rejected.error.code, 'MISSING_REQUIREMENTS');
   assert.match(rejected.error.message, /目标/u);
@@ -268,7 +270,7 @@ test('CASE-060 CASE-062 structured task template validates written requirements 
   assert.doesNotMatch(subSection(original, '业务范围'), /`src`|`test`/u);
   assert.match(original, /^### 验收条件$/mu);
   assert.doesNotMatch(original, /^## 验收条件$/mu);
-  editTask(root, id, content => content.replace('Write the structured requirement.', ''));
+  editTask(root, id, content => emptySubSection(content, '目标'));
   const incomplete = failure(cli(root, 'confirm', id, 'requirements'));
   assert.equal(incomplete.error.code, 'MISSING_REQUIREMENTS');
   assert.match(incomplete.error.message, /目标/u);

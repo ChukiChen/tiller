@@ -70,8 +70,150 @@
 
 ## 验证
 
-尚无验证。
+### run-1
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-310 merge and close leave no untracked task seed and a clean primary can fast-forward$' \u002d\u002dtest-reporter=./.tiller/local/verify-Ybdv5Q/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-Ybdv5Q/report.jsonl test/merge.test.mjs","exitCode":0,"tree":"fea7cb6091688f241ab1e1e8473e50ea9332b389740ba142c6f641cbb764cb26","commit":"2189bbe6862e74296a39485a9f083bc973f5ec4c"} -->
+- 条件：AC-1
+- 测试：test/merge.test.mjs::CASE-310 merge and close leave no untracked task seed and a clean primary can fast-forward
+- 用例：CASE-310
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/20261027-hygiene-invariants/logs/run-1.log
+- 提交：2189bbe6862e
+- 时间：2026-10-27T12:20:49.024Z
+
+### run-2
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-311 short goal start creates a confirmable structured requirement while requirement-file stays authoritative$' \u002d\u002dtest-reporter=./.tiller/local/verify-nWfiA6/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-nWfiA6/report.jsonl test/doc-templates.test.mjs","exitCode":0,"tree":"fea7cb6091688f241ab1e1e8473e50ea9332b389740ba142c6f641cbb764cb26","commit":"2189bbe6862e74296a39485a9f083bc973f5ec4c"} -->
+- 条件：AC-2
+- 测试：test/doc-templates.test.mjs::CASE-311 short goal start creates a confirmable structured requirement while requirement-file stays authoritative
+- 用例：CASE-311
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/20261027-hygiene-invariants/logs/run-2.log
+- 提交：2189bbe6862e
+- 时间：2026-10-27T12:20:52.495Z
+
+### run-3
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-313 main path uses one PATH tiller without init runtime binding$' \u002d\u002dtest-reporter=./.tiller/local/verify-ZPTijm/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-ZPTijm/report.jsonl test/init-baseline.test.mjs","exitCode":0,"tree":"fea7cb6091688f241ab1e1e8473e50ea9332b389740ba142c6f641cbb764cb26","commit":"2189bbe6862e74296a39485a9f083bc973f5ec4c"} -->
+- 条件：AC-3
+- 测试：test/init-baseline.test.mjs::CASE-313 main path uses one PATH tiller without init runtime binding
+- 用例：CASE-313
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/20261027-hygiene-invariants/logs/run-3.log
+- 提交：2189bbe6862e
+- 时间：2026-10-27T12:20:53.720Z
+
+### run-4
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-312 check does not report conventional global or workflow commit scopes as missing modules$' \u002d\u002dtest-reporter=./.tiller/local/verify-IPiQqt/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-IPiQqt/report.jsonl test/flow-hardening.test.mjs","exitCode":0,"tree":"fea7cb6091688f241ab1e1e8473e50ea9332b389740ba142c6f641cbb764cb26","commit":"2189bbe6862e74296a39485a9f083bc973f5ec4c"} -->
+- 条件：AC-4
+- 测试：test/flow-hardening.test.mjs::CASE-312 check does not report conventional global or workflow commit scopes as missing modules
+- 用例：CASE-312
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/20261027-hygiene-invariants/logs/run-4.log
+- 提交：2189bbe6862e
+- 时间：2026-10-27T12:20:54.613Z
+
+### run-5
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-314 0\\.5\\.0 发布契约与完整质量门禁保持覆盖$' \u002d\u002dtest-reporter=./.tiller/local/verify-wfiWsK/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-wfiWsK/report.jsonl test/rules.test.mjs","exitCode":0,"tree":"fea7cb6091688f241ab1e1e8473e50ea9332b389740ba142c6f641cbb764cb26","commit":"2189bbe6862e74296a39485a9f083bc973f5ec4c"} -->
+- 条件：AC-5
+- 测试：test/rules.test.mjs::CASE-314 0.5.0 发布契约与完整质量门禁保持覆盖
+- 用例：CASE-314
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/20261027-hygiene-invariants/logs/run-5.log
+- 提交：2189bbe6862e
+- 时间：2026-10-27T12:20:55.793Z
+
+### run-6
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-310 merge and close leave no untracked task seed and a clean primary can fast-forward$' \u002d\u002dtest-reporter=./.tiller/local/verify-ougGYl/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-ougGYl/report.jsonl test/merge.test.mjs","exitCode":0,"tree":"2d7d7351c7c2caa2cca961e260275e220a12b256b8d87319ee40deb143b0fcf6","commit":"2189bbe6862e74296a39485a9f083bc973f5ec4c"} -->
+- 条件：AC-1
+- 测试：test/merge.test.mjs::CASE-310 merge and close leave no untracked task seed and a clean primary can fast-forward
+- 用例：CASE-310
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/20261027-hygiene-invariants/logs/run-6.log
+- 提交：2189bbe6862e
+- 时间：2026-10-27T12:28:28.860Z
+
+### run-7
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-311 short goal start creates a confirmable structured requirement while requirement-file stays authoritative$' \u002d\u002dtest-reporter=./.tiller/local/verify-2Podkt/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-2Podkt/report.jsonl test/doc-templates.test.mjs","exitCode":0,"tree":"2d7d7351c7c2caa2cca961e260275e220a12b256b8d87319ee40deb143b0fcf6","commit":"2189bbe6862e74296a39485a9f083bc973f5ec4c"} -->
+- 条件：AC-2
+- 测试：test/doc-templates.test.mjs::CASE-311 short goal start creates a confirmable structured requirement while requirement-file stays authoritative
+- 用例：CASE-311
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/20261027-hygiene-invariants/logs/run-7.log
+- 提交：2189bbe6862e
+- 时间：2026-10-27T12:28:32.449Z
+
+### run-8
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-313 main path uses one PATH tiller without init runtime binding$' \u002d\u002dtest-reporter=./.tiller/local/verify-QllWSu/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-QllWSu/report.jsonl test/init-baseline.test.mjs","exitCode":0,"tree":"2d7d7351c7c2caa2cca961e260275e220a12b256b8d87319ee40deb143b0fcf6","commit":"2189bbe6862e74296a39485a9f083bc973f5ec4c"} -->
+- 条件：AC-3
+- 测试：test/init-baseline.test.mjs::CASE-313 main path uses one PATH tiller without init runtime binding
+- 用例：CASE-313
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/20261027-hygiene-invariants/logs/run-8.log
+- 提交：2189bbe6862e
+- 时间：2026-10-27T12:28:33.705Z
+
+### run-9
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-312 check does not report conventional global or workflow commit scopes as missing modules$' \u002d\u002dtest-reporter=./.tiller/local/verify-ere7Di/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-ere7Di/report.jsonl test/flow-hardening.test.mjs","exitCode":0,"tree":"2d7d7351c7c2caa2cca961e260275e220a12b256b8d87319ee40deb143b0fcf6","commit":"2189bbe6862e74296a39485a9f083bc973f5ec4c"} -->
+- 条件：AC-4
+- 测试：test/flow-hardening.test.mjs::CASE-312 check does not report conventional global or workflow commit scopes as missing modules
+- 用例：CASE-312
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/20261027-hygiene-invariants/logs/run-9.log
+- 提交：2189bbe6862e
+- 时间：2026-10-27T12:28:34.649Z
+
+### run-10
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-314 0\\.5\\.0 发布契约与完整质量门禁保持覆盖$' \u002d\u002dtest-reporter=./.tiller/local/verify-KNj9hg/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-KNj9hg/report.jsonl test/rules.test.mjs","exitCode":0,"tree":"2d7d7351c7c2caa2cca961e260275e220a12b256b8d87319ee40deb143b0fcf6","commit":"2189bbe6862e74296a39485a9f083bc973f5ec4c"} -->
+- 条件：AC-5
+- 测试：test/rules.test.mjs::CASE-314 0.5.0 发布契约与完整质量门禁保持覆盖
+- 用例：CASE-314
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/20261027-hygiene-invariants/logs/run-10.log
+- 提交：2189bbe6862e
+- 时间：2026-10-27T12:28:35.886Z
 
 ## 自检
 
-交付前运行 check；验收后运行 accept。
+- [x] 需求确认有效
+- [ ] 设计确认有效
+- [x] 验收条件均有当前通过且绑定全局用例的测试引用
+- [x] 每条验收条件均映射到本次验证引用的全局用例
+- [x] 验收条件与用例通过 verify 的 AC→测试→CASE 记录关联
+- [x] 验证命令已执行且测试输出已核实
+- [x] 全局用例结构与引用有效
+- [x] 改动未超出范围
+- [x] 未弱化仍存在的测试
+- [x] 评审无未清除阻塞项
+- [x] 记录不含密钥或本机绝对路径
+
+阻塞项：
+- 过程卫生：设计确认提交 e9b7c568316b 后，工作区仍有未提交业务改动：resources/usage.md、scripts/package-smoke.mjs、src/cli.ts、src/commit-conventions.ts、src/flow.ts、test/case-redesign.test.mjs、test/doc-templates.test.mjs、test/flow-cli.test.mjs 等 13 项。请先提交或移出本任务。
+- 交付范围存在未提交改动：.tiller/cases/modules/workflow/behavior.md、.tiller/cases/modules/workflow/interface.md、.tiller/context/project.md、.tiller/specs/decisions.md、.tiller/specs/modules/workflow/design.md、.tiller/specs/modules/workflow/hygiene-invariants.md、.tiller/specs/modules/workflow/requirements.md、.tiller/usage.md、resources/usage.md、scripts/package-smoke.mjs、src/cli.ts、src/commit-conventions.ts、src/flow.ts、test/case-redesign.test.mjs、test/doc-templates.test.mjs、test/flow-cli.test.mjs、test/flow-hardening.test.mjs、test/init-baseline.test.mjs、test/merge.test.mjs、test/review-release.test.mjs、test/rules.test.mjs
+
+提示：
+- 172 条历史用例仍以 <任务>#AC-n 记录关联 AC；这是可迁移的历史债，不阻断当前覆盖。
+- 142 条用例的关联 AC 为无；覆盖以需求字段和 verify 的 AC→测试→CASE 记录为准。
+- 本次改动涉及模块 initialization：建议回归该模块 69 条用例及经过它的场景 CASE-055, CASE-001。
+- 本次改动涉及模块 standards：建议回归该模块 37 条用例及经过它的场景 CASE-055。
+- 本次改动涉及模块 verification：建议回归该模块 45 条用例及经过它的场景 CASE-055, CASE-001。
+- 本次改动涉及模块 workflow：建议回归该模块 161 条用例及经过它的场景 CASE-055, CASE-001。
+- 任务设计“取舍”仅空白或占位：`.tiller/task/20261027-hygiene-invariants/task.md`。
+- 修改的测试文件移除了 1 个测试用例（请确认对应功能已删除；详情见 Git diff）。
