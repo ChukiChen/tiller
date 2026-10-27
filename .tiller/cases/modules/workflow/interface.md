@@ -1310,3 +1310,28 @@ check 不出现“未检测到任务基线后 .tiller/specs/ 或 .tiller/context
 ### 预期结果
 
 `PR_TASK_RECORDS_DIRTY` 分别标明当前任务检出（worktree）与 primary 主检出（残留副本），提示人工提交或清理且不删除文件；重复验收按当前代码树重新核实并阻断过期验证；多行 `--requirement` 明确指向 `--requirement-file`
+
+## CASE-304 requirement 仅短目标并导向 requirement-file
+
+- 类型：interface
+- 优先级：medium
+- 模块：workflow
+- 关联 AC：无
+- 需求：`.tiller/specs/modules/workflow/soft-friction-rootfixes.md`
+
+### 前置条件
+
+- tiller CLI 已安装
+
+### 步骤
+
+1. 用含换行的 --requirement 调用 start
+2. 核对错误与 help/usage 文案
+
+### 输入
+
+- 多行 requirement 字符串
+
+### 预期结果
+
+多行 --requirement 失败且文案导向 --requirement-file；help/usage 标明短目标定位

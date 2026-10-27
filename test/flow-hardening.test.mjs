@@ -4,10 +4,9 @@ import { join } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
-import { cli, completeDesign, completeRequirement, confirmTask, failure, fixture, put, success } from './helpers.mjs';
+import { cli, completeDesign, completeRequirement, confirmTask, failure, fixture, put, success, read, commitFixtures, taskRecordRoot } from './helpers.mjs';
 
 const repository = fileURLToPath(new URL('../', import.meta.url));
-const read = (root, relative) => readFileSync(join(root, relative), 'utf8');
 
 function git(root, ...args) {
   const result = spawnSync('git', ['-c', 'user.name=Tiller Test', '-c', 'user.email=tiller@example.invalid', ...args], {
@@ -62,7 +61,8 @@ test('CASE-174 start warns on a missing task date prefix without rewriting it', 
     '--criterion', 'AC-1=Legacy id remains readable', '--size', 'small', '--target', 'src'));
   assert.match(started.warnings.join('\n'), /YYYYMMDD-/u);
   assert.equal(started.id, 'legacy-task');
-  assert.ok(existsSync(join(root, '.tiller/task/legacy-task/task.md')));
+  assert.equal(existsSync(join(root, '.tiller/task/legacy-task/task.md')), false);
+  assert.ok(existsSync(join(taskRecordRoot(root, 'legacy-task'), '.tiller/task/legacy-task/task.md')));
   assert.equal(existsSync(join(root, '.tiller/task/20261023-legacy-task/task.md')), false);
 
   const help = success(cli(root, '--help')).help;
@@ -179,15 +179,16 @@ test('CASE-177 untracked managed entries are visible in check and block release'
   assert.equal(released.status, 1);
   const item = released.data.items.find(entry => entry.id === 'managed-entry-tracking');
   assert.equal(item.status, 'fail');
-  assert.match(item.detail, /\.tiller\/project\.json/u);
   assert.match(item.detail, /AGENTS\.md/u);
   assert.match(item.detail, /\.github\/pull_request_template\.md/u);
+  assert.match(item.detail, /\.gitignore/u);
 
-  git(root, 'add', '.');
-  git(root, 'commit', '--quiet', '-m', 'chore(workflow): 提交受管入口');
+  const trackingCheckout = taskRecordRoot(root, id);
+  git(trackingCheckout, 'add', '.');
+  git(trackingCheckout, 'commit', '--quiet', '-m', 'chore(workflow): 提交受管入口');
   const committed = cli(root, 'release', id);
   const tracked = committed.data.items.find(entry => entry.id === 'managed-entry-tracking');
-  assert.equal(tracked.status, 'pass');
+  assert.equal(tracked.status, 'pass', JSON.stringify(committed.data));
 });
 
 test('CASE-178 hardening regression names and version stay linked at 0.5.0', () => {
@@ -213,7 +214,7 @@ test('CASE-179 standard design fields that are blank or placeholders get located
   const relative = `.tiller/task/${id}/task.md`;
   completeDesign(root, id);
   success(confirmTask(root, id, 'design'));
-  put(root, relative, read(root, relative)
+  put(taskRecordRoot(root, id), relative, read(root, relative)
     .replace('沿用现有命令边界实现本次行为。', '待补充')
     .replace('失败时返回明确结果并保留原记录。', 'TODO')
     .replace('不新增并行入口，保持现有接口。', '')
@@ -274,7 +275,7 @@ test('CASE-183 check explains a branch name missing the task id', async t => {
   success(cli(root, 'start', id, '--title', 'Branch name', '--requirement', 'Keep branch names traceable.',
     '--criterion', 'AC-1=Branch naming is visible', '--size', 'small', '--target', 'src', '--target', 'test'));
   success(confirmTask(root, id, 'requirements'));
-  git(root, 'checkout', '--quiet', '-b', 'feat/flow-hardening');
+  git(taskRecordRoot(root, id), 'branch', '-m', 'feat/flow-hardening');
 
   const checked = failure(cli(root, 'check', id));
   assert.ok(checked.warnings.some(warning => warning.includes('feat/flow-hardening')
@@ -293,7 +294,7 @@ test('CASE-260 check warns about delivery paths inside the business scope do lis
   completeRequirement(root, id);
   const content = read(root, relative);
   const scope = `### 业务范围\n\n- 做：实现 \`src/flow.ts\` 与测试 \`test/flow-hardening.test.mjs\`。\n- 不做：修改范围外文件。\n- 假设与待确认：无。\n\n### 关键行为`;
-  put(root, relative, content.replace(/### 业务范围[\s\S]*?### 关键行为/u, scope));
+  put(taskRecordRoot(root, id), relative, content.replace(/### 业务范围[\s\S]*?### 关键行为/u, scope));
   success(cli(root, 'confirm', id, 'requirements'));
 
   const checked = failure(cli(root, 'check', id));
@@ -314,7 +315,14 @@ test('CASE-276 check blocks specs changes on the default branch', async t => {
     '--criterion', 'AC-1=Default branch changes are blocked', '--size', 'small',
     '--target', 'src', '--target', 'test', '--target', '.tiller/specs'));
   success(confirmTask(root, id, 'requirements'));
-  put(root, '.tiller/specs/modules/workflow/design.md', '# Workflow design\n\nSpecs changes use task worktrees.\n');
+  const specsCheckout = taskRecordRoot(root, id);
+  put(specsCheckout, '.tiller/specs/modules/workflow/design.md', '# Workflow design\n\nSpecs changes use task worktrees.\n');
+  // Free the default branch name on primary, then point the task checkout at it.
+  const primaryBranch = git(root, 'branch', '--show-current').trim() || 'main';
+  if (primaryBranch === 'main' || primaryBranch === 'master') {
+    git(root, 'branch', '-m', primaryBranch, `primary-${primaryBranch}`);
+  }
+  git(specsCheckout, 'branch', '-M', 'main');
 
   const mainChecked = failure(cli(root, 'check', id));
   const mainIssue = mainChecked.issues.find(issue => issue.includes('过程卫生') && issue.includes('.tiller/specs/'));
@@ -324,7 +332,7 @@ test('CASE-276 check blocks specs changes on the default branch', async t => {
   assert.match(mainIssue, /任务 PR\/MR/u);
   assert.match(mainIssue, /请勿.*默认分支.*直改.*直推/u);
 
-  git(root, 'branch', '-m', 'master');
+  git(taskRecordRoot(root, id), 'branch', '-M', 'master');
   const masterChecked = failure(cli(root, 'check', id));
   assert.ok(masterChecked.issues.some(issue => issue.includes('过程卫生') && issue.includes('默认分支 master')
     && issue.includes('.tiller/specs/')), masterChecked.issues.join('\n'));

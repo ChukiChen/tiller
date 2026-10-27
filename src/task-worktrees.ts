@@ -265,17 +265,37 @@ async function copyTaskDirectory(sourceRoot: string, targetRoot: string, relativ
   }
 }
 
-/** Copy a freshly written task record into every worktree created for that task. */
+/** Absolute path of the management (or sole) task worktree that owns task records. */
+export function managementWorktreePath(primaryRoot: string, state: TaskWorktreeState): string {
+  const entry = state.worktrees.find(item => item.repository === 'management') ?? state.worktrees[0];
+  if (!entry) fail('WORKTREE_TASK_SYNC_FAILED', `任务 ${state.id} 没有可用的 worktree 可写入任务记录。`);
+  return path.resolve(primaryRoot, ...entry.path.split('/'));
+}
+
+/** Relative management worktree path within the primary checkout. */
+export function managementWorktreeRelative(state: TaskWorktreeState): string {
+  const entry = state.worktrees.find(item => item.repository === 'management') ?? state.worktrees[0];
+  if (!entry) fail('WORKTREE_TASK_SYNC_FAILED', `任务 ${state.id} 没有可用的 worktree 可写入任务记录。`);
+  return entry.path;
+}
+
+/**
+ * Propagate task records from the management worktree into sibling task worktrees.
+ * Source of truth is the management worktree (not primary); project mode is a no-op after the initial write.
+ */
 export async function syncTaskRecordsToWorktrees(rootInput: string, state: TaskWorktreeState): Promise<void> {
   const root = path.resolve(rootInput);
   const relative = relativePath('.tiller/task', state.id);
-  const source = await assertSafePath(root, relative);
+  const sourceRoot = managementWorktreePath(root, state);
+  const source = await assertSafePath(sourceRoot, relative);
   const stat = await lstat(source);
   if (!stat.isDirectory()) fail('WORKTREE_TASK_SYNC_FAILED', `任务记录不是目录：\`${relative}\`。`);
+  const sourceRelative = managementWorktreeRelative(state);
   try {
     for (const entry of state.worktrees) {
+      if (entry.path === sourceRelative) continue;
       const target = await assertSafePath(root, entry.path);
-      await copyTaskDirectory(root, target, relative);
+      await copyTaskDirectory(sourceRoot, target, relative);
     }
   } catch (error) {
     if ((error as { code?: string }).code === 'WORKTREE_TASK_SYNC_FAILED') throw error;
@@ -435,3 +455,4 @@ export async function cleanupTaskWorktrees(rootInput: string, id: string, metada
   await removeRelative(root, relativePath(LEGACY_SIDECAR_DIRECTORY, id), true, '旧任务旁路目录', warnings);
   return { removedWorktrees, missingWorktrees, logsRemoved: logsRemoved || legacyLogsRemoved, warnings };
 }
+

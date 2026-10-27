@@ -128,5 +128,9 @@ export async function resolveTaskCheckout(input: string, id: string): Promise<Ta
     return { primary, taskRoot: await resolvedPath(candidate) };
   }
   if (await hasTaskRecord(primary, id)) return { primary, taskRoot: primary };
+  // start writes records only into the task worktree; resolve from primary via sidecar paths.
+  for (const worktree of await taskWorktreePaths(primary, id)) {
+    if (await hasTaskRecord(worktree, id)) return { primary, taskRoot: await resolvedPath(worktree) };
+  }
   return { primary, taskRoot: primary };
 }

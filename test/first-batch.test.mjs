@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
-import { cli, completeDesign, confirmTask, failure, fixture, put, snapshot, success } from './helpers.mjs';
+import { cli, commitFixtures, completeDesign, confirmTask, failure, fixture, put, snapshot, success, taskRecordRoot } from './helpers.mjs';
 
 const read = (root, relative) => readFileSync(join(root, relative), 'utf8');
 const taskId = '20261022-first-batch';
@@ -15,16 +15,8 @@ async function initialized(t) {
   return root;
 }
 
-function commitAll(root, message = 'test fixture') {
-  const result = spawnSync('git', ['-c', 'user.name=Tiller Test', '-c', 'user.email=tiller@example.invalid', 'add', '-A'], {
-    cwd: root, encoding: 'utf8', timeout: 20_000,
-  });
-  assert.ifError(result.error && result.error.code !== 'EPERM' ? result.error : null);
-  assert.equal(result.status, 0, result.stderr);
-  const committed = spawnSync('git', ['-c', 'user.name=Tiller Test', '-c', 'user.email=tiller@example.invalid',
-    'commit', '--quiet', '--allow-empty', '-m', message], { cwd: root, encoding: 'utf8', timeout: 20_000 });
-  assert.ifError(committed.error && committed.error.code !== 'EPERM' ? committed.error : null);
-  assert.equal(committed.status, 0, committed.stderr);
+function commitAll(root, message = 'test: 夹具提交') {
+  commitFixtures(root, message);
 }
 
 function checkoutTaskBranch(root, id) {
@@ -50,9 +42,10 @@ function stageTask(root, id) {
 
 function addDesign(root, id) {
   const relative = `.tiller/task/${id}/task.md`;
-  const content = read(root, relative);
+  const checkout = taskRecordRoot(root, id);
+  const content = read(checkout, relative);
   assert.match(content, /^### 方案$/mu);
-  completeDesign(root, id);
+  completeDesign(checkout, id);
 }
 
 function activeFiles(root) {
@@ -160,7 +153,7 @@ test('CASE-054 CASE-264 check accepts verified coverage without a task AC back-r
   assert.deepEqual(added.criteria, []);
   put(root, 'src/alpha.mjs', 'export const alpha = true;\n');
   put(root, 'test/alpha.test.mjs', `import assert from 'node:assert/strict';\nimport test from 'node:test';\n\ntest('${added.id} alpha behaves', () => { assert.equal(true, true); });\n`);
-  commitAll(root, 'test: alpha behavior fixture');
+  commitAll(root, 'test: alpha 行为夹具');
   success(cli(root, 'verify', taskId, '--criterion', 'AC-1', '--test', `test/alpha.test.mjs::${added.id} alpha behaves`));
   checkoutTaskBranch(root, taskId);
   const checked = success(cli(root, 'check', taskId));
@@ -190,7 +183,7 @@ test('CASE-055 new project runs init, plan, start, confirm, case add, verify, ch
   assert.equal(added.id, 'CASE-001');
   put(root, 'src/sample.mjs', 'export const sample = () => 42;\n');
   put(root, 'test/sample.test.mjs', `import assert from 'node:assert/strict';\nimport test from 'node:test';\nimport { sample } from '../src/sample.mjs';\n\ntest('${added.id} sample flow works', () => { assert.equal(sample(), 42); });\n`);
-  commitAll(root, 'test: accept sample flow fixture');
+  commitAll(root, 'test: sample 流程夹具');
   const verified = success(cli(root, 'verify', taskId, '--criterion', 'AC-1', '--test', `test/sample.test.mjs::${added.id} sample flow works`));
   assert.deepEqual(verified.cases, ['CASE-001']);
   checkoutTaskBranch(root, taskId);
@@ -253,14 +246,14 @@ test('CASE-056 task stages derive from task facts and fall back on invalid confi
     '--expected', '阶段随任务事实推进',
     '--spec', '.tiller/specs/modules/workflow/requirements.md#2-开始与接续'));
   put(root, 'test/lifecycle.test.mjs', `import assert from 'node:assert/strict';\nimport test from 'node:test';\n\ntest('${stageCase.id} lifecycle stage behavior', () => assert.equal(1, 1));\n`);
-  commitAll(root, 'test: accept lifecycle stage fixture');
+  commitAll(root, 'test: 生命周期阶段夹具');
   success(cli(root, 'verify', id, '--criterion', 'AC-1', '--test', `test/lifecycle.test.mjs::${stageCase.id} lifecycle stage behavior`));
   assert.equal(stageTask(root, id), '已验证');
   checkoutTaskBranch(root, id);
   success(cli(root, 'accept', id, '--quote', '验收阶段流程'));
   assert.equal(stageTask(root, id), '已验收');
   const taskPath = `.tiller/task/${id}/task.md`;
-  put(root, taskPath, read(root, taskPath).replace('Task stage behavior is derived from records.', 'Task stage behavior changed after confirmation.'));
+  put(taskRecordRoot(root, id), taskPath, read(taskRecordRoot(root, id), taskPath).replace('Task stage behavior is derived from records.', 'Task stage behavior changed after confirmation.'));
   const invalidated = success(cli(root, 'resume', id));
   assert.equal(invalidated.stage, '已开始');
   assert.match(invalidated.stageReason, /需求确认已失效/u);
@@ -287,7 +280,7 @@ test('CASE-057 accepted task close cleans local state without changing shared re
   const root = await initialized(t);
   moduleSpec(root, 'workflow');
   put(root, 'src/close.mjs', 'export const close = 1;\n');
-  commitAll(root, '初始化关闭流程夹具');
+  commitAll(root, 'test: 关闭流程初始化夹具');
   const id = '20261022-close-flow';
   success(cli(root, 'start', id, '--title', '关闭流程', '--requirement', 'An accepted task can be closed and reopened.',
     '--criterion', 'AC-1=Close blocks terminal changes', '--size', 'small',
@@ -297,20 +290,19 @@ test('CASE-057 accepted task close cleans local state without changing shared re
     '--expected', '关闭后阻止变更并可重开',
     '--spec', '.tiller/specs/modules/workflow/requirements.md#flow-15-在关键节点取得人工确认'));
   put(root, 'test/close.test.mjs', `import assert from 'node:assert/strict';\nimport test from 'node:test';\n\ntest('${closeCase.id} close lifecycle behavior', () => assert.equal(1, 1));\n`);
-  commitAll(root, 'test: accept close lifecycle fixture');
+  commitAll(root, 'test: 关闭生命周期夹具');
   success(cli(root, 'verify', id, '--criterion', 'AC-1', '--test', `test/close.test.mjs::${closeCase.id} close lifecycle behavior`));
   success(cli(root, 'accept', id, '--quote', '验收关闭流程'));
   const alreadyAccepted = failure(cli(root, 'close', id, '--reason', '不能放弃', '--abandon'));
   assert.equal(alreadyAccepted.error.code, 'ALREADY_ACCEPTED');
   const taskFile = `.tiller/task/${id}/task.md`;
-  const beforeClose = read(root, taskFile);
-  const beforeMtime = statSync(join(root, taskFile)).mtimeMs;
+  const beforeClose = read(taskRecordRoot(root, id), taskFile);
   put(root, `.tiller/local/${id}/cleanup-marker.txt`, 'local only\n');
   const closed = success(cli(root, 'close', id, '--reason', '交付完成并收尾'));
-  assert.equal(closed.stage, '已验收');
+    assert.equal(closed.stage, '已验收');
   assert.match(closed.stageReason, /本机清理完成/u);
   assert.equal(read(root, taskFile), beforeClose);
-  assert.equal(statSync(join(root, taskFile)).mtimeMs, beforeMtime);
+  assert.ok(existsSync(join(root, taskFile)), 'accepted close materializes shared task on primary');
   assert.doesNotMatch(beforeClose, /^## 关闭$/mu);
   assert.equal(existsSync(join(root, `.tiller/local/${id}`)), false);
   const listed = success(cli(root, 'resume'));
@@ -341,7 +333,7 @@ test('CASE-058 abandoned tasks are terminal, reopenable, and not counted as acti
   assert.equal(refused.error.code, 'NOT_ACCEPTED');
   const abandoned = success(cli(root, 'close', id, '--reason', '需求取消', '--abandon'));
   assert.equal(abandoned.stage, '已放弃');
-  assert.match(read(root, `.tiller/task/${id}/task.md`), /^- 状态：已放弃$/mu);
+  assert.match(read(taskRecordRoot(root, id), `.tiller/task/${id}/task.md`), /^- 状态：已放弃$/mu);
   const status = success(cli(root, 'plan', 'status', 'abandon-plan'));
   assert.equal(status.items[0].status, '已放弃');
   assert.equal(status.items[0].tasks[0].stage, '已放弃');

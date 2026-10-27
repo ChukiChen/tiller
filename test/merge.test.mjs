@@ -4,11 +4,10 @@ import { join } from 'node:path';
 import { spawn, spawnSync } from 'node:child_process';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
-import { cli, cliPath, confirmTask, failure, fixture, put, success } from './helpers.mjs';
+import { cli, cliPath, commitFixtures, confirmTask, failure, fixture, put, success, read } from './helpers.mjs';
 import { startPlatformMock } from './platform-api-mock.mjs';
 
 const repository = fileURLToPath(new URL('../', import.meta.url));
-const read = (root, relative) => readFileSync(join(root, relative), 'utf8');
 
 function git(root, ...args) {
   const result = spawnSync('git', ['-c', 'user.name=Tiller Test', '-c', 'user.email=tiller@example.invalid', ...args], {
@@ -78,8 +77,7 @@ async function acceptTask(root, id) {
   const testPath = `test/${id}.test.mjs`;
   const testName = `${added.id} merge fixture`;
   put(root, testPath, `import test from 'node:test';\n\ntest('${testName}', () => {});\n`);
-  git(root, 'add', '-A');
-  git(root, 'commit', '--quiet', '-m', 'test(workflow): 准备 merge 夹具');
+  commitFixtures(root, 'test(workflow): 准备 merge 夹具');
   success(cli(root, 'verify', id, '--criterion', 'AC-1', '--test', `${testPath}::${testName}`));
   git(root, 'checkout', '--quiet', '-b', `fix/${id}-fixture`);
   success(cli(root, 'accept', id, '--by', 'Tiller Test'));

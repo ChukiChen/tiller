@@ -5,7 +5,7 @@ import { spawnSync } from 'node:child_process';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 import { runnerFor } from '../dist/test-output.js';
-import { cli, confirmTask, fixture, put, success } from './helpers.mjs';
+import { cli, confirmTask, fixture, put, success, taskRecordRoot} from './helpers.mjs';
 
 const repository = fileURLToPath(new URL('../', import.meta.url));
 const read = (root, relative) => readFileSync(join(root, relative), 'utf8');
@@ -238,7 +238,7 @@ test('CASE-189 upgrade adopts managed content and plan attach links an existing 
     '--criterion', 'AC-1=Attachment is visible', '--size', 'small'));
   const attached = success(cli(root, 'plan', 'attach', id, '--plan', '20261024-attach-plan', '--item', 'P-1'));
   assert.equal(attached.changed, true);
-  const content = read(root, `.tiller/task/${id}/task.md`);
+  const content = read(taskRecordRoot(root, id), `.tiller/task/${id}/task.md`);
   assert.match(content, /"plan":"20261024-attach-plan","item":"P-1"/u);
   assert.match(content, /^## 规划$/mu);
   assert.match(content, /^- 规划：20261024-attach-plan$/mu);

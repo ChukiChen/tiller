@@ -5,10 +5,9 @@ import { spawnSync } from 'node:child_process';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 import { parseCaseMarkdown, readCaseLibrary } from '../dist/cases.js';
-import { cli, completeDesign, confirmTask, failure, fixture, put, success } from './helpers.mjs';
+import { cli, completeDesign, confirmTask, failure, fixture, put, success, read, commitFixtures } from './helpers.mjs';
 
 const repository = fileURLToPath(new URL('../', import.meta.url));
-const read = (root, relative) => readFileSync(join(root, relative), 'utf8');
 const taskId = '20261022-fixture';
 
 function git(root, ...args) {
@@ -271,8 +270,7 @@ import test from 'node:test';
 ${sourceTest('CASE-001 staged coverage', 'assert.equal(1, 1)')}
 `);
   success(cli(root, 'verify', taskId, '--criterion', 'AC-1', '--case', added.id));
-  git(root, 'add', 'src', 'test', '.tiller/cases');
-  git(root, 'commit', '--quiet', '-m', 'test(workflow): 补充用例测试');
+  commitFixtures(root, 'test(workflow): 补充用例测试');
   const checked = success(cli(root, 'check', taskId));
   assert.equal(checked.ready, true, checked.issues.join('\n'));
 
@@ -290,7 +288,7 @@ ${sourceTest('staged coverage without a case id', 'undefined')}
 test('CASE-103 CASE-156 repository history and docs use the new case model', async () => {
   const library = await readCaseLibrary(repository);
   assert.deepEqual(library.issues, []);
-  assert.equal(library.cases.length, 301);
+  assert.equal(library.cases.length, 304);
   assert.ok(library.cases.every(item => item.preconditions.length && item.steps.length && item.inputs.length && item.expected));
   assert.ok(library.cases.every(item => item.tests.length > 0), 'every case should be referenced by a test');
   assert.ok(library.cases.every(item => item.tests.every(reference => reference.name?.includes(item.id))));

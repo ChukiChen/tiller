@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 import { execFile } from 'node:child_process';
-import { lstat, readdir } from 'node:fs/promises';
+import { lstat } from 'node:fs/promises';
 import path from 'node:path';
 import { promisify } from 'node:util';
 import { readProjectMetadata } from './core.js';
@@ -377,15 +377,14 @@ async function currentCommit(root: string, requested?: string): Promise<string> 
 
 async function taskLinks(root: string, planId: string): Promise<Map<string, { id: string; stage: FlowStage; accepted: boolean }[]>> {
   const result = new Map<string, { id: string; stage: FlowStage; accepted: boolean }[]>();
-  const { taskStage } = await import('./flow.js');
-  let entries;
-  try { entries = await readdir(path.join(root, TASK_DIRECTORY), { withFileTypes: true }); }
-  catch (error) { if ((error as NodeJS.ErrnoException).code === 'ENOENT') return result; throw error; }
-  for (const entry of entries.sort((a, b) => a.name.localeCompare(b.name))) {
-    if (!entry.isDirectory()) continue;
+  const { discoverTaskIds, taskStage } = await import('./flow.js');
+  const { resolveTaskCheckout } = await import('./project-root.js');
+  for (const taskId of await discoverTaskIds(root)) {
     let content: string | null;
-    try { content = await readTextIfExists(root, `${TASK_DIRECTORY}/${entry.name}/task.md`); }
-    catch { continue; }
+    try {
+      const checkout = (await resolveTaskCheckout(root, taskId)).taskRoot;
+      content = await readTextIfExists(checkout, `${TASK_DIRECTORY}/${taskId}/task.md`);
+    } catch { continue; }
     if (!content) continue;
     const marker = /<!-- tiller-task:v1 (\{.*\}) -->/u.exec(content);
     if (!marker) continue;
@@ -393,8 +392,8 @@ async function taskLinks(root: string, planId: string): Promise<Map<string, { id
     try { meta = JSON.parse(marker[1]!) as Record<string, unknown>; } catch { continue; }
     if (meta.plan !== planId || typeof meta.item !== 'string') continue;
     const links = result.get(meta.item) ?? [];
-    const stage = await taskStage(root, entry.name);
-    links.push({ id: entry.name, stage: stage.stage, accepted: stage.stage === '已验收' || stage.stage === '已关闭' });
+    const stage = await taskStage(root, taskId);
+    links.push({ id: taskId, stage: stage.stage, accepted: stage.stage === '已验收' || stage.stage === '已关闭' });
     result.set(meta.item, links);
   }
   return result;
