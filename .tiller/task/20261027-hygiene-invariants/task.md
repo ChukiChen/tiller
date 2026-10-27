@@ -64,9 +64,11 @@
 | --- | --- | --- | --- | --- |
 | 需求 | boon yu | 2026-10-27T11:57:46.593Z | b963f40c861e | — |
 | 设计 | boon yu | 2026-10-27T11:57:51.992Z | e9b7c568316b | — |
+| 交付验收 | boon yu | 2026-10-27T12:29:23.669Z | fb60a44d5722 | — |
 
 <!-- tiller-confirm:v1 {"gate":"requirements","object":"需求正文（目标、范围与验收条件）","subject":"d066360c18b0c252472bbe6e7c47004dbad445fc1d621a26e095cae9fd0d67b3","commit":"b963f40c861ecaa73f49e4220d787dbedb3e424c","by":"boon yu","quote":"","at":"2026-10-27T11:57:46.593Z"} -->
 <!-- tiller-confirm:v1 {"gate":"design","object":"设计正文","subject":"0ab84f469fe48421d8c93713cdcc4a5338a68dbf9d64c6c30cfec2a5702f1400","commit":"e9b7c568316b7f341d7bb6d1f1aa9ee7085d9b3d","by":"boon yu","quote":"","at":"2026-10-27T11:57:51.992Z"} -->
+<!-- tiller-confirm:v1 {"gate":"acceptance","object":"当前交付（需求、设计、验证与提交）","subject":"423fb87ca4d74abac7395d7130d1a5167afbf5eee276c925d4711e2b55e06858","commit":"fb60a44d57220531486794abf31ac8042bb78dae","by":"boon yu","quote":"","at":"2026-10-27T12:29:23.669Z"} -->
 
 ## 验证
 
@@ -260,12 +262,9 @@
 - [x] 验证命令已执行且测试输出已核实
 - [x] 全局用例结构与引用有效
 - [x] 改动未超出范围
-- [ ] 未弱化仍存在的测试
+- [x] 未弱化仍存在的测试
 - [x] 评审无未清除阻塞项
 - [x] 记录不含密钥或本机绝对路径
-
-阻塞项：
-- 弱化测试断言：test/doc-templates.test.mjs::CASE-193 CASE-270 requirements confirmation rejects blank or placeholder sections while accepting the legacy scope section
 
 提示：
 - 172 条历史用例仍以 <任务>#AC-n 记录关联 AC；这是可迁移的历史债，不阻断当前覆盖。
