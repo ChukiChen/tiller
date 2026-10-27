@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { existsSync, mkdirSync, readFileSync, rmSync, statSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, renameSync, rmSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { spawn, spawnSync } from 'node:child_process';
 import test from 'node:test';
@@ -234,6 +234,22 @@ test('CASE-280 worktree 根 close 可删本地任务分支', async t => {
   assert.equal(branchExists(root, branch), false);
   assert.ok(!repeated.warnings?.some(warning => warning.includes('远端分支')), repeated.warnings?.join('\n'));
   assert.equal(repeated.stage, '已验收');
+});
+
+test('CASE-280 worktree 根 close 可读取仅存在于 worktree 的任务记录', async t => {
+  const root = project(t);
+  const id = '20261027-worktree-only-record-close';
+  const started = startTask(root, id);
+  const worktree = join(root, started.worktreeRoot);
+  mkdirSync(join(worktree, '.tiller/task'), { recursive: true });
+  renameSync(join(root, `.tiller/task/${id}`), join(worktree, `.tiller/task/${id}`));
+  assert.equal(existsSync(join(root, `.tiller/task/${id}/task.md`)), false);
+
+  acceptTask(worktree, id);
+  const closed = success(cli(worktree, 'close', id, '--reason', '从仅含任务记录的 worktree 收尾'));
+  assert.deepEqual(closed.worktrees, [started.worktreeRoot]);
+  assert.equal(existsSync(worktree), false);
+  assert.equal(branchExists(root, started.worktrees[0].branch), false);
 });
 
 test('CASE-283 合入后 close 不改共享 task.md 且重复 close 安全', async t => {

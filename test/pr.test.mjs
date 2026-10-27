@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { existsSync, readFileSync, rmSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, renameSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import { spawn, spawnSync } from 'node:child_process';
 import test from 'node:test';
@@ -46,6 +46,11 @@ function fillDesign(root, id) {
 function commitAll(root, message = 'chore(workflow): 同步验收夹具') {
   git(root, 'add', '-A');
   git(root, 'commit', '--quiet', '--allow-empty', '-m', message);
+}
+
+function moveTaskRecordTo(source, target, id) {
+  mkdirSync(join(target, '.tiller/task'), { recursive: true });
+  renameSync(join(source, `.tiller/task/${id}`), join(target, `.tiller/task/${id}`));
 }
 
 function acceptTaskForPr(root, id) {
@@ -166,6 +171,40 @@ test('CASE-284 pr draft-only 仅输出草稿不联网', async t => {
   for (const heading of ['关联任务', '变更内容', '验收条件', '验证结果', '影响与风险']) {
     assert.equal(draft.body.split(`## ${heading}`).length - 1, 1, heading);
   }
+});
+
+test('CASE-285 任务记录仅在 worktree 时 pr 不误报缺失', async t => {
+  const root = fixture(t);
+  success(cli(root, 'init'));
+  setupRepository(root);
+  const id = '20261027-worktree-pr-record';
+  const started = success(cli(root, 'start', id, '--title', 'worktree 任务记录', '--requirement', '从记录所在检出生成 PR 草稿。',
+    '--criterion', 'AC-1=主仓缺少记录仍可生成草稿', '--size', 'small', '--target', 'src', '--target', 'test',
+    '--target', '.tiller/cases', '--target', '.tiller/specs/modules/workflow'));
+  const worktree = join(root, started.worktreeRoot);
+  moveTaskRecordTo(root, worktree, id);
+  assert.equal(existsSync(join(root, `.tiller/task/${id}/task.md`)), false);
+
+  acceptTaskForPr(worktree, id);
+  assert.equal(existsSync(join(root, `.tiller/task/${id}/task.md`)), false);
+  const draft = success(cli(worktree, 'pr', id, '--draft-only'));
+  assert.equal(draft.draftOnly, true);
+  assert.match(draft.body, new RegExp(`\\.tiller/task/${id}/task\\.md`, 'u'));
+});
+
+test('CASE-286 任务在所有相关检出均不存在时 pr 仍报缺失', async t => {
+  const root = fixture(t);
+  success(cli(root, 'init'));
+  setupRepository(root);
+  const fixtureId = '20261027-worktree-missing-record';
+  const started = success(cli(root, 'start', fixtureId, '--title', '缺失记录夹具', '--requirement', '提供任务 worktree。',
+    '--criterion', 'AC-1=缺失任务保持原错误码', '--size', 'small', '--target', 'src', '--target', 'test',
+    '--target', '.tiller/cases'));
+  const worktree = join(root, started.worktreeRoot);
+  const absentId = '20261027-absent-task-record';
+  const missing = failure(cli(worktree, 'pr', absentId, '--draft-only'));
+  assert.equal(missing.error.code, 'TASK_NOT_FOUND');
+  assert.match(missing.error.message, new RegExp(absentId, 'u'));
 });
 
 test('CASE-070 branch names follow type and task prefix rules', () => {
