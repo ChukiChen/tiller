@@ -21,7 +21,7 @@
 3. init：受管文件写入与提交以初始化 worktree/基线分支为准；默认分支 cwd 不留下需 hard reset 才能 pull 的未跟踪受管残留（保留 project.json 基线元信息所需的最小例外须文档化且可测）。
 4. pr：成功创建真实 PR/MR 后，在保持人类可读的同时提供机器友好输出（`--json` 稳定字段必含 url/number/branch/title 等；非 TTY 默认可走 JSON 或等价稳定结构）；`--draft-only` 行为保持不联网。
 5. close/merge 删远端：分支已不存在或平台返回 404/422/“does not exist” 等视为已清理，不进 warnings；与文档「安静处理」一致。
-6. init/骨架：SHARED_RESOURCES 与初始化提交所含空目录保留所需 `.gitkeep`；对狗粮常见的空 `src/`、`test/`（若工程已存在这些空目录或骨架会创建它们），在同一次初始化变更中带上 `.gitkeep`，避免 wipe+fullflow 再追加一次仅含 gitkeep 的 main 提交。
+6. init/骨架：SHARED_RESOURCES 与初始化提交所含空目录保留所需 `.gitkeep`；对狗粮常见的缺失或空 `src/`、`test/`，在同一次初始化变更中带上 `.gitkeep`，避免 wipe+fullflow 再追加一次仅含 gitkeep 的 main 提交。
 
 ## 验收条件
 
@@ -30,4 +30,4 @@
 - AC-3: 首次 init 成功后，默认分支工作区对受管文件无未跟踪残留（或仅有文档化的最小例外），无需 hard reset 即可与远端同步
 - AC-4: tiller pr 成功时机器可解析稳定字段（`--json` 与/或非 TTY 默认）；人类 TTY 仍可读；`--draft-only` 不联网且输出可用
 - AC-5: 删除已不存在的远端任务分支（404/422/不存在语义）时 close/merge 不产生 warnings，并视为已清理
-- AC-6: init/骨架在同一变更集中包含必要 `.gitkeep`（含 cases 空目录与存在的空 src/test），狗粮无需额外仅 gitkeep 的 main 提交
+- AC-6: init/骨架在同一变更集中包含必要 `.gitkeep`（含 cases 空目录与缺失或为空的 src/test），狗粮无需额外仅 gitkeep 的 main 提交

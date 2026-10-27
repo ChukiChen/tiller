@@ -5,7 +5,7 @@ import { spawn, spawnSync } from 'node:child_process';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 import { cli, cliPath, confirmTask, failure, fixture, put, success } from './helpers.mjs';
-import { fakeGitForTokenizedPush, realGitPath, startPlatformMock } from './platform-api-mock.mjs';
+import { startPlatformMock } from './platform-api-mock.mjs';
 
 const repository = fileURLToPath(new URL('../', import.meta.url));
 const read = (root, relative) => readFileSync(join(root, relative), 'utf8');
@@ -59,13 +59,11 @@ async function initialize(t, platform = 'github') {
   configure(root);
   const mock = await startPlatformMock(t, { platform, remoteHead: git(root, 'rev-parse', 'HEAD') });
   git(root, 'remote', 'add', 'origin', `${mock.origin}${platform === 'github' ? '/owner/repo.git' : '/group/project.git'}`);
-  const wrapper = platform === 'gitlab' ? fakeGitForTokenizedPush(t, root, realGitPath()) : null;
-  if (platform === 'gitlab' && wrapper === null) return null;
   const environment = platform === 'github'
     ? { GITHUB_TOKEN: 'mock-token', GH_TOKEN: '', GITLAB_TOKEN: '', GL_TOKEN: '' }
-    : { GITHUB_TOKEN: '', GH_TOKEN: '', GITLAB_TOKEN: 'mock-token', GL_TOKEN: '', ...wrapper.environment };
+    : { GITHUB_TOKEN: '', GH_TOKEN: '', GITLAB_TOKEN: 'mock-token', GL_TOKEN: '' };
   const initialized = success(await cliAt(root, environment, 'init', '--platform', platform));
-  return { root, environment, mock, wrapper, baseline: initialized.initBaseline };
+  return { root, environment, mock, baseline: initialized.initBaseline };
 }
 
 async function acceptTask(root, id) {
@@ -165,7 +163,7 @@ test('CASE-236 CASE-250 GitHub merge API 失败时保留本机任务', async t =
 test('CASE-237 GitLab merge 经 REST API squash 成功后自动清理本机任务', async t => {
   const initialized = await initialize(t, 'gitlab');
   if (!initialized) return;
-  const { root, environment, mock, wrapper } = initialized;
+  const { root, environment, mock } = initialized;
   const id = '20261026-gitlab-merge';
   await acceptTask(root, id);
   const local = join(root, '.tiller/local', id);
@@ -182,7 +180,7 @@ test('CASE-237 GitLab merge 经 REST API squash 成功后自动清理本机任�
   ]);
   assert.ok(mock.state.requests.every(item => item.hasPrivateToken));
   assert.deepEqual(JSON.parse(mock.state.requests[1].body), { squash: true });
-  assert.equal(readFileSync(wrapper.log, 'utf8').trim().split('\n').length, 1);
+  assert.ok(git(root, '--git-dir', mock.gitRepo, 'rev-parse', '--verify', 'refs/heads/chore/tiller-init'));
 });
 
 test('CASE-238 GitLab merge API 失败时保留本机任务', async t => {

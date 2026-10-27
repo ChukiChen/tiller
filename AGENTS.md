@@ -14,9 +14,9 @@
 - 不删除、跳过或弱化测试。验收条件必须编号，先转为全局用例并写测试设计，再由测试名/紧邻注释引用 `CASE-NNN`；自动扫描反查，用例不保存源码字段。
 - `start` 写清目标、范围、AC 与设计；确认绑定正文并记录部分、确认人、时间、提交和摘要，原话可选。
 - 验证留摘要与旁路；完整命令、代码树和输出只进日志。`verify` 只声明测试并由 tiller 执行、读私有报告；外部报告须写明理由并放行；bugfix 留基线失败先行；回归写 `.tiller/cases/`，不提交日志、全文快照、自举工程或安装包。
-- `check` 检查过薄设计、空壳 decisions/模块设计、分支未包含任务编号；业务范围·做交付路径给 warning；规格/背景未回写列路径与提纲；`verify` 日志含命令、起止和退出码。`doctor [path]` 查过程卫生，严重项非零退出。
+- `check` 检查过薄设计、空壳 decisions/模块设计、分支未包含任务编号；业务范围·做交付路径给 warning；未回写列路径提纲；`verify` 日志含命令、起止和退出码。`doctor [path]` 查过程卫生，严重项失败。
 - 单任务只维护 `task.md`；长期结论同步 `.tiller/specs/`。大设计用 plan 拆任务，已有任务可 `plan attach`；受管修改用 `upgrade --adopt` 更新摘要。
-- 阶段由事实推导；已验收即交付完成，`accept` 先于 `pr`。`pr` 默认经平台 API 创建真实 PR/MR，`--draft-only` 仅预览；`merge` 经 API squash，`close` 在任务 worktree 根也可先拆树再从主仓删本地/远端分支。`--keep-branch` 保留且不改共享 `task.md`；未验收终止用 `close --abandon`，继续用 `reopen`。
+- 阶段由事实推导；已验收即交付完成，`accept` 先于 `pr`。`pr` 默认 tokenized git push 并经平台 API 创建真实 PR/MR，`--draft-only` 仅预览；`merge` 经 API squash，`close` 在 worktree 根拆树并删本地/远端分支。`--keep-branch` 保留且不改共享 `task.md`；未验收终止用 `close --abandon`，继续用 `reopen`。
 - 记录不得出现密钥、token、凭据或本机绝对路径。共享资料必须可提交，`.tiller/local/` 只放本机数据。
 - 入口、目录或验证方式变化时同步 `.tiller/context/`，实现细节不重复。
 

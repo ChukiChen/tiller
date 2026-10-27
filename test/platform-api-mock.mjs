@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
-import { mkdtempSync, mkdirSync, rmSync, writeFileSync, chmodSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, rmSync } from 'node:fs';
 import { createServer } from 'node:http';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import { spawnSync } from 'node:child_process';
 
 function git(cwd, args, options = {}) {
@@ -34,7 +34,12 @@ function empty(response, status = 204) {
 export async function startPlatformMock(t, options = {}) {
   const platform = options.platform ?? 'github';
   const objectStore = mkdtempSync(join(tmpdir(), 'tiller-api-objects-'));
+  const httpRoot = mkdtempSync(join(tmpdir(), 'tiller-git-http-'));
   git(objectStore, ['init', '--quiet']);
+  const gitRepo = join(httpRoot, platform === 'github' ? 'owner/repo.git' : 'group/project.git');
+  mkdirSync(dirname(gitRepo), { recursive: true });
+  git(httpRoot, ['init', '--bare', '--quiet', gitRepo]);
+  git(gitRepo, ['config', 'http.receivepack', 'true']);
   const state = {
     platform,
     mode: options.mode ?? 'success',
@@ -58,6 +63,54 @@ export async function startPlatformMock(t, options = {}) {
       hasPrivateToken: Boolean(request.headers['private-token']),
     });
     try {
+      const gitService = options.git !== false
+        && /\.git\/(?:info\/refs|git-receive-pack|git-upload-pack)$/u.test(url.pathname);
+      if (gitService) {
+        const result = spawnSync('git', ['http-backend'], {
+          input: body,
+          encoding: 'buffer',
+          maxBuffer: 64 * 1024 * 1024,
+          env: {
+            ...process.env,
+            GIT_PROJECT_ROOT: httpRoot,
+            GIT_HTTP_EXPORT_ALL: '1',
+            PATH_INFO: url.pathname,
+            QUERY_STRING: url.search.slice(1),
+            REQUEST_METHOD: request.method ?? 'GET',
+            CONTENT_TYPE: request.headers['content-type'] ?? '',
+            CONTENT_LENGTH: String(body.length),
+            REMOTE_ADDR: '127.0.0.1',
+            SERVER_PROTOCOL: 'HTTP/1.1',
+          },
+        });
+        if (result.status !== 0) return json(response, 500, { message: result.stderr.toString('utf8') });
+        const output = result.stdout;
+        const separator = output.indexOf('\r\n\r\n');
+        const headerEnd = separator >= 0 ? separator : output.indexOf('\n\n');
+        assert.ok(headerEnd >= 0, 'git http-backend returned headers');
+        const headerText = output.subarray(0, headerEnd).toString('utf8');
+        const payload = output.subarray(headerEnd + (separator >= 0 ? 4 : 2));
+        const headers = {};
+        let status = 200;
+        for (const line of headerText.split(/\r?\n/u)) {
+          const colon = line.indexOf(':');
+          if (colon <= 0) continue;
+          const name = line.slice(0, colon).trim();
+          const value = line.slice(colon + 1).trim();
+          if (name.toLowerCase() === 'status') status = Number.parseInt(value, 10);
+          else headers[name] = value;
+        }
+        response.writeHead(status, headers);
+        response.end(payload);
+        const refs = spawnSync('git', ['--git-dir', gitRepo, 'show-ref'], { encoding: 'utf8' });
+        if (refs.status === 0) {
+          for (const line of refs.stdout.split(/\r?\n/u).filter(Boolean)) {
+            const [sha, ref] = line.trim().split(/\s+/u);
+            if (sha && ref) state.refs.set(ref, sha);
+          }
+        }
+        return;
+      }
       if (platform === 'github') {
         const repo = /^\/api\/v3\/repos\/owner\/repo(?:\/(.*))?$/u.exec(url.pathname);
         assert.ok(repo, `unexpected GitHub path: ${request.method} ${url.pathname}`);
@@ -223,44 +276,14 @@ export async function startPlatformMock(t, options = {}) {
   t.after(async () => {
     await new Promise(resolve => server.close(resolve));
     rmSync(objectStore, { recursive: true, force: true });
+    rmSync(httpRoot, { recursive: true, force: true });
   });
   return {
     origin,
+    gitRepo,
     state,
     addRemoteCommit(sha) { state.remoteCommits.add(sha); },
     setMode(mode) { state.mode = mode; },
     resetRequests() { state.requests.length = 0; },
   };
-}
-
-function quote(value) {
-  return `'${value.replaceAll("'", `'\\''`)}'`;
-}
-
-export function fakeGitForTokenizedPush(t, root, realGit) {
-  if (process.platform === 'win32') {
-    t.skip('The tokenized-push git wrapper uses a POSIX shell script.');
-    return null;
-  }
-  const directory = join(root, 'fake-git-bin');
-  mkdirSync(directory, { recursive: true });
-  const log = join(root, 'git-push.log');
-  const wrapper = join(directory, 'git');
-  writeFileSync(wrapper, [
-    '#!/bin/sh',
-    'if [ "$1" = push ]; then',
-    '  printf "%s\\n" "$*" >> "${TILLER_FAKE_GIT_PUSH_LOG:?}"',
-    '  exit 0',
-    'fi',
-    `exec ${quote(realGit)} "$@"`,
-    '',
-  ].join('\n'));
-  chmodSync(wrapper, 0o755);
-  return { directory, log, environment: { PATH: `${directory}:${process.env.PATH ?? ''}`, TILLER_FAKE_GIT_PUSH_LOG: log } };
-}
-
-export function realGitPath() {
-  const result = spawnSync('which', ['git'], { encoding: 'utf8', timeout: 10_000 });
-  assert.equal(result.status, 0, result.stderr);
-  return result.stdout.trim();
 }

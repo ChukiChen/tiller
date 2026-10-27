@@ -381,13 +381,14 @@ async function skeletonChanges(root: string): Promise<FileChange[]> {
     if (before === null) changes.push({ path: item.path, before: null, after: item.content });
   }
   for (const directory of ['src', 'test']) {
-    let stat: Awaited<ReturnType<typeof lstat>>;
+    let stat: Awaited<ReturnType<typeof lstat>> | null = null;
     try { stat = await lstat(path.join(root, directory)); }
     catch (error) {
-      if ((error as NodeJS.ErrnoException).code === 'ENOENT') continue;
-      throw error;
+      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
     }
-    if (!stat.isDirectory() || (await readdir(path.join(root, directory))).length) continue;
+    if (stat !== null) {
+      if (!stat.isDirectory() || (await readdir(path.join(root, directory))).length) continue;
+    }
     const relative = `${directory}/.gitkeep`;
     if (await readTextIfExists(root, relative) === null) changes.push({ path: relative, before: null, after: '' });
   }

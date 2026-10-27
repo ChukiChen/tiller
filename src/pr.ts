@@ -156,6 +156,11 @@ async function uncommittedTaskRecords(root: string, task: FlowTask): Promise<{ p
   return { paths };
 }
 
+function dirtyTaskRecordsMessage(locations: Array<{ label: string; paths: string[] }>): string {
+  const detail = locations.map(item => `${item.label}：${item.paths.join('、')}`).join('；');
+  return `任务记录尚未提交（${detail}）。请先在 worktree 当前任务检出提交这些记录；若 primary 主检出仍有残留副本，请手动提交或清理，tiller 不会自动删除用户文件。`;
+}
+
 function impactText(task: FlowTask): string {
   if (!task.design.trim()) return '无';
   const impact = sectionBody(task.design, '影响与风险', 3) || sectionBody(task.design, '影响与风险', 2);
@@ -219,7 +224,7 @@ export async function draftPullRequest(
   id: string,
   options: { slug?: string; summary?: string } = {},
 ): Promise<PullRequestDraft & { markdown: string }> {
-  const { taskRoot } = await resolveTaskCheckout(rootInput, id);
+  const { primary, taskRoot } = await resolveTaskCheckout(rootInput, id);
   const sourceRoot = taskRoot;
   const task = await readTask(taskRoot, id);
   const type = commitTypeForTaskType(task.meta.type);
@@ -230,9 +235,22 @@ export async function draftPullRequest(
       code: 'PR_NOT_ACCEPTED',
     });
   }
+  const dirty: Array<{ label: string; paths: string[] }> = [];
   const records = await uncommittedTaskRecords(taskRoot, task);
   if (records.paths.length) {
-    throw Object.assign(new Error(`任务记录尚未提交，先提交后再运行 pr：${records.paths.join('、')}`), {
+    dirty.push({
+      label: path.resolve(taskRoot) === path.resolve(primary) ? '当前任务检出（primary）' : '当前任务检出（worktree）',
+      paths: records.paths,
+    });
+  }
+  if (path.resolve(taskRoot) !== path.resolve(primary)) {
+    const primaryRecords = await uncommittedTaskRecords(primary, task);
+    if (primaryRecords.paths.length) {
+      dirty.push({ label: 'primary 主检出（残留副本）', paths: primaryRecords.paths });
+    }
+  }
+  if (dirty.length) {
+    throw Object.assign(new Error(dirtyTaskRecordsMessage(dirty)), {
       code: 'PR_TASK_RECORDS_DIRTY',
     });
   }

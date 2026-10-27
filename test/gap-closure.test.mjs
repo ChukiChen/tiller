@@ -53,6 +53,36 @@ test('CASE-186 check locates specs and context writeback suggestions without blo
   assert.ok(!checked.data.issues.some(issue => issue.includes('回写')), checked.data.issues.join('\n'));
 });
 
+test('CASE-300 stable requirement files suppress generic specs writeback warnings', async t => {
+  const root = fixture(t);
+  success(cli(root, 'init'));
+  put(root, '.tiller/specs/modules/workflow/known-behavior.md', [
+    '# 已有工作流能力',
+    '',
+    '## 使用场景',
+    '',
+    '实现任务只引用已有稳定规格。',
+    '',
+    '## 验收条件',
+    '',
+    '- AC-1: 已稳定规格可由实现任务直接引用',
+    '',
+  ].join('\n'));
+  put(root, 'src/value.txt', 'one\n');
+  baseline(root);
+  const id = '20261027-stable-requirement-writeback';
+  success(cli(root, 'start', id, '--title', '稳定规格回写降噪', '--requirement-file',
+    '.tiller/specs/modules/workflow/known-behavior.md', '--size', 'small', '--target', 'src'));
+  success(confirmTask(root, id, 'requirements'));
+  put(root, 'src/value.txt', 'two\n');
+  git(root, 'add', 'src/value.txt');
+  git(root, 'commit', '--quiet', '-m', 'change referenced stable requirement implementation');
+
+  const checked = cli(root, 'check', id);
+  assert.ok(!checked.data.warnings.some(item => item.includes('未检测到任务基线后') && item.includes('回写')),
+    checked.data.warnings.join('\n'));
+});
+
 test('CASE-187 repeated failures stop retries only for the same AC or CASE and a verified pass resets the count', async t => {
   const root = fixture(t);
   success(cli(root, 'init'));

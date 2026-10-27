@@ -8,7 +8,7 @@ import { prOutputFormat } from '../dist/cli.js';
 import { commitSubjectIssue } from '../dist/commit-conventions.js';
 import { GITLAB_TEMPLATE, initialize as initializeCore } from '../dist/core.js';
 import { cliPath, cli, completeDesign, confirmTask, failure, fixture, put, settleInitBaseline, spawnCaptured, success } from './helpers.mjs';
-import { fakeGitForTokenizedPush, realGitPath, startPlatformMock } from './platform-api-mock.mjs';
+import { startPlatformMock } from './platform-api-mock.mjs';
 
 const read = (root, relative) => readFileSync(join(root, relative), 'utf8');
 const emptyTokens = { GITHUB_TOKEN: '', GH_TOKEN: '', GITLAB_TOKEN: '', GL_TOKEN: '' };
@@ -133,14 +133,13 @@ test('CASE-279 CASE-292 pr 经 API 创建真实 PR 并返回稳定字段', async
     const mock = await startPlatformMock(t, { platform, remoteHead });
     git(root, 'remote', 'add', 'origin', `${mock.origin}${platform === 'github' ? '/owner/repo.git' : '/group/project.git'}`);
     acceptTaskForPr(root, id);
-    const wrapper = platform === 'gitlab' ? fakeGitForTokenizedPush(t, root, realGitPath()) : null;
-    if (platform === 'gitlab' && wrapper === null) continue;
     const environment = platform === 'github'
       ? { ...emptyTokens, GITHUB_TOKEN: 'mock-token' }
-      : { ...emptyTokens, GITLAB_TOKEN: 'mock-token', ...wrapper.environment };
+      : { ...emptyTokens, GITLAB_TOKEN: 'mock-token' };
 
     const created = success(await cliAt(root, environment, 'pr', id));
     assert.equal(created.platform, platform);
+    assert.equal(created.pushed.method, 'tokenized-git');
     assert.equal(created.branch, branch);
     assert.match(created.title, new RegExp(`\\[${id}\\]$`, 'u'));
     assert.equal(created.draftOnly, false);
@@ -160,6 +159,33 @@ test('CASE-279 CASE-292 pr 经 API 创建真实 PR 并返回稳定字段', async
     assert.equal(existing.error.code, 'PR_ALREADY_EXISTS');
     assert.match(existing.error.message, /已存在|already exists/u);
   }
+});
+
+test('CASE-298 GitHub pr prefers tokenized git push and keeps pull request creation on REST API', async t => {
+  const root = fixture(t);
+  success(cli(root, 'init'));
+  setupRepository(root);
+  const id = '20261027-github-tokenized-push';
+  const branch = prepareTaskBranch(root, id);
+  const remoteHead = git(root, 'rev-parse', 'HEAD').trim();
+  const mock = await startPlatformMock(t, { platform: 'github', remoteHead });
+  git(root, 'remote', 'add', 'origin', `${mock.origin}/owner/repo.git`);
+  acceptTaskForPr(root, id);
+  const environment = { ...emptyTokens, GITHUB_TOKEN: 'mock-token' };
+
+  const created = success(await cliAt(root, environment, 'pr', id));
+  assert.equal(created.pushed.method, 'tokenized-git');
+  assert.equal(mock.state.requests.some(item => item.path.includes('/git/')), false,
+    mock.state.requests.map(item => `${item.method} ${item.path}`).join('\n'));
+  const pushed = git(root, '--git-dir', mock.gitRepo, 'rev-parse', `refs/heads/${branch}`).trim();
+  assert.equal(pushed, git(root, 'rev-parse', branch).trim());
+  const create = mock.state.requests.find(item => item.method === 'POST' && item.path.endsWith('/pulls'));
+  assert.ok(create?.hasAuthorization);
+
+  const source = readFileSync(new URL('../src/platform-api.ts', import.meta.url), 'utf8');
+  const pushBranch = source.slice(source.indexOf('export async function pushBranch'));
+  assert.ok(pushBranch.indexOf('tokenizedPush') < pushBranch.indexOf('pushGitHubApi'),
+    'pushBranch must try tokenizedPush before the optional Git Data API fallback');
 });
 
 test('CASE-284 pr draft-only 仅输出草稿不联网', async t => {
@@ -240,6 +266,7 @@ test('CASE-296 worktree PR push and cleanup keep primary as the main checkout', 
     '--criterion', 'AC-1=交付使用主仓句柄', '--size', 'small', '--target', '.'));
   const worktree = join(root, started.worktreeRoot);
   const branch = started.worktrees[0].branch;
+  rmSync(join(root, `.tiller/task/${id}`), { recursive: true, force: true });
   const remoteHead = git(root, 'rev-parse', 'HEAD').trim();
   const mock = await startPlatformMock(t, { platform: 'github', remoteHead });
   git(root, 'remote', 'add', 'origin', `${mock.origin}/owner/repo.git`);
@@ -697,6 +724,56 @@ test('CASE-216 pr blocks uncommitted task records and lists relative paths', asy
   assert.equal(specDirty.error.code, 'PR_TASK_RECORDS_DIRTY');
   assert.ok(specDirty.error.message.includes(specPath), specDirty.error.message);
   assert.equal(Object.hasOwn(specDirty, 'body'), false);
+});
+
+test('CASE-301 pr identifies worktree records separately from primary residual copies', async t => {
+  const root = fixture(t);
+  success(cli(root, 'init'));
+  setupRepository(root);
+  const id = '20261027-dirty-records-primary';
+  const started = success(cli(root, 'start', id, '--title', '区分任务记录残留', '--requirement', '任务记录位置应清晰。',
+    '--criterion', 'AC-1=PR 指出 worktree 与 primary 的脏记录', '--size', 'small',
+    '--target', 'src', '--target', 'test', '--target', '.tiller/cases', '--target', '.tiller/specs'));
+  const worktree = join(root, started.worktreeRoot);
+  acceptTaskForPr(worktree, id);
+
+  put(root, `.tiller/task/${id}/primary-residual.md`, 'primary residual copy\n');
+  put(worktree, '.tiller/specs/modules/workflow/pending-record.md', '# pending record\n');
+
+  const dirty = failure(cli(worktree, 'pr', id, '--draft-only'));
+  assert.equal(dirty.error.code, 'PR_TASK_RECORDS_DIRTY');
+  assert.match(dirty.error.message, /当前任务检出（worktree）/u);
+  assert.match(dirty.error.message, /primary 主检出（残留副本）/u);
+  assert.match(dirty.error.message, /不会自动删除用户文件/u);
+  assert.ok(existsSync(join(root, `.tiller/task/${id}/primary-residual.md`)),
+    'tiller must not delete the primary residual copy');
+});
+
+test('CASE-301 repeated accept rechecks the current code tree', async t => {
+  const root = fixture(t);
+  success(cli(root, 'init'));
+  setupRepository(root);
+  const id = '20261027-repeat-accept-current-tree';
+  success(cli(root, 'start', id, '--title', '重复验收当前树', '--requirement', '重复验收要重新核实当前工作区。',
+    '--criterion', 'AC-1=改代码后重复验收被阻断', '--size', 'small',
+    '--target', 'src', '--target', 'test', '--target', '.tiller/cases', '--target', '.tiller/specs'));
+  acceptTaskForPr(root, id);
+
+  put(root, 'src/workflow.ts', 'export const value = 2;\n');
+  git(root, 'add', 'src/workflow.ts');
+  git(root, 'commit', '--quiet', '-m', 'feat(workflow): change accepted tree');
+  const repeated = failure(cli(root, 'accept', id, '--by', 'Tiller Test'));
+  assert.equal(repeated.error.code, 'NOT_READY');
+  assert.match(repeated.error.message, /验证已过期|当前工作区|重新验证/u);
+});
+
+test('CASE-301 multiline requirement points callers to requirement-file', async t => {
+  const root = fixture(t);
+  success(cli(root, 'init'));
+  const rejected = failure(cli(root, 'start', '20261027-multiline-requirement', '--title', '多行需求',
+    '--requirement', '第一行\n第二行', '--criterion', 'AC-1=多行需求指向文件', '--size', 'small', '--target', 'src'));
+  assert.equal(rejected.error.code, 'INVALID_FLOW_INPUT');
+  assert.match(rejected.error.message, /--requirement-file/u);
 });
 
 test('CASE-217 pr generates the five-section draft after task records are committed', async t => {
