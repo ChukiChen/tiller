@@ -1,6 +1,6 @@
 # doctor/close 对齐 worktree 任务真相
 
-<!-- tiller-task:v1 {"version":1,"id":"20261027-lifecycle-truth","type":"feature","size":"small","created":"2026-10-27T14:20:04.916Z","base":"e32d0099f79df0ed92af835989ded84bd2367b11","scope":["src","test",".tiller","resources","AGENTS.md"],"format":"structured"} -->
+<!-- tiller-task:v1 {"version":1,"id":"20261027-lifecycle-truth","type":"feature","size":"small","created":"2026-10-27T14:20:04.916Z","base":"e32d0099f79df0ed92af835989ded84bd2367b11","scope":["src","test",".tiller"],"format":"structured"} -->
 
 ## 需求
 
@@ -128,24 +128,88 @@ src/doctor.ts、src/flow.ts close/abandon、相关 test/CASE、usage/decisions�
 - 提交：71024c76c948
 - 时间：2026-10-27T14:41:51.502Z
 
+### run-6
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-315 doctor checks tasks that exist only in an active worktree$' \u002d\u002dtest-reporter=./.tiller/local/verify-BkjQIl/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-BkjQIl/report.jsonl test/doctor.test.mjs","exitCode":0,"tree":"8bab1d07cef5ba9242b312415af522270ac59ccfe13e9ac942e4a4f7a6c1cc64","commit":"4080cc2dd1984e3bc13b380bedf953206e1f6116"} -->
+- 条件：AC-1
+- 测试：test/doctor.test.mjs::CASE-315 doctor checks tasks that exist only in an active worktree
+- 用例：CASE-315
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/20261027-lifecycle-truth/logs/run-6.log
+- 提交：4080cc2dd198
+- 时间：2026-10-27T14:45:55.919Z
+
+### run-7
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-280 CASE-316 worktree-only close reads the record but requires merge proof$' \u002d\u002dtest-reporter=./.tiller/local/verify-gEtt8u/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-gEtt8u/report.jsonl test/task-worktrees.test.mjs","exitCode":0,"tree":"8bab1d07cef5ba9242b312415af522270ac59ccfe13e9ac942e4a4f7a6c1cc64","commit":"4080cc2dd1984e3bc13b380bedf953206e1f6116"} -->
+- 条件：AC-2
+- 测试：test/task-worktrees.test.mjs::CASE-280 CASE-316 worktree-only close reads the record but requires merge proof
+- 用例：CASE-316
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/20261027-lifecycle-truth/logs/run-7.log
+- 提交：4080cc2dd198
+- 时间：2026-10-27T14:45:57.011Z
+
+### run-8
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-316 close reports no executable reopen when only platform merge evidence survives$' \u002d\u002dtest-reporter=./.tiller/local/verify-WFFixJ/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-WFFixJ/report.jsonl test/task-worktrees.test.mjs","exitCode":0,"tree":"8bab1d07cef5ba9242b312415af522270ac59ccfe13e9ac942e4a4f7a6c1cc64","commit":"4080cc2dd1984e3bc13b380bedf953206e1f6116"} -->
+- 条件：AC-2
+- 测试：test/task-worktrees.test.mjs::CASE-316 close reports no executable reopen when only platform merge evidence survives
+- 用例：CASE-316
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/20261027-lifecycle-truth/logs/run-8.log
+- 提交：4080cc2dd198
+- 时间：2026-10-27T14:45:57.011Z
+
+### run-9
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-317 abandon refuses to erase a worktree-only task and persists when primary has a record$' \u002d\u002dtest-reporter=./.tiller/local/verify-HCBxfy/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-HCBxfy/report.jsonl test/task-worktrees.test.mjs","exitCode":0,"tree":"8bab1d07cef5ba9242b312415af522270ac59ccfe13e9ac942e4a4f7a6c1cc64","commit":"4080cc2dd1984e3bc13b380bedf953206e1f6116"} -->
+- 条件：AC-2
+- 测试：test/task-worktrees.test.mjs::CASE-317 abandon refuses to erase a worktree-only task and persists when primary has a record
+- 用例：CASE-317
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/20261027-lifecycle-truth/logs/run-9.log
+- 提交：4080cc2dd198
+- 时间：2026-10-27T14:46:00.623Z
+
+### run-10
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-314 0\\.5\\.0 发布契约与完整质量门禁保持覆盖$' \u002d\u002dtest-reporter=./.tiller/local/verify-FJBHbW/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-FJBHbW/report.jsonl test/rules.test.mjs","exitCode":0,"tree":"8bab1d07cef5ba9242b312415af522270ac59ccfe13e9ac942e4a4f7a6c1cc64","commit":"4080cc2dd1984e3bc13b380bedf953206e1f6116"} -->
+- 条件：AC-3
+- 测试：test/rules.test.mjs::CASE-314 0.5.0 发布契约与完整质量门禁保持覆盖
+- 用例：CASE-314
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/20261027-lifecycle-truth/logs/run-10.log
+- 提交：4080cc2dd198
+- 时间：2026-10-27T14:46:01.741Z
+
 ## 自检
 
 - [x] 需求确认有效
 - [x] 该任务无需设计确认
-- [x] 验收条件均有当前通过且绑定全局用例的测试引用
-- [x] 每条验收条件均映射到本次验证引用的全局用例
-- [x] 验收条件与用例通过 verify 的 AC→测试→CASE 记录关联
-- [x] 验证命令已执行且测试输出已核实
+- [ ] 验收条件均有当前通过且绑定全局用例的测试引用
+- [ ] 每条验收条件均映射到本次验证引用的全局用例
+- [ ] 验收条件与用例通过 verify 的 AC→测试→CASE 记录关联
+- [ ] 验证命令已执行且测试输出已核实
 - [x] 全局用例结构与引用有效
-- [ ] 改动未超出范围
+- [x] 改动未超出范围
 - [x] 未弱化仍存在的测试
 - [x] 评审无未清除阻塞项
 - [x] 记录不含密钥或本机绝对路径
 
 阻塞项：
-- 过程卫生：设计确认提交 125be60ded33 后，工作区仍有未提交业务改动：src/cli.ts、src/doctor.ts、src/flow.ts、src/pr.ts、test/case-redesign.test.mjs、test/doctor.test.mjs、test/first-batch.test.mjs、test/merge.test.mjs 等 12 项。请先提交或移出本任务。
-- 改动超出范围：AGENTS.md、resources/entry.md、resources/rules/activities/delivery.md、resources/usage.md
-- 交付范围存在未提交改动：.tiller/cases/modules/workflow/behavior.md、.tiller/context/project.md、.tiller/index.md、.tiller/project.json、.tiller/rules/activities/delivery.md、.tiller/specs/decisions.md、.tiller/specs/modules/workflow/design.md、.tiller/specs/modules/workflow/lifecycle-truth.md、.tiller/usage.md、src/cli.ts、src/doctor.ts、src/flow.ts、src/pr.ts、test/case-redesign.test.mjs、test/doctor.test.mjs、test/first-batch.test.mjs、test/merge.test.mjs、test/pr.test.mjs、test/review-release.test.mjs、test/rules.test.mjs、test/task-worktrees.test.mjs
+- AC-1 的用例 CASE-315：AC-1 的验证已过期：记录时的代码树与当前工作树不同（范围内代码已变化）。
+- AC-1 的验证已过期：记录时的代码树与当前工作树不同（范围内代码已变化）。
+- AC-2 的用例 CASE-317：AC-2 的验证已过期：记录时的代码树与当前工作树不同（范围内代码已变化）。
+- AC-2 的验证已过期：记录时的代码树与当前工作树不同（范围内代码已变化）。
+- AC-3 的用例 CASE-314：AC-3 的验证已过期：记录时的代码树与当前工作树不同（范围内代码已变化）。
+- AC-3 的验证已过期：记录时的代码树与当前工作树不同（范围内代码已变化）。
+- 交付范围存在未提交改动：.tiller/project.json、.tiller/rules/activities/delivery.md、.tiller/usage.md
 
 提示：
 - 172 条历史用例仍以 <任务>#AC-n 记录关联 AC；这是可迁移的历史债，不阻断当前覆盖。
