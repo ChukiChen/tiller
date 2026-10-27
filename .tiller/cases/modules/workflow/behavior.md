@@ -2088,3 +2088,103 @@ init 分支经 squash/合入后 doctor init-baseline 通过；close init-id 在�
 ### 预期结果
 
 init/骨架同一变更集含 cases 空目录 gitkeep；若存在空 src/test 则含对应 .gitkeep，无需额外仅 gitkeep 的 main 提交
+
+## CASE-293 worktree 根默认读写当前任务记录
+
+- 类型：behavior
+- 优先级：medium
+- 模块：workflow
+- 关联 AC：无
+- 需求：`.tiller/specs/modules/workflow/worktree-task-truth.md`
+
+### 前置条件
+
+- 对应模块与运行环境可用。
+
+### 步骤
+
+1. 执行覆盖本用例的测试。
+2. 核对实际结果与预期结果一致。
+
+### 输入
+
+- 按用例描述准备正常输入及必要的边界输入。
+
+### 预期结果
+
+在任务 worktree 根不带 --path 执行 case/confirm/verify/check 时读写该 worktree 的任务记录
+
+## CASE-294 双份任务记录以 cwd worktree 为任务根
+
+- 类型：behavior
+- 优先级：medium
+- 模块：workflow
+- 关联 AC：无
+- 需求：`.tiller/specs/modules/workflow/worktree-task-truth.md`
+
+### 前置条件
+
+- 对应模块与运行环境可用。
+
+### 步骤
+
+1. 执行覆盖本用例的测试。
+2. 核对实际结果与预期结果一致。
+
+### 输入
+
+- 按用例描述准备正常输入及必要的边界输入。
+
+### 预期结果
+
+primary 与 worktree 均有可区分 task.md 时 cwd=worktree 的任务根为 worktree，显式 primary 路径仍读 primary
+
+## CASE-295 worktree 写入不镜像 primary
+
+- 类型：behavior
+- 优先级：medium
+- 模块：workflow
+- 关联 AC：无
+- 需求：`.tiller/specs/modules/workflow/worktree-task-truth.md`
+
+### 前置条件
+
+- 对应模块与运行环境可用。
+
+### 步骤
+
+1. 执行覆盖本用例的测试。
+2. 核对实际结果与预期结果一致。
+
+### 输入
+
+- 按用例描述准备正常输入及必要的边界输入。
+
+### 预期结果
+
+worktree 内确认与验证写入只修改当前任务检出，primary 任务记录保持原内容
+
+## CASE-296 worktree 交付仍从 primary 推送与清理
+
+- 类型：behavior
+- 优先级：medium
+- 模块：workflow
+- 关联 AC：无
+- 需求：`.tiller/specs/modules/workflow/worktree-task-truth.md`
+
+### 前置条件
+
+- 对应模块与运行环境可用。
+
+### 步骤
+
+1. 执行覆盖本用例的测试。
+2. 核对实际结果与预期结果一致。
+
+### 输入
+
+- 按用例描述准备正常输入及必要的边界输入。
+
+### 预期结果
+
+cwd=worktree 创建真实 PR 时推送和平台 API 使用 primary；close 仍从 primary 拆除 worktree 与删除本地分支

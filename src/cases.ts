@@ -2,6 +2,7 @@ import { lstat, readFile, readdir } from 'node:fs/promises';
 import type { Dirent } from 'node:fs';
 import path from 'node:path';
 import { applyChanges, readTextIfExists, validateRelativePath, withProjectLock } from './files.js';
+import { resolveTaskCheckout } from './project-root.js';
 import { readProjectMetadata } from './core.js';
 import { validateTaskId } from './task-id.js';
 
@@ -507,8 +508,8 @@ function renderCase(input: {
 }
 
 export async function addGlobalCase(rootInput: string, input: AddCaseInput) {
-  const root = path.resolve(rootInput);
   validateTaskId(input.task);
+  const root = (await resolveTaskCheckout(rootInput, input.task)).taskRoot;
   const title = requiredText(input.title, '用例标题', 200);
   await assertTaskExists(root, input.task);
   if (input.criteria?.length) {

@@ -231,6 +231,34 @@ test('CASE-285 任务记录仅在 worktree 时 pr 不误报缺失', async t => {
   assert.match(draft.body, new RegExp(`\\.tiller/task/${id}/task\\.md`, 'u'));
 });
 
+test('CASE-296 worktree PR push and cleanup keep primary as the main checkout', async t => {
+  const root = fixture(t);
+  success(cli(root, 'init'));
+  setupRepository(root);
+  const id = '20261027-worktree-primary-delivery';
+  const started = success(cli(root, 'start', id, '--title', 'worktree 交付', '--requirement', '从 worktree 交付仍使用主仓推送和清理。',
+    '--criterion', 'AC-1=交付使用主仓句柄', '--size', 'small', '--target', '.'));
+  const worktree = join(root, started.worktreeRoot);
+  const branch = started.worktrees[0].branch;
+  const remoteHead = git(root, 'rev-parse', 'HEAD').trim();
+  const mock = await startPlatformMock(t, { platform: 'github', remoteHead });
+  git(root, 'remote', 'add', 'origin', `${mock.origin}/owner/repo.git`);
+  acceptTaskForPr(worktree, id);
+
+  const environment = { ...emptyTokens, GITHUB_TOKEN: 'mock-token' };
+  const created = success(await cliAt(worktree, environment, 'pr', id));
+  assert.equal(created.branch, branch);
+  assert.equal(created.draftOnly, false);
+  assert.ok(mock.state.requests.some(item => item.method === 'POST' && item.path.endsWith('/pulls')));
+
+  const closed = success(await cliAt(worktree, environment, 'close', id, '--reason', '夹具清理'));
+  assert.deepEqual(closed.worktrees, [started.worktreeRoot]);
+  assert.equal(existsSync(worktree), false);
+  assert.notEqual(spawnSync('git', ['show-ref', '--verify', '--quiet', `refs/heads/${branch}`], {
+    cwd: root, encoding: 'utf8', timeout: 20_000,
+  }).status, 0);
+});
+
 test('CASE-286 任务在所有相关检出均不存在时 pr 仍报缺失', async t => {
   const root = fixture(t);
   success(cli(root, 'init'));

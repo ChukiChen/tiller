@@ -197,3 +197,9 @@
 - doctor 与 close init-id 复用 start 的祖先/status/API 合入证明，squash 不要求 SHA 祖先；证据不足仍保持 pending，不伪造 merged。
 - init 以初始化 worktree 提交为事实源，成功后精确删除主树本次写入且仍未跟踪的受管文件，仅保留 `.tiller/project.json`；不使用 `git clean`。空 `src/`/`test/` 在同一初始化变更中补 `.gitkeep`，不强造缺失业务目录。
 - `pr` 的 TTY 默认保持 Markdown，显式 `--json` 或非 TTY 默认稳定 JSON；draft-only 仍不联网。远端分支 404/422/不存在语义统一计入已清理且不进 warnings。
+
+## 2026-10-27 worktree 为任务真相
+
+- `resolveTaskCheckout` 先识别 cwd 或显式路径所在的本任务 worktree，再考虑 primary 副本；双份 `task.md` 并存时以当前任务检出为任务根。
+- `case add`、`confirm`、`verify`、`check`、`accept`、`review`、`release`、`reopen`、`resume <id>`、`attach` 与 `pr` 统一经该入口，任务 worktree 缺记录时清晰失败而不静默读取 primary。
+- 从任务 worktree 写任务记录不镜像 primary；primary 只承担 push、平台 PR/MR API、拆树和删除本地/远端分支。显式 `--path primary` 保留读取主仓副本的能力。

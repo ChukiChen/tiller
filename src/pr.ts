@@ -220,7 +220,7 @@ export async function draftPullRequest(
   options: { slug?: string; summary?: string } = {},
 ): Promise<PullRequestDraft & { markdown: string }> {
   const { taskRoot } = await resolveTaskCheckout(rootInput, id);
-  const sourceRoot = path.resolve(rootInput);
+  const sourceRoot = taskRoot;
   const task = await readTask(taskRoot, id);
   const type = commitTypeForTaskType(task.meta.type);
   if (!type) throw Object.assign(new Error(`无法从任务类型 ${task.meta.type} 推导提交类型。`), { code: 'PR_TYPE_UNKNOWN' });

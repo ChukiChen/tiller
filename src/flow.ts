@@ -101,6 +101,14 @@ export interface FlowTask {
 }
 export interface TaskStage { stage: FlowStage; reason: string }
 
+interface FlowCleanupMarker {
+  schemaVersion: 1;
+  id: string;
+  stage: FlowStage;
+  at: string;
+  reason: string;
+}
+
 export interface FlowStartInput {
   title: string; requirement?: string; requirementFile?: string; type?: string; size?: string; targets?: string[];
   criteria: string[]; plan?: string; item?: string; slug?: string; summary?: string; skipInitGate?: boolean;
@@ -130,6 +138,7 @@ function safeInput(value: string, label: string): string {
   return value;
 }
 function taskPath(id: string): string { return `${TASK_DIRECTORY}/${id}/${TASK_FILE}`; }
+function cleanupMarkerPath(id: string): string { return `.tiller/local/closed/${id}.json`; }
 function scopeValues(values: string[] | undefined, size?: FlowSize): string[] {
   if (size === 'standard' && !values?.length) {
     fail('MISSING_FLOW_SCOPE', 'standard 任务必须用至少一个 --target 声明交付范围；small 任务可省略并默认整个仓库。');
@@ -635,7 +644,8 @@ async function writeTask(root: string, id: string, before: string, after: string
   const relative = taskPath(id);
   if (before !== after) await applyChanges(root, [{ path: relative, before, after }]);
   const primary = await resolveProjectRoot(root);
-  const targets = new Set([primary, ...await taskWorktreePaths(primary, id)]);
+  const targets = new Set(await taskWorktreePaths(primary, id));
+  if (path.resolve(root) === path.resolve(primary)) targets.add(primary);
   for (const target of targets) {
     if (path.resolve(target) === path.resolve(root)) continue;
     let stat: Awaited<ReturnType<typeof lstat>>;
@@ -1013,9 +1023,9 @@ export async function startFlow(rootInput: string, idInput: string, input: FlowS
 }
 
 export async function attachFlowTask(rootInput: string, id: string, plan: string, item: string) {
-  const root = path.resolve(rootInput);
   validateTaskId(id);
   validateTaskId(plan);
+  const root = (await resolveTaskCheckout(rootInput, id)).taskRoot;
   return withProjectLock(root, async () => {
     const task = await readTask(root, id);
     const planned = await planItemForAttachment(root, plan, item);
@@ -1038,7 +1048,8 @@ export async function attachFlowTask(rootInput: string, id: string, plan: string
 }
 
 export async function resumeFlow(rootInput: string, id?: string) {
-  const root = path.resolve(rootInput); await readProjectMetadata(root);
+  const root = id ? (await resolveTaskCheckout(rootInput, id)).taskRoot : await resolveProjectRoot(rootInput);
+  await readProjectMetadata(root);
   if (id) {
     const task = await readTask(root, id);
     const stage = await taskStageForTask(root, id, task);
@@ -1106,7 +1117,7 @@ function designFieldIssues(task: FlowTask): { missing: string[]; tradeoffsMissin
 }
 
 export async function confirmFlow(rootInput: string, id: string, gateInput: string, input: FlowConfirmInput = {}) {
-  const root = path.resolve(rootInput);
+  const root = (await resolveTaskCheckout(rootInput, id)).taskRoot;
   return withProjectLock(root, async () => {
     const task = await readTask(root, id);
     assertTaskOpen(task);
@@ -1611,9 +1622,35 @@ async function taskStageForTask(root: string, id: string, task: FlowTask): Promi
 }
 
 export async function taskStage(rootInput: string, id: string): Promise<TaskStage> {
-  const root = path.resolve(rootInput);
+  const root = (await resolveTaskCheckout(rootInput, id)).taskRoot;
   const task = await readTask(root, id);
   return taskStageForTask(root, id, task);
+}
+
+async function readCleanupMarker(root: string, id: string): Promise<FlowCleanupMarker | null> {
+  const text = await readTextIfExists(root, cleanupMarkerPath(id));
+  if (text === null) return null;
+  try {
+    const value = JSON.parse(text) as Partial<FlowCleanupMarker>;
+    if (value.schemaVersion === 1 && value.id === id && typeof value.stage === 'string' &&
+        FLOW_STAGES.includes(value.stage as FlowStage) && Number.isFinite(Date.parse(value.at ?? '')) && typeof value.reason === 'string') {
+      return value as FlowCleanupMarker;
+    }
+  } catch { /* Invalid local markers are ignored; the task record remains authoritative. */ }
+  return null;
+}
+
+async function writeCleanupMarker(root: string, id: string, stage: FlowStage, reason: string): Promise<void> {
+  const relative = cleanupMarkerPath(id);
+  const target = await assertSafePath(root, relative);
+  await mkdir(path.dirname(target), { recursive: true });
+  const marker: FlowCleanupMarker = { schemaVersion: 1, id, stage, at: new Date().toISOString(), reason };
+  await writeFile(target, `${JSON.stringify(marker, null, 2)}\n`, 'utf8');
+}
+
+async function clearCleanupMarker(root: string, id: string): Promise<void> {
+  try { await rm(await assertSafePath(root, cleanupMarkerPath(id)), { force: true }); }
+  catch { /* A missing or invalid local marker must not block reopen. */ }
 }
 
 export interface FlowCheck {
@@ -1782,12 +1819,12 @@ async function evaluateFlow(root: string, id: string, task: FlowTask, options: F
 }
 
 export async function inspectFlow(rootInput: string, id: string, options: FlowCheckOptions = {}): Promise<FlowCheck> {
-  const root = path.resolve(rootInput); const task = await readTask(root, id);
+  const root = (await resolveTaskCheckout(rootInput, id)).taskRoot; const task = await readTask(root, id);
   return evaluateFlow(root, id, task, options);
 }
 
 export async function checkFlow(rootInput: string, id: string, options: FlowCheckOptions = {}): Promise<FlowCheck> {
-  const root = path.resolve(rootInput);
+  const root = (await resolveTaskCheckout(rootInput, id)).taskRoot;
   return withProjectLock(root, async () => {
     const task = await readTask(root, id);
     const checked = await evaluateFlow(root, id, task, options);
@@ -1937,7 +1974,7 @@ async function executeBaseline(
 }
 
 export async function verifyFlow(rootInput: string, id: string, input: FlowVerifyInput) {
-  const root = path.resolve(rootInput);
+  const root = (await resolveTaskCheckout(rootInput, id)).taskRoot;
   return withProjectLock(root, async () => {
     const task = await readTask(root, id);
     assertTaskOpen(task);
@@ -2067,15 +2104,15 @@ function flowResult(value: string): FlowResult {
 }
 
 export async function acceptFlow(rootInput: string, id: string, input: FlowConfirmInput = {}) {
-  const root = path.resolve(rootInput);
+  const root = (await resolveTaskCheckout(rootInput, id)).taskRoot;
   assertTaskOpen(await readTask(root, id));
-  const checked = await checkFlow(rootInput, id, { allowReported: input.allowReported === true });
+  const checked = await checkFlow(root, id, { allowReported: input.allowReported === true });
   if (!checked.ready) fail('NOT_READY', `技术自检未通过：${checked.issues.join('；')}`);
-  return confirmFlow(rootInput, id, 'acceptance', input);
+  return confirmFlow(root, id, 'acceptance', input);
 }
 
 export async function reviewFlow(rootInput: string, id: string, input: FlowReviewInput = {}) {
-  const root = path.resolve(rootInput);
+  const root = (await resolveTaskCheckout(rootInput, id)).taskRoot;
   return withProjectLock(root, async () => {
     const task = await readTask(root, id);
     assertTaskOpen(task);
@@ -2115,7 +2152,7 @@ export async function reviewFlow(rootInput: string, id: string, input: FlowRevie
 }
 
 export async function releaseFlow(rootInput: string, id: string) {
-  const root = path.resolve(rootInput);
+  const root = (await resolveTaskCheckout(rootInput, id)).taskRoot;
   const task = await readTask(root, id);
   const stage = await taskStageForTask(root, id, task);
   const acceptance = latestAcceptance(task);
@@ -2149,6 +2186,12 @@ export async function closeFlow(rootInput: string, id: string, reasonInput: stri
         ...(warnings.length ? { warnings } : {}),
         next: '初始化基线本机目录已清理；共享 task 记录不受影响。' };
     }
+    const completed = await readCleanupMarker(root, id);
+    if (completed) {
+      return { id, stage: completed.stage, stageReason: '任务本机已清理；重复 close 安全。', reason,
+        at: new Date().toISOString(), worktrees: [], missingWorktrees: [], logsRemoved: false,
+        next: `任务已清理；如需继续修改，执行 tiller reopen ${id} --reason "<原因>".` };
+    }
     const task = await readTask(taskRoot, id);
     const ended = terminalStage(task);
     if (ended) fail('TASK_ENDED', `任务当前阶段为${ended.stage}；如需继续，先执行 reopen。`);
@@ -2164,6 +2207,10 @@ export async function closeFlow(rootInput: string, id: string, reasonInput: stri
       const cleanup = await cleanupTaskWorktrees(root, id, metadata);
       const branchCleanup = await cleanupTaskBranches(root, metadata, taskBranchName(task.meta), options);
       const warnings = [...cleanup.warnings, ...branchCleanup.warnings];
+      if (!options.keepBranch && !branchCleanup.warnings.length) {
+        try { await writeCleanupMarker(root, id, current.stage, reason); }
+        catch (error) { warnings.push(`本机清理标记写入失败：${(error as Error).message}`); }
+      }
       return { id, stage: current.stage, stageReason: '交付验收有效；本机清理完成。', reason, at, path: task.path,
         worktrees: cleanup.removedWorktrees, missingWorktrees: cleanup.missingWorktrees, logsRemoved: cleanup.logsRemoved,
         branch: branchCleanup, ...(warnings.length ? { warnings } : {}),
@@ -2180,6 +2227,10 @@ export async function closeFlow(rootInput: string, id: string, reasonInput: stri
     const cleanup = await cleanupTaskWorktrees(root, id, metadata);
     const branchCleanup = await cleanupTaskBranches(root, metadata, taskBranchName(task.meta), options);
     const warnings = [...cleanup.warnings, ...branchCleanup.warnings];
+    if (!options.keepBranch && !branchCleanup.warnings.length) {
+      try { await writeCleanupMarker(root, id, stage.stage, reason); }
+      catch (error) { warnings.push(`本机清理标记写入失败：${(error as Error).message}`); }
+    }
     return { id, stage: stage.stage, stageReason: stage.reason, reason, at: closure.at, path: task.path,
       worktrees: cleanup.removedWorktrees, missingWorktrees: cleanup.missingWorktrees, logsRemoved: cleanup.logsRemoved,
       branch: branchCleanup, ...(warnings.length ? { warnings } : {}),
@@ -2188,7 +2239,7 @@ export async function closeFlow(rootInput: string, id: string, reasonInput: stri
 }
 
 export async function reopenFlow(rootInput: string, id: string, reasonInput: string) {
-  const root = path.resolve(rootInput);
+  const root = (await resolveTaskCheckout(rootInput, id)).taskRoot;
   const reason = safeInput(text(reasonInput, '重开原因', 4000), '重开原因');
   return withProjectLock(root, async () => {
     const task = await readTask(root, id);
@@ -2199,6 +2250,7 @@ export async function reopenFlow(rootInput: string, id: string, reasonInput: str
     const next = { ...task, closures: [...task.closures, event] };
     const { content: _content, path: _path, ...body } = next;
     await writeTask(root, id, task.content, renderTask(body, sectionBody(task.content, '自检')), body.meta.preExisting);
+    await clearCleanupMarker(root, id);
     const stage = await taskStage(root, id);
     return { id, stage: stage.stage, stageReason: stage.reason, reason, at: event.at, path: task.path,
       next: stage.stage === '已验收' ? `tiller close ${id} --reason "<原因>"` : `tiller resume ${id}` };
