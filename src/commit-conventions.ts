@@ -20,6 +20,10 @@ const TASK_TYPE_MAP: Record<string, CommitType> = {
   operations: 'chore',
 };
 
+const CONVENTIONAL_COMMIT_SCOPES = new Set([
+  'specs', 'workflow', 'standards', 'initialization', 'verification',
+]);
+
 export interface TaskCommit { oid: string; subject: string }
 
 export function commitTypeForTaskType(value: string): CommitType | undefined {
@@ -32,7 +36,9 @@ export function commitSubjectIssue(subject: string, modules: string[] = []): str
   const module = match[2];
   const summary = match[3]!.trim();
   if (!/[\u3400-\u9fff]/u.test(summary)) return '摘要必须包含中文';
-  if (module && modules.length && !modules.includes(module)) return `模块 ${module} 不在 specs/modules 中`;
+  if (module && modules.length && !modules.includes(module) && !CONVENTIONAL_COMMIT_SCOPES.has(module)) {
+    return `模块 ${module} 不在 specs/modules 中`;
+  }
   if (/https?:\/\/|\[[^\]]+\]\([^)]+\)|(?:^|\s)#\d+\b/u.test(summary)) return '摘要不应包含任务链接';
   return null;
 }

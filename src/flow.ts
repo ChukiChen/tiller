@@ -726,22 +726,46 @@ function renderStructuredRequirement(goal: string, criteria: FlowCriterion[], re
   requirementContent?: string): string {
   const source = requirementFile ? [`需求来源：\`${requirementFile}\``, ''] : [];
   const parsed = requirementFile && requirementContent !== undefined ? parseRequirementFile(requirementContent) : undefined;
+  const shortGoal = requirementFile === undefined ? {
+    scenario: `- 场景：${goal}`,
+    target: `短目标：${goal}\n\n交付结果须满足下列验收条件。\n\n<!-- 引用已有 specs，不复制规格全文。 -->`,
+    scope: [
+      '<!-- 业务做/不做/假设和防跑偏约束；交付路径只记录在任务范围，不在此枚举。 -->',
+      `- 做：完成短目标“${goal}”，并满足验收条件。`,
+      '- 不做：超出该短目标与验收条件的额外行为变更。',
+      '- 假设与待确认：短目标已由用户提供；实现细节以设计确认或现有规格为准。',
+    ].join('\n'),
+    behaviors: ['<!-- 写用户可观察行为；不塞长命令或实现步骤。 -->',
+      ...criteria.map(item => `- ${item.id}：${normalizeLine(item.text)}`)].join('\n'),
+    exceptions: [
+      '- 输入无效、依赖或权限不可用时返回明确错误，不静默降级。',
+      '- 未满足任一验收条件时不得声明完成。',
+    ].join('\n'),
+  } : undefined;
   const targetExtras = [...(parsed?.structured && parsed.preamble ? [parsed.preamble] : []), ...(parsed?.extras ?? [])];
   const target = parsed?.structured
     ? [parsed.sections.get('目标'), ...targetExtras].filter(Boolean).join('\n\n')
-    : requirementFile && requirementContent !== undefined ? requirementContent.trim() : goal;
+    : requirementFile && requirementContent !== undefined ? requirementContent.trim() : shortGoal?.target ?? goal;
   const section = (name: RequirementSection, fallback: string): string => parsed?.structured
     ? parsed.sections.get(name) || fallback : fallback;
+  const short = (name: RequirementSection, fallback: string): string => {
+    if (!shortGoal) return fallback;
+    if (name === '使用场景') return shortGoal.scenario;
+    if (name === '业务范围') return shortGoal.scope;
+    if (name === '关键行为') return shortGoal.behaviors;
+    if (name === '异常与边界') return shortGoal.exceptions;
+    return fallback;
+  };
   return [
-    '### 使用场景', '', section('使用场景', '<!-- 写主要使用场景与背景依据；不复制规格全文。 -->'), '',
+    '### 使用场景', '', short('使用场景', section('使用场景', '<!-- 写主要使用场景与背景依据；不复制规格全文。 -->')), '',
     '### 目标', '', ...source, target || '<!-- 写可观察的业务结果、所实现的 `.tiller/specs/...` 稳定需求与约束；不枚举交付路径。 -->', '',
     '### 业务范围', '',
-    section('业务范围', [
+    short('业务范围', section('业务范围', [
       '<!-- 写业务做/不做/假设和防跑偏约束；交付路径只记录在任务范围，不在此枚举。 -->',
       '- 做：', '- 不做：', '- 假设与待确认：',
-    ].join('\n')), '',
-    '### 关键行为', '', section('关键行为', '<!-- 写用户可观察行为；不塞长命令或实现步骤。 -->'), '',
-    '### 异常与边界', '', section('异常与边界', '<!-- 写失败、空值、权限、规模和兼容边界。 -->'), '',
+    ].join('\n'))), '',
+    '### 关键行为', '', short('关键行为', section('关键行为', '<!-- 写用户可观察行为；不塞长命令或实现步骤。 -->')), '',
+    '### 异常与边界', '', short('异常与边界', section('异常与边界', '<!-- 写失败、空值、权限、规模和兼容边界。 -->')), '',
     '### 验收条件', '', criteria.map(item => `- ${item.id}: ${normalizeLine(item.text)}`).join('\n'),
   ].join('\n').trim();
 }

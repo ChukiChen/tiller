@@ -2340,3 +2340,78 @@ close 后 primary 无因 materialize 产生的未跟踪 `.tiller/task/<id>/`，�
 
 两次 close 均成功；共享 task.md 不被改写；不创建 closed 清理标记。
 
+## CASE-310 合入或关闭后 primary 无未跟踪任务树且可快进
+
+- 类型：behavior
+- 优先级：medium
+- 模块：workflow
+- 关联 AC：无
+- 需求：`.tiller/specs/modules/workflow/hygiene-invariants.md`
+
+### 前置条件
+
+- 已验收任务拥有任务 worktree，平台远端默认分支包含任务提交
+
+### 步骤
+
+1. 通过平台 API squash merge 或手动 close 清理任务 worktree
+2. 检查 primary 的 .tiller/task/<id>/ 与 git status
+3. 在干净 primary 上 fetch 后执行 git merge --ff-only origin/main
+
+### 输入
+
+- 已合入或已验收任务、干净默认分支与远端任务提交
+
+### 预期结果
+
+merge/close 后 primary 不出现 tiller materialize/种子产生的未跟踪 .tiller/task/<id>/；fetch 后可在干净工作区快进，任务记录以跟踪文件进入默认分支
+
+## CASE-311 短目标 start 生成可确认的结构化需求骨架
+
+- 类型：behavior
+- 优先级：medium
+- 模块：workflow
+- 关联 AC：无
+- 需求：`.tiller/specs/modules/workflow/hygiene-invariants.md`
+
+### 前置条件
+
+- tiller 已在 PATH，Git 工程可创建任务 worktree
+
+### 步骤
+
+1. 仅用单行 --requirement 和至少一个 --criterion 运行 start
+2. 检查任务需求的使用场景、目标、业务范围、关键行为、异常与边界、验收条件
+3. 不手工补空模板，直接运行 confirm requirements
+
+### 输入
+
+- 单行短目标与至少一个 AC
+
+### 预期结果
+
+需求含完整结构；短目标写入使用场景与目标；生成内容达到最低完整度可直接 confirm；--requirement-file 仍以文件内容为准
+
+## CASE-314 0.5.0 发布契约与完整质量门禁保持覆盖
+
+- 类型：behavior
+- 优先级：high
+- 模块：workflow
+- 关联 AC：无
+- 需求：`.tiller/specs/modules/workflow/hygiene-invariants.md#验收条件`
+
+### 前置条件
+
+- tiller 工程与发布脚本可用。
+
+### 步骤
+
+1. 检查版本契约、全量测试入口和安装包冒烟入口。
+
+### 输入
+
+- package.json、src/cli.ts、test/suites.json 与 scripts/package-smoke.mjs。
+
+### 预期结果
+
+版本保持 0.5.0，全量测试与安装包冒烟入口均存在且指向当前发布包

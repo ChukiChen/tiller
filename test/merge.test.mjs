@@ -140,6 +140,67 @@ test('CASE-235 CASE-249 GitHub merge 经 REST API squash 成功后自动清理�
   assert.deepEqual(JSON.parse(mock.state.requests[1].body), { merge_method: 'squash' });
 });
 
+test('CASE-310 merge and close leave no untracked task seed and a clean primary can fast-forward', async t => {
+  const initialized = await initialize(t, 'github');
+  if (!initialized) return;
+  const { root, environment, mock } = initialized;
+  put(root, '.tiller/specs/modules/workflow/requirements.md', '# Workflow\n\n## Merge invariant\n\nMerged history stays tracked.\n');
+  put(root, 'src/invariant.ts', 'export const invariant = true;\n');
+  git(root, 'add', '-A');
+  git(root, 'commit', '--quiet', '-m', 'test(workflow): 合入后不变式基线');
+
+  const prepare = async id => {
+    const started = success(cli(root, 'start', id, '--title', '合入后不变式', '--requirement', '合入后主树保持干净。',
+      '--criterion', 'AC-1=主树无未跟踪任务树且可快进', '--size', 'small',
+      '--target', 'src', '--target', 'test', '--target', '.tiller/specs', '--target', '.tiller/cases'));
+    const worktree = join(root, started.worktreeRoot);
+    success(confirmTask(worktree, id, 'requirements', '--by', 'Tiller Test'));
+    const added = success(cli(worktree, 'case', 'add', id, '--module', 'workflow', '--kind', 'behavior',
+      '--title', '合入后不变式', '--expected', '主树无未跟踪任务树且可快进',
+      '--spec', '.tiller/specs/modules/workflow/requirements.md'));
+    const testName = `${added.id} merge invariant`;
+    put(worktree, `test/${id}.test.mjs`, `import test from 'node:test';\n\ntest('${testName}', () => {});\n`);
+    git(worktree, 'add', '-A');
+    git(worktree, 'commit', '--quiet', '-m', 'test(workflow): 合入后不变式');
+    success(cli(worktree, 'verify', id, '--criterion', 'AC-1', '--case', added.id));
+    const checked = success(cli(worktree, 'check', id));
+    assert.equal(checked.ready, true, checked.issues.join('\n'));
+    success(cli(worktree, 'accept', id, '--by', 'Tiller Test'));
+    return worktree;
+  };
+  const publishMain = (worktree, head) => {
+    git(worktree, 'push', '--quiet', '--force', mock.gitRepo, `${head}:refs/heads/main`);
+    mock.state.refs.set('refs/heads/main', head);
+  };
+
+  const mergeId = '20261027-merge-invariant';
+  const mergeWorktree = await prepare(mergeId);
+  const mergeHead = git(mergeWorktree, 'rev-parse', 'HEAD');
+  publishMain(mergeWorktree, mergeHead);
+  const merged = success(await cliAt(root, environment, 'merge', mergeId));
+  assert.equal(merged.merged, true);
+  assert.equal(git(root, 'status', '--porcelain=v1', '--untracked-files=all'), '');
+  assert.equal(existsSync(join(root, `.tiller/task/${mergeId}`)), false);
+  git(root, 'fetch', '--quiet', mock.gitRepo, 'refs/heads/main:refs/remotes/origin/main');
+  git(root, 'merge', '--ff-only', 'origin/main');
+  assert.ok(existsSync(join(root, `.tiller/task/${mergeId}/task.md`)));
+  assert.equal(git(root, 'status', '--porcelain=v1', '--untracked-files=all'), '');
+
+  const closeId = '20261027-close-invariant';
+  const closeWorktree = await prepare(closeId);
+  const closeHead = git(closeWorktree, 'rev-parse', 'HEAD');
+  publishMain(closeWorktree, closeHead);
+  git(root, 'fetch', '--quiet', mock.gitRepo, 'refs/heads/main:refs/remotes/origin/main');
+  git(root, 'merge', '--ff-only', 'origin/main');
+  assert.equal(git(root, 'status', '--porcelain=v1', '--untracked-files=all'), '');
+  const closed = success(await cliAt(root, environment, 'close', closeId, '--reason', '已合入'));
+  assert.equal(closed.stage, '已验收');
+  assert.equal(existsSync(closeWorktree), false);
+  assert.ok(existsSync(join(root, `.tiller/task/${closeId}/task.md`)));
+  assert.equal(git(root, 'status', '--porcelain=v1', '--untracked-files=all'), '');
+  git(root, 'merge', '--ff-only', 'origin/main');
+});
+
 test('CASE-236 CASE-250 GitHub merge API 失败时保留本机任务', async t => {
   const initialized = await initialize(t, 'github');
   if (!initialized) return;

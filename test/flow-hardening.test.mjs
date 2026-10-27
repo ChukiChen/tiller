@@ -17,19 +17,19 @@ function git(root, ...args) {
   return result.stdout;
 }
 
-function baseline(root) {
+function baseline(root, module = 'workflow') {
   put(root, 'src/value.txt', 'one\n');
   put(root, 'test/baseline.test.mjs', "import assert from 'node:assert/strict';\nimport test from 'node:test';\ntest('CASE-001 baseline', () => assert.equal(1, 1));\n");
-  put(root, '.tiller/specs/modules/workflow/requirements.md', '# Workflow\n\n## Baseline behavior\n\nThe baseline test guards a task change.\n');
-  put(root, '.tiller/cases/modules/workflow/behavior.md', `# workflow / behavior
+  put(root, `.tiller/specs/modules/${module}/requirements.md`, `# ${module}\n\n## Baseline behavior\n\nThe baseline test guards a task change.\n`);
+  put(root, `.tiller/cases/modules/${module}/behavior.md`, `# ${module} / behavior
 
 ## CASE-001 Baseline behavior is regression tested
 
 - 类型：behavior
 - 优先级：medium
-- 模块：workflow
+- 模块：${module}
 - 关联 AC：无
-- 需求：\`.tiller/specs/modules/workflow/requirements.md#baseline-behavior\`
+- 需求：\`.tiller/specs/modules/${module}/requirements.md#baseline-behavior\`
 
 ### 前置条件
 
@@ -330,6 +330,26 @@ test('CASE-260 check warns about delivery paths inside the business scope do lis
   assert.match(warnings, /业务范围·做.*test\/flow-hardening\.test\.mjs/u);
   assert.match(warnings, new RegExp(relative.replace(/[.*+?^${}()|[\]\\]/gu, '\\$&'), 'u'));
   assert.ok(!checked.issues.some(issue => issue.includes('业务范围') && issue.includes('交付路径')), checked.issues.join('\n'));
+});
+
+test('CASE-312 check does not report conventional global or workflow commit scopes as missing modules', async t => {
+  const root = fixture(t);
+  success(cli(root, 'init'));
+  baseline(root, 'core');
+  const id = '20261027-commit-scope';
+  success(cli(root, 'start', id, '--title', '提交 scope 识别', '--requirement', '区分约定 scope 与真实缺失模块。',
+    '--criterion', 'AC-1=scope 提示准确', '--size', 'small', '--target', 'src', '--target', 'test'));
+  success(confirmTask(root, id, 'requirements'));
+  const checkout = taskRecordRoot(root, id);
+  git(checkout, 'commit', '--allow-empty', '--quiet', '-m', 'feat(specs): 同步全局规格');
+  git(checkout, 'commit', '--allow-empty', '--quiet', '-m', 'feat(workflow): 编排工作流');
+  git(checkout, 'commit', '--allow-empty', '--quiet', '-m', 'feat(ghost): 添加未知模块');
+
+  const checked = failure(cli(root, 'check', id));
+  const warnings = checked.warnings.join('\n');
+  assert.doesNotMatch(warnings, /模块 specs 不在 specs\/modules/u);
+  assert.doesNotMatch(warnings, /模块 workflow 不在 specs\/modules/u);
+  assert.match(warnings, /feat\(ghost\): 添加未知模块.*模块 ghost 不在 specs\/modules/u);
 });
 
 test('CASE-276 check blocks specs changes on the default branch', async t => {

@@ -51,7 +51,6 @@ const HELP = `tiller ${CLI_VERSION} — 默认工作流
   tiller close <YYYYMMDD-task-id> --reason "<原因>" [--abandon] [--keep-branch] [--path <root>]
   tiller reopen <YYYYMMDD-task-id> --reason "<原因>" [--path <root>]
   tiller recover [path]
-  tiller runtime status|bind [--path <root>]
   tiller upgrade [path] --plan
   tiller upgrade [path] --apply <plan-id>
   tiller upgrade [path] --adopt <受管文件> [--adopt ...]
@@ -77,13 +76,6 @@ const HELP = `tiller ${CLI_VERSION} — 默认工作流
 
 function usage(message: string): never {
   throw Object.assign(new Error(message), { code: 'INVALID_ARGUMENT' });
-}
-
-async function bindAfterSetup(root: string) {
-  try { return await bindRuntime(root, fileURLToPath(import.meta.url)); }
-  catch (error) {
-    return { ready: false, issues: [`工程资源操作已完成，但本机 CLI 绑定失败：${(error as Error).message}。请核对本机资料后执行 runtime bind。`] };
-  }
 }
 
 export async function runCli(rawArgs = process.argv.slice(2)): Promise<void> {
@@ -336,28 +328,8 @@ export async function runCli(rawArgs = process.argv.slice(2)): Promise<void> {
           if (mode === 'project' && values.repo) usage('--repo 仅适用于 workspace 模式。');
           const initialized = await initialize({ root, mode, ...(values.repo ? { repositories: values.repo } : {}),
             ...(values.platform === undefined ? {} : { platform: values.platform as 'github' | 'gitlab' | 'both' }) });
-          const runtime = await bindAfterSetup(root);
-          // Worktree-only init leaves primary without META until the init PR merges; do not fail the command.
-          if (initialized.initBaseline && !runtime.ready) {
-            ready = initialized.ready;
-            result = {
-              ...initialized,
-              runtime: {
-                ...runtime,
-                ready: true,
-                deferred: true,
-                issues: [
-                  ...runtime.issues,
-                  '初始化基线已写入 init worktree；合入并拉取主干后再执行 runtime bind。',
-                ],
-              },
-              entry: null,
-              entryRoot: resolve(root),
-            };
-          } else {
-            ready = initialized.ready && runtime.ready;
-            result = { ...initialized, runtime, entry: runtime.ready ? 'node .tiller/run.cjs' : null, entryRoot: resolve(root) };
-          }
+          ready = initialized.ready;
+          result = initialized;
         } else if (command === 'status') {
           const status = await inspectProject(root);
           result = status; ready = status.ready;
@@ -382,7 +354,7 @@ export async function runCli(rawArgs = process.argv.slice(2)): Promise<void> {
         const root = values.path ?? process.cwd();
         const runtime = second === 'bind' ? await bindRuntime(root, fileURLToPath(import.meta.url)) : await runtimeStatus(root);
         ready = runtime.ready;
-        result = { runtime, entry: runtime.ready ? 'node .tiller/run.cjs' : null, entryRoot: resolve(root) };
+        result = { runtime, entry: runtime.ready ? 'tiller' : null, entryRoot: resolve(root) };
       } else usage(`未知命令：${command ?? ''}`);
       if (markdownOutput !== null && prOutputFormat({ json: wantsJson, tty: process.stdout.isTTY }) === 'markdown') {
         process.stdout.write(markdownOutput);

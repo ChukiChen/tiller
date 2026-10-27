@@ -98,3 +98,9 @@
 `init-baseline.ts` 提供 `proveInitBaselineMerged`，统一祖先、status=merged 与平台已合入 PR/MR 三种证明；start、doctor 与 close init-id 共用。init 基线成功写入 worktree 并提交后，`createInitBaseline` 对本次 changes 中除 `.tiller/project.json` 外、主树仍未跟踪且字节匹配 after 的受管路径精确删除，不用 `git clean`；内容被用户改写或已跟踪时保留。`skeletonChanges` 在 `src/`、`test/` 已存在且为空时向同一事务追加对应 `.gitkeep`，文件事务仅额外放行这两个固定目录标记。
 
 `deleteRemoteBranch` 对 404、422 与 does not exist/not found 语义返回 `deleted: true`，`branch-cleanup` 因而计入 `remoteDeleted` 且不生成 warning。`cli.ts` 的 `prOutputFormat` 选择输出形态：显式 `--json` 或 stdout 非 TTY 使用稳定 JSON，TTY 保持 Markdown；draft-only 从工程元信息返回 platform，不解析远端或联网。
+
+## 14. 合入后不变式、短目标骨架与 PATH 入口
+
+`closeFlow` 与 `mergeFlow` 的自动 close 只清理任务 worktree、本机目录和任务分支，不向 primary 复制 `.tiller/task/<id>/`。合入后的共享记录由远端默认分支的已跟踪提交快进获得。回归测试同时验证 primary 无任务残留、`git status` 工作区干净，以及 `git merge --ff-only` 可完成；平台 API 合入与手动 close 两条收尾路径共用这一不变式。
+
+无 `--requirement-file` 时，`renderStructuredRequirement` 用短目标生成可确认骨架：使用场景记录目标，目标写明短目标，业务范围写本次做/不做/假设，关键行为逐条列出 AC，异常与边界写失败和未完成边界。`--requirement-file` 的结构化正文仍优先，不注入短目标骨架。`init` 不再自动执行 `runtime bind`；主路径文档和 package smoke 直接调用 PATH、`npx` 或安装包的 tiller。`commitSubjectIssue` 对 `specs`、`workflow`、`standards`、`initialization`、`verification` 等约定 scope 跳过模块存在性提示，其它未知模块仍报错。

@@ -226,3 +226,10 @@
 - 代价：从未合入就 close 的任务不会在 primary 留下未跟踪副本；reopen/plan 仅在记录仍可解析（通常已跟踪）时可用。
 - abandon 若 primary 已有该任务文件则刷新已有副本，仍不新建未跟踪种子。
 
+## 2026-10-27 合入后不变式、短目标骨架与 PATH 单一入口
+
+- merge/close 后 primary 不保留 tiller 生成的未跟踪任务树；合入记录只通过默认分支快进/pull 成为跟踪文件。自动化测试以 `git status` 与 `git merge --ff-only` 锁住该不变式，避免收尾副作用再次出现。
+- `--requirement` 保持单行短目标通道，但 start 会把短目标展开为可确认的结构化需求骨架，并逐条写入 AC；`--requirement-file` 仍以文件为准。代价是骨架中的业务范围与异常边界采用保守默认值，确认人仍需按实际目标复核。
+- 主路径、狗粮和 package smoke 统一调用 PATH、`npx` 或打包入口的 tiller；init 不再自动写 runtime binding，也不把 bind 作为合入后步骤。可选的历史 runtime 命令不进入主路径说明或验收。
+- commit scope 的 `specs`、`workflow`、`standards`、`initialization`、`verification` 视为约定名称，不再按模块目录误报；未知模块仍提示。
+

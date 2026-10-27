@@ -1335,3 +1335,53 @@ check 不出现“未检测到任务基线后 .tiller/specs/ 或 .tiller/context
 ### 预期结果
 
 多行 --requirement 失败且文案导向 --requirement-file；help/usage 标明短目标定位
+
+## CASE-312 commit scope 不误报全局或工作流 scope
+
+- 类型：interface
+- 优先级：medium
+- 模块：workflow
+- 关联 AC：无
+- 需求：`.tiller/specs/modules/workflow/hygiene-invariants.md`
+
+### 前置条件
+
+- 任务包含 feat(specs)、feat(workflow) 与真实缺失模块的提交
+
+### 步骤
+
+1. 运行 check 并读取提交信息规范 warnings
+
+### 输入
+
+- 全局/workflow scope 与不存在的模块 scope
+
+### 预期结果
+
+specs/workflow 等约定 scope 不产生模块缺失提示；不存在的真实模块 id 仍提示模块不在 specs/modules
+
+## CASE-313 主路径 CLI 与测试按 PATH 使用 tiller 且不依赖 bind
+
+- 类型：interface
+- 优先级：medium
+- 模块：workflow
+- 关联 AC：无
+- 需求：`.tiller/specs/modules/workflow/hygiene-invariants.md`
+
+### 前置条件
+
+- 已安装 tiller 0.5.0 且 PATH 中只有一个 tiller；Git 工程可初始化
+
+### 步骤
+
+1. 用 PATH 中的 tiller 执行 init、start 与 --version
+2. 检查主路径 usage/README、dogfood 入口和 package smoke 的调用方式
+3. 检查 init 后不要求或自动生成 runtime bind 才能继续
+
+### 输入
+
+- PATH 安装的 tiller 与干净 Git 工程
+
+### 预期结果
+
+主路径通过 PATH、npx 或打包入口调用同一个 tiller；不要求、不引导、不验收 runtime bind；init/start 不依赖 .tiller/local/runtime.json

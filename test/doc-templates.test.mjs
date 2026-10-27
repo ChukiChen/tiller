@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import test from 'node:test';
 import { readTask } from '../dist/flow.js';
-import {  cli, completeDesign, completeRequirement, confirmTask, failure, fixture, put, success, taskRecordRoot, read } from './helpers.mjs';
+import { cli, completeDesign, confirmTask, failure, fixture, put, success, taskRecordRoot, read } from './helpers.mjs';
 
 const hash = text => createHash('sha256').update(text).digest('hex');
 const taskPath = (id, name = 'task.md') => `.tiller/task/${id}/${name}`;
@@ -137,18 +137,34 @@ test('CASE-193 CASE-270 requirements confirmation rejects blank or placeholder s
   success(cli(root, 'start', id, '--title', 'Requirement confirmation', '--requirement', 'Reject empty fields.',
     '--criterion', 'AC-1=Only substantive requirements confirm', '--size', 'small', '--target', 'src'));
 
-  const blank = failure(cli(root, 'confirm', id, 'requirements'));
+  success(confirmTask(root, id, 'requirements'));
+
+  const blankId = '20261024-requirement-blank';
+  success(cli(root, 'start', blankId, '--title', 'Blank requirement', '--requirement', 'Reject blank fields after editing.',
+    '--criterion', 'AC-1=Blank sections are rejected', '--size', 'small', '--target', 'src'));
+  put(taskRecordRoot(root, blankId), taskPath(blankId), replaceRequirement(read(taskRecordRoot(root, blankId), taskPath(blankId)), [
+    '### 使用场景', '', 'TODO', '',
+    '### 目标', '', 'Reject blank fields after editing.', '',
+    '### 业务范围', '', '- 做：待补充', '- 不做：TODO', '- 假设与待确认：待定', '',
+    '### 关键行为', '', 'TBD', '',
+    '### 异常与边界', '', 'N/A', '',
+    '### 验收条件', '', '- AC-1: Blank sections are rejected',
+  ].join('\n')));
+  const blank = failure(cli(root, 'confirm', blankId, 'requirements'));
   assert.equal(blank.error.code, 'MISSING_REQUIREMENTS');
   for (const heading of ['使用场景', '业务范围', '关键行为', '异常与边界']) assert.match(blank.error.message, new RegExp(heading, 'u'));
 
-  completeRequirement(root, id);
-  put(taskRecordRoot(root, id), taskPath(id), read(taskRecordRoot(root, id), taskPath(id)).replace(
-    '- 做：实现确认的验收条件。\n- 不做：范围外变更。\n- 假设与待确认：无。',
-    '- 做：待补充\n- 不做：TODO\n- 假设与待确认：待定'));
-  const placeholder = failure(cli(root, 'confirm', id, 'requirements'));
+  put(taskRecordRoot(root, blankId), taskPath(blankId), replaceRequirement(read(taskRecordRoot(root, blankId), taskPath(blankId)), [
+    '### 使用场景', '', '编辑后的明确场景。', '',
+    '### 目标', '', 'Reject blank fields after editing.', '',
+    '### 业务范围', '', '- 做：待补充', '- 不做：TODO', '- 假设与待确认：待定', '',
+    '### 关键行为', '', '编辑后的可观察行为。', '',
+    '### 异常与边界', '', '编辑后的明确边界。', '',
+    '### 验收条件', '', '- AC-1: Blank sections are rejected',
+  ].join('\n')));
+  const placeholder = failure(cli(root, 'confirm', blankId, 'requirements'));
+  assert.equal(placeholder.error.code, 'MISSING_REQUIREMENTS');
   assert.match(placeholder.error.message, /业务范围/u);
-
-  success(confirmTask(root, id, 'requirements'));
 
   const legacy = '20261024-legacy-scope';
   success(cli(root, 'start', legacy, '--title', 'Legacy scope', '--requirement', 'Keep old records valid.',
@@ -159,6 +175,45 @@ test('CASE-193 CASE-270 requirements confirmation rejects blank or placeholder s
     '### 验收条件', '', '- AC-1: Legacy scope confirms',
   ].join('\n')));
   success(cli(root, 'confirm', legacy, 'requirements'));
+});
+
+test('CASE-311 short goal start creates a confirmable structured requirement while requirement-file stays authoritative', async t => {
+  const root = await project(t);
+  const id = '20261027-short-goal-skeleton';
+  const goal = '短目标会自动展开为可确认需求。';
+  success(cli(root, 'start', id, '--title', '短目标骨架', '--requirement', goal,
+    '--criterion', 'AC-1=短目标可确认', '--size', 'small', '--target', 'src'));
+
+  const content = read(taskRecordRoot(root, id), taskPath(id));
+  const requirement = section(content, '需求');
+  for (const heading of ['使用场景', '目标', '业务范围', '关键行为', '异常与边界', '验收条件']) {
+    assert.match(requirement, new RegExp(`^### ${heading}$`, 'mu'));
+    assert.notEqual(subSection(requirement, heading).trim(), '', heading);
+  }
+  assert.match(subSection(requirement, '使用场景'), new RegExp(goal, 'u'));
+  assert.match(subSection(requirement, '目标'), new RegExp(goal, 'u'));
+  assert.match(subSection(requirement, '关键行为'), /AC-1/u);
+  const confirmed = success(confirmTask(root, id, 'requirements', '--by', 'Tiller Test'));
+  assert.equal(confirmed.by, 'Tiller Test');
+
+  const fileId = '20261027-requirement-file-priority';
+  put(root, '.tiller/specs/modules/workflow/short-goal-source.md', [
+    '# 文件需求', '', '## 使用场景', '', '文件中的明确场景。', '',
+    '## 目标', '', '文件中的明确目标。', '',
+    '## 业务范围', '', '- 做：按文件实现。', '- 不做：忽略文件。', '- 假设与待确认：无。', '',
+    '## 关键行为', '', '文件定义的行为。', '',
+    '## 异常与边界', '', '文件定义的边界。', '',
+    '## 验收条件', '', '- AC-1: 文件验收条件生效',
+  ].join('\n'));
+  git(root, 'add', '.tiller/specs/modules/workflow/short-goal-source.md');
+  git(root, 'commit', '--quiet', '-m', 'docs(workflow): 短目标文件夹具');
+  success(cli(root, 'start', fileId, '--title', '文件需求优先', '--requirement-file',
+    '.tiller/specs/modules/workflow/short-goal-source.md', '--size', 'small', '--target', 'src'));
+  const fromFile = read(taskRecordRoot(root, fileId), taskPath(fileId));
+  assert.match(subSection(section(fromFile, '需求'), '使用场景'), /文件中的明确场景/u);
+  assert.match(subSection(section(fromFile, '需求'), '目标'), /文件中的明确目标/u);
+  assert.doesNotMatch(subSection(section(fromFile, '需求'), '业务范围'), /短目标“/u);
+  success(confirmTask(root, fileId, 'requirements', '--by', 'Tiller Test'));
 });
 
 test('CASE-194 design template covers failure handling and verification entry with located confirm and check feedback', async t => {
