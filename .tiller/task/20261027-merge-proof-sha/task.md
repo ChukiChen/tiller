@@ -69,8 +69,10 @@
 | 部分 | 确认人 | 时间 | 短提交 | 原话 |
 | --- | --- | --- | --- | --- |
 | 需求 | boon yu | 2026-10-27T15:20:44.991Z | 80f42f948821 | — |
+| 设计 | boon yu | 2026-10-27T15:20:45.137Z | 20d6d6b2e952 | — |
 
 <!-- tiller-confirm:v1 {"gate":"requirements","object":"需求正文（目标、范围与验收条件）","subject":"17542a84ad47e114bb1e9cd1cddff377b80dcd0b2c8aa2b24cd87a6718165a50","commit":"80f42f948821f2a6a58caf7befe6431398c5a5cc","by":"boon yu","quote":"","at":"2026-10-27T15:20:44.991Z"} -->
+<!-- tiller-confirm:v1 {"gate":"design","object":"设计正文","subject":"69254af86f841853eacce321616435bb4e53b151b7402f46ba51f376ed01bc48","commit":"20d6d6b2e952578e0fc3134878fe8d6bd5bf53c3","by":"boon yu","quote":"","at":"2026-10-27T15:20:45.137Z"} -->
 
 ## 验证
 
