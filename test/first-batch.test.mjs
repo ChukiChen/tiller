@@ -301,18 +301,23 @@ test('${closeCase.id} close lifecycle behavior', () => assert.equal(1, 1));
   assert.equal(alreadyAccepted.error.code, 'ALREADY_ACCEPTED');
   const taskFile = `.tiller/task/${id}/task.md`;
   const beforeClose = read(taskRecordRoot(root, id), taskFile);
+  assert.equal(existsSync(join(root, taskFile)), false);
+  put(root, taskFile, beforeClose);
+  commitAll(root, 'chore(workflow): 模拟合入关闭任务记录');
   put(root, `.tiller/local/${id}/cleanup-marker.txt`, 'local only\n');
   const closed = success(cli(root, 'close', id, '--reason', '交付完成并收尾'));
   assert.equal(closed.stage, '已验收');
   assert.match(closed.stageReason, /本机清理完成/u);
   assert.equal(existsSync(join(root, `.tiller/local/${id}`)), false);
-  assert.equal(existsSync(join(root, taskFile)), false, 'close must not materialize untracked task onto primary');
+  assert.equal(existsSync(join(root, taskFile)), true, 'the merged task record remains tracked on primary');
+  const status = spawnSync('git', ['status', '--porcelain', '--', taskFile], {
+    cwd: root, encoding: 'utf8', timeout: 20_000,
+  });
+  assert.equal(status.status, 0, status.stderr);
+  assert.doesNotMatch(status.stdout, /^\?\?/mu);
   assert.equal(existsSync(join(root, `.tiller/local/closed/${id}.json`)), false);
   assert.doesNotMatch(beforeClose, /^## 关闭$/mu);
 
-  // Simulate merge/ff: accepted record lands on primary as tracked.
-  put(root, taskFile, beforeClose);
-  commitAll(root, 'chore(workflow): 模拟合入关闭任务记录');
   const listed = success(cli(root, 'resume'));
   assert.equal(listed.tasks.find(entry => entry.id === id).stage, '已验收');
   const reopened = success(cli(root, 'reopen', id, '--reason', '需要再次交付'));
@@ -328,14 +333,23 @@ test('CASE-308 abandon does not materialize an untracked task onto primary', asy
   const root = await initialized(t);
   moduleSpec(root, 'workflow');
   const id = '20261027-abandon-no-materialize';
-  success(cli(root, 'start', id, '--title', '放弃不复制', '--requirement', 'Abandon only cleans the task checkout.',
+  const started = success(cli(root, 'start', id, '--title', '放弃不复制', '--requirement', 'Abandon only cleans the task checkout.',
     '--criterion', 'AC-1=Abandon does not seed primary', '--size', 'small'));
+  const worktree = join(root, started.worktreeRoot);
   success(confirmTask(root, id, 'requirements'));
   assert.equal(existsSync(join(root, `.tiller/task/${id}/task.md`)), false);
 
+  const refused = failure(cli(worktree, 'close', id, '--reason', '需求取消', '--abandon'));
+  assert.equal(refused.error.code, 'ABANDON_NOT_PERSISTABLE');
+  assert.ok(existsSync(worktree));
+  assert.equal(existsSync(join(root, `.tiller/task/${id}`)), false);
+
+  const live = read(taskRecordRoot(worktree, id), `.tiller/task/${id}/task.md`);
+  put(root, `.tiller/task/${id}/task.md`, live);
+  commitAll(root, 'chore(workflow): 持久化待放弃任务记录');
   const abandoned = success(cli(root, 'close', id, '--reason', '需求取消', '--abandon'));
   assert.equal(abandoned.stage, '已放弃');
-  assert.equal(existsSync(join(root, `.tiller/task/${id}`)), false, 'abandon must not materialize onto primary');
+  assert.match(read(root, `.tiller/task/${id}/task.md`), /^- 状态：已放弃$/mu);
   assert.equal(existsSync(join(root, `.tiller/local/closed/${id}.json`)), false);
 });
 

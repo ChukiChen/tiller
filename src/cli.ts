@@ -62,11 +62,11 @@ const HELP = `tiller ${CLI_VERSION} — 默认工作流
 - task.md 是唯一任务记录：start 生成结构化需求，并引用所实现的稳定 specs；--requirement 仅短目标单行，完整需求正文与 AC-n 只用 --requirement-file（必须位于 .tiller/specs/），文件“验收条件”中的 - AC-n: 正文会导入任务，因此可省略 --criterion；文件无 AC-n 时仍须提供。确认（含 accept）写入后自动提交本任务记录。任务只引用同一 specs 路径与 AC-n，不写模块前缀或“对照”平行列表；确认前校验正文，原话只作可选附注。verify 自主执行测试并从私有报告核实。
 - review 记录独立评审发现；未解决阻塞项会阻断 check/accept。release 只做发布门禁，不发布包。check 汇总发布清单；已验收任务按验收提交读取代码树与测试，之后代码漂移不误报过期。
 - start 只把任务记录写入任务 worktree，不在 primary 留种子；confirm/accept 写确认后自动提交本任务 .tiller/task/<id>/。
-- 阶段由 task.md 事实推导；accept 须在 pr 前；pr 默认用 tokenized HTTPS git push 推送任务分支并经平台 API 创建真实 PR/MR，GitHub Git Data API 只在 git 推送失败时可选回退；返回 URL 与编号；--draft-only 仅输出五段草稿。重复 accept 按当前工作区重新核实，改代码后先重新 verify。审阅后用 merge 经 REST API squash 合入并自动 close；merge/close 默认删除本地与远端任务分支，close init-id 同样清理 chore/tiller-init；--keep-branch 保留，分支已不存在或 422 视为已清理，其它删除失败只记 warning。token 从 GITHUB_TOKEN/GH_TOKEN 或 GITLAB_TOKEN/GL_TOKEN 读取，不依赖平台 CLI；网页合入后仍需手动 close；未验收终止用 --abandon，必要时 reopen。
+- 阶段由 task.md 事实推导；accept 须在 pr 前；pr 默认用 tokenized HTTPS git push 推送任务分支并经平台 API 创建真实 PR/MR，GitHub Git Data API 只在 git 推送失败时可选回退；返回 URL 与编号；--draft-only 仅输出五段草稿。重复 accept 按当前工作区重新核实，改代码后先重新 verify。审阅后用 merge 经 REST API squash 合入并自动 close；merge/close 默认删除本地与远端任务分支，close init-id 同样清理 chore/tiller-init；--keep-branch 保留，分支已不存在或 422 视为已清理，其它删除失败只记 warning。token 从 GITHUB_TOKEN/GH_TOKEN 或 GITLAB_TOKEN/GL_TOKEN 读取，不依赖平台 CLI；网页合入后仍需手动 close，且 close 先验证合入证明，证明不足不清理；未验收终止用 --abandon，须先在 primary 持久化放弃事件；仅当任务记录仍可读取时才提示 reopen。
 - start 对 pending 初始化基线先判祖先，再通过平台 API 查同分支已合入 PR/MR；确认后写入 .tiller/local/ merged 标记并放行（不改跟踪的 project.json），无 token、API 失败或无记录仍阻断，--skip-init-gate 例外。
 - standard 须先设计确认再 verify；过早 verify 以 VERIFY_BEFORE_DESIGN 拒绝。历史错序段可用 verify --clear-premature 清除。
 - specs 变更只走 start → 任务 worktree 修改 → 随任务 PR/MR 合入；禁止在 main/master 默认分支直改或直推。默认分支上相对任务基线触及 .tiller/specs/ 时，check 按过程卫生阻断；任务分支与已验收历史快照不触发。
-- doctor [path] 扫描初始化基线、默认分支 specs 变更、残留任务分支与进行中任务 AC 缺口；严重项非零退出，warning 不阻断。
+- doctor [path] 扫描初始化基线、默认分支 specs 变更、残留任务分支，并从 active worktree 读取进行中任务检查 AC 缺口与数据模型；active 任务缺记录或检查失败按严重项处理，warning 不阻断。
 - check 对过薄文档给出可定位提示：空白或占位的 standard 设计、无有效条目的 .tiller/specs/decisions.md、空壳模块设计 design.md；需求“业务范围·做”中的交付路径给 warning；规格/背景未回写时列出路径与提纲。默认不单独阻断。verify 日志含显示命令、起止时间与退出码。当前分支未包含任务编号时 check 提示，分支名用“类型/任务编号[-描述]”。
 - 同一 AC 或 CASE 连续两次 verify 失败且无成功核实时，verify/check 要求停止自动重试并按 FLOW-05 报告证据与可选方案；成功核实清零。
 - case add 在测试之前登记测试设计（前置条件、步骤、输入、预期结果、类型、优先级、稳定 specs 需求），关联 AC 固定写“无”，不保存源码字段，自动分配 CASE 编号；测试名引用 CASE 编号形成反查。check 以 verify 的 AC→测试→CASE 记录核对当前验证，校验模块/场景结构并提示相关回归，同时检查范围、测试弱化、密钥和本机绝对路径。

@@ -22,13 +22,13 @@ tiller doctor
 
 `start` 生成需求，standard 另生成设计；worktree 在 `.tiller/local/<id>/worktrees/`，任务记录只写入该 worktree（primary 不留种子）。`--requirement` 仅短目标单行，并生成含使用场景、目标、业务范围、关键行为、异常与边界的可确认骨架；完整需求与 AC-n 用 `--requirement-file`（限 `.tiller/specs/`）且以文件为准。“验收条件”的 `- AC-n: …` 会自动导入；有 AC 可省略 `--criterion`，无 AC 仍须提供。验收条件按路径作用域用 AC-n，不写模块前缀/对照列表。`--quote` 可选，`--by` 默认取 `git config user.name`。首次 `init` → 初始化 PR/MR → 人工合入 → `start`；pending 基线须 API 证明合入，`--skip-init-gate` 例外。`specs` 经任务 worktree，随任务 PR/MR 合入；禁止默认分支直改/直推。
 
-`review` 阻塞 `check`/`accept`；`release` 与已验收任务钉在验收提交。未验收终止用 `close --abandon`；再交付用 `reopen`。
+`review` 阻塞 `check`/`accept`；`release` 与已验收任务钉在验收提交。已验收 close 须有跟踪记录、默认历史或平台 API 的合入证明；未验收终止用 `close --abandon`，且 primary 必须已有清理后仍可读取的任务记录。只有记录仍可读取时结果才提示 `reopen`。
 
 `standard` 须先设计确认再 `verify`（过早 verify 以 `VERIFY_BEFORE_DESIGN` 拒绝）；历史错序段用 `verify --clear-premature` 清除。确认后有未提交业务改动时，`check` 仍阻断 `accept`。
 
-accept 须在 pr 前；`confirm`/`accept` 写入确认后自动提交本任务记录（含 acceptance），一般无需再手搓一轮；`PR_NOT_ACCEPTED`/`PR_TASK_RECORDS_DIRTY` 仍阻断未验收或未提交记录。重复 accept 重查当前树，改码先 verify。`pr <id>` 默认 tokenized git push 并经平台 API 创建真实 PR/MR；Git Data API 仅失败回退。返回 URL/编号；`--draft-only` 仅五段草稿。审阅后 `merge <id>` 经 GitHub/GitLab REST API squash 后 close；合入即交付完成。merge/close 默认删本地与远端分支，`--keep-branch` 保留；不存在/422 已清理，其它失败 warning；worktree 根先拆树并删分支。网页合入手动 close，失败不清理，收尾不改 `task.md`、不 materialize 未跟踪 task、不写 `.tiller/local/closed/`，仍兼容清理旧三棵树布局；合入后靠快进/pull 读已跟踪记录。
+accept 须在 pr 前；`confirm`/`accept` 写入确认后自动提交本任务记录（含 acceptance），一般无需再手搓一轮；`PR_NOT_ACCEPTED`/`PR_TASK_RECORDS_DIRTY` 仍阻断未验收或未提交记录。重复 accept 重查当前树，改码先 verify。`pr <id>` 默认 tokenized git push 并经平台 API 创建真实 PR/MR；Git Data API 仅失败回退。返回 URL/编号；`--draft-only` 仅五段草稿。审阅后 `merge <id>` 经 GitHub/GitLab REST API squash 后 close；合入即交付完成。merge/close 默认删本地与远端分支，`--keep-branch` 保留；不存在/422 已清理，其它失败 warning；worktree 根先拆树并删分支。网页合入手动 close 也须先取得合入证明，证明不足时保留 worktree 与本机任务事实；abandon 无法把放弃事件持久化到 primary 时同样拒绝清理。收尾不改 `task.md`、不 materialize 未跟踪 task、不写 `.tiller/local/closed/`，仍兼容清理旧三棵树布局；合入后靠快进/pull 读已跟踪记录。
 
-`doctor [path]` 查基线、默认分支 specs 脏改、残留任务分支与 AC 缺口；严重失败。
+`doctor [path]` 查基线、默认分支 specs 脏改、残留任务分支，并从 active worktree 读取进行中任务检查 AC 缺口；active 分支找不到任务记录或检查失败按严重项处理。
 
 `check` 提示过薄设计、空壳 decisions/模块设计及分支未包含任务编号；业务范围·做交付路径 warning；规格/背景未回写列路径与提纲。
 

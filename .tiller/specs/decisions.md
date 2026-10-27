@@ -233,3 +233,9 @@
 - 主路径、狗粮和 package smoke 统一调用 PATH、`npx` 或打包入口的 tiller；init 不再自动写 runtime binding，也不把 bind 作为合入后步骤。可选的历史 runtime 命令不进入主路径说明或验收。
 - commit scope 的 `specs`、`workflow`、`standards`、`initialization`、`verification` 视为约定名称，不再按模块目录误报；未知模块仍提示。
 
+## 2026-10-27 任务生命周期以 worktree 事实为准
+
+- `doctor` 从 active 任务 worktree 读取任务记录检查 AC 覆盖与数据模型；primary 没有 `.tiller/task/` 不再表示没有进行中任务，active 任务分支缺记录直接失败。
+- 已验收 `close` 先验证主检出跟踪记录、默认历史或平台 API 的合入证明，证明不足时保留 worktree、本机目录和分支。清理后没有可读取记录时，结果不提示 `reopen`。
+- `abandon` 先确认 primary 已有清理后仍可读取的任务记录，再写放弃事件并清理；无法持久化时拒绝破坏性清理，不创建未跟踪 primary 种子。
+

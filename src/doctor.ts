@@ -32,6 +32,14 @@ export interface DoctorReport {
 
 interface GitResult { ok: boolean; stdout: string; stderr: string }
 
+interface WorktreeEntry { path: string; branch: string | null }
+interface ActiveTaskRecord { id: string; root: string; branch: string; task: Awaited<ReturnType<typeof readTask>> }
+interface ActiveTaskDiscovery {
+  tasks: ActiveTaskRecord[];
+  unmatchedBranches: string[];
+  error?: string;
+}
+
 async function git(cwd: string, args: string[]): Promise<GitResult> {
   try {
     const result = await execFileAsync('git', args, {
@@ -49,12 +57,22 @@ function lines(value: string): string[] {
   return value.split(/\r?\n/u).map(item => item.trim()).filter(Boolean);
 }
 
-function worktreeBranches(output: string): Set<string> {
-  const branches = new Set<string>();
+function worktreeEntries(output: string): WorktreeEntry[] {
+  const entries: WorktreeEntry[] = [];
+  let current: WorktreeEntry | null = null;
   for (const line of lines(output)) {
-    if (line.startsWith('branch refs/heads/')) branches.add(line.slice('branch refs/heads/'.length));
+    if (line.startsWith('worktree ')) {
+      current = { path: line.slice('worktree '.length), branch: null };
+      entries.push(current);
+    } else if (current && line.startsWith('branch refs/heads/')) {
+      current.branch = line.slice('branch refs/heads/'.length);
+    }
   }
-  return branches;
+  return entries;
+}
+
+function worktreeBranches(output: string): Set<string> {
+  return new Set(worktreeEntries(output).flatMap(entry => entry.branch ? [entry.branch] : []));
 }
 
 async function initCheck(root: string): Promise<DoctorCheck> {
@@ -115,16 +133,50 @@ async function taskDirectories(root: string): Promise<string[]> {
   }
 }
 
-async function activeCoverageCheck(root: string): Promise<DoctorCheck[]> {
+async function discoverActiveTasks(root: string): Promise<ActiveTaskDiscovery> {
   const worktrees = await git(root, ['worktree', 'list', '--porcelain']);
-  if (!worktrees.ok) return [{ id: 'ac-coverage', status: 'warn', message: '无法读取 worktree，已跳过进行中任务 AC 覆盖检查。' }];
-  const active = worktreeBranches(worktrees.stdout);
-  if (!active.size) return [{ id: 'ac-coverage', status: 'pass', message: '没有进行中的任务 worktree。' }];
+  if (!worktrees.ok) {
+    return { tasks: [], unmatchedBranches: [], error: '无法读取 worktree，已跳过进行中任务 AC 覆盖检查。' };
+  }
+  const active = worktreeEntries(worktrees.stdout)
+    .filter((entry): entry is WorktreeEntry & { branch: string } => Boolean(entry.branch && TASK_BRANCH.test(entry.branch)));
+  const tasks = new Map<string, ActiveTaskRecord>();
+  const matchedBranches = new Set<string>();
+  for (const entry of active) {
+    for (const candidate of [entry.path, path.join(entry.path, 'management')]) {
+      for (const id of await taskDirectories(candidate)) {
+        if (tasks.has(id)) continue;
+        try {
+          const task = await readTask(candidate, id);
+          if (taskBranchName(task.meta) !== entry.branch) continue;
+          tasks.set(id, { id, root: candidate, branch: entry.branch, task });
+          matchedBranches.add(entry.branch);
+        } catch { /* The unmatched branch check below reports the missing or unreadable record. */ }
+      }
+    }
+  }
+  return {
+    tasks: [...tasks.values()].sort((left, right) => left.id.localeCompare(right.id)),
+    unmatchedBranches: [...new Set(active.map(entry => entry.branch))]
+      .filter(branch => !matchedBranches.has(branch)).sort(),
+  };
+}
+
+async function activeCoverageCheck(discovery: ActiveTaskDiscovery): Promise<DoctorCheck[]> {
+  if (discovery.error) return [{ id: 'ac-coverage', status: 'warn', message: discovery.error }];
+  if (!discovery.tasks.length && !discovery.unmatchedBranches.length) {
+    return [{ id: 'ac-coverage', status: 'pass', message: '没有进行中的任务 worktree。' }];
+  }
   const checks: DoctorCheck[] = [];
-  for (const id of await taskDirectories(root)) {
+  for (const branch of discovery.unmatchedBranches) {
+    checks.push({
+      id: `ac-coverage:${branch}`, status: 'fail',
+      message: `active 任务 worktree ${branch} 找不到对应任务记录；不得按 primary 缺少任务目录跳过。`,
+    });
+  }
+  for (const record of discovery.tasks) {
+    const { id, root } = record;
     try {
-      const task = await readTask(root, id);
-      if (!active.has(taskBranchName(task.meta))) continue;
       const stage = await taskStage(root, id);
       if (stage.stage === '已关闭' || stage.stage === '已放弃') continue;
       const checked = await inspectFlow(root, id);
@@ -136,20 +188,27 @@ async function activeCoverageCheck(root: string): Promise<DoctorCheck[]> {
       checks.push({ id: `ac-coverage:${id}`, status: 'warn', message: `任务 ${id} 的 AC 覆盖无法检查：${(error as Error).message}` });
     }
   }
-  return checks.length ? checks : [{ id: 'ac-coverage', status: 'pass', message: '进行中的 worktree 未匹配到任务记录。' }];
+  return checks.length ? checks : [{ id: 'ac-coverage', status: 'pass', message: '没有进行中的任务 worktree。' }];
 }
 
-async function modelCheck(root: string): Promise<DoctorCheck> {
-  const paths: string[] = [];
+async function modelCheck(root: string, activeTasks: ActiveTaskRecord[]): Promise<DoctorCheck> {
+  const paths = new Set<string>();
+  const records = new Map<string, string>();
   for (const id of await taskDirectories(root)) {
-    const relative = `.tiller/task/${id}/task.md`;
+    records.set(path.join(root, '.tiller/task', id, 'task.md'), `.tiller/task/${id}/task.md`);
+  }
+  for (const record of activeTasks) {
+    const file = path.join(record.root, '.tiller/task', record.id, 'task.md');
+    records.set(file, path.relative(root, file) || `.tiller/task/${record.id}/task.md`);
+  }
+  for (const [file, relative] of records) {
     try {
-      const content = await readFile(path.join(root, relative), 'utf8');
-      if (/LIB-(?:AC|[A-Z]+)-\d+/u.test(content) || /^#{2,3}\s+验收条件（稳定）\s*$/mu.test(content)) paths.push(relative);
+      const content = await readFile(file, 'utf8');
+      if (/LIB-(?:AC|[A-Z]+)-\d+/u.test(content) || /^#{2,3}\s+验收条件（稳定）\s*$/mu.test(content)) paths.add(relative);
     } catch { /* A missing task file is reported by its own command. */ }
   }
-  if (!paths.length) return { id: 'data-model', status: 'pass', message: '任务记录没有发现 LIB- 或“验收条件（稳定）”新主路径写法。' };
-  return { id: 'data-model', status: 'warn', message: '任务记录含历史编号或稳定标题别名；新写入请使用文件路径作用域的 AC-n 与“验收条件”。', paths };
+  if (!paths.size) return { id: 'data-model', status: 'pass', message: '任务记录没有发现 LIB- 或“验收条件（稳定）”新主路径写法。' };
+  return { id: 'data-model', status: 'warn', message: '任务记录含历史编号或稳定标题别名；新写入请使用文件路径作用域的 AC-n 与“验收条件”。', paths: [...paths].sort() };
 }
 
 export async function doctorFlow(rootInput: string): Promise<DoctorReport> {
@@ -163,7 +222,8 @@ export async function doctorFlow(rootInput: string): Promise<DoctorReport> {
     checks.push({ id: 'init-baseline', status: 'fail', message: `无法读取工程元信息：${(error as Error).message}` });
   }
   checks.push(await defaultSpecsCheck(root, branch), await branchCheck(root));
-  checks.push(...await activeCoverageCheck(root), await modelCheck(root));
+  const active = await discoverActiveTasks(root);
+  checks.push(...await activeCoverageCheck(active), await modelCheck(root, active.tasks));
   const issues = checks.filter(check => check.status === 'fail').map(check => check.message);
   const warnings = checks.filter(check => check.status === 'warn').map(check => check.message);
   return {

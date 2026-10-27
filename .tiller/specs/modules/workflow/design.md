@@ -77,7 +77,7 @@
 
 建树前先校验任务容器、全部源仓和目标路径，任何一步失败都强制移除本次已建树，并清理本次产生的 worktree 容器、清单和开工前旁路；未知的本机文件保留，空任务目录一并移除，task.md 不落盘。成功后把相对路径与本机清单 `.tiller/local/<id>/worktrees.json` 写入；读取先新后旧，清单缺失或损坏时 close 回退 project/workspace 的新旧约定布局。所有目标都经安全路径校验并限制在新旧任务 worktree 容器内。
 
-已验收 close 不写共享关闭事实，也不把 `.tiller/task/<id>/` materialize 到 primary；直接按清单或约定布局执行 `git worktree remove --force` 与 prune。abandon 只在当前任务检出写关闭段，若 primary 已有该任务记录则刷新已有副本，**不**新建未跟踪种子。路径已缺失记入 `missingWorktrees` 并继续。Git 移除失败时仅对该受管目录强制删除并返回 warning；随后删除整棵 `.tiller/local/<id>/`（含 logs 与旁路），并 best-effort 清理旧 `.tiller/local/worktrees|logs|tasks/<id>/`。`closeFlow` 经 `resolveTaskCheckout` 从任务 worktree 取得主仓与任务读取根：任务记录和 abandon 写回使用当前任务检出，worktree 清理与 `cleanupTaskBranches` 继续使用主仓，在管理仓与各业务仓删除同名本地分支并优先通过平台 API 删除远端；远端 404/422/已不存在视为已清理且不产生 warning，无 token、平台解析失败、其它远端 API 失败或当前分支无法安全切换只汇总 warning，不回滚本机清理。`--keep-branch` 跳过整段分支删除。不再写入或读取 `.tiller/local/closed/<id>.json`；合入后的历史靠默认分支快进/pull 取得已跟踪记录。重复 close 对缺失 worktree、local 与分支保持幂等。清理失败不阻断本机清理结果或放弃记录，其他任务路径不动。所有本机路径保持工程相对形式，不写入共享 task.md。
+已验收 close 不写共享关闭事实，也不把 `.tiller/task/<id>/` materialize 到 primary；清理前先验证主检出跟踪记录与当前任务记录一致、任务分支已进入默认历史，或平台 API 确认同分支 PR/MR 已合入。证明不足时以 `CLOSE_MERGE_PROOF_MISSING` 拒绝拆树、删本地目录与分支。证明有效后按清单或约定布局执行 `git worktree remove --force` 与 prune。abandon 不要求合入证明，但必须先把关闭段写入 primary 已有任务记录；primary 没有清理后仍可读取记录时以 `ABANDON_NOT_PERSISTABLE` 拒绝，**不**新建未跟踪种子。路径已缺失记入 `missingWorktrees` 并继续。Git 移除失败时仅对该受管目录强制删除并返回 warning；随后删除整棵 `.tiller/local/<id>/`（含 logs 与旁路），并 best-effort 清理旧 `.tiller/local/worktrees|logs|tasks/<id>/`。`closeFlow` 经 `resolveTaskCheckout` 从任务 worktree 取得主仓与任务读取根：任务记录和 abandon 写回使用当前任务检出，worktree 清理与 `cleanupTaskBranches` 继续使用主仓，在管理仓与各业务仓删除同名本地分支并优先通过平台 API 删除远端；远端 404/422/已不存在视为已清理且不产生 warning，无 token、平台解析失败、其它远端 API 失败或当前分支无法安全切换只汇总 warning，不回滚本机清理。`--keep-branch` 跳过整段分支删除。清理后只有 primary 仍可读取任务记录时，返回的 `next` 才提示 `reopen`。不再写入或读取 `.tiller/local/closed/<id>.json`；合入后的历史靠默认分支快进/pull 取得已跟踪记录。重复 close 对缺失 worktree、local 与分支保持幂等。清理失败不阻断本机清理结果或放弃记录，其他任务路径不动。所有本机路径保持工程相对形式，不写入共享 task.md。
 
 `project-root.ts` 的 `resolveTaskCheckout(input, id)` 是任务根、`--path` 与 cwd 的唯一解析入口。它先由 `resolveProjectRoot` 找主仓，再识别输入是否落在本任务新旧 worktree 容器或清单登记的任务检出；命中时以该检出的管理根为 `taskRoot`，即使主仓也有同名 `task.md`。`case add`、`confirm`、`verify`、`check`、`accept`、`review`、`release`、`reopen`、`resume <id>`、`attach` 与 `pr` 读任务侧均使用该入口，不再各自 `path.resolve(rootInput)` 猜任务根。任务 worktree 缺少记录时仍返回该任务根，由 `readTask` 报 `TASK_NOT_FOUND`；显式 `--path primary` 才读取主仓副本。任务记录写入只更新当前检出及其它已存在的任务 worktree，不在 `taskRoot` 非 primary 时写回 primary；start 首次写入目标是管理/sole 任务 worktree，再按需同步到兄弟 worktree，不在 primary 留种子。`confirm`/`accept` 写入确认后自动提交本任务 `.tiller/task/<id>/`。
 
@@ -89,7 +89,7 @@
 
 ## 12. 过程卫生自检
 
-`src/doctor.ts` 的 `doctorFlow` 先解析主工程根，再返回 `ready`、分支、逐项 `checks`、issues/warnings 与汇总。`init-baseline` 按祖先或 merged 状态检查初始化基线；`default-specs` 在当前为 main/master 时检查 `.tiller/specs` 的工作区脏改与相对 `origin/<branch>` 的未合入改动；`task-branches` 找出未挂载 worktree 的残留任务分支；`ac-coverage` 复用任务阶段与 `inspectFlow` 提示进行中任务缺口；`data-model` 扫描历史 `LIB-*` 与“验收条件（稳定）”标题。fail 项使 CLI 退出码为 1，warn 项只报告。
+`src/doctor.ts` 的 `doctorFlow` 先解析主工程根，再返回 `ready`、分支、逐项 `checks`、issues/warnings 与汇总。`init-baseline` 按祖先或 merged 状态检查初始化基线；`default-specs` 在当前为 main/master 时检查 `.tiller/specs` 的工作区脏改与相对 `origin/<branch>` 的未合入改动；`task-branches` 找出未挂载 worktree 的残留任务分支。进行中任务从 `git worktree list` 的 active 任务分支和 worktree 内的 `.tiller/task/<id>/task.md` 发现，`ac-coverage` 从 worktree 读取任务并复用任务阶段与 `inspectFlow`，`data-model` 扫描 primary 与这些 worktree 记录中的历史 `LIB-*` 与“验收条件（稳定）”标题；active 任务分支找不到记录时 fail，不按 primary 缺少任务目录跳过。fail 项使 CLI 退出码为 1，warn 项只报告。
 
 ## 13. 狗粮路径卫生
 

@@ -27,6 +27,7 @@
 - [总体需求](specs/requirements.md)、[总体设计](specs/design.md)、[决策记录](specs/decisions.md)
 - [初始化规格](specs/modules/initialization/requirements.md)、[工作流规格](specs/modules/workflow/requirements.md)、[验证规格](specs/modules/verification/requirements.md)、[规范规格](specs/modules/standards/requirements.md)
 - [流程稳定执行规格](specs/modules/workflow/flow-exec-stability.md)
+- [任务生命周期核对](specs/modules/workflow/lifecycle-truth.md)
 - [规则索引](rules/index.md)、[项目规则](rules/project.md)、[项目背景](context/project.md)
 - [全局用例](cases/index.md)
 

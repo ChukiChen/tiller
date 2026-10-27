@@ -197,6 +197,11 @@ test('CASE-198 CASE-211 close and abandon remove the whole task-local directory 
   put(root, taskLocalPath(abandonedId, 'logs/run-1.log'), 'abandoned log\n');
   put(root, taskLocalPath(bystanderId, 'logs/run-1.log'), 'bystander log\n');
   acceptTask(root, acceptedId);
+  assert.match(readFileSync(join(root, worktreePath(acceptedId), `.tiller/task/${acceptedId}/task.md`), 'utf8'), /"gate":"acceptance"/u);
+  put(root, `.tiller/task/${acceptedId}/task.md`, readFileSync(join(taskRecordRoot(root, acceptedId), `.tiller/task/${acceptedId}/task.md`), 'utf8'));
+  assert.match(readFileSync(join(root, `.tiller/task/${acceptedId}/task.md`), 'utf8'), /"gate":"acceptance"/u);
+  put(root, `.tiller/task/${abandonedId}/task.md`, readFileSync(join(taskRecordRoot(root, abandonedId), `.tiller/task/${abandonedId}/task.md`), 'utf8'));
+  commit(root, 'chore(workflow): 持久化收尾任务记录');
 
   const closed = success(cli(root, 'close', acceptedId, '--reason', '交付完成'));
   assert.deepEqual(closed.worktrees, [worktreePath(acceptedId)]);
@@ -250,7 +255,7 @@ test('CASE-280 worktree 根 close 可删本地任务分支', async t => {
   assert.equal(repeated.stage, '已验收');
 });
 
-test('CASE-280 worktree 根 close 可读取仅存在于 worktree 的任务记录', async t => {
+test('CASE-280 CASE-316 worktree-only close reads the record but requires merge proof', async t => {
   const root = project(t);
   const id = '20261027-worktree-only-record-close';
   const started = startTask(root, id);
@@ -259,6 +264,13 @@ test('CASE-280 worktree 根 close 可读取仅存在于 worktree 的任务记录
   assert.ok(existsSync(join(taskRecordRoot(worktree, id), `.tiller/task/${id}/task.md`)));
 
   acceptTask(root, id);
+  const refused = failure(cli(worktree, 'close', id, '--reason', '从仅含任务记录的 worktree 收尾'));
+  assert.equal(refused.error.code, 'CLOSE_MERGE_PROOF_MISSING');
+  assert.ok(existsSync(worktree));
+  assert.ok(branchExists(root, started.worktrees[0].branch));
+
+  put(root, `.tiller/task/${id}/task.md`, readFileSync(join(taskRecordRoot(worktree, id), `.tiller/task/${id}/task.md`), 'utf8'));
+  commit(root, 'chore(workflow): 模拟合入任务记录');
   const closed = success(cli(worktree, 'close', id, '--reason', '从仅含任务记录的 worktree 收尾'));
   assert.deepEqual(closed.worktrees, [started.worktreeRoot]);
   assert.equal(existsSync(worktree), false);
@@ -320,6 +332,7 @@ test('CASE-199 tasks without worktrees still close or abandon and clear task-loc
     rmSync(join(root, taskLocalPath(id, 'worktrees.json')), { force: true });
     put(root, taskLocalPath(id, 'logs/run-1.log'), `${id}\n`);
   }
+  commit(root, 'chore(workflow): 保留旧任务记录');
 
   const closed = success(cli(root, 'close', closedId, '--reason', '旧任务收尾'));
   assert.ok(closed.missingWorktrees.includes(worktreePath(closedId)));
@@ -344,6 +357,15 @@ test('CASE-212 close cleans legacy worktrees, logs and sidecars without touching
   mkdirSync(join(taskRecordRoot(root, abandonedId), `.tiller/task/${abandonedId}`), { recursive: true });
   put(root, `.tiller/task/${abandonedId}/task.md`,
     readFileSync(join(root, worktreePath(abandonedId), `.tiller/task/${abandonedId}/task.md`), 'utf8'));
+  put(root, `.tiller/task/${acceptedId}/task.md`,
+    readFileSync(join(taskRecordRoot(root, acceptedId), `.tiller/task/${acceptedId}/task.md`), 'utf8'));
+  for (const relative of [
+    '.tiller/cases/modules/workflow/behavior.md',
+    `test/${acceptedId}.test.mjs`,
+    '.tiller/specs/modules/workflow/requirements.md',
+    '.tiller/specs/modules/workflow/design.md',
+  ]) put(root, relative, readFileSync(join(root, worktreePath(acceptedId), relative), 'utf8'));
+  commit(root, 'chore(workflow): 模拟合入旧任务记录');
 
   const legacyPaths = (id) => {
     const current = worktreePath(id);
@@ -364,6 +386,8 @@ test('CASE-212 close cleans legacy worktrees, logs and sidecars without touching
   };
   const acceptedLegacy = legacyPaths(acceptedId);
   const abandonedLegacy = legacyPaths(abandonedId);
+  const movedStage = success(cli(root, 'resume', acceptedId));
+  assert.equal(movedStage.stage, '已验收', movedStage.stageReason);
   put(root, legacyWorktreePath(bystanderId, 'sentinel.txt'), 'keep\n');
   put(root, legacySidecarPath(bystanderId, 'pre-existing.json'), '{}\n');
   put(root, legacyLogPath(bystanderId, 'run-1.log'), 'keep\n');
@@ -390,6 +414,50 @@ test('CASE-212 close cleans legacy worktrees, logs and sidecars without touching
     assert.equal(existsSync(join(root, path)), false, path);
   }
   assert.ok(existsSync(join(root, legacyWorktreePath(bystanderId, 'sentinel.txt'))));
+});
+
+test('CASE-316 close reports no executable reopen when only platform merge evidence survives', async t => {
+  const root = project(t);
+  const id = '20261027-platform-proof-close';
+  const started = startTask(root, id);
+  const worktree = join(root, started.worktreeRoot);
+  const branch = started.worktrees[0].branch;
+  acceptTask(root, id);
+
+  const mock = await startPlatformMock(t, { platform: 'github' });
+  mock.state.mergedBranches.add(branch);
+  git(root, 'remote', 'add', 'origin', `${mock.origin}/owner/repo.git`);
+  const environment = { GITHUB_TOKEN: 'mock-token', GH_TOKEN: '', GITLAB_TOKEN: '', GL_TOKEN: '' };
+  const closed = success(await cliWithEnv(worktree, environment, 'close', id, '--reason', '平台已合入'));
+  assert.deepEqual(closed.worktrees, [started.worktreeRoot]);
+  assert.equal(existsSync(join(root, `.tiller/task/${id}`)), false);
+  assert.doesNotMatch(closed.next, /tiller reopen/u);
+  assert.ok(mock.state.requests.some(item => item.method === 'GET' && item.path.endsWith('/pulls')));
+});
+
+test('CASE-317 abandon refuses to erase a worktree-only task and persists when primary has a record', async t => {
+  const root = project(t);
+  const id = '20261027-abandon-durability';
+  const started = startTask(root, id);
+  const worktree = join(root, started.worktreeRoot);
+  const branch = started.worktrees[0].branch;
+
+  const refused = failure(cli(worktree, 'close', id, '--reason', '需求取消', '--abandon'));
+  assert.equal(refused.error.code, 'ABANDON_NOT_PERSISTABLE');
+  assert.doesNotMatch(refused.error.message, /tiller reopen/u);
+  assert.ok(existsSync(worktree));
+  assert.ok(existsSync(join(root, taskLocalPath(id))));
+  assert.ok(branchExists(root, branch));
+
+  put(root, `.tiller/task/${id}/task.md`, readFileSync(join(taskRecordRoot(worktree, id), `.tiller/task/${id}/task.md`), 'utf8'));
+  commit(root, 'chore(workflow): 持久化待放弃任务记录');
+  const abandoned = success(cli(worktree, 'close', id, '--reason', '需求取消', '--abandon'));
+  assert.equal(abandoned.stage, '已放弃');
+  assert.match(abandoned.next, /tiller reopen/u);
+  assert.match(readFileSync(join(root, `.tiller/task/${id}/task.md`), 'utf8'), /^- 状态：已放弃$/mu);
+  assert.equal(existsSync(worktree), false);
+  const reopened = success(cli(root, 'reopen', id, '--reason', '重新评估'));
+  assert.notEqual(reopened.stage, '已放弃');
 });
 
 test('CASE-200 start failures leave no task record or partially created worktree', async t => {

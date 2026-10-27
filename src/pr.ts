@@ -381,7 +381,9 @@ export async function mergeFlow(rootInput: string, id: string, options: { keepBr
 
   let closed: Awaited<ReturnType<typeof closeFlow>>;
   try {
-    closed = await closeFlow(rootInput, id, '合入后自动清理', false, { keepBranch: options.keepBranch === true });
+    closed = await closeFlow(rootInput, id, '合入后自动清理', false, {
+      keepBranch: options.keepBranch === true, merged: true,
+    });
   } catch (error) {
     const metadataNote = metadataError ? `；初始化状态也未更新：${metadataError.message}` : '';
     fail('MERGE_CLOSE_FAILED', `远端已合入，但本机清理失败：${(error as Error).message}${metadataNote}；请手动运行 tiller close ${id} --reason "已合入"。`);
