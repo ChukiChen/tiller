@@ -89,8 +89,10 @@ post-#43 狗粮后仍有三项软摩擦：设计确认前误跑 `verify` 会写�
 | 部分 | 确认人 | 时间 | 短提交 | 原话 |
 | --- | --- | --- | --- | --- |
 | 需求 | boon yu | 2026-10-27T10:08:15.082Z | c2e25c5868dd | 一起修改吧，是否还有别的问题 |
+| 设计 | boon yu | 2026-10-27T10:08:17.674Z | 7739eed68eb8 | 一起修改吧，是否还有别的问题 |
 
 <!-- tiller-confirm:v1 {"gate":"requirements","object":"需求正文（目标、范围与验收条件）","subject":"5791147763f4e714c04295097adec6812eb44485a6e4dac8745f6b98919681ec","commit":"c2e25c5868ddc052b747a8bd2f3f8dd30411f4b2","by":"boon yu","quote":"一起修改吧，是否还有别的问题","at":"2026-10-27T10:08:15.082Z"} -->
+<!-- tiller-confirm:v1 {"gate":"design","object":"设计正文","subject":"2f586f5ca5b1bb1b9c8ae3e9f8c1979eb2a49eb8ddba5a9b73a2c1e59bead4ed","commit":"7739eed68eb87baa093a39c388e1bf8b4f3ddeff","by":"boon yu","quote":"一起修改吧，是否还有别的问题","at":"2026-10-27T10:08:17.674Z"} -->
 
 ## 验证
 
