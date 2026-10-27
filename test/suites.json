@@ -25,6 +25,7 @@
     "doctor.test.mjs",
     "gap-closure.test.mjs",
     "task-worktrees.test.mjs",
+    "worktree-task-root.test.mjs",
     "first-batch.test.mjs",
     "pr.test.mjs",
     "verification-integrity.test.mjs",

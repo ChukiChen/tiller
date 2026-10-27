@@ -215,7 +215,7 @@ test('CASE-280 worktree 根 close 可删本地任务分支', async t => {
   const started = startTask(root, id);
   const branch = started.worktrees[0].branch;
   const worktree = join(root, started.worktreeRoot);
-  acceptTask(root, id);
+  acceptTask(worktree, id);
   const mock = await startPlatformMock(t, { platform: 'github' });
   mock.setMode('branch-delete-missing');
   git(root, 'remote', 'add', 'origin', `${mock.origin}/owner/repo.git`);

@@ -3,6 +3,7 @@ import { access, realpath } from 'node:fs/promises';
 import path from 'node:path';
 import { promisify } from 'node:util';
 import { validateTaskId } from './task-id.js';
+import { taskWorktreePaths } from './task-worktrees.js';
 
 const execFileAsync = promisify(execFile);
 
@@ -42,6 +43,52 @@ async function resolvedPath(target: string): Promise<string> {
   catch { return path.resolve(target); }
 }
 
+function isWithin(target: string, parent: string): boolean {
+  const relative = path.relative(parent, target);
+  return relative === '' || (!relative.startsWith('..') && !path.isAbsolute(relative));
+}
+
+async function hasTaskRecord(root: string, id: string): Promise<boolean> {
+  return await exists(path.join(root, '.tiller/task', id, 'task.md'));
+}
+
+function taskWorktreeContainers(primary: string, id: string): string[] {
+  return [
+    path.join(primary, '.tiller/local', id, 'worktrees'),
+    path.join(primary, '.tiller/local/worktrees', id),
+  ];
+}
+
+async function relatedTaskWorktree(input: string, primary: string, id: string): Promise<string | null> {
+  const starts = [...new Set([path.resolve(input), await projectCandidate(input)].filter((value): value is string => Boolean(value)))];
+  const worktrees = await taskWorktreePaths(primary, id);
+  const resolvedWorktrees = await Promise.all(worktrees.map(resolvedPath));
+  for (const start of starts) {
+    const candidate = await resolvedPath(start);
+    const matching = resolvedWorktrees.filter(worktree => isWithin(candidate, worktree));
+    if (matching.length) {
+      for (const worktree of matching) if (await hasTaskRecord(worktree, id)) return worktree;
+      for (const worktree of matching) if (await exists(path.join(worktree, '.tiller/project.json'))) return worktree;
+      for (const worktree of resolvedWorktrees) {
+        if (await exists(path.join(worktree, '.tiller/project.json'))) return worktree;
+      }
+      return matching[0]!;
+    }
+    for (const container of taskWorktreeContainers(primary, id)) {
+      const resolvedContainer = await resolvedPath(container);
+      if (!isWithin(candidate, resolvedContainer)) continue;
+      if (await exists(path.join(candidate, '.tiller/project.json'))) return candidate;
+      for (const worktree of resolvedWorktrees) {
+        if (isWithin(worktree, resolvedContainer) && await exists(path.join(worktree, '.tiller/project.json'))) return worktree;
+      }
+      const management = path.join(candidate, 'management');
+      if (await exists(path.join(management, '.tiller/project.json'))) return resolvedPath(management);
+      return candidate;
+    }
+  }
+  return null;
+}
+
 function worktreeRoots(output: string | null): string[] {
   if (!output) return [];
   return output.split(/\r?\n/u)
@@ -74,12 +121,12 @@ export interface TaskCheckout {
 export async function resolveTaskCheckout(input: string, id: string): Promise<TaskCheckout> {
   validateTaskId(id);
   const primary = await resolveProjectRoot(input);
-  if (await exists(path.join(primary, '.tiller/task', id, 'task.md'))) {
-    return { primary, taskRoot: primary };
-  }
+  const related = await relatedTaskWorktree(input, primary, id);
+  if (related) return { primary, taskRoot: related };
   const candidate = await projectCandidate(input);
-  if (candidate && await exists(path.join(candidate, '.tiller/task', id, 'task.md'))) {
+  if (candidate && await hasTaskRecord(candidate, id)) {
     return { primary, taskRoot: await resolvedPath(candidate) };
   }
+  if (await hasTaskRecord(primary, id)) return { primary, taskRoot: primary };
   return { primary, taskRoot: primary };
 }

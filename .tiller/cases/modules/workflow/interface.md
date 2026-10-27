@@ -1208,3 +1208,28 @@ draft-only 只生成五段草稿与建议分支，不调用创建 PR API
 ### 预期结果
 
 json 或非 TTY 输出含 url/number/branch 等稳定字段；TTY 可读；draft-only 不联网
+
+## CASE-297 任务根解析集中单一入口
+
+- 类型：interface
+- 优先级：medium
+- 模块：workflow
+- 关联 AC：无
+- 需求：`.tiller/specs/modules/workflow/worktree-task-truth.md`
+
+### 前置条件
+
+- 对应模块与运行环境可用。
+
+### 步骤
+
+1. 执行覆盖本用例的测试。
+2. 核对实际结果与预期结果一致。
+
+### 输入
+
+- 按用例描述准备正常输入及必要的边界输入。
+
+### 预期结果
+
+任务根与 --path/cwd 解析集中在 resolveTaskCheckout，相关任务命令源码均引用该入口且不再自行 path.resolve(rootInput)
