@@ -76,9 +76,11 @@ tokenized push 失败以 `PLATFORM_PUSH_FAILED` 中文说明；不回退到会�
 | --- | --- | --- | --- | --- |
 | 需求 | ChukiChen | 2026-10-27T06:44:29.599Z | dcb746d0e7d5 | — |
 | 设计 | ChukiChen | 2026-10-27T06:44:29.716Z | dcb746d0e7d5 | — |
+| 交付验收 | ChukiChen | 2026-10-27T06:45:01.848Z | 86db98d7e103 | — |
 
 <!-- tiller-confirm:v1 {"gate":"requirements","object":"需求正文（目标、范围与验收条件）","subject":"a5684fc43cbe6da278153a4cd7074c9682b063da5da7dbd77990585044345b23","commit":"dcb746d0e7d523ef99dc9e23057fa7fea3368c81","by":"ChukiChen","quote":"","at":"2026-10-27T06:44:29.599Z"} -->
 <!-- tiller-confirm:v1 {"gate":"design","object":"设计正文","subject":"9198c6251a7f40016416778aa50c24a32391033854af21055dc63b817a28e12f","commit":"dcb746d0e7d523ef99dc9e23057fa7fea3368c81","by":"ChukiChen","quote":"","at":"2026-10-27T06:44:29.716Z"} -->
+<!-- tiller-confirm:v1 {"gate":"acceptance","object":"当前交付（需求、设计、验证与提交）","subject":"1b994d254580c8effc75b3e02ef4caecc56f18a36e2b55fb1edf556cd6b40748","commit":"86db98d7e1039c37f1a3b81b1c92b1574d7b5b80","by":"ChukiChen","quote":"","at":"2026-10-27T06:45:01.848Z"} -->
 
 ## 验证
 
@@ -190,4 +192,25 @@ tokenized push 失败以 `PLATFORM_PUSH_FAILED` 中文说明；不回退到会�
 - 提交：dcb746d0e7d5
 - 时间：2026-10-27T06:44:41.018Z
 
-#
+## 自检
+
+- [x] 需求确认有效
+- [x] 设计确认有效
+- [x] 验收条件均有当前通过且绑定全局用例的测试引用
+- [x] 每条验收条件均映射到本次验证引用的全局用例
+- [x] 验收条件与用例通过 verify 的 AC→测试→CASE 记录关联
+- [x] 验证命令已执行且测试输出已核实
+- [x] 全局用例结构与引用有效
+- [x] 改动未超出范围
+- [x] 未弱化仍存在的测试
+- [x] 评审无未清除阻塞项
+- [x] 记录不含密钥或本机绝对路径
+
+提示：
+- 172 条历史用例仍以 <任务>#AC-n 记录关联 AC；这是可迁移的历史债，不阻断当前覆盖。
+- 129 条用例的关联 AC 为无；覆盖以需求字段和 verify 的 AC→测试→CASE 记录为准。
+- 本次改动涉及模块 initialization：建议回归该模块 67 条用例及经过它的场景 CASE-055, CASE-001。
+- 本次改动涉及模块 standards：建议回归该模块 37 条用例及经过它的场景 CASE-055。
+- 本次改动涉及模块 verification：建议回归该模块 45 条用例及经过它的场景 CASE-055, CASE-001。
+- 本次改动涉及模块 workflow：建议回归该模块 150 条用例及经过它的场景 CASE-055, CASE-001。
+- 修改的测试文件移除了 1 个测试用例（请确认对应功能已删除；详情见 Git diff）。
