@@ -62,9 +62,11 @@ src/doctor.ts、src/flow.ts close/abandon、相关 test/CASE、usage/decisions�
 | --- | --- | --- | --- | --- |
 | 需求 | boon yu | 2026-10-27T14:20:24.304Z | e32d0099f79d | — |
 | 设计 | boon yu | 2026-10-27T14:20:24.434Z | 125be60ded33 | — |
+| 交付验收 | boon yu | 2026-10-27T14:53:36.629Z | c02246c0d99a | — |
 
 <!-- tiller-confirm:v1 {"gate":"requirements","object":"需求正文（目标、范围与验收条件）","subject":"88c742075c78fafd3f7dc41502cb212a374fbef8e9dcb41e2c862583c08f4ffa","commit":"e32d0099f79df0ed92af835989ded84bd2367b11","by":"boon yu","quote":"","at":"2026-10-27T14:20:24.304Z"} -->
 <!-- tiller-confirm:v1 {"gate":"design","object":"设计正文","subject":"7bb4ac4a3f9a0e5af76e9632ce4179a8c353445ad96ff49851179187e4e52de2","commit":"125be60ded33cf39fbf4b441403d188527d9a8eb","by":"boon yu","quote":"","at":"2026-10-27T14:20:24.434Z"} -->
+<!-- tiller-confirm:v1 {"gate":"acceptance","object":"当前交付（需求、设计、验证与提交）","subject":"9ce75b85ffd4fcd20d16fc5794b34bd0f9745639b56f75d1fed4d3788b4fd946","commit":"c02246c0d99aa0152a6489e8840cb838e643bb42","by":"boon yu","quote":"","at":"2026-10-27T14:53:36.629Z"} -->
 
 ## 验证
 
@@ -188,28 +190,127 @@ src/doctor.ts、src/flow.ts close/abandon、相关 test/CASE、usage/decisions�
 - 提交：4080cc2dd198
 - 时间：2026-10-27T14:46:01.741Z
 
+### run-11
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-315 doctor checks tasks that exist only in an active worktree$' \u002d\u002dtest-reporter=./.tiller/local/verify-FgGuEX/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-FgGuEX/report.jsonl test/doctor.test.mjs","exitCode":0,"tree":"9f9d441594ff2a305417de991b320105dbff3e3fb256db46d1f27a4baeba01ae","commit":"ba0e56eff745d5054f1f173cc44d2be7f1ab0c78"} -->
+- 条件：AC-1
+- 测试：test/doctor.test.mjs::CASE-315 doctor checks tasks that exist only in an active worktree
+- 用例：CASE-315
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/20261027-lifecycle-truth/logs/run-11.log
+- 提交：ba0e56eff745
+- 时间：2026-10-27T14:50:36.920Z
+
+### run-12
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-280 CASE-316 worktree-only close reads the record but requires merge proof$' \u002d\u002dtest-reporter=./.tiller/local/verify-SMKWeI/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-SMKWeI/report.jsonl test/task-worktrees.test.mjs","exitCode":0,"tree":"9f9d441594ff2a305417de991b320105dbff3e3fb256db46d1f27a4baeba01ae","commit":"ba0e56eff745d5054f1f173cc44d2be7f1ab0c78"} -->
+- 条件：AC-2
+- 测试：test/task-worktrees.test.mjs::CASE-280 CASE-316 worktree-only close reads the record but requires merge proof
+- 用例：CASE-316
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/20261027-lifecycle-truth/logs/run-12.log
+- 提交：ba0e56eff745
+- 时间：2026-10-27T14:50:37.983Z
+
+### run-13
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-316 close reports no executable reopen when only platform merge evidence survives$' \u002d\u002dtest-reporter=./.tiller/local/verify-ITVtVq/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-ITVtVq/report.jsonl test/task-worktrees.test.mjs","exitCode":0,"tree":"9f9d441594ff2a305417de991b320105dbff3e3fb256db46d1f27a4baeba01ae","commit":"ba0e56eff745d5054f1f173cc44d2be7f1ab0c78"} -->
+- 条件：AC-2
+- 测试：test/task-worktrees.test.mjs::CASE-316 close reports no executable reopen when only platform merge evidence survives
+- 用例：CASE-316
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/20261027-lifecycle-truth/logs/run-13.log
+- 提交：ba0e56eff745
+- 时间：2026-10-27T14:50:37.983Z
+
+### run-14
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-317 abandon refuses to erase a worktree-only task and persists when primary has a record$' \u002d\u002dtest-reporter=./.tiller/local/verify-xEiwkf/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-xEiwkf/report.jsonl test/task-worktrees.test.mjs","exitCode":0,"tree":"9f9d441594ff2a305417de991b320105dbff3e3fb256db46d1f27a4baeba01ae","commit":"ba0e56eff745d5054f1f173cc44d2be7f1ab0c78"} -->
+- 条件：AC-2
+- 测试：test/task-worktrees.test.mjs::CASE-317 abandon refuses to erase a worktree-only task and persists when primary has a record
+- 用例：CASE-317
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/20261027-lifecycle-truth/logs/run-14.log
+- 提交：ba0e56eff745
+- 时间：2026-10-27T14:50:41.397Z
+
+### run-15
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-314 0\\.5\\.0 发布契约与完整质量门禁保持覆盖$' \u002d\u002dtest-reporter=./.tiller/local/verify-6phFap/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-6phFap/report.jsonl test/rules.test.mjs","exitCode":0,"tree":"9f9d441594ff2a305417de991b320105dbff3e3fb256db46d1f27a4baeba01ae","commit":"ba0e56eff745d5054f1f173cc44d2be7f1ab0c78"} -->
+- 条件：AC-3
+- 测试：test/rules.test.mjs::CASE-314 0.5.0 发布契约与完整质量门禁保持覆盖
+- 用例：CASE-314
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/20261027-lifecycle-truth/logs/run-15.log
+- 提交：ba0e56eff745
+- 时间：2026-10-27T14:50:42.508Z
+
+### run-16
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-315 doctor checks tasks that exist only in an active worktree$' \u002d\u002dtest-reporter=./.tiller/local/verify-MjP4AG/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-MjP4AG/report.jsonl test/doctor.test.mjs","exitCode":0,"tree":"834d9b206b6d27658d4c6f7d30e7084369b42a7c0916d267bb7e0f36df7d9f02","commit":"c02246c0d99aa0152a6489e8840cb838e643bb42"} -->
+- 条件：AC-1
+- 测试：test/doctor.test.mjs::CASE-315 doctor checks tasks that exist only in an active worktree
+- 用例：CASE-315
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/20261027-lifecycle-truth/logs/run-16.log
+- 提交：c02246c0d99a
+- 时间：2026-10-27T14:53:26.034Z
+
+### run-17
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-316 close reports no executable reopen when only platform merge evidence survives$' \u002d\u002dtest-reporter=./.tiller/local/verify-oVePEY/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-oVePEY/report.jsonl test/task-worktrees.test.mjs","exitCode":0,"tree":"834d9b206b6d27658d4c6f7d30e7084369b42a7c0916d267bb7e0f36df7d9f02","commit":"c02246c0d99aa0152a6489e8840cb838e643bb42"} -->
+- 条件：AC-2
+- 测试：test/task-worktrees.test.mjs::CASE-316 close reports no executable reopen when only platform merge evidence survives
+- 用例：CASE-316
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/20261027-lifecycle-truth/logs/run-17.log
+- 提交：c02246c0d99a
+- 时间：2026-10-27T14:53:27.110Z
+
+### run-18
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-317 abandon refuses to erase a worktree-only task and persists when primary has a record$' \u002d\u002dtest-reporter=./.tiller/local/verify-hKhxtd/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-hKhxtd/report.jsonl test/task-worktrees.test.mjs","exitCode":0,"tree":"834d9b206b6d27658d4c6f7d30e7084369b42a7c0916d267bb7e0f36df7d9f02","commit":"c02246c0d99aa0152a6489e8840cb838e643bb42"} -->
+- 条件：AC-2
+- 测试：test/task-worktrees.test.mjs::CASE-317 abandon refuses to erase a worktree-only task and persists when primary has a record
+- 用例：CASE-317
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/20261027-lifecycle-truth/logs/run-18.log
+- 提交：c02246c0d99a
+- 时间：2026-10-27T14:53:29.127Z
+
+### run-19
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-314 0\\.5\\.0 发布契约与完整质量门禁保持覆盖$' \u002d\u002dtest-reporter=./.tiller/local/verify-ilM88w/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-ilM88w/report.jsonl test/rules.test.mjs","exitCode":0,"tree":"834d9b206b6d27658d4c6f7d30e7084369b42a7c0916d267bb7e0f36df7d9f02","commit":"c02246c0d99aa0152a6489e8840cb838e643bb42"} -->
+- 条件：AC-3
+- 测试：test/rules.test.mjs::CASE-314 0.5.0 发布契约与完整质量门禁保持覆盖
+- 用例：CASE-314
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/20261027-lifecycle-truth/logs/run-19.log
+- 提交：c02246c0d99a
+- 时间：2026-10-27T14:53:30.261Z
+
 ## 自检
 
 - [x] 需求确认有效
 - [x] 该任务无需设计确认
-- [ ] 验收条件均有当前通过且绑定全局用例的测试引用
-- [ ] 每条验收条件均映射到本次验证引用的全局用例
-- [ ] 验收条件与用例通过 verify 的 AC→测试→CASE 记录关联
-- [ ] 验证命令已执行且测试输出已核实
+- [x] 验收条件均有当前通过且绑定全局用例的测试引用
+- [x] 每条验收条件均映射到本次验证引用的全局用例
+- [x] 验收条件与用例通过 verify 的 AC→测试→CASE 记录关联
+- [x] 验证命令已执行且测试输出已核实
 - [x] 全局用例结构与引用有效
 - [x] 改动未超出范围
 - [x] 未弱化仍存在的测试
 - [x] 评审无未清除阻塞项
 - [x] 记录不含密钥或本机绝对路径
-
-阻塞项：
-- AC-1 的用例 CASE-315：AC-1 的验证已过期：记录时的代码树与当前工作树不同（范围内代码已变化）。
-- AC-1 的验证已过期：记录时的代码树与当前工作树不同（范围内代码已变化）。
-- AC-2 的用例 CASE-317：AC-2 的验证已过期：记录时的代码树与当前工作树不同（范围内代码已变化）。
-- AC-2 的验证已过期：记录时的代码树与当前工作树不同（范围内代码已变化）。
-- AC-3 的用例 CASE-314：AC-3 的验证已过期：记录时的代码树与当前工作树不同（范围内代码已变化）。
-- AC-3 的验证已过期：记录时的代码树与当前工作树不同（范围内代码已变化）。
-- 交付范围存在未提交改动：.tiller/project.json、.tiller/rules/activities/delivery.md、.tiller/usage.md
 
 提示：
 - 172 条历史用例仍以 <任务>#AC-n 记录关联 AC；这是可迁移的历史债，不阻断当前覆盖。
@@ -218,4 +319,3 @@ src/doctor.ts、src/flow.ts close/abandon、相关 test/CASE、usage/decisions�
 - 本次改动涉及模块 standards：建议回归该模块 37 条用例及经过它的场景 CASE-055。
 - 本次改动涉及模块 verification：建议回归该模块 45 条用例及经过它的场景 CASE-055, CASE-001。
 - 本次改动涉及模块 workflow：建议回归该模块 164 条用例及经过它的场景 CASE-055, CASE-001。
-- 修改的测试文件移除了 1 个测试用例（请确认对应功能已删除；详情见 Git diff）。
