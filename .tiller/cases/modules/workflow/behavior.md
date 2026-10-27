@@ -198,7 +198,7 @@
 
 ### 预期结果
 
-测试通过，并且已验收任务 close 只删除本机任务目录、不改写共享 task.md，仍可 reopen 继续交付。
+测试通过，并且已验收任务 close 只删除本机任务目录、不 materialize 未跟踪 task 到 primary；合入快进后的跟踪记录仍可 reopen 继续交付。
 
 ## CASE-058 放弃任务不污染规划统计且可恢复
 
@@ -2288,4 +2288,55 @@ confirm/accept 后本任务 .tiller/task/<id>/ 已提交，无需手搓即可通
 ### 预期结果
 
 步骤 1 以 `VERIFY_BEFORE_DESIGN` 失败且不写入验证段。clear-premature 清除设计确认前的 verify 段后，过程卫生不再因错序 verify 阻断设计确认后的 check。
+
+## CASE-308 close 不 materialize 未跟踪 task 到 primary
+
+- 类型：behavior
+- 优先级：high
+- 模块：workflow
+- 关联 AC：无
+- 需求：`.tiller/specs/modules/workflow/no-close-materialize.md`
+
+### 前置条件
+
+- 已验收任务仅存在于任务 worktree（primary 无 `.tiller/task/<id>/`）。
+
+### 步骤
+
+1. 运行 `tiller close <id> --reason "..."`。
+2. 检查 primary 是否出现未跟踪任务树与 `.tiller/local/closed/<id>.json`。
+3. 将已验收记录落到默认分支（模拟合入快进）后再 `reopen`。
+
+### 输入
+
+- 已验收任务与关闭原因。
+
+### 预期结果
+
+close 后 primary 无因 materialize 产生的未跟踪 `.tiller/task/<id>/`，且无 closed 标记；合入模拟后可 reopen 继续交付。
+
+## CASE-309 close 不写 closed 标记且合入后重复 close 安全
+
+- 类型：behavior
+- 优先级：high
+- 模块：workflow
+- 关联 AC：无
+- 需求：`.tiller/specs/modules/workflow/no-close-materialize.md`
+
+### 前置条件
+
+- 已验收任务记录已合入默认分支（primary 跟踪 `.tiller/task/<id>/task.md`）。
+
+### 步骤
+
+1. 运行 `tiller close <id>` 两次。
+2. 检查共享 task.md 内容不变，且不存在 `.tiller/local/closed/<id>.json`。
+
+### 输入
+
+- 合入后的已验收任务与关闭原因。
+
+### 预期结果
+
+两次 close 均成功；共享 task.md 不被改写；不创建 closed 清理标记。
 

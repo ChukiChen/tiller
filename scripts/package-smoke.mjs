@@ -181,7 +181,7 @@ const resolveTaskMd = () => existsSync(taskRecord) ? taskRecord : sharedTaskReco
 const beforeClose = readFileSync(resolveTaskMd(), 'utf8');
 const closed = invoke(['close', taskId, '--reason', 'Package smoke delivered']);
 assert.equal(closed.stage, '已验收');
-assert.ok(existsSync(sharedTaskRecord), 'close materializes task onto primary');
+assert.ok(existsSync(sharedTaskRecord), 'merged task record remains on primary after close');
 assert.equal(readFileSync(sharedTaskRecord, 'utf8'), beforeClose);
 assert.equal(invoke(['resume', taskId]).stage, '已验收');
 assert.equal(invoke(['reopen', taskId, '--reason', 'Package smoke reopened']).stage, '已验证');

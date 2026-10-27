@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { cpSync, existsSync, mkdtempSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { chmodSync, cpSync, existsSync, lstatSync, mkdtempSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -154,12 +154,26 @@ export function spawnCaptured(command, args, options = {}) {
 
 const FIXTURE_SYNC_PATHS = ['.tiller/cases', '.tiller/specs', 'test', 'src', 'docs', 'resources', 'scripts', 'repositories'];
 
+function makeFixtureCopyWritable(pathname) {
+  if (!existsSync(pathname)) return;
+  const stat = lstatSync(pathname);
+  if (stat.isSymbolicLink()) return;
+  if (stat.isDirectory()) {
+    if ((stat.mode & 0o200) === 0) chmodSync(pathname, stat.mode | 0o200);
+    for (const entry of readdirSync(pathname)) makeFixtureCopyWritable(join(pathname, entry));
+  } else if ((stat.mode & 0o200) === 0) {
+    chmodSync(pathname, stat.mode | 0o200);
+  }
+}
+
 function syncFixturePaths(fromRoot, toRoot) {
   for (const rel of FIXTURE_SYNC_PATHS) {
     const from = join(fromRoot, rel);
     if (!existsSync(from)) continue;
     const to = join(toRoot, rel);
     mkdirSync(dirname(to), { recursive: true });
+    // Git object files are read-only; make an existing fixture copy writable before overlay.
+    makeFixtureCopyWritable(to);
     cpSync(from, to, { recursive: true, force: true });
   }
 }

@@ -276,7 +276,7 @@ test('CASE-056 task stages derive from task facts and fall back on invalid confi
   assert.match(stale.stageReason, /验证已过期/u);
 });
 
-test('CASE-057 accepted task close cleans local state without changing shared records and reopens for another delivery', async t => {
+test('CASE-057 CASE-308 accepted close cleans local state without materializing; reopen after merge simulation', async t => {
   const root = await initialized(t);
   moduleSpec(root, 'workflow');
   put(root, 'src/close.mjs', 'export const close = 1;\n');
@@ -289,7 +289,11 @@ test('CASE-057 accepted task close cleans local state without changing shared re
   const closeCase = success(cli(root, 'case', 'add', id, '--module', 'workflow', '--kind', 'behavior', '--title', '关闭与重开',
     '--expected', '关闭后阻止变更并可重开',
     '--spec', '.tiller/specs/modules/workflow/requirements.md#flow-15-在关键节点取得人工确认'));
-  put(root, 'test/close.test.mjs', `import assert from 'node:assert/strict';\nimport test from 'node:test';\n\ntest('${closeCase.id} close lifecycle behavior', () => assert.equal(1, 1));\n`);
+  put(root, 'test/close.test.mjs', `import assert from 'node:assert/strict';
+import test from 'node:test';
+
+test('${closeCase.id} close lifecycle behavior', () => assert.equal(1, 1));
+`);
   commitAll(root, 'test: 关闭生命周期夹具');
   success(cli(root, 'verify', id, '--criterion', 'AC-1', '--test', `test/close.test.mjs::${closeCase.id} close lifecycle behavior`));
   success(cli(root, 'accept', id, '--quote', '验收关闭流程'));
@@ -299,20 +303,40 @@ test('CASE-057 accepted task close cleans local state without changing shared re
   const beforeClose = read(taskRecordRoot(root, id), taskFile);
   put(root, `.tiller/local/${id}/cleanup-marker.txt`, 'local only\n');
   const closed = success(cli(root, 'close', id, '--reason', '交付完成并收尾'));
-    assert.equal(closed.stage, '已验收');
+  assert.equal(closed.stage, '已验收');
   assert.match(closed.stageReason, /本机清理完成/u);
-  assert.equal(read(root, taskFile), beforeClose);
-  assert.ok(existsSync(join(root, taskFile)), 'accepted close materializes shared task on primary');
-  assert.doesNotMatch(beforeClose, /^## 关闭$/mu);
   assert.equal(existsSync(join(root, `.tiller/local/${id}`)), false);
+  assert.equal(existsSync(join(root, taskFile)), false, 'close must not materialize untracked task onto primary');
+  assert.equal(existsSync(join(root, `.tiller/local/closed/${id}.json`)), false);
+  assert.doesNotMatch(beforeClose, /^## 关闭$/mu);
+
+  // Simulate merge/ff: accepted record lands on primary as tracked.
+  put(root, taskFile, beforeClose);
+  commitAll(root, 'chore(workflow): 模拟合入关闭任务记录');
   const listed = success(cli(root, 'resume'));
   assert.equal(listed.tasks.find(entry => entry.id === id).stage, '已验收');
   const reopened = success(cli(root, 'reopen', id, '--reason', '需要再次交付'));
   assert.equal(reopened.stage, '已验证');
+  assert.equal(existsSync(join(root, `.tiller/local/closed/${id}.json`)), false);
   const checked = success(cli(root, 'check', id));
   assert.equal(checked.confirmations.find(entry => entry.gate === 'acceptance').confirmed, false);
   success(cli(root, 'accept', id, '--quote', '重新验收关闭流程'));
   assert.equal(stageTask(root, id), '已验收');
+});
+
+test('CASE-308 abandon does not materialize an untracked task onto primary', async t => {
+  const root = await initialized(t);
+  moduleSpec(root, 'workflow');
+  const id = '20261027-abandon-no-materialize';
+  success(cli(root, 'start', id, '--title', '放弃不复制', '--requirement', 'Abandon only cleans the task checkout.',
+    '--criterion', 'AC-1=Abandon does not seed primary', '--size', 'small'));
+  success(confirmTask(root, id, 'requirements'));
+  assert.equal(existsSync(join(root, `.tiller/task/${id}/task.md`)), false);
+
+  const abandoned = success(cli(root, 'close', id, '--reason', '需求取消', '--abandon'));
+  assert.equal(abandoned.stage, '已放弃');
+  assert.equal(existsSync(join(root, `.tiller/task/${id}`)), false, 'abandon must not materialize onto primary');
+  assert.equal(existsSync(join(root, `.tiller/local/closed/${id}.json`)), false);
 });
 
 test('CASE-058 abandoned tasks are terminal, reopenable, and not counted as active or accepted plan work', async t => {
@@ -331,9 +355,14 @@ test('CASE-058 abandoned tasks are terminal, reopenable, and not counted as acti
   assert.equal(active.items[0].tasks[0].stage, '需求已确认');
   const refused = failure(cli(root, 'close', id, '--reason', '未验收不能收尾'));
   assert.equal(refused.error.code, 'NOT_ACCEPTED');
+  // Seed primary with the live task record so abandon refreshes an existing copy (no materialize).
+  const liveTask = read(taskRecordRoot(root, id), `.tiller/task/${id}/task.md`);
+  put(root, `.tiller/task/${id}/task.md`, liveTask);
+  commitAll(root, 'chore(workflow): 模拟已合入任务记录后放弃');
   const abandoned = success(cli(root, 'close', id, '--reason', '需求取消', '--abandon'));
   assert.equal(abandoned.stage, '已放弃');
-  assert.match(read(taskRecordRoot(root, id), `.tiller/task/${id}/task.md`), /^- 状态：已放弃$/mu);
+  assert.equal(existsSync(join(root, `.tiller/local/closed/${id}.json`)), false);
+  assert.match(read(root, `.tiller/task/${id}/task.md`), /^- 状态：已放弃$/mu);
   const status = success(cli(root, 'plan', 'status', 'abandon-plan'));
   assert.equal(status.items[0].status, '已放弃');
   assert.equal(status.items[0].tasks[0].stage, '已放弃');

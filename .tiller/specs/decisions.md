@@ -220,3 +220,9 @@
 - 代价：合入前 primary 可能尚无完整骨架，须先合入 init PR；测试夹具用 settle 物化文件。
 - standard 过早 `verify` 以 `VERIFY_BEFORE_DESIGN` 拒绝；历史错序段用 `verify --clear-premature` 清除。
 
+## 2026-10-27 close 不合入后 materialize / 不写 closed 标记
+
+- 决定：`close`/`merge` 自动 close 与 abandon **不再**把 `.tiller/task/<id>/` 复制到 primary；也不再读写 `.tiller/local/closed/<id>.json`。合入后的任务记录靠默认分支快进/pull；close 只清 worktree 与分支。
+- 代价：从未合入就 close 的任务不会在 primary 留下未跟踪副本；reopen/plan 仅在记录仍可解析（通常已跟踪）时可用。
+- abandon 若 primary 已有该任务文件则刷新已有副本，仍不新建未跟踪种子。
+

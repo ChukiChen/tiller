@@ -167,6 +167,8 @@ test('CASE-206 accepted close preserves the shared self-check while check still 
   const id = '20261024-closed-self-check';
   await acceptedTask(root, id, { touchModuleTest: true });
   const beforeClose = read(taskRecordRoot(root, id), taskPath(id));
+  put(root, taskPath(id), beforeClose);
+  commit(root, 'chore(workflow): 模拟合入关闭任务记录');
   success(cli(root, 'close', id, '--reason', '交付完成'));
   assert.equal(read(taskRecordRoot(root, id), taskPath(id)), beforeClose);
   assert.doesNotMatch(beforeClose, /^## 关闭$/mu);
@@ -184,6 +186,8 @@ test('CASE-224 accepted close only cleans local state and leaves shared task con
   const id = '20261026-post-merge-close';
   await acceptedTask(root, id);
   const before = read(taskRecordRoot(root, id), taskPath(id));
+  put(root, taskPath(id), before);
+  commit(root, 'chore(workflow): 模拟合入关闭任务记录');
   const digestBefore = createHash('sha256').update(before).digest('hex');
   put(root, `.tiller/local/${id}/cleanup-marker.txt`, 'local only\n');
 
@@ -447,7 +451,7 @@ test('CASE-109 repository docs and suite include review release and pinned check
   assert.ok(suite.e2e.includes('review-release.test.mjs'));
   const library = await readCaseLibrary(repository);
   assert.deepEqual(library.issues, []);
-  assert.equal(library.cases.length, 307);
+  assert.equal(library.cases.length, 309);
   for (const id of ['CASE-104', 'CASE-105', 'CASE-106', 'CASE-107', 'CASE-108', 'CASE-109']) {
     assert.ok(library.cases.find(item => item.id === id)?.tests.length, id);
   }
