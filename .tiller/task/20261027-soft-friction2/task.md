@@ -88,11 +88,11 @@ post-#43 狗粮后仍有三项软摩擦：设计确认前误跑 `verify` 会写�
 
 | 部分 | 确认人 | 时间 | 短提交 | 原话 |
 | --- | --- | --- | --- | --- |
-| 设计 | boon yu | 2026-10-27T10:08:17.674Z | 7739eed68eb8 | 一起修改吧，是否还有别的问题 |
 | 需求 | boon yu | 2026-10-27T10:43:56.730Z | f46a1564da22 | 一起修改吧，是否还有别的问题 |
+| 设计 | boon yu | 2026-10-27T10:43:56.979Z | 06dfb75053a3 | 一起修改吧，是否还有别的问题 |
 
-<!-- tiller-confirm:v1 {"gate":"design","object":"设计正文","subject":"2f586f5ca5b1bb1b9c8ae3e9f8c1979eb2a49eb8ddba5a9b73a2c1e59bead4ed","commit":"7739eed68eb87baa093a39c388e1bf8b4f3ddeff","by":"boon yu","quote":"一起修改吧，是否还有别的问题","at":"2026-10-27T10:08:17.674Z"} -->
 <!-- tiller-confirm:v1 {"gate":"requirements","object":"需求正文（目标、范围与验收条件）","subject":"32de2c40162b300ae8b07368ec95f60bd830bee12827507a8e2f73c567c5f174","commit":"f46a1564da22d78ebbdc4a8893f7de85d294e7ad","by":"boon yu","quote":"一起修改吧，是否还有别的问题","at":"2026-10-27T10:43:56.730Z"} -->
+<!-- tiller-confirm:v1 {"gate":"design","object":"设计正文","subject":"dddf2b07aaa61a37c3aca1d708f191a3eee30d3161b6dc3689598be0b5eb4be1","commit":"06dfb75053a3ad6a23949090e60ad78475e022c4","by":"boon yu","quote":"一起修改吧，是否还有别的问题","at":"2026-10-27T10:43:56.979Z"} -->
 
 ## 验证
 
