@@ -96,64 +96,42 @@ post-#43 狗粮后仍有三项软摩擦：设计确认前误跑 `verify` 会写�
 
 ## 验证
 
-### run-1
-<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-175 CASE-307 standard verify before design is rejected; clear-premature restores hygiene$' \u002d\u002dtest-reporter=./.tiller/local/verify-heiswO/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-heiswO/report.jsonl test/flow-hardening.test.mjs","exitCode":0,"tree":"c6485df55876c5fb178e778a07fb9db259e03e5bab3fd9a5eab5f9d41dcecbeb","commit":"f46a1564da22d78ebbdc4a8893f7de85d294e7ad"} -->
+### run-4
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-175 CASE-307 standard verify before design is rejected; clear-premature restores hygiene$' \u002d\u002dtest-reporter=./.tiller/local/verify-rQTHp8/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-rQTHp8/report.jsonl test/flow-hardening.test.mjs","exitCode":0,"tree":"353bd24ecbf23d6b0c5ab2a5be65d2a6ab62425d364d92731471b1a0fe745f7e","commit":"b6d35980b6ff59acc1f0aa03abb563d50366c037"} -->
 - 条件：AC-1
 - 测试：test/flow-hardening.test.mjs::CASE-175 CASE-307 standard verify before design is rejected; clear-premature restores hygiene
 - 用例：CASE-307
 - 结果：passed
 - 来源：executed
 - 核实：已核实
-- 日志：.tiller/local/20261027-soft-friction2/logs/run-1.log
-- 提交：f46a1564da22
-- 时间：2026-10-27T10:43:29.975Z
+- 日志：.tiller/local/20261027-soft-friction2/logs/run-4.log
+- 提交：b6d35980b6ff
+- 时间：2026-10-27T10:44:00.247Z
 
-### run-2
-<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-289 CASE-305 init leaves no untracked managed residue$' \u002d\u002dtest-reporter=./.tiller/local/verify-Xktt7Z/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-Xktt7Z/report.jsonl test/init-baseline.test.mjs","exitCode":0,"tree":"c6485df55876c5fb178e778a07fb9db259e03e5bab3fd9a5eab5f9d41dcecbeb","commit":"f46a1564da22d78ebbdc4a8893f7de85d294e7ad"} -->
+### run-5
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-289 CASE-305 init leaves no untracked managed residue$' \u002d\u002dtest-reporter=./.tiller/local/verify-thrQi7/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-thrQi7/report.jsonl test/init-baseline.test.mjs","exitCode":0,"tree":"353bd24ecbf23d6b0c5ab2a5be65d2a6ab62425d364d92731471b1a0fe745f7e","commit":"b6d35980b6ff59acc1f0aa03abb563d50366c037"} -->
 - 条件：AC-2
 - 测试：test/init-baseline.test.mjs::CASE-289 CASE-305 init leaves no untracked managed residue
 - 用例：CASE-305
 - 结果：passed
 - 来源：executed
 - 核实：已核实
-- 日志：.tiller/local/20261027-soft-friction2/logs/run-2.log
-- 提交：f46a1564da22
-- 时间：2026-10-27T10:43:34.948Z
+- 日志：.tiller/local/20261027-soft-friction2/logs/run-5.log
+- 提交：b6d35980b6ff
+- 时间：2026-10-27T10:44:03.208Z
 
-### run-3
-<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-253 CASE-306 init baseline merged through the platform API unlocks start and records merged$' \u002d\u002dtest-reporter=./.tiller/local/verify-PCx1hq/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-PCx1hq/report.jsonl test/init-baseline.test.mjs","exitCode":0,"tree":"c6485df55876c5fb178e778a07fb9db259e03e5bab3fd9a5eab5f9d41dcecbeb","commit":"f46a1564da22d78ebbdc4a8893f7de85d294e7ad"} -->
+### run-6
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-253 CASE-306 init baseline merged through the platform API unlocks start and records merged$' \u002d\u002dtest-reporter=./.tiller/local/verify-0taefJ/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-0taefJ/report.jsonl test/init-baseline.test.mjs","exitCode":0,"tree":"353bd24ecbf23d6b0c5ab2a5be65d2a6ab62425d364d92731471b1a0fe745f7e","commit":"b6d35980b6ff59acc1f0aa03abb563d50366c037"} -->
 - 条件：AC-3
 - 测试：test/init-baseline.test.mjs::CASE-253 CASE-306 init baseline merged through the platform API unlocks start and records merged
 - 用例：CASE-306
 - 结果：passed
 - 来源：executed
 - 核实：已核实
-- 日志：.tiller/local/20261027-soft-friction2/logs/run-3.log
-- 提交：f46a1564da22
-- 时间：2026-10-27T10:43:36.346Z
+- 日志：.tiller/local/20261027-soft-friction2/logs/run-6.log
+- 提交：b6d35980b6ff
+- 时间：2026-10-27T10:44:04.743Z
 
 ## 自检
 
-- [x] 需求确认有效
-- [x] 设计确认有效
-- [x] 验收条件均有当前通过且绑定全局用例的测试引用
-- [x] 每条验收条件均映射到本次验证引用的全局用例
-- [x] 验收条件与用例通过 verify 的 AC→测试→CASE 记录关联
-- [x] 验证命令已执行且测试输出已核实
-- [x] 全局用例结构与引用有效
-- [ ] 改动未超出范围
-- [x] 未弱化仍存在的测试
-- [x] 评审无未清除阻塞项
-- [x] 记录不含密钥或本机绝对路径
-
-阻塞项：
-- 改动超出范围：scripts/package-smoke.mjs
-
-提示：
-- 172 条历史用例仍以 <任务>#AC-n 记录关联 AC；这是可迁移的历史债，不阻断当前覆盖。
-- 135 条用例的关联 AC 为无；覆盖以需求字段和 verify 的 AC→测试→CASE 记录为准。
-- 本次改动涉及模块 initialization：建议回归该模块 69 条用例及经过它的场景 CASE-055, CASE-001。
-- 本次改动涉及模块 standards：建议回归该模块 37 条用例及经过它的场景 CASE-055。
-- 本次改动涉及模块 verification：建议回归该模块 45 条用例及经过它的场景 CASE-055, CASE-001。
-- 本次改动涉及模块 workflow：建议回归该模块 154 条用例及经过它的场景 CASE-055, CASE-001。
-- 修改的测试文件移除了 3 个测试用例（请确认对应功能已删除；详情见 Git diff）。
+交付前运行 check；验收后运行 accept。
