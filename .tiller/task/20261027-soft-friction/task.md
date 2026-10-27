@@ -87,14 +87,69 @@ post-#42 狗粮后仍有三项软摩擦：primary 残留未跟踪 `.tiller/task/
 | --- | --- | --- | --- | --- |
 | 需求 | boon yu | 2026-10-27T08:20:12.619Z | 0215cd8b2349 | — |
 | 设计 | boon yu | 2026-10-27T08:20:15.235Z | b7db706dbdd9 | — |
+| 交付验收 | boon yu | 2026-10-27T08:20:35.454Z | 9d506993a73e | — |
 
 <!-- tiller-confirm:v1 {"gate":"requirements","object":"需求正文（目标、范围与验收条件）","subject":"a2c39faf52cb09f21590e37e750acff4592835c33ab676a506644e6a35ba4c8e","commit":"0215cd8b23492cb7932ec49f7c2e601091ac648c","by":"boon yu","quote":"","at":"2026-10-27T08:20:12.619Z"} -->
 <!-- tiller-confirm:v1 {"gate":"design","object":"设计正文","subject":"04bbc7d66d5249cd70c9fdba204387b5152fa86ad33ab401174fe44b0204a6cd","commit":"b7db706dbdd9cb1fd0b59e987380abae7e4f3319","by":"boon yu","quote":"","at":"2026-10-27T08:20:15.235Z"} -->
+<!-- tiller-confirm:v1 {"gate":"acceptance","object":"当前交付（需求、设计、验证与提交）","subject":"c14d4cde24b2ec1b87f5722a254ceafa94bcf792f4c7ec498f477b9235ebfb41","commit":"9d506993a73ebe6e666596cbb5e07a50e9632eca","by":"boon yu","quote":"","at":"2026-10-27T08:20:35.454Z"} -->
 
 ## 验证
 
-尚无验证。
+### run-1
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-302 CASE-293 CASE-295 start leaves no primary seed; worktree root commands stay local$' \u002d\u002dtest-reporter=./.tiller/local/verify-gc8lux/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-gc8lux/report.jsonl test/worktree-task-root.test.mjs","exitCode":0,"tree":"eb139ea00a6be98d78b263dfa2e57762bd18bda45ba2f2d05482cf32465412fe","commit":"9d506993a73ebe6e666596cbb5e07a50e9632eca"} -->
+- 条件：AC-1
+- 测试：test/worktree-task-root.test.mjs::CASE-302 CASE-293 CASE-295 start leaves no primary seed; worktree root commands stay local
+- 用例：CASE-302
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/20261027-soft-friction/logs/run-1.log
+- 提交：9d506993a73e
+- 时间：2026-10-27T08:20:17.446Z
+
+### run-2
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-303 confirm and accept auto-commit task records$' \u002d\u002dtest-reporter=./.tiller/local/verify-PKBurA/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-PKBurA/report.jsonl test/worktree-task-root.test.mjs","exitCode":0,"tree":"eb139ea00a6be98d78b263dfa2e57762bd18bda45ba2f2d05482cf32465412fe","commit":"9d506993a73ebe6e666596cbb5e07a50e9632eca"} -->
+- 条件：AC-2
+- 测试：test/worktree-task-root.test.mjs::CASE-303 confirm and accept auto-commit task records
+- 用例：CASE-303
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/20261027-soft-friction/logs/run-2.log
+- 提交：9d506993a73e
+- 时间：2026-10-27T08:20:23.244Z
+
+### run-3
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-301 CASE-304 multiline requirement stays short-goal only and points to requirement-file$' \u002d\u002dtest-reporter=./.tiller/local/verify-mH49Ss/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-mH49Ss/report.jsonl test/pr.test.mjs","exitCode":0,"tree":"eb139ea00a6be98d78b263dfa2e57762bd18bda45ba2f2d05482cf32465412fe","commit":"9d506993a73ebe6e666596cbb5e07a50e9632eca"} -->
+- 条件：AC-3
+- 测试：test/pr.test.mjs::CASE-301 CASE-304 multiline requirement stays short-goal only and points to requirement-file
+- 用例：CASE-304
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/20261027-soft-friction/logs/run-3.log
+- 提交：9d506993a73e
+- 时间：2026-10-27T08:20:26.833Z
 
 ## 自检
 
-交付前运行 check；验收后运行 accept。
+- [x] 需求确认有效
+- [x] 设计确认有效
+- [x] 验收条件均有当前通过且绑定全局用例的测试引用
+- [x] 每条验收条件均映射到本次验证引用的全局用例
+- [x] 验收条件与用例通过 verify 的 AC→测试→CASE 记录关联
+- [x] 验证命令已执行且测试输出已核实
+- [x] 全局用例结构与引用有效
+- [x] 改动未超出范围
+- [x] 未弱化仍存在的测试
+- [x] 评审无未清除阻塞项
+- [x] 记录不含密钥或本机绝对路径
+
+提示：
+- 172 条历史用例仍以 <任务>#AC-n 记录关联 AC；这是可迁移的历史债，不阻断当前覆盖。
+- 132 条用例的关联 AC 为无；覆盖以需求字段和 verify 的 AC→测试→CASE 记录为准。
+- 本次改动涉及模块 initialization：建议回归该模块 67 条用例及经过它的场景 CASE-055, CASE-001。
+- 本次改动涉及模块 standards：建议回归该模块 37 条用例及经过它的场景 CASE-055。
+- 本次改动涉及模块 verification：建议回归该模块 45 条用例及经过它的场景 CASE-055, CASE-001。
+- 本次改动涉及模块 workflow：建议回归该模块 153 条用例及经过它的场景 CASE-055, CASE-001。
+- 修改的测试文件移除了 2 个测试用例（请确认对应功能已删除；详情见 Git diff）。
