@@ -738,3 +738,29 @@ start 放行，project.json 基线状态更新为 merged。
 ### 预期结果
 
 初始化本机目录与 chore/tiller-init 本地、远端分支均被删除。
+
+## CASE-305 init 受管产物只落 init worktree
+
+- 类型：behavior
+- 优先级：high
+- 模块：initialization
+- 关联 AC：无
+- 需求：`.tiller/specs/modules/workflow/soft-friction2-init-verify.md`
+
+### 前置条件
+
+- 空仓库有可提交 HEAD；可创建 worktree。
+
+### 步骤
+
+1. 运行 `tiller init --platform github`（带 token/mock）。
+2. 检查 primary 工作区与 init worktree。
+
+### 输入
+
+- 合法远端与 token。
+
+### 预期结果
+
+primary 对受管文件（含 `.tiller/project.json`、AGENTS.md、usage 等）无未跟踪残留；全部 init 产物仅在 `.tiller/local/<YYYYMMDD-tiller-init>/worktrees` 的提交中；local `baseline.json` 记录 pending 基线。
+

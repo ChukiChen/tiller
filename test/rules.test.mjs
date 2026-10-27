@@ -263,15 +263,15 @@ test('CASE-048 global cases use module kinds and scenarios with resolvable named
   const kinds = ['behavior', 'interface', 'performance', 'security'];
   const library = await readCaseLibrary(repository);
   assert.deepEqual(library.issues, []);
-  assert.equal(library.cases.length, 304);
+  assert.equal(library.cases.length, 307);
   assert.deepEqual(library.cases.map(item => item.id).sort(),
-    Array.from({ length: 304 }, (_, index) => `CASE-${String(index + 1).padStart(3, '0')}`));
+    Array.from({ length: 307 }, (_, index) => `CASE-${String(index + 1).padStart(3, '0')}`));
   assert.deepEqual(library.modules.map(item => ({ module: item.module, behavior: item.behavior, interface: item.interface,
     performance: item.performance, security: item.security })), [
-    { module: 'initialization', behavior: 30, interface: 9, performance: 11, security: 17 },
+    { module: 'initialization', behavior: 31, interface: 10, performance: 11, security: 17 },
     { module: 'standards', behavior: 22, interface: 15, performance: 0, security: 0 },
     { module: 'verification', behavior: 13, interface: 13, performance: 15, security: 4 },
-    { module: 'workflow', behavior: 92, interface: 54, performance: 0, security: 7 },
+    { module: 'workflow', behavior: 93, interface: 54, performance: 0, security: 7 },
   ]);
   assert.equal(library.scenarios.length, 2);
   for (const item of library.scenarios) assert.ok(item.modules.length > 0 && item.modules.every(module => specs.includes(module)));
@@ -311,7 +311,7 @@ test('CASE-048 global cases use module kinds and scenarios with resolvable named
 test('CASE-245 全局用例库同步文档 CLI 名称与版本', async () => {
   const library = await readCaseLibrary(repository);
   assert.deepEqual(library.issues, []);
-  assert.equal(library.cases.length, 304);
+  assert.equal(library.cases.length, 307);
   const added = library.cases.filter(item => Number(item.id.slice(5)) >= 242 && Number(item.id.slice(5)) <= 245);
   assert.deepEqual(added.map(item => item.id), ['CASE-242', 'CASE-243', 'CASE-244', 'CASE-245']);
   const standards = library.modules.find(item => item.module === 'standards');
@@ -602,7 +602,7 @@ test('CASE-164 historical empty AC cases stay warned without fabricated backfill
   assert.match(decisions, /不批量回填/u);
   assert.match(decisions, /不.*冒充历史来源/u);
   const library = await readCaseLibrary(repository);
-  assert.equal(library.cases.filter(item => item.criteria.length === 0).length, 132);
+  assert.equal(library.cases.filter(item => item.criteria.length === 0).length, 135);
 });
 
 test('CASE-165 project rules and context match 0.5.0 without stale workflow guidance', () => {

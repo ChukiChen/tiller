@@ -41,6 +41,7 @@ const HELP = `tiller ${CLI_VERSION} — 默认工作流
   tiller verify <YYYYMMDD-task-id> --criterion AC-1 [--criterion ...] --test "<文件::测试名>" [--expect-fail] [--verbose] [--path <root>]
   tiller verify <YYYYMMDD-task-id> --criterion AC-1 [--criterion ...] --case CASE-NNN [--verbose] [--path <root>]
   tiller verify <YYYYMMDD-task-id> --criterion AC-1 --test "<文件::测试名>" --reported --command "<外部命令>" --result passed|failed|skipped --reason "<理由>" [--path <root>]
+  tiller verify <YYYYMMDD-task-id> --clear-premature [--path <root>]
   tiller check <YYYYMMDD-task-id> [--allow-reported] [--path <root>]
   tiller review <YYYYMMDD-task-id> [--by <评审人>] [--finding <发现> ...] [--blocking <阻塞发现> ...] [--resolve REV-NNN ...] [--path <root>]
   tiller release <YYYYMMDD-task-id> [--path <root>]
@@ -63,7 +64,8 @@ const HELP = `tiller ${CLI_VERSION} — 默认工作流
 - review 记录独立评审发现；未解决阻塞项会阻断 check/accept。release 只做发布门禁，不发布包。check 汇总发布清单；已验收任务按验收提交读取代码树与测试，之后代码漂移不误报过期。
 - start 只把任务记录写入任务 worktree，不在 primary 留种子；confirm/accept 写确认后自动提交本任务 .tiller/task/<id>/。
 - 阶段由 task.md 事实推导；accept 须在 pr 前；pr 默认用 tokenized HTTPS git push 推送任务分支并经平台 API 创建真实 PR/MR，GitHub Git Data API 只在 git 推送失败时可选回退；返回 URL 与编号；--draft-only 仅输出五段草稿。重复 accept 按当前工作区重新核实，改代码后先重新 verify。审阅后用 merge 经 REST API squash 合入并自动 close；merge/close 默认删除本地与远端任务分支，close init-id 同样清理 chore/tiller-init；--keep-branch 保留，分支已不存在或 422 视为已清理，其它删除失败只记 warning。token 从 GITHUB_TOKEN/GH_TOKEN 或 GITLAB_TOKEN/GL_TOKEN 读取，不依赖平台 CLI；网页合入后仍需手动 close；未验收终止用 --abandon，必要时 reopen。
-- start 对 pending 初始化基线先判祖先，再通过平台 API 查同分支已合入 PR/MR；确认后写回 merged 并放行，无 token、API 失败或无记录仍阻断，--skip-init-gate 例外。
+- start 对 pending 初始化基线先判祖先，再通过平台 API 查同分支已合入 PR/MR；确认后写入 .tiller/local/ merged 标记并放行（不改跟踪的 project.json），无 token、API 失败或无记录仍阻断，--skip-init-gate 例外。
+- standard 须先设计确认再 verify；过早 verify 以 VERIFY_BEFORE_DESIGN 拒绝。历史错序段可用 verify --clear-premature 清除。
 - specs 变更只走 start → 任务 worktree 修改 → 随任务 PR/MR 合入；禁止在 main/master 默认分支直改或直推。默认分支上相对任务基线触及 .tiller/specs/ 时，check 按过程卫生阻断；任务分支与已验收历史快照不触发。
 - doctor [path] 扫描初始化基线、默认分支 specs 变更、残留任务分支与进行中任务 AC 缺口；严重项非零退出，warning 不阻断。
 - check 对过薄文档给出可定位提示：空白或占位的 standard 设计、无有效条目的 .tiller/specs/decisions.md、空壳模块设计 design.md；需求“业务范围·做”中的交付路径给 warning；规格/背景未回写时列出路径与提纲。默认不单独阻断。verify 日志含显示命令、起止时间与退出码。当前分支未包含任务编号时 check 提示，分支名用“类型/任务编号[-描述]”。
@@ -121,6 +123,7 @@ export async function runCli(rawArgs = process.argv.slice(2)): Promise<void> {
         finding: { type: 'string', multiple: true }, blocking: { type: 'string', multiple: true },
         resolve: { type: 'string', multiple: true }, apply: { type: 'string' }, abandon: { type: 'boolean' },
         'skip-init-gate': { type: 'boolean' }, 'keep-branch': { type: 'boolean' }, 'draft-only': { type: 'boolean' },
+        'clear-premature': { type: 'boolean' },
       },
     });
     const seenOptions = new Set<string>();
@@ -144,7 +147,7 @@ export async function runCli(rawArgs = process.argv.slice(2)): Promise<void> {
         ? command === 'start' ? ['path', 'title', 'requirement', 'requirement-file', 'type', 'size', 'target', 'criterion', 'plan', 'item', 'slug', 'summary', 'skip-init-gate']
           : command === 'resume' ? ['path']
             : command === 'confirm' ? ['path', 'quote', 'by', 'commit', 'allow-reported']
-              : command === 'verify' ? ['path', 'criterion', 'test', 'case', 'command', 'run', 'result', 'reported', 'reason', 'expect-fail', 'verbose']
+              : command === 'verify' ? ['path', 'criterion', 'test', 'case', 'command', 'run', 'result', 'reported', 'reason', 'expect-fail', 'verbose', 'clear-premature']
                 : command === 'accept' ? ['path', 'quote', 'by', 'commit', 'allow-reported']
                   : command === 'review' ? ['path', 'by', 'finding', 'blocking', 'resolve']
                     : command === 'release' ? ['path']
@@ -202,26 +205,34 @@ export async function runCli(rawArgs = process.argv.slice(2)): Promise<void> {
           });
         } else if (command === 'verify') {
           if (positionals.length !== 2) usage('verify 需要一个任务标识。');
-          if (!values.test && !values.case) usage('verify 需要 --test "文件::测试名" 或 --case CASE-xxx。');
-          if (!values.criterion?.length && !values.case) usage('verify 未指定 --case 时至少需要一个 --criterion。');
-          if (values.test && values.case) usage('--test 与 --case 只能选一个。');
-          if (values.run !== undefined) usage('verify 不再接受 --run；使用 --test "文件::测试名" 或 --case CASE-xxx，由 tiller 自主执行测试。');
-          if (values.reported) {
-            if (!values.test) usage('--reported 需要 --test；--case 必须由 tiller 执行。');
-            if (!values.command || !values.result || !values.reason) usage('--reported 需要 --command、--result 和 --reason。');
-          } else if (values.command !== undefined || values.result !== undefined || values.reason !== undefined) {
-            usage('外部报告需要 --reported；普通验证只需 --test 或 --case。');
+          if (values['clear-premature']) {
+            if (values.test || values.case || values.criterion?.length || values.reported || values['expect-fail']
+              || values.command !== undefined || values.result !== undefined || values.reason !== undefined) {
+              usage('--clear-premature 不能与其它 verify 执行选项同用。');
+            }
+            result = await verifyFlow(root, second!, { clearPremature: true });
+          } else {
+            if (!values.test && !values.case) usage('verify 需要 --test "文件::测试名" 或 --case CASE-xxx；清除错序段用 --clear-premature。');
+            if (!values.criterion?.length && !values.case) usage('verify 未指定 --case 时至少需要一个 --criterion。');
+            if (values.test && values.case) usage('--test 与 --case 只能选一个。');
+            if (values.run !== undefined) usage('verify 不再接受 --run；使用 --test "文件::测试名" 或 --case CASE-xxx，由 tiller 自主执行测试。');
+            if (values.reported) {
+              if (!values.test) usage('--reported 需要 --test；--case 必须由 tiller 执行。');
+              if (!values.command || !values.result || !values.reason) usage('--reported 需要 --command、--result 和 --reason。');
+            } else if (values.command !== undefined || values.result !== undefined || values.reason !== undefined) {
+              usage('外部报告需要 --reported；普通验证只需 --test 或 --case。');
+            }
+            result = await verifyFlow(root, second!, { criteria: values.criterion ?? [],
+              ...(values.test === undefined ? {} : { test: values.test }),
+              ...(values.case === undefined ? {} : { case: values.case }),
+              ...(values.command === undefined ? {} : { command: values.command }),
+              ...(values.result === undefined ? {} : { result: values.result }),
+              ...(values.reported === undefined ? {} : { reported: values.reported }),
+              ...(values.reason === undefined ? {} : { reason: values.reason }),
+              ...(values['expect-fail'] === undefined ? {} : { expectFail: values['expect-fail'] }),
+              ...(values.verbose === undefined ? {} : { verbose: values.verbose }) });
+            ready = (result as { ready?: boolean }).ready !== false;
           }
-          result = await verifyFlow(root, second!, { criteria: values.criterion ?? [],
-            ...(values.test === undefined ? {} : { test: values.test }),
-            ...(values.case === undefined ? {} : { case: values.case }),
-            ...(values.command === undefined ? {} : { command: values.command }),
-            ...(values.result === undefined ? {} : { result: values.result }),
-            ...(values.reported === undefined ? {} : { reported: values.reported }),
-            ...(values.reason === undefined ? {} : { reason: values.reason }),
-            ...(values['expect-fail'] === undefined ? {} : { expectFail: values['expect-fail'] }),
-            ...(values.verbose === undefined ? {} : { verbose: values.verbose }) });
-          ready = (result as { ready?: boolean }).ready !== false;
         } else if (command === 'check') {
           if (positionals.length !== 2) usage('check 需要一个任务标识。');
           const checked = await checkFlow(root, second!, { allowReported: values['allow-reported'] === true }); result = checked; ready = checked.ready;
@@ -326,8 +337,27 @@ export async function runCli(rawArgs = process.argv.slice(2)): Promise<void> {
           const initialized = await initialize({ root, mode, ...(values.repo ? { repositories: values.repo } : {}),
             ...(values.platform === undefined ? {} : { platform: values.platform as 'github' | 'gitlab' | 'both' }) });
           const runtime = await bindAfterSetup(root);
-          ready = initialized.ready && runtime.ready;
-          result = { ...initialized, runtime, entry: runtime.ready ? 'node .tiller/run.cjs' : null, entryRoot: resolve(root) };
+          // Worktree-only init leaves primary without META until the init PR merges; do not fail the command.
+          if (initialized.initBaseline && !runtime.ready) {
+            ready = initialized.ready;
+            result = {
+              ...initialized,
+              runtime: {
+                ...runtime,
+                ready: true,
+                deferred: true,
+                issues: [
+                  ...runtime.issues,
+                  '初始化基线已写入 init worktree；合入并拉取主干后再执行 runtime bind。',
+                ],
+              },
+              entry: null,
+              entryRoot: resolve(root),
+            };
+          } else {
+            ready = initialized.ready && runtime.ready;
+            result = { ...initialized, runtime, entry: runtime.ready ? 'node .tiller/run.cjs' : null, entryRoot: resolve(root) };
+          }
         } else if (command === 'status') {
           const status = await inspectProject(root);
           result = status; ready = status.ready;

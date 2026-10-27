@@ -219,3 +219,29 @@
 ### 预期结果
 
 文档写明初始化 PR、人工合入、start 门禁、close init-id 清理，以及 specs 仅在任务 worktree 修改并随任务分支合入
+
+## CASE-306 initBaseline merged 只写 local 不脏 project.json
+
+- 类型：interface
+- 优先级：high
+- 模块：initialization
+- 关联 AC：无
+- 需求：`.tiller/specs/modules/workflow/soft-friction2-init-verify.md`
+
+### 前置条件
+
+- 存在 pending initBaseline；平台可证明分支已合入，或提交已是 HEAD 祖先。
+
+### 步骤
+
+1. 运行 `doctor` / `start` / `close <init-id>` 触发合入证明。
+2. 检查 `.tiller/project.json` 与 `.tiller/local/init-baseline-merged.json`。
+
+### 输入
+
+- 平台已合入证据或祖先证明。
+
+### 预期结果
+
+跟踪的 `project.json` 中 `initBaseline.status` 保持 pending 快照（若文件已在主干）；merged 记在 `.tiller/local/init-baseline-merged.json`；工作区不因仅 status 字段出现脏跟踪改动。
+

@@ -3,7 +3,7 @@ import { createHash } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
 import { existsSync, mkdtempSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join, resolve } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 
 const npm = process.env.npm_execpath;
 assert.ok(npm, 'Run through npm run test:package');
@@ -30,7 +30,14 @@ function git(cwd, ...args) {
     cwd, encoding: 'utf8', timeout: 20_000, windowsHide: true,
   });
   assert.ifError(result.error && result.error.code !== 'EPERM' ? result.error : null);
-  assert.equal(result.status, 0, result.stderr);
+  assert.equal(result.status, 0, result.stderr || result.stdout);
+}
+function gitCommitIfDirty(cwd, message) {
+  const status = spawnSync('git', ['status', '--porcelain'], { cwd, encoding: 'utf8', timeout: 20_000, windowsHide: true });
+  assert.equal(status.status, 0, status.stderr);
+  if (!status.stdout.trim()) return;
+  git(cwd, 'add', '-A');
+  git(cwd, 'commit', '--quiet', '-m', message);
 }
 function manifest(root) {
   const entries = [];
@@ -128,12 +135,16 @@ const started = invoke(['start', taskId, '--title', 'Package smoke', '--requirem
 assert.equal(started.id, taskId);
 assert.equal(started.size, 'small');
 assert.ok(!started.next.includes('advanced'));
-const taskRecord = join(target, '.tiller/task', taskId, 'task.md');
+// start 只写任务 worktree；包冒烟按 worktree 读任务记录与提交夹具
+const taskCheckout = join(target, '.tiller/local', taskId, 'worktrees');
+assert.ok(existsSync(join(taskCheckout, '.tiller/task', taskId, 'task.md')), 'task record lives in worktree');
+assert.ok(!existsSync(join(target, '.tiller/task', taskId, 'task.md')), 'primary is not seeded with task tree');
+const taskRecord = join(taskCheckout, '.tiller/task', taskId, 'task.md');
 assert.ok(!readFileSync(taskRecord, 'utf8').includes('"preExisting"'), 'new task marker omits preExisting');
 assert.match(readFileSync(taskRecord, 'utf8'), /^### 使用场景$/mu);
 const resumed = invoke(['resume', taskId]);
 assert.equal(resumed.criteria[0].text, 'package starts a task');
-assert.deepEqual(readdirSync(join(target, '.tiller/task', taskId)), ['task.md']);
+assert.deepEqual(readdirSync(join(taskCheckout, '.tiller/task', taskId)), ['task.md']);
 for (const args of [['advanced'], ['work', 'create'], ['workflow', 'list'], ['planning'], ['task'], ['delivery-check']]) {
   assert.equal(invoke(args, 2).error.code, 'INVALID_ARGUMENT', args.join(' '));
 }
@@ -148,26 +159,30 @@ const added = invoke(['case', 'add', taskId, '--module', 'package-smoke', '--kin
   '--expected', 'the packaged test passes its named case',
   '--spec', '.tiller/specs/modules/package-smoke/requirements.md']);
 assert.equal(added.id, 'CASE-001');
-mkdirSync(join(target, 'test'), { recursive: true });
-writeFileSync(join(target, 'test/package-smoke.test.mjs'), "import assert from 'node:assert/strict';\nimport test from 'node:test';\n\ntest('CASE-001 package flow works', () => { assert.equal(1, 1); });\n");
-git(target, 'add', '-A');
-git(target, 'commit', '--quiet', '-m', 'test: package smoke fixture');
+mkdirSync(join(taskCheckout, 'test'), { recursive: true });
+writeFileSync(join(taskCheckout, 'test/package-smoke.test.mjs'), "import assert from 'node:assert/strict';\nimport test from 'node:test';\n\ntest('CASE-001 package flow works', () => { assert.equal(1, 1); });\n");
+gitCommitIfDirty(taskCheckout, 'test: package smoke fixture');
 const verified = invoke(['verify', taskId, '--criterion', 'AC-1', '--case', added.id]);
 assert.deepEqual(verified.cases, ['CASE-001']);
 const checked = invoke(['check', taskId]);
 assert.equal(checked.ready, true, checked.issues.join('\n'));
-git(target, 'add', '-A');
-git(target, 'commit', '--quiet', '-m', 'chore(workflow): 同步验证记录');
-invoke(['accept', taskId, '--quote', 'Package smoke accepted']);
-git(target, 'add', '-A');
-git(target, 'commit', '--quiet', '-m', 'chore(workflow): 记录交付验收');
+gitCommitIfDirty(taskCheckout, 'chore(workflow): 同步验证记录');
+const accepted = invoke(['accept', taskId, '--quote', 'Package smoke accepted']);
+assert.equal(accepted.ok, true);
+gitCommitIfDirty(taskCheckout, 'chore(workflow): 记录交付验收');
 const draft = invoke(['pr', taskId, '--draft-only']);
 assert.equal(draft.branch, `feat/${taskId}`);
 assert.ok(draft.title.endsWith(`[${taskId}]`));
 assert.match(draft.body, /^## 关联任务$/mu);
-const beforeClose = readFileSync(taskRecord, 'utf8');
-assert.equal(invoke(['close', taskId, '--reason', 'Package smoke delivered']).stage, '已验收');
-assert.equal(readFileSync(taskRecord, 'utf8'), beforeClose);
+// close 前把 feat 快进到 primary，否则共享记录在主分支上会因缺测试而阶段回落
+git(target, 'merge', '--ff-only', `feat/${taskId}`);
+const sharedTaskRecord = join(target, '.tiller/task', taskId, 'task.md');
+const resolveTaskMd = () => existsSync(taskRecord) ? taskRecord : sharedTaskRecord;
+const beforeClose = readFileSync(resolveTaskMd(), 'utf8');
+const closed = invoke(['close', taskId, '--reason', 'Package smoke delivered']);
+assert.equal(closed.stage, '已验收');
+assert.ok(existsSync(sharedTaskRecord), 'close materializes task onto primary');
+assert.equal(readFileSync(sharedTaskRecord, 'utf8'), beforeClose);
 assert.equal(invoke(['resume', taskId]).stage, '已验收');
 assert.equal(invoke(['reopen', taskId, '--reason', 'Package smoke reopened']).stage, '已验证');
 invoke(['accept', taskId, '--quote', 'Package smoke accepted again']);
@@ -175,6 +190,6 @@ assert.equal(invoke(['plan', 'status', 'package-plan']).items[0].status, '已验
 const upgrade = invoke(['upgrade', '--plan']);
 assert.equal(upgrade.ready, true);
 assert.deepEqual(upgrade.changes, []);
-assert.equal(manifest(join(target, '.tiller/task', taskId)).length, 1);
+assert.equal(manifest(dirname(sharedTaskRecord)).length, 1);
 writeFileSync(join(output, 'manifest.json'), JSON.stringify({ version, files: packed.files.length }));
 process.stdout.write(`Package smoke passed: ${version}, ${packed.files.length} packaged files.\n`);

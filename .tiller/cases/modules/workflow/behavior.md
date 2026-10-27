@@ -2263,3 +2263,29 @@ start 后 primary 无 .tiller/task/<id>/，worktree 内可读 task.md 并可继�
 ### 预期结果
 
 confirm/accept 后本任务 .tiller/task/<id>/ 已提交，无需手搓即可通过 pr 记录干净门禁
+
+## CASE-307 standard 设计前 verify 拒绝且可 clear-premature
+
+- 类型：behavior
+- 优先级：high
+- 模块：workflow
+- 关联 AC：无
+- 需求：`.tiller/specs/modules/workflow/soft-friction2-init-verify.md`
+
+### 前置条件
+
+- standard 任务已确认需求、尚未确认设计。
+
+### 步骤
+
+1. 运行 `tiller verify <id> --criterion AC-1 --test ...`。
+2. 若历史已有过早 verify 段，运行 `tiller verify <id> --clear-premature` 后再确认设计。
+
+### 输入
+
+- 有效测试引用。
+
+### 预期结果
+
+步骤 1 以 `VERIFY_BEFORE_DESIGN` 失败且不写入验证段。clear-premature 清除设计确认前的 verify 段后，过程卫生不再因错序 verify 阻断设计确认后的 check。
+

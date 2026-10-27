@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { spawn, spawnSync } from 'node:child_process';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
-import { cli, cliPath, commitFixtures, confirmTask, failure, fixture, put, success, read } from './helpers.mjs';
+import { cli, cliPath, commitFixtures, confirmTask, failure, fixture, put, settleInitBaseline, success, read } from './helpers.mjs';
 import { startPlatformMock } from './platform-api-mock.mjs';
 
 const repository = fileURLToPath(new URL('../', import.meta.url));
@@ -62,6 +62,7 @@ async function initialize(t, platform = 'github') {
     ? { GITHUB_TOKEN: 'mock-token', GH_TOKEN: '', GITLAB_TOKEN: '', GL_TOKEN: '' }
     : { GITHUB_TOKEN: '', GH_TOKEN: '', GITLAB_TOKEN: 'mock-token', GL_TOKEN: '' };
   const initialized = success(await cliAt(root, environment, 'init', '--platform', platform));
+  settleInitBaseline(root, initialized);
   return { root, environment, mock, baseline: initialized.initBaseline };
 }
 
@@ -210,7 +211,8 @@ test('CASE-239 init-id merge 通过 REST API 合入初始化分支并清理 loca
   assert.equal(merged.branch, 'chore/tiller-init');
   assert.equal(merged.close.stage, '已关闭');
   assert.equal(existsSync(join(root, '.tiller/local', baseline.id)), false);
-  assert.equal(JSON.parse(read(root, '.tiller/project.json')).initBaseline.status, 'merged');
+  assert.equal(JSON.parse(read(root, '.tiller/local/init-baseline-merged.json')).status, 'merged');
+  assert.equal(JSON.parse(read(root, '.tiller/project.json')).initBaseline.status, 'pending');
   assert.match(merged.command, /pulls\/1\/merge \(squash\)/u);
   assert.ok(mock.state.requests.every(item => item.hasAuthorization));
 

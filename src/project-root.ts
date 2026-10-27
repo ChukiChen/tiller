@@ -106,7 +106,13 @@ export async function resolveProjectRoot(input: string): Promise<string> {
   for (const root of roots) {
     if (await exists(path.join(root, '.tiller/project.json'))) verified.push(root);
   }
-  const main = verified.find(root => !root.split(path.sep).join('/').includes('/.tiller/local/')) ?? verified[0] ?? candidate;
+  const outsideLocal = (target: string): boolean => !target.split(path.sep).join('/').includes('/.tiller/local/');
+  // After worktree-only init, primary has no META; prefer the git toplevel over an init worktree.
+  const main = verified.find(outsideLocal)
+    ?? (outsideLocal(top) ? top : null)
+    ?? (outsideLocal(path.resolve(candidate)) ? path.resolve(candidate) : null)
+    ?? verified[0]
+    ?? candidate;
   return resolvedPath(main);
 }
 

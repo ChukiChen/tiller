@@ -25,6 +25,9 @@ function project(t) {
     delete metadata.initBaseline;
     put(root, relative, `${JSON.stringify(metadata, null, 2)}\n`);
   }
+  // Worktree-only init keeps pending baseline under .tiller/local/; clear it when the
+  // fixture wants a stock project without an init gate.
+  rmSync(join(root, '.tiller/local'), { recursive: true, force: true });
   return root;
 }
 
