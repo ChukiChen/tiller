@@ -61,8 +61,10 @@ src/doctor.ts、src/flow.ts close/abandon、相关 test/CASE、usage/decisions�
 | 部分 | 确认人 | 时间 | 短提交 | 原话 |
 | --- | --- | --- | --- | --- |
 | 需求 | boon yu | 2026-10-27T14:20:24.304Z | e32d0099f79d | — |
+| 设计 | boon yu | 2026-10-27T14:20:24.434Z | 125be60ded33 | — |
 
 <!-- tiller-confirm:v1 {"gate":"requirements","object":"需求正文（目标、范围与验收条件）","subject":"88c742075c78fafd3f7dc41502cb212a374fbef8e9dcb41e2c862583c08f4ffa","commit":"e32d0099f79df0ed92af835989ded84bd2367b11","by":"boon yu","quote":"","at":"2026-10-27T14:20:24.304Z"} -->
+<!-- tiller-confirm:v1 {"gate":"design","object":"设计正文","subject":"7bb4ac4a3f9a0e5af76e9632ce4179a8c353445ad96ff49851179187e4e52de2","commit":"125be60ded33cf39fbf4b441403d188527d9a8eb","by":"boon yu","quote":"","at":"2026-10-27T14:20:24.434Z"} -->
 
 ## 验证
 
