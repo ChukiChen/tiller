@@ -101,14 +101,6 @@ export interface FlowTask {
 }
 export interface TaskStage { stage: FlowStage; reason: string }
 
-interface FlowCleanupMarker {
-  schemaVersion: 1;
-  id: string;
-  stage: FlowStage;
-  at: string;
-  reason: string;
-}
-
 export interface FlowStartInput {
   title: string; requirement?: string; requirementFile?: string; type?: string; size?: string; targets?: string[];
   criteria: string[]; plan?: string; item?: string; slug?: string; summary?: string; skipInitGate?: boolean;
@@ -139,7 +131,6 @@ function safeInput(value: string, label: string): string {
   return value;
 }
 function taskPath(id: string): string { return `${TASK_DIRECTORY}/${id}/${TASK_FILE}`; }
-function cleanupMarkerPath(id: string): string { return `.tiller/local/closed/${id}.json`; }
 function scopeValues(values: string[] | undefined, size?: FlowSize): string[] {
   if (size === 'standard' && !values?.length) {
     fail('MISSING_FLOW_SCOPE', 'standard 任务必须用至少一个 --target 声明交付范围；small 任务可省略并默认整个仓库。');
@@ -651,6 +642,8 @@ async function writeTask(root: string, id: string, before: string, after: string
   const targets = new Set(await taskWorktreePaths(primary, id));
   // Do not recreate a primary task seed when the active checkout is a worktree.
   if (path.resolve(root) === path.resolve(primary)) targets.add(primary);
+  // Refresh an existing primary copy (e.g. after merge); never create a new untracked seed.
+  else if (await readTextIfExists(primary, relative) !== null) targets.add(primary);
   for (const target of targets) {
     if (path.resolve(target) === path.resolve(root)) continue;
     let stat: Awaited<ReturnType<typeof lstat>>;
@@ -1729,32 +1722,6 @@ export async function taskStage(rootInput: string, id: string): Promise<TaskStag
   return taskStageForTask(root, id, task);
 }
 
-async function readCleanupMarker(root: string, id: string): Promise<FlowCleanupMarker | null> {
-  const text = await readTextIfExists(root, cleanupMarkerPath(id));
-  if (text === null) return null;
-  try {
-    const value = JSON.parse(text) as Partial<FlowCleanupMarker>;
-    if (value.schemaVersion === 1 && value.id === id && typeof value.stage === 'string' &&
-        FLOW_STAGES.includes(value.stage as FlowStage) && Number.isFinite(Date.parse(value.at ?? '')) && typeof value.reason === 'string') {
-      return value as FlowCleanupMarker;
-    }
-  } catch { /* Invalid local markers are ignored; the task record remains authoritative. */ }
-  return null;
-}
-
-async function writeCleanupMarker(root: string, id: string, stage: FlowStage, reason: string): Promise<void> {
-  const relative = cleanupMarkerPath(id);
-  const target = await assertSafePath(root, relative);
-  await mkdir(path.dirname(target), { recursive: true });
-  const marker: FlowCleanupMarker = { schemaVersion: 1, id, stage, at: new Date().toISOString(), reason };
-  await writeFile(target, `${JSON.stringify(marker, null, 2)}\n`, 'utf8');
-}
-
-async function clearCleanupMarker(root: string, id: string): Promise<void> {
-  try { await rm(await assertSafePath(root, cleanupMarkerPath(id)), { force: true }); }
-  catch { /* A missing or invalid local marker must not block reopen. */ }
-}
-
 export interface FlowCheck {
   id: string; ready: boolean; issues: string[]; warnings: string[]; criteria: { id: string; covered: boolean; test?: string; cases?: string[]; result?: string; commit?: string }[];
   confirmations: { gate: FlowGate; confirmed: boolean; quote?: string; by?: string; commit: string; issue?: string }[];
@@ -2302,18 +2269,6 @@ export async function releaseFlow(rootInput: string, id: string) {
 }
 
 
-/** After delivery, keep the shared task record on primary so close can remove the worktree. */
-async function materializeSharedTaskRecord(primary: string, taskRoot: string, id: string): Promise<void> {
-  if (path.resolve(primary) === path.resolve(taskRoot)) return;
-  const relative = taskPath(id);
-  const content = await readTextIfExists(taskRoot, relative);
-  if (content === null) return;
-  const existing = await readTextIfExists(primary, relative);
-  if (existing === content) return;
-  await mkdir(path.dirname(path.join(primary, relative)), { recursive: true });
-  await applyChanges(primary, [{ path: relative, before: existing, after: content }]);
-}
-
 export async function closeFlow(rootInput: string, id: string, reasonInput: string, abandon = false,
   options: { keepBranch?: boolean } = {}) {
   const { primary: root, taskRoot } = await resolveTaskCheckout(rootInput, id);
@@ -2336,12 +2291,6 @@ export async function closeFlow(rootInput: string, id: string, reasonInput: stri
         ...(warnings.length ? { warnings } : {}),
         next: '初始化基线本机目录已清理；共享 task 记录不受影响。' };
     }
-    const completed = await readCleanupMarker(root, id);
-    if (completed) {
-      return { id, stage: completed.stage, stageReason: '任务本机已清理；重复 close 安全。', reason,
-        at: new Date().toISOString(), worktrees: [], missingWorktrees: [], logsRemoved: false,
-        next: `任务已清理；如需继续修改，执行 tiller reopen ${id} --reason "<原因>".` };
-    }
     const task = await readTask(taskRoot, id);
     const ended = terminalStage(task);
     if (ended) fail('TASK_ENDED', `任务当前阶段为${ended.stage}；如需继续，先执行 reopen。`);
@@ -2354,14 +2303,10 @@ export async function closeFlow(rootInput: string, id: string, reasonInput: stri
     }
     if (!abandon) {
       const at = new Date().toISOString();
-      await materializeSharedTaskRecord(root, taskRoot, id);
+      // Do not materialize `.tiller/task/<id>/` onto primary; merged history arrives via ff/pull.
       const cleanup = await cleanupTaskWorktrees(root, id, metadata);
       const branchCleanup = await cleanupTaskBranches(root, metadata, taskBranchName(task.meta), options);
       const warnings = [...cleanup.warnings, ...branchCleanup.warnings];
-      if (!options.keepBranch && !branchCleanup.warnings.length) {
-        try { await writeCleanupMarker(root, id, current.stage, reason); }
-        catch (error) { warnings.push(`本机清理标记写入失败：${(error as Error).message}`); }
-      }
       return { id, stage: current.stage, stageReason: '交付验收有效；本机清理完成。', reason, at, path: task.path,
         worktrees: cleanup.removedWorktrees, missingWorktrees: cleanup.missingWorktrees, logsRemoved: cleanup.logsRemoved,
         branch: branchCleanup, ...(warnings.length ? { warnings } : {}),
@@ -2375,14 +2320,10 @@ export async function closeFlow(rootInput: string, id: string, reasonInput: stri
     const { content: _content, path: _path, ...body } = next;
     await writeTask(taskRoot, id, task.content, renderTask(body, sectionBody(task.content, '自检')), body.meta.preExisting);
     const stage = terminalStage(next)!;
-    await materializeSharedTaskRecord(root, taskRoot, id);
+    // Abandon writes on the task checkout only; no untracked primary copy.
     const cleanup = await cleanupTaskWorktrees(root, id, metadata);
     const branchCleanup = await cleanupTaskBranches(root, metadata, taskBranchName(task.meta), options);
     const warnings = [...cleanup.warnings, ...branchCleanup.warnings];
-    if (!options.keepBranch && !branchCleanup.warnings.length) {
-      try { await writeCleanupMarker(root, id, stage.stage, reason); }
-      catch (error) { warnings.push(`本机清理标记写入失败：${(error as Error).message}`); }
-    }
     return { id, stage: stage.stage, stageReason: stage.reason, reason, at: closure.at, path: task.path,
       worktrees: cleanup.removedWorktrees, missingWorktrees: cleanup.missingWorktrees, logsRemoved: cleanup.logsRemoved,
       branch: branchCleanup, ...(warnings.length ? { warnings } : {}),
@@ -2402,7 +2343,6 @@ export async function reopenFlow(rootInput: string, id: string, reasonInput: str
     const next = { ...task, closures: [...task.closures, event] };
     const { content: _content, path: _path, ...body } = next;
     await writeTask(root, id, task.content, renderTask(body, sectionBody(task.content, '自检')), body.meta.preExisting);
-    await clearCleanupMarker(root, id);
     const stage = await taskStage(root, id);
     return { id, stage: stage.stage, stageReason: stage.reason, reason, at: event.at, path: task.path,
       next: stage.stage === '已验收' ? `tiller close ${id} --reason "<原因>"` : `tiller resume ${id}` };

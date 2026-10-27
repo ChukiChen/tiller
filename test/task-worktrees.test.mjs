@@ -220,6 +220,16 @@ test('CASE-280 worktree 根 close 可删本地任务分支', async t => {
   const branch = started.worktrees[0].branch;
   const worktree = join(root, started.worktreeRoot);
   acceptTask(worktree, id);
+  // Simulate merge: the accepted record is tracked on primary before local cleanup.
+  put(root, `.tiller/task/${id}/task.md`, readFileSync(join(worktree, `.tiller/task/${id}/task.md`), 'utf8'));
+  put(root, '.tiller/cases/modules/workflow/behavior.md',
+    readFileSync(join(worktree, '.tiller/cases/modules/workflow/behavior.md'), 'utf8'));
+  put(root, `test/${id}.test.mjs`, readFileSync(join(worktree, `test/${id}.test.mjs`), 'utf8'));
+  put(root, '.tiller/specs/modules/workflow/requirements.md',
+    readFileSync(join(worktree, '.tiller/specs/modules/workflow/requirements.md'), 'utf8'));
+  put(root, '.tiller/specs/modules/workflow/design.md',
+    readFileSync(join(worktree, '.tiller/specs/modules/workflow/design.md'), 'utf8'));
+  commit(root, 'chore(workflow): 模拟合入关闭任务记录');
   const mock = await startPlatformMock(t, { platform: 'github' });
   mock.setMode('branch-delete-missing');
   git(root, 'remote', 'add', 'origin', `${mock.origin}/owner/repo.git`);
@@ -255,7 +265,7 @@ test('CASE-280 worktree 根 close 可读取仅存在于 worktree 的任务记录
   assert.equal(branchExists(root, started.worktrees[0].branch), false);
 });
 
-test('CASE-283 合入后 close 不改共享 task.md 且重复 close 安全', async t => {
+test('CASE-283 CASE-309 合入后 close 不改共享 task.md、无 closed 标记且重复 close 安全', async t => {
   const root = project(t);
   const id = '20261027-repeat-close';
   const started = startTask(root, id);
@@ -282,6 +292,7 @@ test('CASE-283 合入后 close 不改共享 task.md 且重复 close 安全', asy
   assert.equal(second.stage, '已验收');
   assert.equal(readFileSync(taskPath, 'utf8'), before);
   assert.ok(existsSync(taskPath), 'shared task.md stays after close');
+  assert.equal(existsSync(join(root, `.tiller/local/closed/${id}.json`)), false);
 });
 
 test('CASE-199 tasks without worktrees still close or abandon and clear task-local logs', async t => {

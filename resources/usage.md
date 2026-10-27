@@ -26,7 +26,7 @@ node .tiller/run.cjs doctor
 
 `standard` 须先设计确认再 `verify`（过早 verify 以 `VERIFY_BEFORE_DESIGN` 拒绝）；历史错序段用 `verify --clear-premature` 清除。确认后有未提交业务改动时，`check` 仍阻断 `accept`。
 
-accept 须在 pr 前；`confirm`/`accept` 写入确认后自动提交本任务记录（含 acceptance），一般无需再手搓一轮；`PR_NOT_ACCEPTED`/`PR_TASK_RECORDS_DIRTY` 仍阻断未验收或未提交记录。重复 accept 重查当前树，改码先 verify。`pr <id>` 默认 tokenized git push 并经平台 API 创建真实 PR/MR；Git Data API 仅失败回退。返回 URL/编号；`--draft-only` 仅五段草稿。审阅后 `merge <id>` 经 GitHub/GitLab REST API squash 后 close；合入即交付完成。merge/close 默认删本地与远端分支，`--keep-branch` 保留；不存在/422 已清理，其它失败 warning；worktree 根先拆树并删分支。网页合入手动 close，失败不清理，收尾不改 `task.md`，兼容清理旧。
+accept 须在 pr 前；`confirm`/`accept` 写入确认后自动提交本任务记录（含 acceptance），一般无需再手搓一轮；`PR_NOT_ACCEPTED`/`PR_TASK_RECORDS_DIRTY` 仍阻断未验收或未提交记录。重复 accept 重查当前树，改码先 verify。`pr <id>` 默认 tokenized git push 并经平台 API 创建真实 PR/MR；Git Data API 仅失败回退。返回 URL/编号；`--draft-only` 仅五段草稿。审阅后 `merge <id>` 经 GitHub/GitLab REST API squash 后 close；合入即交付完成。merge/close 默认删本地与远端分支，`--keep-branch` 保留；不存在/422 已清理，其它失败 warning；worktree 根先拆树并删分支。网页合入手动 close，失败不清理，收尾不改 `task.md`、不 materialize 未跟踪 task、不写 `.tiller/local/closed/`，仍兼容清理旧三棵树布局；合入后靠快进/pull 读已跟踪记录。
 
 `doctor [path]` 查基线、默认分支 specs 脏改、残留任务分支与 AC 缺口；严重失败。
 
