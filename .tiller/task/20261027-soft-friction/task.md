@@ -85,11 +85,11 @@ post-#42 狗粮后仍有三项软摩擦：primary 残留未跟踪 `.tiller/task/
 
 | 部分 | 确认人 | 时间 | 短提交 | 原话 |
 | --- | --- | --- | --- | --- |
-| 需求 | boon yu | 2026-10-27T07:18:44.229Z | 19fc75b4a4ed | — |
 | 设计 | boon yu | 2026-10-27T07:18:45.919Z | 19fc75b4a4ed | — |
+| 需求 | boon yu | 2026-10-27T08:20:12.619Z | 0215cd8b2349 | — |
 
-<!-- tiller-confirm:v1 {"gate":"requirements","object":"需求正文（目标、范围与验收条件）","subject":"1147b92b22a9298784f1cc13ffa5cfc025b39352810e687187d4e11e8c22261c","commit":"19fc75b4a4eddda997930bb929bf143882cc25f8","by":"boon yu","quote":"","at":"2026-10-27T07:18:44.229Z"} -->
 <!-- tiller-confirm:v1 {"gate":"design","object":"设计正文","subject":"0f56b145dd151841dfdacd6bd48ff6b78b54d9ed7a250f1ca87bb05fd59f2146","commit":"19fc75b4a4eddda997930bb929bf143882cc25f8","by":"boon yu","quote":"","at":"2026-10-27T07:18:45.919Z"} -->
+<!-- tiller-confirm:v1 {"gate":"requirements","object":"需求正文（目标、范围与验收条件）","subject":"a2c39faf52cb09f21590e37e750acff4592835c33ab676a506644e6a35ba4c8e","commit":"0215cd8b23492cb7932ec49f7c2e601091ac648c","by":"boon yu","quote":"","at":"2026-10-27T08:20:12.619Z"} -->
 
 ## 验证
 
