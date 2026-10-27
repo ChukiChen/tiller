@@ -87,126 +87,123 @@
 | --- | --- | --- | --- | --- |
 | 需求 | boon yu | 2026-10-27T01:01:33.788Z | 55162d869c78 | 优化你说的这些 |
 | 设计 | boon yu | 2026-10-27T01:01:33.867Z | 55162d869c78 | 优化你说的这些 |
+| 交付验收 | boon yu | 2026-10-27T01:02:24.397Z | c816bc86f1f6 | 优化你说的这些 |
 
 <!-- tiller-confirm:v1 {"gate":"requirements","object":"需求正文（目标、范围与验收条件）","subject":"4447ae58b77b95eb23dd9fba6d43f328d70baf0b62738b169c16e3567f6ec531","commit":"55162d869c7872d33db9c577be0f5f9c813812db","by":"boon yu","quote":"优化你说的这些","at":"2026-10-27T01:01:33.788Z"} -->
 <!-- tiller-confirm:v1 {"gate":"design","object":"设计正文","subject":"8c5d15130c95625ae75e813a60259a755ead2aec9f62fecbd7f0e372006a03a0","commit":"55162d869c7872d33db9c577be0f5f9c813812db","by":"boon yu","quote":"优化你说的这些","at":"2026-10-27T01:01:33.867Z"} -->
+<!-- tiller-confirm:v1 {"gate":"acceptance","object":"当前交付（需求、设计、验证与提交）","subject":"fbd52529dd1bc05db31c5c0a2c38e5e3b28cfdafcb7a7cd066f49e49cf697140","commit":"c816bc86f1f6ebe8daaa66396e6d70658b46651a","by":"boon yu","quote":"优化你说的这些","at":"2026-10-27T01:02:24.397Z"} -->
 
 ## 验证
 
 ### run-1
-<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-279 pr 经 API 创建真实 PR 并返回 URL$' \u002d\u002dtest-reporter=./.tiller/local/verify-TYZWHN/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-TYZWHN/report.jsonl test/pr.test.mjs","exitCode":0,"tree":"b749e46db8e1796f4ace356642d57d84d61e17e8432229fce6fd3d068aa77b57","commit":"55162d869c7872d33db9c577be0f5f9c813812db"} -->
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-279 pr 经 API 创建真实 PR 并返回 URL$' \u002d\u002dtest-reporter=./.tiller/local/verify-DDFhuE/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-DDFhuE/report.jsonl test/pr.test.mjs","exitCode":0,"tree":"7d851dc17dde2cbb186471bbcdc23f286dfe24bfec49c1b2f991d61a8d17a905","commit":"c816bc86f1f6ebe8daaa66396e6d70658b46651a"} -->
 - 条件：AC-1
 - 测试：test/pr.test.mjs::CASE-279 pr 经 API 创建真实 PR 并返回 URL
 - 用例：CASE-279
 - 结果：passed
 - 来源：executed
 - 核实：已核实
-- 日志：.tiller/local/20261027-flow-exec-stability/logs/run-1.log
-- 提交：55162d869c78
-- 时间：2026-10-27T00:58:49.706Z
+- 日志：.tiller/local/20261027-flow-exec-stability/logs/run-17.log
+- 提交：c816bc86f1f6
+- 时间：2026-10-27T01:02:07.484Z
 
 ### run-2
-<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-284 pr draft-only 仅输出草稿不联网$' \u002d\u002dtest-reporter=./.tiller/local/verify-YtRdXK/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-YtRdXK/report.jsonl test/pr.test.mjs","exitCode":0,"tree":"b749e46db8e1796f4ace356642d57d84d61e17e8432229fce6fd3d068aa77b57","commit":"55162d869c7872d33db9c577be0f5f9c813812db"} -->
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-284 pr draft-only 仅输出草稿不联网$' \u002d\u002dtest-reporter=./.tiller/local/verify-pCmPrN/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-pCmPrN/report.jsonl test/pr.test.mjs","exitCode":0,"tree":"7d851dc17dde2cbb186471bbcdc23f286dfe24bfec49c1b2f991d61a8d17a905","commit":"c816bc86f1f6ebe8daaa66396e6d70658b46651a"} -->
 - 条件：AC-1
 - 测试：test/pr.test.mjs::CASE-284 pr draft-only 仅输出草稿不联网
 - 用例：CASE-284
 - 结果：passed
 - 来源：executed
 - 核实：已核实
-- 日志：.tiller/local/20261027-flow-exec-stability/logs/run-2.log
-- 提交：55162d869c78
-- 时间：2026-10-27T00:58:54.753Z
+- 日志：.tiller/local/20261027-flow-exec-stability/logs/run-18.log
+- 提交：c816bc86f1f6
+- 时间：2026-10-27T01:02:12.450Z
 
 ### run-3
-<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-282 docs use the real pr path without a hand-built API alternative$' \u002d\u002dtest-reporter=./.tiller/local/verify-6ETDJM/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-6ETDJM/report.jsonl test/rules.test.mjs","exitCode":0,"tree":"b749e46db8e1796f4ace356642d57d84d61e17e8432229fce6fd3d068aa77b57","commit":"55162d869c7872d33db9c577be0f5f9c813812db"} -->
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-282 docs use the real pr path without a hand-built API alternative$' \u002d\u002dtest-reporter=./.tiller/local/verify-OvfDZO/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-OvfDZO/report.jsonl test/rules.test.mjs","exitCode":0,"tree":"7d851dc17dde2cbb186471bbcdc23f286dfe24bfec49c1b2f991d61a8d17a905","commit":"c816bc86f1f6ebe8daaa66396e6d70658b46651a"} -->
 - 条件：AC-1
 - 测试：test/rules.test.mjs::CASE-282 docs use the real pr path without a hand-built API alternative
 - 用例：CASE-282
 - 结果：passed
 - 来源：executed
 - 核实：已核实
-- 日志：.tiller/local/20261027-flow-exec-stability/logs/run-3.log
-- 提交：55162d869c78
-- 时间：2026-10-27T00:58:56.604Z
+- 日志：.tiller/local/20261027-flow-exec-stability/logs/run-19.log
+- 提交：c816bc86f1f6
+- 时间：2026-10-27T01:02:14.382Z
 
 ### run-4
-<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-282 docs use the real pr path without a hand-built API alternative$' \u002d\u002dtest-reporter=./.tiller/local/verify-Csx5aM/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-Csx5aM/report.jsonl test/rules.test.mjs","exitCode":0,"tree":"b749e46db8e1796f4ace356642d57d84d61e17e8432229fce6fd3d068aa77b57","commit":"55162d869c7872d33db9c577be0f5f9c813812db"} -->
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-282 docs use the real pr path without a hand-built API alternative$' \u002d\u002dtest-reporter=./.tiller/local/verify-ROjJ28/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-ROjJ28/report.jsonl test/rules.test.mjs","exitCode":0,"tree":"7d851dc17dde2cbb186471bbcdc23f286dfe24bfec49c1b2f991d61a8d17a905","commit":"c816bc86f1f6ebe8daaa66396e6d70658b46651a"} -->
 - 条件：AC-2
 - 测试：test/rules.test.mjs::CASE-282 docs use the real pr path without a hand-built API alternative
 - 用例：CASE-282
 - 结果：passed
 - 来源：executed
 - 核实：已核实
-- 日志：.tiller/local/20261027-flow-exec-stability/logs/run-4.log
-- 提交：55162d869c78
-- 时间：2026-10-27T00:58:59.818Z
+- 日志：.tiller/local/20261027-flow-exec-stability/logs/run-20.log
+- 提交：c816bc86f1f6
+- 时间：2026-10-27T01:02:14.929Z
 
 ### run-5
-<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-280 worktree 根 close 可删本地任务分支$' \u002d\u002dtest-reporter=./.tiller/local/verify-vrKeTB/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-vrKeTB/report.jsonl test/task-worktrees.test.mjs","exitCode":0,"tree":"b749e46db8e1796f4ace356642d57d84d61e17e8432229fce6fd3d068aa77b57","commit":"55162d869c7872d33db9c577be0f5f9c813812db"} -->
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-280 worktree 根 close 可删本地任务分支$' \u002d\u002dtest-reporter=./.tiller/local/verify-I9s8e0/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-I9s8e0/report.jsonl test/task-worktrees.test.mjs","exitCode":0,"tree":"7d851dc17dde2cbb186471bbcdc23f286dfe24bfec49c1b2f991d61a8d17a905","commit":"c816bc86f1f6ebe8daaa66396e6d70658b46651a"} -->
 - 条件：AC-3
 - 测试：test/task-worktrees.test.mjs::CASE-280 worktree 根 close 可删本地任务分支
 - 用例：CASE-280
 - 结果：passed
 - 来源：executed
 - 核实：已核实
-- 日志：.tiller/local/20261027-flow-exec-stability/logs/run-5.log
-- 提交：55162d869c78
-- 时间：2026-10-27T00:59:00.372Z
+- 日志：.tiller/local/20261027-flow-exec-stability/logs/run-21.log
+- 提交：c816bc86f1f6
+- 时间：2026-10-27T01:02:15.479Z
 
 ### run-6
-<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-283 合入后 close 不改共享 task\\.md 且重复 close 安全$' \u002d\u002dtest-reporter=./.tiller/local/verify-5BCh6c/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-5BCh6c/report.jsonl test/task-worktrees.test.mjs","exitCode":0,"tree":"b749e46db8e1796f4ace356642d57d84d61e17e8432229fce6fd3d068aa77b57","commit":"55162d869c7872d33db9c577be0f5f9c813812db"} -->
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-283 合入后 close 不改共享 task\\.md 且重复 close 安全$' \u002d\u002dtest-reporter=./.tiller/local/verify-avIFVk/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-avIFVk/report.jsonl test/task-worktrees.test.mjs","exitCode":0,"tree":"7d851dc17dde2cbb186471bbcdc23f286dfe24bfec49c1b2f991d61a8d17a905","commit":"c816bc86f1f6ebe8daaa66396e6d70658b46651a"} -->
 - 条件：AC-3
 - 测试：test/task-worktrees.test.mjs::CASE-283 合入后 close 不改共享 task.md 且重复 close 安全
 - 用例：CASE-283
 - 结果：passed
 - 来源：executed
 - 核实：已核实
-- 日志：.tiller/local/20261027-flow-exec-stability/logs/run-6.log
-- 提交：55162d869c78
-- 时间：2026-10-27T00:59:02.372Z
+- 日志：.tiller/local/20261027-flow-exec-stability/logs/run-22.log
+- 提交：c816bc86f1f6
+- 时间：2026-10-27T01:02:17.475Z
 
 ### run-7
-<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-281 doctor 过程卫生扫描与退出码$' \u002d\u002dtest-reporter=./.tiller/local/verify-jlRi8v/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-jlRi8v/report.jsonl test/doctor.test.mjs","exitCode":0,"tree":"b749e46db8e1796f4ace356642d57d84d61e17e8432229fce6fd3d068aa77b57","commit":"55162d869c7872d33db9c577be0f5f9c813812db"} -->
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-281 doctor 过程卫生扫描与退出码$' \u002d\u002dtest-reporter=./.tiller/local/verify-mRUisz/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-mRUisz/report.jsonl test/doctor.test.mjs","exitCode":0,"tree":"7d851dc17dde2cbb186471bbcdc23f286dfe24bfec49c1b2f991d61a8d17a905","commit":"c816bc86f1f6ebe8daaa66396e6d70658b46651a"} -->
 - 条件：AC-4
 - 测试：test/doctor.test.mjs::CASE-281 doctor 过程卫生扫描与退出码
 - 用例：CASE-281
 - 结果：passed
 - 来源：executed
 - 核实：已核实
-- 日志：.tiller/local/20261027-flow-exec-stability/logs/run-7.log
-- 提交：55162d869c78
-- 时间：2026-10-27T00:59:04.292Z
+- 日志：.tiller/local/20261027-flow-exec-stability/logs/run-23.log
+- 提交：c816bc86f1f6
+- 时间：2026-10-27T01:02:19.297Z
 
 ### run-8
-<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-113 CASE-157 migration preserves the 0\\.5\\.0 release contract and full verification entry$' \u002d\u002dtest-reporter=./.tiller/local/verify-ShDLlg/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-ShDLlg/report.jsonl test/work-migration.test.mjs","exitCode":0,"tree":"b749e46db8e1796f4ace356642d57d84d61e17e8432229fce6fd3d068aa77b57","commit":"55162d869c7872d33db9c577be0f5f9c813812db"} -->
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-113 CASE-157 migration preserves the 0\\.5\\.0 release contract and full verification entry$' \u002d\u002dtest-reporter=./.tiller/local/verify-U07yiJ/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-U07yiJ/report.jsonl test/work-migration.test.mjs","exitCode":0,"tree":"7d851dc17dde2cbb186471bbcdc23f286dfe24bfec49c1b2f991d61a8d17a905","commit":"c816bc86f1f6ebe8daaa66396e6d70658b46651a"} -->
 - 条件：AC-5
 - 测试：test/work-migration.test.mjs::CASE-113 CASE-157 migration preserves the 0.5.0 release contract and full verification entry
 - 用例：CASE-113, CASE-157
 - 结果：passed
 - 来源：executed
 - 核实：已核实
-- 日志：.tiller/local/20261027-flow-exec-stability/logs/run-8.log
-- 提交：55162d869c78
-- 时间：2026-10-27T01:00:50.839Z
+- 日志：.tiller/local/20261027-flow-exec-stability/logs/run-24.log
+- 提交：c816bc86f1f6
+- 时间：2026-10-27T01:02:20.590Z
 
 ## 自检
 
 - [x] 需求确认有效
-- [ ] 设计确认有效
+- [x] 设计确认有效
 - [x] 验收条件均有当前通过且绑定全局用例的测试引用
 - [x] 每条验收条件均映射到本次验证引用的全局用例
 - [x] 验收条件与用例通过 verify 的 AC→测试→CASE 记录关联
 - [x] 验证命令已执行且测试输出已核实
 - [x] 全局用例结构与引用有效
-- [ ] 改动未超出范围
+- [x] 改动未超出范围
 - [x] 未弱化仍存在的测试
 - [x] 评审无未清除阻塞项
 - [x] 记录不含密钥或本机绝对路径
-
-阻塞项：
-- 过程卫生：需求、设计确认提交 55162d869c78 后，工作区仍有未提交业务改动：resources/entry.md、resources/rules/activities/delivery.md、resources/rules/core.md、resources/usage.md、scripts/package-smoke.mjs、src/branch-cleanup.ts、src/cli.ts、src/commit-conventions.ts 等 24 项。请先提交或移出本任务。
-- 改动超出范围：.tiller/context/project.md、.tiller/index.md、AGENTS.md
-- 交付范围存在未提交改动：.tiller/cases/index.md、.tiller/cases/modules/standards/interface.md、.tiller/cases/modules/workflow/behavior.md、.tiller/cases/modules/workflow/interface.md、.tiller/project.json、.tiller/rules/activities/delivery.md、.tiller/rules/core.md、.tiller/specs/decisions.md、.tiller/specs/design.md、.tiller/specs/modules/workflow/design.md、.tiller/specs/modules/workflow/flow-exec-stability.md、.tiller/specs/modules/workflow/requirements.md、.tiller/usage.md、resources/entry.md、resources/rules/activities/delivery.md、resources/rules/core.md、resources/usage.md、scripts/package-smoke.mjs、src/branch-cleanup.ts、src/cli.ts、src/commit-conventions.ts、src/doctor.ts、src/flow.ts、src/init-baseline.ts、src/platform-api.ts、src/pr.ts、src/project-root.ts、test/case-redesign.test.mjs、test/doctor.test.mjs、test/init-baseline.test.mjs、test/platform-api-mock.mjs、test/pr.test.mjs、test/review-release.test.mjs、test/rules.test.mjs、test/suites.json、test/task-worktrees.test.mjs、test/verification-integrity.test.mjs
 
 提示：
 - 172 条历史用例仍以 <任务>#AC-n 记录关联 AC；这是可迁移的历史债，不阻断当前覆盖。
