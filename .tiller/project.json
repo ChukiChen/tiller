@@ -23,7 +23,7 @@
     ".tiller/rules/quality/documents.md": "b3368483a9ca6c2a45ff142b6fa37455ade64dca17f004a195f6c01748ffc74b",
     ".tiller/rules/quality/code.md": "d316f24ed06a13194ab03aa1b2a3beedda23d92a1a04c3b6587954e0c3e09b82",
     ".tiller/rules/quality/verification.md": "dc8ceb8c067025d027976de4ad31f8d9ff9c1871b8f09b5238f562107e2bf86c",
-    ".tiller/usage.md": "65f418a9c0dc53167746799e4b0eb67441d82fe6aefe723fc415a3bc7896b39e",
+    ".tiller/usage.md": "4f449d73496bb0b21857e6956011b4bedbd3d31c9d4e2b32f5744aa368142ee2",
     ".tiller/run.cjs": "b760046bf12723a7f040877ad19bd26de5d94e02a918df832196e64361cac24a",
     ".github/pull_request_template.md": "76169f57652bd136127ac9cec64c29293bd5b6d92039948a01963c4e043aafd4"
   },
