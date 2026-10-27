@@ -288,6 +288,7 @@ test('CASE-296 worktree PR push and cleanup keep primary as the main checkout', 
   assert.equal(created.draftOnly, false);
   assert.ok(mock.state.requests.some(item => item.method === 'POST' && item.path.endsWith('/pulls')));
 
+  mock.state.mergedBranches.add(branch);
   const closed = success(await cliAt(worktree, environment, 'close', id, '--reason', '夹具清理'));
   assert.deepEqual(closed.worktrees, [started.worktreeRoot]);
   assert.equal(existsSync(worktree), false);

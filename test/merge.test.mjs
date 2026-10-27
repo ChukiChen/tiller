@@ -331,6 +331,7 @@ test('CASE-257 merge and close keep branches when --keep-branch is explicit', as
   await acceptTask(root, closeId);
   for (const id of [mergeId, closeId]) {
     mock.state.refs.set(`refs/heads/feat/${id}`, git(root, 'rev-parse', `feat/${id}`));
+    mock.state.mergedBranches.add(`feat/${id}`);
   }
 
   mock.resetRequests();
@@ -378,6 +379,7 @@ test('CASE-290 已不存在的远端分支按已清理处理且不产生警告',
     await acceptTask(root, id);
     const branch = `feat/${id}`;
     mock.state.refs.set(`refs/heads/${branch}`, git(root, 'rev-parse', branch));
+    mock.state.mergedBranches.add(branch);
     mock.setMode(mode);
     mock.resetRequests();
 

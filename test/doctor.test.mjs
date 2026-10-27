@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { readFileSync, rmSync } from 'node:fs';
+import { existsSync, readFileSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import test from 'node:test';
@@ -68,4 +68,25 @@ test('CASE-281 doctor 过程卫生扫描与退出码', async t => {
   const restored = success(cli(root, 'doctor'));
   assert.equal(restored.ready, true, restored.issues.join('\n'));
   assert.equal(restored.summary.fail, 0);
+});
+
+test('CASE-315 doctor checks tasks that exist only in an active worktree', async t => {
+  const root = project(t);
+  const id = '20261027-doctor-worktree-truth';
+  const started = success(cli(root, 'start', id, '--title', 'Doctor worktree truth',
+    '--requirement', 'Doctor inspects the active worktree task record.',
+    '--criterion', 'AC-1=The worktree task coverage is visible', '--size', 'small', '--target', '.'));
+  const worktree = join(root, started.worktreeRoot);
+  assert.equal(existsSync(join(root, `.tiller/task/${id}/task.md`)), false);
+
+  const report = success(cli(root, 'doctor'));
+  const coverage = report.checks.find(check => check.id === `ac-coverage:${id}`);
+  assert.ok(coverage, JSON.stringify(report));
+  assert.equal(coverage.status, 'warn');
+  assert.match(coverage.message, /AC-1/u);
+
+  rmSync(join(worktree, `.tiller/task/${id}`), { recursive: true, force: true });
+  const missing = failure(cli(root, 'doctor'));
+  assert.equal(missing.ready, false);
+  assert.ok(missing.issues.some(issue => issue.includes(started.worktrees[0].branch)), JSON.stringify(missing));
 });

@@ -21,6 +21,7 @@ import {
 } from './files.js';
 import { assertInitBaselineReady, isInitBaselineId, proveInitBaselineMerged } from './init-baseline.js';
 import { planItemForAttachment, readPlanItem } from './plans.js';
+import { findMergedIntegration, platformToken, resolvePlatformRepository } from './platform-api.js';
 import { releaseChecklist, type ReleaseChecklist } from './release.js';
 import { taskIdWarnings, validateTaskId } from './task-id.js';
 import { resolveProjectRoot, resolveTaskCheckout } from './project-root.js';
@@ -2292,9 +2293,50 @@ export async function releaseFlow(rootInput: string, id: string) {
     ...(acceptance?.commit ? { acceptanceCommit: acceptance.commit } : {}), ...checklist };
 }
 
+interface TaskMergeProof { merged: boolean; detail: string }
+
+async function proveTaskMerged(root: string, taskRoot: string, id: string, metadata: ProjectMetadata,
+  task: FlowTask): Promise<TaskMergeProof> {
+  const relative = taskPath(id);
+  const current = await readTextIfExists(taskRoot, relative);
+  const tracked = await git(root, ['show', `HEAD:${relative}`]);
+  if (current !== null && tracked.ok && tracked.stdout === current) {
+    return { merged: true, detail: `主检出的跟踪任务记录与 ${id} 的当前验收记录一致。` };
+  }
+
+  const branch = taskBranchName(task.meta);
+  const tip = await git(root, ['rev-parse', '--verify', `refs/heads/${branch}`]);
+  if (tip.ok) {
+    const candidates = [
+      'HEAD', 'refs/heads/main', 'refs/heads/master',
+      'refs/remotes/origin/main', 'refs/remotes/origin/master',
+    ];
+    for (const candidate of candidates) {
+      if ((await git(root, ['merge-base', '--is-ancestor', tip.stdout.trim(), candidate])).ok) {
+        return { merged: true, detail: `任务分支 ${branch} 已进入 ${candidate} 的历史。` };
+      }
+    }
+  }
+
+  let detail = '平台未确认该任务分支已合入';
+  try {
+    const repository = await resolvePlatformRepository(root, metadata.platform ?? 'github');
+    const token = platformToken(repository.platform);
+    if (!token) {
+      detail = `缺少 ${repository.platform === 'github' ? 'GITHUB_TOKEN/GH_TOKEN' : 'GITLAB_TOKEN/GL_TOKEN'}，无法确认平台合入状态`;
+    } else {
+      const merged = await findMergedIntegration(repository, token, branch);
+      if (merged) return { merged: true, detail: `平台已确认任务分支 ${branch} 的 PR/MR #${merged.number} 合入。` };
+    }
+  } catch (error) {
+    detail = `平台合入状态查询失败：${(error as Error).message}`;
+  }
+  return { merged: false, detail };
+}
+
 
 export async function closeFlow(rootInput: string, id: string, reasonInput: string, abandon = false,
-  options: { keepBranch?: boolean } = {}) {
+  options: { keepBranch?: boolean; merged?: boolean } = {}) {
   const { primary: root, taskRoot } = await resolveTaskCheckout(rootInput, id);
   const reason = safeInput(text(reasonInput, '关闭原因', 4000), '关闭原因');
   return withProjectLock(root, async () => {
@@ -2326,15 +2368,28 @@ export async function closeFlow(rootInput: string, id: string, reasonInput: stri
       fail('NOT_ACCEPTED', `任务当前阶段为${current.stage}；只有已验收任务可以 close，未验收终止请使用 --abandon。`);
     }
     if (!abandon) {
+      const proof = options.merged === true
+        ? { merged: true, detail: '平台 API 已确认本次合入成功。' }
+        : await proveTaskMerged(root, taskRoot, id, metadata, task);
+      if (!proof.merged) {
+        fail('CLOSE_MERGE_PROOF_MISSING', `任务 ${id} 尚无合入证明：${proof.detail}。先合入任务分支或更新默认分支后重试 close；本机任务事实未清理。`);
+      }
       const at = new Date().toISOString();
       // Do not materialize `.tiller/task/<id>/` onto primary; merged history arrives via ff/pull.
       const cleanup = await cleanupTaskWorktrees(root, id, metadata);
       const branchCleanup = await cleanupTaskBranches(root, metadata, taskBranchName(task.meta), options);
       const warnings = [...cleanup.warnings, ...branchCleanup.warnings];
+      const recordAvailable = await readTextIfExists(root, taskPath(id)) !== null;
       return { id, stage: current.stage, stageReason: '交付验收有效；本机清理完成。', reason, at, path: task.path,
         worktrees: cleanup.removedWorktrees, missingWorktrees: cleanup.missingWorktrees, logsRemoved: cleanup.logsRemoved,
         branch: branchCleanup, ...(warnings.length ? { warnings } : {}),
-        next: `任务已交付；如需继续修改，执行 tiller reopen ${id} --reason "<原因>".` };
+        next: recordAvailable
+          ? `任务已交付；如需继续修改，执行 tiller reopen ${id} --reason "<原因>".`
+          : '任务已交付并清理；当前检出没有可读取任务记录，不能直接 reopen。' };
+    }
+    const taskRecord = taskPath(id);
+    if (await readTextIfExists(root, taskRecord) === null) {
+      fail('ABANDON_NOT_PERSISTABLE', `任务 ${id} 的放弃事实无法在独占 worktree 清理后保留；请先在 primary 保留可读取的任务记录，再执行 --abandon。本机任务事实未清理。`);
     }
     const closure: FlowClosure = {
       action: 'close', status: 'abandoned', reason,
@@ -2343,6 +2398,9 @@ export async function closeFlow(rootInput: string, id: string, reasonInput: stri
     const next = { ...task, closures: [...task.closures, closure] };
     const { content: _content, path: _path, ...body } = next;
     await writeTask(taskRoot, id, task.content, renderTask(body, sectionBody(task.content, '自检')), body.meta.preExisting);
+    if (await readTextIfExists(root, taskRecord) === null) {
+      fail('ABANDON_NOT_PERSISTABLE', `任务 ${id} 的放弃事件未能写入 primary；本机任务事实未清理。`);
+    }
     const stage = terminalStage(next)!;
     // Abandon writes on the task checkout only; no untracked primary copy.
     const cleanup = await cleanupTaskWorktrees(root, id, metadata);

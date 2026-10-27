@@ -1868,7 +1868,7 @@ check 在 main/master 且变更含 .tiller/specs/ 时返回含过程卫生/specs
 
 ### 预期结果
 
-从任务 worktree 根执行 close/merge 时能读取仅存在于该检出的任务记录；清理后主仓不再残留该本地任务分支，远端已不存在不失败
+从任务 worktree 根执行 close/merge 时能读取仅存在于该检出的任务记录；缺少合入证明时拒绝清理，证明合入后才删除本地任务分支，远端已不存在不失败
 
 ## CASE-281 doctor 过程卫生扫描与退出码
 
@@ -2415,3 +2415,85 @@ merge/close 后 primary 不出现 tiller materialize/种子产生的未跟踪 .t
 ### 预期结果
 
 版本保持 0.5.0，全量测试与安装包冒烟入口均存在且指向当前发布包
+
+## CASE-315 doctor 从 active worktree 读取进行中任务
+
+- 类型：behavior
+- 优先级：high
+- 模块：workflow
+- 关联 AC：无
+- 需求：`.tiller/specs/modules/workflow/lifecycle-truth.md#1-doctor-以-active-worktree-为任务真相`
+
+### 前置条件
+
+- primary 没有 `.tiller/task/<id>/task.md`。
+- 任务分支已挂载 active worktree，任务记录只存在于该 worktree，且仍有未覆盖 AC。
+
+### 步骤
+
+1. 从 primary 运行 `tiller doctor`。
+2. 检查 AC 覆盖项是否包含该 worktree 任务及未覆盖 AC。
+3. 移除 worktree 任务记录后再次运行 `tiller doctor`。
+
+### 输入
+
+- 仅存在于任务 worktree 的进行中任务记录。
+
+### 预期结果
+
+doctor 发现并检查 worktree 任务，报告未覆盖 AC，不因 primary 缺少任务目录而全绿；active 任务分支缺少记录时明确失败而非跳过。
+
+## CASE-316 close 缺少合入证明时保留任务事实
+
+- 类型：behavior
+- 优先级：high
+- 模块：workflow
+- 关联 AC：无
+- 需求：`.tiller/specs/modules/workflow/lifecycle-truth.md#2-close-以合入证明约束破坏性清理`
+
+### 前置条件
+
+- 任务已验收且记录和 worktree 仍只存在于任务分支。
+- 默认历史、跟踪的任务记录和平台合入状态均不能证明任务分支已合入。
+
+### 步骤
+
+1. 运行 `tiller close <id> --reason "..."`。
+2. 检查任务 worktree、`.tiller/local/<id>/` 与分支仍在。
+3. 提供已合入证明后再次运行 close。
+4. 当前检出没有可读取记录时阅读结果的 `next`。
+
+### 输入
+
+- 未合入的已验收任务与关闭原因。
+
+### 预期结果
+
+首次 close 以稳定错误拒绝破坏性清理；证明合入后才清理。清理后没有可读任务记录时不提示执行 `tiller reopen`。
+
+## CASE-317 abandon 无法持久化时拒绝清理
+
+- 类型：behavior
+- 优先级：high
+- 模块：workflow
+- 关联 AC：无
+- 需求：`.tiller/specs/modules/workflow/lifecycle-truth.md#3-abandon-先持久化再清理`
+
+### 前置条件
+
+- 未验收任务记录只在任务 worktree，primary 没有可持久化的同名记录。
+
+### 步骤
+
+1. 运行 `tiller close <id> --reason "..." --abandon`。
+2. 检查 worktree、本机目录和任务分支仍在，且错误不承诺 reopen。
+3. 在 primary 保留可读取任务记录后再次 abandon。
+4. 检查放弃事件已写入 primary 任务记录，再运行 reopen。
+
+### 输入
+
+- 仅存在于 worktree 的未验收任务；随后提供 primary 持久记录。
+
+### 预期结果
+
+无法持久化时拒绝清理；持久化后可放弃并清理，放弃状态仍可读取和 reopen。
