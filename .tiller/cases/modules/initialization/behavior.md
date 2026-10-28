@@ -566,7 +566,7 @@
 
 ### 预期结果
 
-Maven/Gradle 工程 init 写入对应 junit runner，case add 输出匹配运行器的骨架
+Maven/Gradle 工程 init 写入对应 junit runner，case add 输出引用 CASE 的 Node 适配器骨架，内部转调对应 runner 并留下类方法选择器 TODO
 
 ## CASE-195 初始化为项目模块需求设计提供完整章节骨架
 

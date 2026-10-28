@@ -162,3 +162,7 @@ merge 或 close 结束后，primary 不得因 tiller materialize、任务种子�
 ### FLOW-42 平台结果可重建与放弃先提交
 
 PR/MR 与初始化合入状态以平台可重建事实为准。创建任务交付前与创建结果不确定时，按 head branch 与 head SHA 查询开放记录，命中即复用，避免响应丢失后的同树重复。已验收但未合入的任务可放弃：先把放弃事件写入主检出任务记录并自动提交，再清理 worktree、本机目录与分支；无法持久化时不清理。requirement-file 保留关键行为的嵌套层级；全局 specs 任务标题使用 `specs` scope；同类非阻断检查提示合并去重。
+
+### FLOW-43 规格溢出先回写全局
+
+任务引用稳定 specs 时，以引用文件中的普通 `AC-n` 为真相源。任务需求或设计新增、改写 specs 未覆盖的行为或验收点时，`confirm requirements/design`、`check` 与 `accept` 必须阻断，列出缺失文件、未挂载或正文不一致的 AC，并提示先回写 specs（必要时同步 cases/rules），由确认人重新确认后再继续。引用文件缺失或 AC 不存在同样失败，不静默通过；已验收历史按 acceptance 证据复核，不追溯改写旧确认。

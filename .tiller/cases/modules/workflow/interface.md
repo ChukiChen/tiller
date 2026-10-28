@@ -1410,3 +1410,76 @@ specs/workflow 等约定 scope 不产生模块缺失提示；不存在的真实�
 ### 预期结果
 
 规则只说明 expected tip、平台已合入 PR/MR、local marker 与 CLI effective，不出现写回 merged 指向 tracked 元信息的旧表达
+
+## CASE-335 规格溢出阻断确认与交付并在回写后恢复
+
+- 类型：interface
+- 优先级：high
+- 模块：workflow
+- 关联 AC：无
+- 需求：`.tiller/specs/modules/workflow/specs-overflow-gate.md`
+
+### 前置条件
+
+- 任务通过 `--requirement-file` 引用稳定 specs，随后任务正文新增了 specs 未覆盖的验收点。
+
+### 步骤
+
+1. 运行 `tiller confirm <id> requirements`、`tiller check <id>` 和 `tiller accept <id>`。
+2. 把新增验收点回写引用 specs，再重新确认需求。
+
+### 输入
+
+- 只存在于任务正文的新增 AC-n 与原有引用 specs。
+
+### 预期结果
+
+确认、check 与 accept 都阻断并指出规格溢出、回写路径和重新确认要求；回写 specs 后 requirements 确认通过，不自动改写全局文件。
+
+## CASE-336 规格门禁以引用路径和 AC-n 正文为真相源
+
+- 类型：interface
+- 优先级：high
+- 模块：workflow
+- 关联 AC：无
+- 需求：`.tiller/specs/modules/workflow/specs-overflow-gate.md`
+
+### 前置条件
+
+- 任务正文引用 specs 路径，并声明验收条件。
+
+### 步骤
+
+1. 分别使用不存在 specs 路径、引用 specs 中不存在的 AC-n、以及同编号但正文不同的任务 AC 运行确认或 check。
+
+### 输入
+
+- 缺失路径、未挂载 AC 与正文差异三类输入。
+
+### 预期结果
+
+三类输入都失败并给出可定位原因；门禁只认任务引用的 specs 路径与其 AC-n，不引入不存在的 AC 或无法挂载的验收点。
+
+## CASE-337 已验收历史按 acceptance 证据复核而不追溯失败
+
+- 类型：interface
+- 优先级：medium
+- 模块：workflow
+- 关联 AC：无
+- 需求：`.tiller/specs/modules/workflow/specs-overflow-gate.md`
+
+### 前置条件
+
+- 任务在规格门禁下完成验证与验收，之后引用 specs 内容发生变化。
+
+### 步骤
+
+1. 运行 `tiller check <id>`。
+
+### 输入
+
+- 有效 acceptance 提交与后续变化的 specs 工作区。
+
+### 预期结果
+
+check 继续按 acceptance 证据复核，不把后续 specs 变化报成追溯性规格溢出，也不改写旧确认；重新验收仍按当前树重查。
