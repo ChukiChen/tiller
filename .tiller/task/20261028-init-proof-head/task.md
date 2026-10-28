@@ -90,11 +90,11 @@
 
 | 部分 | 确认人 | 时间 | 短提交 | 原话 |
 | --- | --- | --- | --- | --- |
-| 设计 | boon yu | 2026-10-28T12:05:51.760Z | df11349fa145 | — |
 | 需求 | boon yu | 2026-10-28T12:35:59.047Z | ce4584876658 | — |
+| 设计 | boon yu | 2026-10-28T12:35:59.166Z | 06ebe86a8cf7 | — |
 
-<!-- tiller-confirm:v1 {"gate":"design","object":"设计正文","subject":"5e66b69f1af6cd45310aafe9f6f7e278f8233197f62980ef4fe04e350535973c","commit":"df11349fa145d82ceb694c017fcec37798e6fca5","by":"boon yu","quote":"","at":"2026-10-28T12:05:51.760Z"} -->
 <!-- tiller-confirm:v1 {"gate":"requirements","object":"需求正文（目标、范围与验收条件）","subject":"bd56db5616e12878941ca5a8028916bc3d30ed7e98530d0b82b3a9b1d9150bed","commit":"ce45848766580084d6e2797ccf70348385cc9078","by":"boon yu","quote":"","at":"2026-10-28T12:35:59.047Z"} -->
+<!-- tiller-confirm:v1 {"gate":"design","object":"设计正文","subject":"9e91e8b2037cb56fa4fef65fe7c5e1d86b373193a8254a70b3b03f86f15f8486","commit":"06ebe86a8cf71f3ce91e06644cec3d48851e9d5c","by":"boon yu","quote":"","at":"2026-10-28T12:35:59.166Z"} -->
 
 ## 验证
 
