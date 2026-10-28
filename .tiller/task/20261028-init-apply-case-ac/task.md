@@ -1,6 +1,6 @@
 # init预检与apply及用例关联specs AC
 
-<!-- tiller-task:v1 {"version":1,"id":"20261028-init-apply-case-ac","type":"feature","size":"standard","created":"2026-10-28T14:20:23.314Z","base":"7c2816e4b164366564f2c7a98d5a0d43f3d816d7","scope":["src","test",".tiller/specs",".tiller/rules",".tiller/cases",".tiller/usage.md","resources"],"format":"structured","slug":"init-apply-case-ac","summary":"预检后可选apply；CASE挂specs AC-n；tree digest按Git归一化忽略CRLF"} -->
+<!-- tiller-task:v1 {"version":1,"id":"20261028-init-apply-case-ac","type":"feature","size":"standard","created":"2026-10-28T14:20:23.314Z","base":"7c2816e4b164366564f2c7a98d5a0d43f3d816d7","scope":["src","test",".tiller/specs",".tiller/rules",".tiller/cases",".tiller/usage.md",".tiller/context",".tiller/index.md",".tiller/project.json","README.md","resources","scripts/package-smoke.mjs"],"format":"structured","slug":"init-apply-case-ac","summary":"预检后可选apply；CASE挂specs AC-n；tree digest按Git归一化忽略CRLF"} -->
 
 ## 需求
 
@@ -98,11 +98,11 @@
 
 | 部分 | 确认人 | 时间 | 短提交 | 原话 |
 | --- | --- | --- | --- | --- |
-| 需求 | ChukiChen | 2026-10-28T15:31:15.327Z | bd510a92eeb4 | 预检增加 git 已安装检查 |
 | 设计 | ChukiChen | 2026-10-28T15:31:15.435Z | 7810c316e337 | assertInitEnvironment 检查 git 可执行 |
+| 需求 | ChukiChen | 2026-10-28T16:11:09.493Z | 6f3414e3ea17 | 保留未提交改动继续；实现 AC-6；全量 test→verify→check→accept |
 
-<!-- tiller-confirm:v1 {"gate":"requirements","object":"需求正文（目标、范围与验收条件）","subject":"3d2e55b89c1d9b74742d805e9e5e31b7774d0dd9ce1c6fed9cae7f919bcc4db0","commit":"bd510a92eeb4908b33c5661ea0597f62d3e0f632","by":"ChukiChen","quote":"预检增加 git 已安装检查","at":"2026-10-28T15:31:15.327Z"} -->
 <!-- tiller-confirm:v1 {"gate":"design","object":"设计正文","subject":"da26154b7c7382832443206f20c545e047dc245b470d1ec946fa2b2a1a4de071","commit":"7810c316e337aa01258a326f79baf14694c4fbf8","by":"ChukiChen","quote":"assertInitEnvironment 检查 git 可执行","at":"2026-10-28T15:31:15.435Z"} -->
+<!-- tiller-confirm:v1 {"gate":"requirements","object":"需求正文（目标、范围与验收条件）","subject":"d25a858b497f7ce4294c00a64dcfacc21004d450d41773d95c25865e733c4122","commit":"6f3414e3ea176ed20de422e6cd99cf594d6a5eea","by":"ChukiChen","quote":"保留未提交改动继续；实现 AC-6；全量 test→verify→check→accept","at":"2026-10-28T16:11:09.493Z"} -->
 
 ## 验证
 
