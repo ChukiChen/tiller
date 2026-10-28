@@ -491,9 +491,16 @@ export async function inspectProject(root: string): Promise<ProjectInspection> {
 
 export async function inspectProjectStatus(root: string): Promise<ProjectInspection> {
   const result = await inspectProjectState(root);
-  if (!result.metadata) return result;
-  const initBaselineStatus = await resolveInitBaselineStatus(root, result.metadata);
-  return initBaselineStatus ? { ...result, initBaselineStatus } : result;
+  let metadata = result.metadata;
+  if (!metadata) {
+    try { metadata = await readProjectMetadata(root); }
+    catch { return result; }
+  }
+  if (!metadata) return result;
+  const initBaselineStatus = await resolveInitBaselineStatus(root, metadata);
+  return initBaselineStatus
+    ? { ...result, initialized: true, metadata, compatibility: 'read-write', initBaselineStatus }
+    : { ...result, metadata };
 }
 
 /** Read only the current metadata contract. Whole-project health is an explicit inspection.

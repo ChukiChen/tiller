@@ -35,7 +35,7 @@ post-#45 狗粮主路径已通，但仍有入口与卫生摩擦：`--requirement
 
 ### 初始化证明可重建
 
-- 跟踪的 init 基线必须保留可解析到 squash 前 PR head 的引用；fresh clone 即使没有本机 merged 标记、init 分支已删除，也能用该 head 与平台已合入 PR/MR 证明基线。
+- 本机 init 证明必须记录 expected head 与 open PR/MR；平台回查仅在 merged PR/MR 的 head 与该 expected head 一致时记合入。缺少 expected head 时不得以同分支、同初始化编号或标题兜底，fresh clone 只能依靠祖先判定或恢复本机证明。
 - `close <init-id>` 在证明失败时必须返回稳定错误并保留 init worktree、本机目录和分支；不得先清理再报告成功。
 - init 的第二个提交必须可区分或与基线收敛为单个提交；init PR/MR 标题包含 init id，避免重复初始化与历史同名记录混淆。
 
