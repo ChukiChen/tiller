@@ -32,7 +32,7 @@
   - 不恢复 `任务#AC` 为新写入合法值。
   - 不批量改写全部历史 CASE 正文（历史可读即可）。
   - 不升版本号。
-- 假设与待确认：机制已由 boon yu 确认（预检先于一切操作；开关名 `--apply`；CASE 挂 specs `AC-n`；CRLF digest 归一并入本包）。扩展后需 ChukiChen 再确认需求与设计。
+- 假设与待确认：机制已由 boon yu 确认（预检先于一切操作；开关名 `--apply`；CASE 挂 specs `AC-n`；CRLF digest 归一与 git 安装预检并入本包）。扩展后需 ChukiChen 再确认需求与设计。
 
 ### 关键行为
 
@@ -53,6 +53,7 @@
 ### 验收条件
 
 - AC-1: init在创建worktree/分支/提交前完成预检；缺token或origin不可解析则非零退出并给出设置指引，磁盘无本次init产物
+- AC-6: init预检须确认本机 PATH 上可执行 git（如 git --version）；未安装或不可用则非零退出并给出安装指引，磁盘无本次init产物；--apply 同路径
 - AC-2: tiller init --apply在预检通过后推送、开PR/MR、API squash合入、close清理，并对primary默认分支快进；任一步失败停在该步并提示续跑，不假成功
 - AC-3: case add将关联AC写为需求specs文件中的AC-n（可多个）；拒绝任务#AC写法；新用例不再固定写无
 - AC-4: 历史关联AC为无或task#AC仍可读；受管rules/usage/CASE与测试同步；版本保持0.5.0
@@ -97,15 +98,37 @@
 
 | 部分 | 确认人 | 时间 | 短提交 | 原话 |
 | --- | --- | --- | --- | --- |
-| 需求 | ChukiChen | 2026-10-28T14:27:58.670Z | a5f998a70b45 | 并入 CRLF/LF tree digest 归一（AC-5） |
 | 设计 | ChukiChen | 2026-10-28T14:27:58.819Z | 860438196f51 | digest 对齐 Git blob/hash-object；不改用户 autocrlf |
+| 需求 | ChukiChen | 2026-10-28T15:31:15.327Z | bd510a92eeb4 | 预检增加 git 已安装检查 |
 
-<!-- tiller-confirm:v1 {"gate":"requirements","object":"需求正文（目标、范围与验收条件）","subject":"f9815df6897d3c43a9c45ac3768bc4032007a50df8f4750426f5833e7d5f8016","commit":"a5f998a70b45cf5bcfdc5f8b3696f00d14af2c86","by":"ChukiChen","quote":"并入 CRLF/LF tree digest 归一（AC-5）","at":"2026-10-28T14:27:58.670Z"} -->
 <!-- tiller-confirm:v1 {"gate":"design","object":"设计正文","subject":"0545b9787bef660b4c8b55d57c818cd36536ea930950ca7e5d459534e009fe9b","commit":"860438196f515fc75ab0784f9fd6200a03f65baf","by":"ChukiChen","quote":"digest 对齐 Git blob/hash-object；不改用户 autocrlf","at":"2026-10-28T14:27:58.819Z"} -->
+<!-- tiller-confirm:v1 {"gate":"requirements","object":"需求正文（目标、范围与验收条件）","subject":"3d2e55b89c1d9b74742d805e9e5e31b7774d0dd9ce1c6fed9cae7f919bcc4db0","commit":"bd510a92eeb4908b33c5661ea0597f62d3e0f632","by":"ChukiChen","quote":"预检增加 git 已安装检查","at":"2026-10-28T15:31:15.327Z"} -->
 
 ## 验证
 
-尚无验证。
+### run-1
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-339 init preflight rejects missing token or invalid origin before creating artifacts$' \u002d\u002dtest-reporter=./.tiller/local/verify-j8duvC/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-j8duvC/report.jsonl test/init-baseline.test.mjs","exitCode":0,"tree":"561414c39d5b36455b069243e88a10185d240805442beee834f6da3d833ad2e8","commit":"bd510a92eeb4908b33c5661ea0597f62d3e0f632"} -->
+- 条件：AC-1
+- 测试：test/init-baseline.test.mjs::CASE-339 init preflight rejects missing token or invalid origin before creating artifacts
+- 用例：CASE-339
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/20261028-init-apply-case-ac/logs/run-1.log
+- 提交：bd510a92eeb4
+- 时间：2026-10-28T15:30:50.009Z
+
+### run-2
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-248 CASE-339 init without token fails preflight with API/token guidance and no local state$' \u002d\u002dtest-reporter=./.tiller/local/verify-5jCu5K/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-5jCu5K/report.jsonl test/init-baseline.test.mjs","exitCode":0,"tree":"561414c39d5b36455b069243e88a10185d240805442beee834f6da3d833ad2e8","commit":"bd510a92eeb4908b33c5661ea0597f62d3e0f632"} -->
+- 条件：AC-1
+- 测试：test/init-baseline.test.mjs::CASE-248 CASE-339 init without token fails preflight with API/token guidance and no local state
+- 用例：CASE-339
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/20261028-init-apply-case-ac/logs/run-2.log
+- 提交：bd510a92eeb4
+- 时间：2026-10-28T15:30:50.009Z
 
 ## 自检
 
