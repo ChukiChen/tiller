@@ -790,31 +790,7 @@ slug 是任务编号的 -<slug> 后缀时分支为 类型/任务编号；额外�
 
 ### 预期结果
 
-git worktree 位于 .tiller/local/<id>/worktrees，worktrees.json、pre-existing.json 与 logs 同属 .tiller/local/<id>，旧三棵树不创建
-
-## CASE-214 旧开工前旁路按新后旧读取
-
-- 类型：interface
-- 优先级：medium
-- 模块：workflow
-- 关联 AC：20261026-local-task-layout#AC-1
-- 需求：`.tiller/specs/modules/workflow/requirements.md`
-
-### 前置条件
-
-- 任务同时存在新旧开工前改动摘要
-
-### 步骤
-
-1. 读取任务并随后移除新旁路
-
-### 输入
-
-- 新旧 pre-existing.json 内容不同
-
-### 预期结果
-
-同时存在时采用新布局，新缺失时回退旧布局且摘要有效
+git worktree 位于 .tiller/local/<id>/worktrees，worktrees.json、pre-existing.json 与 logs 同属 .tiller/local/<id>
 
 ## CASE-215 文档与规格写明任务本机目录布局与 close 生命周期
 
@@ -839,7 +815,7 @@ git worktree 位于 .tiller/local/<id>/worktrees，worktrees.json、pre-existing
 
 ### 预期结果
 
-usage、rules、workflow specs 与 decisions 描述 .tiller/local/<id>/ 聚合布局，以及 close/abandon 删除整棵任务目录并兼容旧路径
+usage、rules、workflow specs 与 decisions 描述 .tiller/local/<id>/ 聚合布局，以及 close/abandon 删除整棵任务目录
 
 ## CASE-220 交付文档写明 pr 前提交任务记录
 
@@ -1359,29 +1335,3 @@ check 不出现“未检测到任务基线后 .tiller/specs/ 或 .tiller/context
 ### 预期结果
 
 specs/workflow 等约定 scope 不产生模块缺失提示；不存在的真实模块 id 仍提示模块不在 specs/modules
-
-## CASE-313 主路径 CLI 与测试按 PATH 使用 tiller 且不依赖 bind
-
-- 类型：interface
-- 优先级：medium
-- 模块：workflow
-- 关联 AC：无
-- 需求：`.tiller/specs/modules/workflow/hygiene-invariants.md`
-
-### 前置条件
-
-- 已安装 tiller 0.5.0 且 PATH 中只有一个 tiller；Git 工程可初始化
-
-### 步骤
-
-1. 用 PATH 中的 tiller 执行 init、start 与 --version
-2. 检查主路径 usage/README、dogfood 入口和 package smoke 的调用方式
-3. 检查 init 后不要求或自动生成 runtime bind 才能继续
-
-### 输入
-
-- PATH 安装的 tiller 与干净 Git 工程
-
-### 预期结果
-
-主路径通过 PATH、npx 或打包入口调用同一个 tiller；不要求、不引导、不验收 runtime bind；init/start 不依赖 .tiller/local/runtime.json

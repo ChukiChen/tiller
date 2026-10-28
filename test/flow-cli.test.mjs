@@ -1,5 +1,4 @@
 import assert from 'node:assert/strict';
-import { createHash } from 'node:crypto';
 import { existsSync, readFileSync, readdirSync, unlinkSync } from 'node:fs';
 import { join } from 'node:path';
 import { spawnSync } from 'node:child_process';
@@ -349,7 +348,7 @@ test('CASE-063 requirement and design confirmations use independent digests', as
   assert.equal(afterRequirements.confirmations.find(item => item.gate === 'requirements').confirmed, false);
 });
 
-test('CASE-064 CASE-205 legacy task text and quoted confirmation remain readable and valid', async t => {
+test('CASE-064 historical task text and criteria remain readable', async t => {
   const root = await project(t);
   const id = '20261022-legacy-confirmation';
   success(cli(root, 'start', id, '--title', 'Legacy record', '--requirement', 'Initial structured requirement.',
@@ -358,12 +357,6 @@ test('CASE-064 CASE-205 legacy task text and quoted confirmation remain readable
   const meta = JSON.parse(/<!-- tiller-task:v1 (\{.*\}) -->/u.exec(initial)[1]);
   delete meta.format;
   const requirement = 'Legacy requirement text.';
-  const criteria = [{ id: 'AC-1', text: 'Legacy behavior remains valid' }];
-  const normalize = value => value.replace(/\s+/gu, ' ').trim();
-  const subject = createHash('sha256').update(JSON.stringify({
-    type: meta.type, size: meta.size, scope: meta.scope,
-    requirement: normalize(requirement), criteria: criteria.map(item => [item.id, normalize(item.text)]),
-  }), 'utf8').digest('hex');
   put(taskRecordRoot(root, id), task(root, id), [
     '# Legacy record',
     `<!-- tiller-task:v1 ${JSON.stringify(meta)} -->`,
@@ -378,13 +371,7 @@ test('CASE-064 CASE-205 legacy task text and quoted confirmation remain readable
     '',
     '## 确认',
     '',
-    '### requirements',
-    '- 对象：需求正文（目标与验收条件）',
-    '- 用户原话：旧格式确认',
-    '- 原话用途：确认凭证，不替代已写明的正文',
-    `- 提交：${meta.base}`,
-    `- 对象摘要：${subject}`,
-    '- 时间：2026-10-22T00:00:00.000Z',
+    '尚无确认。',
     '',
     '## 验证',
     '',
@@ -396,33 +383,10 @@ test('CASE-064 CASE-205 legacy task text and quoted confirmation remain readable
     '',
   ].join('\n'));
   const resumed = success(cli(root, 'resume', id));
-  assert.equal(resumed.stage, '需求已确认');
-  assert.equal(resumed.confirmations[0].quote, '旧格式确认');
-  const checked = failure(cli(root, 'check', id));
-  assert.equal(checked.confirmations.find(item => item.gate === 'requirements').confirmed, true);
-  const rewritten = read(root, task(root, id));
-  assert.match(rewritten, /^\| 部分 \| 确认人 \| 时间 \| 短提交 \| 原话 \|$/mu);
-  assert.match(rewritten, /^\| 需求 \| — \| .* \| [a-f0-9]{12} \| 旧格式确认 \|$/mu);
-  const [record] = confirmationSidecars(rewritten);
-  assert.equal(record.style, 'legacy');
-  assert.equal(record.by, '');
-  assert.equal(record.quote, '旧格式确认');
-  assert.equal(record.subject, subject);
-  assert.doesNotMatch(rewritten, /^- 原话用途：/mu);
-  assert.doesNotMatch(rewritten, /^- 确认人：/mu);
-  assert.equal(success(cli(root, 'resume', id)).stage, '需求已确认');
-
-  const mixed = rewritten.replace(/## 确认\n\n[\s\S]*?(?=\n## 验证)/u, [
-    '## 确认', '', '<!-- tiller-confirm:v1 {broken -->', '', '### requirements',
-    '- 对象：需求正文（目标与验收条件）', '- 用户原话：旧格式确认', '- 原话用途：确认凭证，不替代已写明的正文',
-    `- 提交：${meta.base}`, `- 对象摘要：${subject}`, '- 时间：2026-10-22T00:00:00.000Z',
-  ].join('\n'));
-  put(taskRecordRoot(root, id), task(root, id), mixed);
-  assert.equal(success(cli(root, 'resume', id)).stage, '需求已确认');
-  put(taskRecordRoot(root, id), task(root, id), mixed.replace(`- 对象摘要：${subject}\n`, ''));
-  const missingField = success(cli(root, 'resume', id));
-  assert.deepEqual(missingField.confirmations, []);
-  assert.equal(missingField.stage, '已开始');
+  assert.equal(resumed.requirement.trim(), requirement);
+  assert.deepEqual(resumed.criteria, [{ id: 'AC-1', text: 'Legacy behavior remains valid' }]);
+  assert.equal(resumed.stage, '已开始');
+  assert.deepEqual(resumed.confirmations, []);
 });
 
 test('CASE-061 plan confirmation records a confirmer without a quote', async t => {

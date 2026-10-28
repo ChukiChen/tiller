@@ -53,10 +53,7 @@ async function hasTaskRecord(root: string, id: string): Promise<boolean> {
 }
 
 function taskWorktreeContainers(primary: string, id: string): string[] {
-  return [
-    path.join(primary, '.tiller/local', id, 'worktrees'),
-    path.join(primary, '.tiller/local/worktrees', id),
-  ];
+  return [path.join(primary, '.tiller/local', id, 'worktrees')];
 }
 
 async function relatedTaskWorktree(input: string, primary: string, id: string): Promise<string | null> {

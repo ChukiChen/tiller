@@ -4,7 +4,7 @@
   ],
   "contracts": [
     "file-path-performance.test.mjs",
-    "launcher-performance.test.mjs",
+    "package-contract.test.mjs",
     "project-inspection-performance.test.mjs",
     "repository-metadata-performance.test.mjs",
     "shared-path-round-performance.test.mjs"
@@ -13,7 +13,6 @@
     "core.test.mjs",
     "repository-paths.test.mjs",
     "java-runners.test.mjs",
-    "runtime.test.mjs",
     "upgrade.test.mjs",
     "work-migration.test.mjs",
     "usage-resources.test.mjs"

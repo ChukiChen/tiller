@@ -8,7 +8,7 @@ import { spawnSync } from 'node:child_process';
 import { fixture, gitRepository, put, settleInitBaseline, snapshot } from './helpers.mjs';
 
 const read = (root, name) => readFileSync(join(root, name), 'utf8');
-const added = ['.tiller/usage.md', '.tiller/run.cjs'];
+const added = ['.tiller/usage.md'];
 
 function mergeInitBaseline(root, result) {
   const baseline = result.initBaseline;
@@ -26,7 +26,7 @@ async function initialized(options) {
   return mergeInitBaseline(options.root, result);
 }
 
-test('CASE-050 initialization supplies current usage and launcher with discoverable links and no machine paths', async t => {
+test('CASE-050 initialization supplies current usage with discoverable links and no machine paths', async t => {
   const root = fixture(t);
   const result = await initialized({ root });
   assert.equal(RESOURCE_VERSION, '0.5.0');
@@ -40,6 +40,7 @@ test('CASE-050 initialization supplies current usage and launcher with discovera
   }
   assert.ok(!existsSync(join(root, 'resources/workflows')));
   assert.ok(!existsSync(join(root, 'resources/templates')));
+  assert.ok(!existsSync(join(root, '.tiller/run.cjs')));
   assert.match(read(root, 'AGENTS.md'), /\.tiller\/usage\.md/u);
   assert.match(read(root, '.tiller/index.md'), /\]\(usage\.md\)/u);
   const usage = read(root, '.tiller/usage.md');
@@ -124,7 +125,7 @@ test('CASE-142 current noop binds raw shared-resource bytes even across permitte
   assert.equal(current.ready, true, current.conflicts.join('\n'));
   assert.equal((await applyUpgrade(root, current.planId)).changed, false);
   assert.deepEqual(snapshot(root), converted);
-  put(root, '.tiller/run.cjs', read(root, '.tiller/run.cjs') + '\n// user edit\n');
+  put(root, '.tiller/rules/core.md', read(root, '.tiller/rules/core.md') + '\n用户修改。\n');
   assert.equal((await inspectProject(root)).ready, false);
   assert.equal((await planUpgrade(root)).ready, false);
 });
@@ -164,7 +165,7 @@ test('CASE-036 ignored current entry paths block inspection and noop without cha
   const root = fixture(t);
   gitRepository(root, '.');
   await initialized({ root });
-  put(root, '.gitignore', read(root, '.gitignore') + '\n/.tiller/run.cjs\n');
+  put(root, '.gitignore', read(root, '.gitignore') + '\n/.tiller/rules/core.md\n');
   assert.equal((await inspectProject(root)).ready, false);
   const before = snapshot(root);
   const plan = await planUpgrade(root);
@@ -209,7 +210,7 @@ test('CASE-144 resource checkout EOL conversion keeps inspection ready and prese
     const before = snapshot(root);
     assert.equal((await initialized({ root })).changed, false);
     assert.deepEqual(snapshot(root), before);
-    put(root, '.tiller/run.cjs', read(root, '.tiller/run.cjs') + '// modified\n');
+    put(root, '.tiller/rules/core.md', read(root, '.tiller/rules/core.md') + '用户修改。\n');
     assert.equal((await inspectProject(root)).ready, false);
   }
 });
@@ -243,7 +244,6 @@ test('CASE-215 docs describe task-local layout and close cleanup lifecycle', () 
     assert.match(text, /\.tiller\/local\/<id>\//u);
   }
   assert.match(usage, /worktrees\//u);
-  assert.match(usage, /兼容清理旧三棵树|兼容清理旧/u);
   assert.match(core, /worktrees\//u);
   assert.match(requirements, /FLOW-34|任务 worktree 生命周期|\.tiller\/local\//u);
   assert.match(design, /worktrees\//u);

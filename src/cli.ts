@@ -1,9 +1,8 @@
 #!/usr/bin/env node
 import { parseArgs } from 'node:util';
 import { resolve } from 'node:path';
-import { fileURLToPath, pathToFileURL } from 'node:url';
+import { pathToFileURL } from 'node:url';
 import { realpathSync } from 'node:fs';
-import { bindRuntime, runtimeStatus } from './runtime.js';
 import { initialize, inspectProject, recoverProject } from './core.js';
 import { adoptManagedFiles, applyUpgrade, planUpgrade } from './upgrade.js';
 import { addGlobalCase } from './cases.js';
@@ -104,7 +103,7 @@ export async function runCli(rawArgs = process.argv.slice(2)): Promise<void> {
         slug: { type: 'string' }, summary: { type: 'string' }, platform: { type: 'string' },
         type: { type: 'string' }, size: { type: 'string' }, target: { type: 'string', multiple: true },
         quote: { type: 'string' }, by: { type: 'string' }, commit: { type: 'string' }, criterion: { type: 'string', multiple: true },
-        test: { type: 'string' }, command: { type: 'string' }, run: { type: 'string' }, result: { type: 'string' },
+        test: { type: 'string' }, command: { type: 'string' }, result: { type: 'string' },
         reported: { type: 'boolean' }, 'expect-fail': { type: 'boolean' }, 'allow-reported': { type: 'boolean' },
         verbose: { type: 'boolean' }, adopt: { type: 'string', multiple: true },
         plan: { type: 'string' }, item: { type: 'string', multiple: true }, goal: { type: 'string' },
@@ -139,7 +138,7 @@ export async function runCli(rawArgs = process.argv.slice(2)): Promise<void> {
         ? command === 'start' ? ['path', 'title', 'requirement', 'requirement-file', 'type', 'size', 'target', 'criterion', 'plan', 'item', 'slug', 'summary', 'skip-init-gate']
           : command === 'resume' ? ['path']
             : command === 'confirm' ? ['path', 'quote', 'by', 'commit', 'allow-reported']
-              : command === 'verify' ? ['path', 'criterion', 'test', 'case', 'command', 'run', 'result', 'reported', 'reason', 'expect-fail', 'verbose', 'clear-premature']
+              : command === 'verify' ? ['path', 'criterion', 'test', 'case', 'command', 'result', 'reported', 'reason', 'expect-fail', 'verbose', 'clear-premature']
                 : command === 'accept' ? ['path', 'quote', 'by', 'commit', 'allow-reported']
                   : command === 'review' ? ['path', 'by', 'finding', 'blocking', 'resolve']
                     : command === 'release' ? ['path']
@@ -154,8 +153,7 @@ export async function runCli(rawArgs = process.argv.slice(2)): Promise<void> {
             : prCommand ? ['path', 'slug', 'summary', 'draft-only']
               : doctorCommand ? ['path']
                 : command === 'init' ? ['mode', 'repo', 'platform']
-              : command === 'upgrade' ? ['plan', 'apply', 'adopt']
-                : command === 'runtime' ? ['path'] : [];
+              : command === 'upgrade' ? ['plan', 'apply', 'adopt'] : [];
       for (const name of Object.keys(values)) {
         if (!['json', ...allowed].includes(name)) usage(`选项 --${name} 不适用于该命令。`);
       }
@@ -207,7 +205,6 @@ export async function runCli(rawArgs = process.argv.slice(2)): Promise<void> {
             if (!values.test && !values.case) usage('verify 需要 --test "文件::测试名" 或 --case CASE-xxx；清除错序段用 --clear-premature。');
             if (!values.criterion?.length && !values.case) usage('verify 未指定 --case 时至少需要一个 --criterion。');
             if (values.test && values.case) usage('--test 与 --case 只能选一个。');
-            if (values.run !== undefined) usage('verify 不再接受 --run；使用 --test "文件::测试名" 或 --case CASE-xxx，由 tiller 自主执行测试。');
             if (values.reported) {
               if (!values.test) usage('--reported 需要 --test；--case 必须由 tiller 执行。');
               if (!values.command || !values.result || !values.reason) usage('--reported 需要 --command、--result 和 --reason。');
@@ -349,12 +346,6 @@ export async function runCli(rawArgs = process.argv.slice(2)): Promise<void> {
           const plan = await planUpgrade(root);
           result = { ...plan, issues: plan.conflicts }; ready = plan.ready;
         }
-      } else if (command === 'runtime') {
-        if (positionals.length !== 2 || !['status', 'bind'].includes(second ?? '')) usage('runtime 需要 status 或 bind，可指定 --path <工程根目录>。');
-        const root = values.path ?? process.cwd();
-        const runtime = second === 'bind' ? await bindRuntime(root, fileURLToPath(import.meta.url)) : await runtimeStatus(root);
-        ready = runtime.ready;
-        result = { runtime, entry: runtime.ready ? 'tiller' : null, entryRoot: resolve(root) };
       } else usage(`未知命令：${command ?? ''}`);
       if (markdownOutput !== null && prOutputFormat({ json: wantsJson, tty: process.stdout.isTTY }) === 'markdown') {
         process.stdout.write(markdownOutput);

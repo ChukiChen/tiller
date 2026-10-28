@@ -300,7 +300,7 @@
 
 测试通过，并且需求与设计确认使用独立摘要。
 
-## CASE-064 旧任务正文与旧确认记录保持有效
+## CASE-064 历史任务正文与验收条件保持可读
 
 - 类型：behavior
 - 优先级：medium
@@ -319,11 +319,11 @@
 
 ### 输入
 
-- 按“旧任务正文与旧确认记录保持有效”的场景准备正常输入和必要的边界输入。
+- 无结构化格式标记的历史任务正文与顶层验收条件。
 
 ### 预期结果
 
-测试通过，并且旧任务正文与旧确认记录保持有效。
+历史任务正文与验收条件可读取，任务按当前记录事实推导阶段。
 
 ## CASE-066 验收确认可省略原话并记录验收人
 
@@ -890,7 +890,7 @@ CASE-179 至 CASE-185 均有具名测试引用，包与资源版本保持 0.5.0
 
 同一 AC 或 CASE 连续两次失败且无成功核实后，verify 与 check 给出 FLOW-05 停止提示；成功核实清零
 
-## CASE-190 新任务标记省略开工前摘要并写入本机旁路
+## CASE-190 新任务标记省略开工前摘要并写入当前任务本机旁路
 
 - 类型：behavior
 - 优先级：medium
@@ -913,32 +913,7 @@ CASE-179 至 CASE-185 均有具名测试引用，包与资源版本保持 0.5.0
 
 ### 预期结果
 
-新 task.md 的 tiller-task 标记不含 preExisting，开工前脏文件摘要保存在 .tiller/local/tasks/<id>/pre-existing.json
-
-## CASE-191 旧标记与旁路摘要兼容且不误报超范围
-
-- 类型：behavior
-- 优先级：medium
-- 模块：workflow
-- 关联 AC：20261024-doc-templates#AC-1
-- 需求：`.tiller/specs/modules/workflow/requirements.md`
-
-### 前置条件
-
-- 对应模块与运行环境可用。
-
-### 步骤
-
-1. 执行覆盖本用例的测试。
-2. 核对实际结果与预期结果一致。
-
-### 输入
-
-- 按用例描述准备正常输入及必要的边界输入。
-
-### 预期结果
-
-旧标记内的 preExisting 仍被解析，旁路摘要可过滤开工前脏文件，check 不误报超出范围
+新 task.md 的 tiller-task 标记不含 preExisting，开工前脏文件摘要保存在 .tiller/local/<id>/pre-existing.json
 
 ## CASE-193 需求确认拒绝关键章节空白或占位
 
@@ -990,7 +965,7 @@ confirm requirements 对空白或占位关键章节返回可定位缺失，旧�
 
 standard 设计模板包含方案、失败处理、取舍、影响与风险、验证入口，空白或占位关键节在 confirm design 与 check 中可定位
 
-## CASE-196 project 模式 start 创建任务 worktree
+## CASE-196 project 模式 start 创建任务本机 worktree
 
 - 类型：behavior
 - 优先级：medium
@@ -1013,7 +988,7 @@ standard 设计模板包含方案、失败处理、取舍、影响与风险、�
 
 ### 预期结果
 
-start 在 .tiller/local/worktrees/<id>/ 创建分支为类型/任务编号[-描述]的 Git worktree，并在结果中返回路径
+start 在 .tiller/local/<id>/worktrees/ 创建分支为类型/任务编号[-描述]的 Git worktree，并在结果中返回路径
 
 ## CASE-198 close 与 abandon 强拆 worktree 并清理本任务日志
 
@@ -1038,7 +1013,7 @@ start 在 .tiller/local/worktrees/<id>/ 创建分支为类型/任务编号[-描�
 
 ### 预期结果
 
-close 与 close --abandon 删除该任务全部 worktree 和 .tiller/local/logs/<id>/，其他任务日志保持
+close 与 close --abandon 删除该任务全部 worktree 和 .tiller/local/<id>/logs/，其他任务日志保持
 
 ## CASE-199 旧任务无 worktree 时 close 与 abandon 仍清理日志
 
@@ -1089,55 +1064,6 @@ worktree 缺失按幂等跳过，close/abandon 成功并删除既有日志目录
 ### 预期结果
 
 目标路径已占用、workspace 业务仓非 Git 或 Git 不可用时 start 失败，不写 task.md，也不遗留已建 worktree
-
-## CASE-202 旧版冗长验证块仍可解析与复用
-
-- 类型：behavior
-- 优先级：high
-- 模块：workflow
-- 关联 AC：20261024-slim-verify-render#AC-3
-- 需求：`.tiller/specs/modules/workflow/requirements.md`
-
-### 前置条件
-
-- 任务记录只含旧版命令、退出码和代码树摘要子弹
-
-### 步骤
-
-1. 读取任务并运行 check
-
-### 输入
-
-- 无机器旁路的旧版验证记录
-
-### 预期结果
-
-旧版字段仍被解析为同一验证事实，check 不因格式旧而误报或放宽
-
-## CASE-205 旧版冗长确认块仍可解析
-
-- 类型：behavior
-- 优先级：medium
-- 模块：workflow
-- 关联 AC：20261024-taskmd-cleanup#AC-1
-- 需求：`.tiller/specs/modules/workflow/requirements.md`
-
-### 前置条件
-
-- 任务记录只含旧版 ## 确认 bullet 且无机器旁路
-
-### 步骤
-
-1. 读取任务并执行 check
-2. 核对需求确认状态与摘要
-
-### 输入
-
-- 旧版对象、用户原话、提交、对象摘要和时间字段
-
-### 预期结果
-
-旧版确认被解析为同一门禁事实，check 不误报失效，也不放宽摘要或字段校验
 
 ## CASE-206 已验收 close 保持共享自检且 check 仍报告提示
 
@@ -1211,30 +1137,6 @@ management 和各 repository.path 均位于 .tiller/local/<id>/worktrees 下并�
 ### 预期结果
 
 任务 worktree 被拆除，整棵 .tiller/local/<id> 删除，其他任务目录保留
-
-## CASE-212 close 兼容清理旧布局旁路
-
-- 类型：behavior
-- 优先级：high
-- 模块：workflow
-- 关联 AC：20261026-local-task-layout#AC-3
-- 需求：`.tiller/specs/modules/workflow/requirements.md`
-
-### 前置条件
-
-- 进行中任务仍使用旧三棵树布局
-
-### 步骤
-
-1. 执行 close 或 close --abandon
-
-### 输入
-
-- 旧 worktree、logs 与 tasks 旁路，允许部分缺失
-
-### 预期结果
-
-旧 worktree 可拆除，旧 .tiller/local/worktrees|logs|tasks/<id> 均清理，缺失幂等且不删其他任务
 
 ## CASE-216 pr 阻断本任务未提交记录
 
@@ -2289,7 +2191,7 @@ confirm/accept 后本任务 .tiller/task/<id>/ 已提交，无需手搓即可通
 
 步骤 1 以 `VERIFY_BEFORE_DESIGN` 失败且不写入验证段。clear-premature 清除设计确认前的 verify 段后，过程卫生不再因错序 verify 阻断设计确认后的 check。
 
-## CASE-308 close 不 materialize 未跟踪 task 到 primary
+## CASE-308 close 不向 primary 复制任务记录
 
 - 类型：behavior
 - 优先级：high
@@ -2304,7 +2206,7 @@ confirm/accept 后本任务 .tiller/task/<id>/ 已提交，无需手搓即可通
 ### 步骤
 
 1. 运行 `tiller close <id> --reason "..."`。
-2. 检查 primary 是否出现未跟踪任务树与 `.tiller/local/closed/<id>.json`。
+2. 检查 primary 是否出现未跟踪任务树。
 3. 将已验收记录落到默认分支（模拟合入快进）后再 `reopen`。
 
 ### 输入
@@ -2313,9 +2215,9 @@ confirm/accept 后本任务 .tiller/task/<id>/ 已提交，无需手搓即可通
 
 ### 预期结果
 
-close 后 primary 无因 materialize 产生的未跟踪 `.tiller/task/<id>/`，且无 closed 标记；合入模拟后可 reopen 继续交付。
+close 后 primary 无未跟踪 `.tiller/task/<id>/`；合入模拟后可 reopen 继续交付。
 
-## CASE-309 close 不写 closed 标记且合入后重复 close 安全
+## CASE-309 合入后重复 close 保持共享记录安全
 
 - 类型：behavior
 - 优先级：high
@@ -2330,7 +2232,7 @@ close 后 primary 无因 materialize 产生的未跟踪 `.tiller/task/<id>/`，�
 ### 步骤
 
 1. 运行 `tiller close <id>` 两次。
-2. 检查共享 task.md 内容不变，且不存在 `.tiller/local/closed/<id>.json`。
+2. 检查共享 task.md 内容不变。
 
 ### 输入
 
@@ -2338,7 +2240,7 @@ close 后 primary 无因 materialize 产生的未跟踪 `.tiller/task/<id>/`，�
 
 ### 预期结果
 
-两次 close 均成功；共享 task.md 不被改写；不创建 closed 清理标记。
+两次 close 均成功；共享 task.md 不被改写。
 
 ## CASE-310 合入或关闭后 primary 无未跟踪任务树且可快进
 

@@ -64,11 +64,12 @@ function replaceTaskSection(content, title, body) {
 
 const packed = JSON.parse(run(process.execPath, [npm, 'pack', '--ignore-scripts=false', '--json', '--pack-destination', output], project))[0];
 const paths = new Set(packed.files.map(file => file.path));
-for (const path of ['dist/cli.js', 'dist/flow.js', 'resources/entry.md', 'resources/usage.md', 'resources/pull_request_template.md', 'resources/merge_request_template.md', 'resources/run.cjs']) {
+for (const path of ['dist/cli.js', 'dist/flow.js', 'resources/entry.md', 'resources/usage.md', 'resources/pull_request_template.md', 'resources/merge_request_template.md']) {
   assert.ok(paths.has(path), path);
 }
+assert.ok(!paths.has('resources/run.cjs'), 'resources/run.cjs must not be packaged');
 for (const path of [...paths]) assert.ok(!/^resources\/(?:workflows|templates)\//u.test(path), path);
-const expectedModules = ['branch-cleanup', 'branch-conventions', 'cases', 'cli', 'commit-conventions', 'confirmer', 'core', 'doctor', 'files', 'flow', 'init-baseline', 'plans', 'platform-api', 'pr', 'project-metadata', 'project-root', 'release', 'repository-paths', 'runtime', 'shared-paths', 'task-id', 'task-worktrees', 'test-output', 'test-reporter', 'types', 'upgrade'];
+const expectedModules = ['branch-cleanup', 'branch-conventions', 'cases', 'cli', 'commit-conventions', 'confirmer', 'core', 'doctor', 'files', 'flow', 'init-baseline', 'plans', 'platform-api', 'pr', 'project-metadata', 'project-root', 'release', 'repository-paths', 'shared-paths', 'task-id', 'task-worktrees', 'test-output', 'test-reporter', 'types', 'upgrade'];
 const packagedModules = [...paths].filter(path => /^dist\/[^/]+\.js$/u.test(path)).map(path => path.slice(5, -3)).sort();
 assert.deepEqual(packagedModules, expectedModules);
 assert.ok(![...paths].some(path => /^(src|test|\.tiller|node_modules)\//u.test(path)));
@@ -85,7 +86,8 @@ assert.equal(version, '0.5.0');
 const initialized = JSON.parse(run(process.execPath, [cli, 'init', target, '--json'], root));
 assert.equal(initialized.ready, true);
 assert.equal(initialized.metadata.resourceVersion, '0.5.0');
-assert.ok(!existsSync(join(target, '.tiller/local/runtime.json')), 'init must not write a runtime binding');
+assert.equal(Object.hasOwn(initialized.metadata.managedFiles, '.tiller/run.cjs'), false);
+assert.ok(!existsSync(join(target, '.tiller/run.cjs')), 'init must not write a launcher');
 const help = run(process.execPath, [cli, '--help'], target);
 assert.ok(help.includes('tiller start'), 'tiller start');
 assert.ok(help.includes('tiller plan start'), 'plan start');
@@ -107,8 +109,6 @@ assert.ok(installedUsage.includes('tiller pr'));
 assert.ok(installedUsage.includes('tiller review'));
 assert.ok(installedUsage.includes('tiller release'));
 assert.ok(installedUsage.includes('--requirement-file'));
-assert.ok(!installedUsage.includes('tiller runtime bind'));
-assert.ok(!installedUsage.includes('node .tiller/run.cjs'));
 const installedTemplate = readFileSync(join(target, '.github/pull_request_template.md'), 'utf8');
 for (const heading of ['关联任务', '变更内容', '验收条件', '验证结果', '影响与风险']) assert.ok(installedTemplate.includes(`## ${heading}`), heading);
 const gitlabTarget = join(root, 'gitlab-target');

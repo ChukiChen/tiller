@@ -2,7 +2,7 @@
 
 ## 1. 任务模型
 
-唯一任务文件为 `.tiller/task/<id>/task.md`，包含标题、一行 `tiller-task:v1` 元信息和可读区段。元信息保存 id、类型、规模、创建时间、Git 基线、范围、可选规划归属、分支描述、标题摘要、需求文件来源和结构化格式标记；新任务不把开工前改动摘要写入标记，而写入已被忽略的 `.tiller/local/<id>/pre-existing.json`。读取先找新路径，再回退旧 `.tiller/local/tasks/<id>/pre-existing.json`；合并旧标记字段与本机旁路，写回只序列化共享元信息。需求、AC、设计、确认、验证、评审、自检从 Markdown 区段读取；元信息与区段都受格式校验。
+唯一任务文件为 `.tiller/task/<id>/task.md`，包含标题、一行 `tiller-task:v1` 元信息和可读区段。元信息保存 id、类型、规模、创建时间、Git 基线、范围、可选规划归属、分支描述、标题摘要、需求文件来源和结构化格式标记；新任务不把开工前改动摘要写入标记，而写入已被忽略的 `.tiller/local/<id>/pre-existing.json`。开工前摘要只读取该任务本机旁路，写回只序列化共享元信息。需求、AC、设计、确认、验证、评审、自检从 Markdown 区段读取；元信息与区段都受格式校验。
 
 ## 2. 状态与确认
 
@@ -12,15 +12,15 @@
 - design：需求摘要和设计正文；
 - acceptance：需求、设计、AC 验证结果、提交和代码树。
 
-正文变化导致对应摘要变化，`check` 将需求或设计确认独立标为失效。确认记录保存确认部分、确认人、时间、提交、摘要和可选原话；人读段渲染为部分、确认人、时间、短提交、原话表，完整对象字段放入单行 `tiller-confirm:v1` 旁路。解析优先旁路，缺失或损坏时回退旧 bullet。确认人优先用 `--by`，否则读取 Git `user.name`。验收前必须已通过技术自检。
+正文变化导致对应摘要变化，`check` 将需求或设计确认独立标为失效。确认记录保存确认部分、确认人、时间、提交、摘要和可选原话；人读段渲染为部分、确认人、时间、短提交、原话表，完整对象字段放入单行 `tiller-confirm:v1` 旁路。确认只从旁路解析，缺失或损坏即未确认。确认人优先用 `--by`，否则读取 Git `user.name`。验收前必须已通过技术自检。
 
-新任务把结构化需求写在 `### 使用场景`、`### 目标`、`### 业务范围`、`### 关键行为`、`### 异常与边界`、`### 验收条件`；业务范围不列交付路径，路径只保存在元信息范围中。standard 设计写在 `### 方案`、`### 失败处理`、`### 取舍`、`### 影响与风险`、`### 验证入口`。章节注释强调业务约束与关键方案，不复制规格全文、不展开长命令菜谱。确认按可读行过滤空标题、注释和占位；旧任务没有格式标记时使用旧正文和顶层 AC，仅有 `### 范围` 的任务继续按旧章节确认。旧 quote 确认继续解析，再次写入时转为紧凑表并由旁路保留旧字段。
+新任务把结构化需求写在 `### 使用场景`、`### 目标`、`### 业务范围`、`### 关键行为`、`### 异常与边界`、`### 验收条件`；业务范围不列交付路径，路径只保存在元信息范围中。standard 设计写在 `### 方案`、`### 失败处理`、`### 取舍`、`### 影响与风险`、`### 验证入口`。章节注释强调业务约束与关键方案，不复制规格全文、不展开长命令菜谱。确认按可读行过滤空标题、注释和占位；历史任务没有格式标记时使用纯文本需求、顶层 AC 和历史“范围”章节。确认只按当前旁路生效。
 
 任务阶段在读取时按事实重新推导，优先级为最近关闭/放弃、有效需求确认、有效设计确认（standard）、当前验证、最后一次重开后的有效验收。回退时返回当前阶段与原因；`resume` 列表和 `plan status` 复用同一函数，避免多处状态漂移。
 
 ## 3. 验证
 
-`start <task-id>` 必须带 `--title`、目标正文和至少一个 `--criterion "AC-N=<验收条件>"`；需求正文来自 `--requirement` 或工程内相对路径 `--requirement-file`。standard 任务必须至少声明一个 `--target`，small 缺省范围为 `.`。`confirm` 的确认人优先取 `--by`，原话 `--quote` 可选。`verify` 接受 `--test` 或 `--case`；`--case` 先扫描覆盖该用例的全部测试，再逐个通过 `src/test-output.ts` 的适配器构造精确匹配的 node:test 命令，并将自带报告器写入私有临时目录。退出码与私有报告共同决定 passed/failed，stdout/stderr 只进日志。报告按文件与完整名称路径精确匹配恰好一个测试，且结果为通过、无失败事件才标记 verified；仅引用文件时要求全部通过。报告缺失/损坏、0/多个匹配、失败或跳过均为 unverified，由 `check` 阻断。`verify.prepare` 先于测试执行，失败即验证失败；`verify.runner` 选择已注册适配器。测试路径先匹配已登记仓库，命中仓库的 `verify` 按字段覆盖根配置，准备命令和测试进程的工作目录都是该仓库根。工作区里不能唯一匹配时直接失败；当前工程没有仓库时使用根配置。`junit-maven` 使用 `mvn -Dsurefire.reportsDirectory=<私有目录> -Dtest=<类名[#方法]> test`，`junit-gradle` 使用 `gradle -Dtiller.junit.reports=<私有目录> --init-script <私有目录>/junit-gradle.init.gradle test --tests <类名[.方法]>`。两者都只解析私有目录里的 JUnit XML，不内嵌 JVM，也不按扩展名选择运行器。`task.md` 的每条 run 只写条件、测试、用例、结果、来源、核实、理由/失败先行、日志、短提交和时间；完整 command、exitCode、tree 与全量 commit 放入紧邻标题的单行 `<!-- tiller-verify:v1 {...} -->`。解析优先读旁路，缺旁路时兼容旧版命令、退出码和代码树摘要子弹；旁路损坏且无旧字段的 run 跳过。日志保留完整显示命令、起止和退出码；check/accept 继续使用解析后的原字段。历史记录没有核实字段时保持旧解析路径，不施加新证据检查。
+`start <task-id>` 必须带 `--title`、目标正文和至少一个 `--criterion "AC-N=<验收条件>"`；需求正文来自 `--requirement` 或工程内相对路径 `--requirement-file`。standard 任务必须至少声明一个 `--target`，small 缺省范围为 `.`。`confirm` 的确认人优先取 `--by`，原话 `--quote` 可选。`verify` 接受 `--test` 或 `--case`；`--case` 先扫描覆盖该用例的全部测试，再逐个通过 `src/test-output.ts` 的适配器构造精确匹配的 node:test 命令，并将自带报告器写入私有临时目录。退出码与私有报告共同决定 passed/failed，stdout/stderr 只进日志。报告按文件与完整名称路径精确匹配恰好一个测试，且结果为通过、无失败事件才标记 verified；仅引用文件时要求全部通过。报告缺失/损坏、0/多个匹配、失败或跳过均为 unverified，由 `check` 阻断。`verify.prepare` 先于测试执行，失败即验证失败；`verify.runner` 选择已注册适配器。测试路径先匹配已登记仓库，命中仓库的 `verify` 按字段覆盖根配置，准备命令和测试进程的工作目录都是该仓库根。工作区里不能唯一匹配时直接失败；当前工程没有仓库时使用根配置。`junit-maven` 使用 `mvn -Dsurefire.reportsDirectory=<私有目录> -Dtest=<类名[#方法]> test`，`junit-gradle` 使用 `gradle -Dtiller.junit.reports=<私有目录> --init-script <私有目录>/junit-gradle.init.gradle test --tests <类名[.方法]>`。两者都只解析私有目录里的 JUnit XML，不内嵌 JVM，也不按扩展名选择运行器。`task.md` 的每条 run 只写条件、测试、用例、结果、来源、核实、理由/失败先行、日志、短提交和时间；完整 command、exitCode、tree 与全量 commit 放入紧邻标题的单行 `<!-- tiller-verify:v1 {...} -->`。每条运行只从当前旁路读取完整证据，旁路缺失或损坏即未核实。日志保留完整显示命令、起止和退出码；check/accept 继续使用解析后的原字段。
 
 外部报告使用 `--reported --command --result --reason`，理由必填并标记 `not-run`；`check`/`accept` 默认阻断，只有 `--allow-reported` 放行，`pr` 在验证结果中标明未执行及理由。bugfix 的 `--expect-fail` 在任务基线提交的临时 Git 工作树运行当前测试文件，要求具名测试失败并记录基线提交；`check` 还要求当前代码存在同一测试的已核实通过记录。工作树在成功或异常时都清理。
 
@@ -41,7 +41,7 @@
 
 ## 5. 关闭与恢复
 
-`close --reason` 只接受当前阶段为已验收的任务；它按任务默认 worktree 清理流程删除本机检出与 `.tiller/local/<id>/`，再默认删除本地与远端任务分支；`--keep-branch` 保留分支，删除失败只记 warning。它不调用 `writeTask`，也不把任务树 materialize 到 primary 或写入 `.tiller/local/closed/`；已合入的共享 `task.md` 内容、摘要和修改时间保持不变，返回阶段仍为已验收并标明本机清理完成。未验收任务必须显式 `close --reason ... --abandon`；放弃事件写入 `task.md` 的“关闭”区段，保存状态、原因和时间，放弃任务保持终态。`reopen --reason` 对已放弃或历史已关闭任务追加恢复事件，也允许从已验收任务显式重开；验收、确认和验证仍按原摘要判断，阶段从最后一次恢复之后的事实重新计算。终态任务上的 `confirm`、`verify`、`accept` 直接阻塞。
+`close --reason` 只接受当前阶段为已验收的任务；它按任务默认 worktree 清理流程删除本机检出与 `.tiller/local/<id>/`，再默认删除本地与远端任务分支；`--keep-branch` 保留分支，删除失败只记 warning。它不调用 `writeTask`，共享 `task.md` 内容、摘要和修改时间保持不变，返回阶段仍为已验收并标明本机清理完成。未验收任务必须显式 `close --reason ... --abandon`；放弃事件写入 `task.md` 的“关闭”区段，保存状态、原因和时间，放弃任务保持终态。`reopen --reason` 对已放弃或历史已关闭任务追加恢复事件，也允许从已验收任务显式重开；验收、确认和验证仍按原摘要判断，阶段从最后一次恢复之后的事实重新计算。终态任务上的 `confirm`、`verify`、`accept` 直接阻塞。
 
 ## 6. 交付草稿与真实 PR/MR
 
@@ -75,11 +75,11 @@
 
 `src/task-worktrees.ts` 统一生成任务分支与布局。每个任务使用 `.tiller/local/<id>/` 作为本机根，检出容器为 `worktrees/`；project 的检出就是该容器，workspace 先建 `management`，再按 `project.json.repositories[].path` 建 `repositories/<id>`。每个源仓必须是自身 Git 工作副本根且有提交，分支复用 `commitTypeForTaskType`、`suggestedBranchNameFor`，任务编号已含同一描述时不双拼；已有同名分支时直接检出，否则从该仓 HEAD 新建。worktree 路径始终只使用任务编号。
 
-建树前先校验任务容器、全部源仓和目标路径，任何一步失败都强制移除本次已建树，并清理本次产生的 worktree 容器、清单和开工前旁路；未知的本机文件保留，空任务目录一并移除，task.md 不落盘。成功后把相对路径与本机清单 `.tiller/local/<id>/worktrees.json` 写入；读取先新后旧，清单缺失或损坏时 close 回退 project/workspace 的新旧约定布局。所有目标都经安全路径校验并限制在新旧任务 worktree 容器内。
+建树前先校验任务容器、全部源仓和目标路径，任何一步失败都强制移除本次已建树，并清理本次产生的 worktree 容器、清单和开工前旁路；未知的本机文件保留，空任务目录一并移除，task.md 不落盘。成功后把相对路径与本机清单 `.tiller/local/<id>/worktrees.json` 写入；清单缺失或损坏时 close 按当前 project/workspace 约定布局回退。所有目标都经安全路径校验并限制在当前任务 worktree 容器内。
 
-已验收 close 不写共享关闭事实，也不把 `.tiller/task/<id>/` materialize 到 primary；清理前先验证主检出跟踪记录与当前任务记录一致、任务分支已进入默认历史，或平台 API 确认同分支 PR/MR 已合入。证明不足时以 `CLOSE_MERGE_PROOF_MISSING` 拒绝拆树、删本地目录与分支。证明有效后按清单或约定布局执行 `git worktree remove --force` 与 prune。abandon 不要求合入证明，但必须先把关闭段写入 primary 已有任务记录；primary 没有清理后仍可读取记录时以 `ABANDON_NOT_PERSISTABLE` 拒绝，**不**新建未跟踪种子。路径已缺失记入 `missingWorktrees` 并继续。Git 移除失败时仅对该受管目录强制删除并返回 warning；随后删除整棵 `.tiller/local/<id>/`（含 logs 与旁路），并 best-effort 清理旧 `.tiller/local/worktrees|logs|tasks/<id>/`。`closeFlow` 经 `resolveTaskCheckout` 从任务 worktree 取得主仓与任务读取根：任务记录和 abandon 写回使用当前任务检出，worktree 清理与 `cleanupTaskBranches` 继续使用主仓，在管理仓与各业务仓删除同名本地分支并优先通过平台 API 删除远端；远端 404/422/已不存在视为已清理且不产生 warning，无 token、平台解析失败、其它远端 API 失败或当前分支无法安全切换只汇总 warning，不回滚本机清理。`--keep-branch` 跳过整段分支删除。清理后只有 primary 仍可读取任务记录时，返回的 `next` 才提示 `reopen`。不再写入或读取 `.tiller/local/closed/<id>.json`；合入后的历史靠默认分支快进/pull 取得已跟踪记录。重复 close 对缺失 worktree、local 与分支保持幂等。清理失败不阻断本机清理结果或放弃记录，其他任务路径不动。所有本机路径保持工程相对形式，不写入共享 task.md。
+已验收 close 不写共享关闭事实，也不把 `.tiller/task/<id>/` 复制到 primary；清理前先验证主检出跟踪记录与当前任务记录一致、任务分支已进入默认历史，或平台 API 确认同分支 PR/MR 已合入。证明不足时以 `CLOSE_MERGE_PROOF_MISSING` 拒绝拆树、删本地目录与分支。证明有效后按清单或当前约定布局执行 `git worktree remove --force` 与 prune。abandon 不要求合入证明，但必须先把关闭段写入 primary 已有任务记录；primary 没有清理后仍可读取记录时以 `ABANDON_NOT_PERSISTABLE` 拒绝，**不**新建未跟踪种子。路径已缺失记入 `missingWorktrees` 并继续。Git 移除失败时仅对该受管目录强制删除并返回 warning；随后删除整棵 `.tiller/local/<id>/`（含 logs 与旁路）。`closeFlow` 经 `resolveTaskCheckout` 从任务 worktree 取得主仓与任务读取根：任务记录和 abandon 写回使用当前任务检出，worktree 清理与 `cleanupTaskBranches` 继续使用主仓，在管理仓与各业务仓删除同名本地分支并优先通过平台 API 删除远端；远端 404/422/已不存在视为已清理且不产生 warning，无 token、平台解析失败、其它远端 API 失败或当前分支无法安全切换只汇总 warning，不回滚本机清理。`--keep-branch` 跳过整段分支删除。清理后只有 primary 仍可读取任务记录时，返回的 `next` 才提示 `reopen`。合入后的历史靠默认分支快进/pull 取得已跟踪记录。重复 close 对缺失 worktree、local 与分支保持幂等。清理失败不阻断本机清理结果或放弃记录，其他任务路径不动。所有本机路径保持工程相对形式，不写入共享 task.md。
 
-`project-root.ts` 的 `resolveTaskCheckout(input, id)` 是任务根、`--path` 与 cwd 的唯一解析入口。它先由 `resolveProjectRoot` 找主仓，再识别输入是否落在本任务新旧 worktree 容器或清单登记的任务检出；命中时以该检出的管理根为 `taskRoot`，即使主仓也有同名 `task.md`。`case add`、`confirm`、`verify`、`check`、`accept`、`review`、`release`、`reopen`、`resume <id>`、`attach` 与 `pr` 读任务侧均使用该入口，不再各自 `path.resolve(rootInput)` 猜任务根。任务 worktree 缺少记录时仍返回该任务根，由 `readTask` 报 `TASK_NOT_FOUND`；显式 `--path primary` 才读取主仓副本。任务记录写入只更新当前检出及其它已存在的任务 worktree，不在 `taskRoot` 非 primary 时写回 primary；start 首次写入目标是管理/sole 任务 worktree，再按需同步到兄弟 worktree，不在 primary 留种子。`confirm`/`accept` 写入确认后自动提交本任务 `.tiller/task/<id>/`。
+`project-root.ts` 的 `resolveTaskCheckout(input, id)` 是任务根、`--path` 与 cwd 的唯一解析入口。它先由 `resolveProjectRoot` 找主仓，再识别输入是否落在当前 `.tiller/local/<id>/worktrees/` 容器或清单登记的任务检出；命中时以该检出的管理根为 `taskRoot`，即使主仓也有同名 `task.md`。`case add`、`confirm`、`verify`、`check`、`accept`、`review`、`release`、`reopen`、`resume <id>`、`attach` 与 `pr` 读任务侧均使用该入口，不再各自 `path.resolve(rootInput)` 猜任务根。任务 worktree 缺少记录时仍返回该任务根，由 `readTask` 报 `TASK_NOT_FOUND`；显式 `--path primary` 才读取主仓副本。任务记录写入只更新当前检出及其它已存在的任务 worktree，不在 `taskRoot` 非 primary 时写回 primary；start 首次写入目标是管理/sole 任务 worktree，再按需同步到兄弟 worktree，不在 primary 留种子。`confirm`/`accept` 写入确认后自动提交本任务 `.tiller/task/<id>/`。
 
 ## 11. 初始化基线门禁
 
@@ -103,4 +103,4 @@
 
 `closeFlow` 与 `mergeFlow` 的自动 close 只清理任务 worktree、本机目录和任务分支，不向 primary 复制 `.tiller/task/<id>/`。合入后的共享记录由远端默认分支的已跟踪提交快进获得。回归测试同时验证 primary 无任务残留、`git status` 工作区干净，以及 `git merge --ff-only` 可完成；平台 API 合入与手动 close 两条收尾路径共用这一不变式。
 
-无 `--requirement-file` 时，`renderStructuredRequirement` 用短目标生成可确认骨架：使用场景记录目标，目标写明短目标，业务范围写本次做/不做/假设，关键行为逐条列出 AC，异常与边界写失败和未完成边界。`--requirement-file` 的结构化正文仍优先，不注入短目标骨架。`init` 不再自动执行 `runtime bind`；主路径文档和 package smoke 直接调用 PATH、`npx` 或安装包的 tiller。`commitSubjectIssue` 对 `specs`、`workflow`、`standards`、`initialization`、`verification` 等约定 scope 跳过模块存在性提示，其它未知模块仍报错。
+无 `--requirement-file` 时，`renderStructuredRequirement` 用短目标生成可确认骨架：使用场景记录目标，目标写明短目标，业务范围写本次做/不做/假设，关键行为逐条列出 AC，异常与边界写失败和未完成边界。`--requirement-file` 的结构化正文仍优先，不注入短目标骨架。主路径文档和 package smoke 直接调用 PATH、`npx` 或安装包的 tiller。`commitSubjectIssue` 对 `specs`、`workflow`、`standards`、`initialization`、`verification` 等约定 scope 跳过模块存在性提示，其它未知模块仍报错。

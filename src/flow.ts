@@ -45,23 +45,17 @@ const CONFIRMATION_OBJECTS: Record<FlowGate, string> = {
   design: '设计正文',
   acceptance: '当前交付（需求、设计、验证与提交）',
 };
-const LEGACY_CONFIRMATION_OBJECTS: Record<FlowGate, string> = {
-  ...CONFIRMATION_OBJECTS,
-  requirements: '需求正文（目标与验收条件）',
-};
 const CONFIRMATION_LABELS: Record<FlowGate, string> = {
   requirements: '需求',
   design: '设计',
   acceptance: '交付验收',
 };
-const LEGACY_QUOTE_PURPOSE = '确认凭证，不替代已写明的正文';
-const OPTIONAL_QUOTE_PURPOSE = '可选附注，不替代已写明的正文';
 const RESULTS = ['passed', 'failed', 'skipped'] as const;
 const FLOW_STAGES = ['已开始', '需求已确认', '设计已确认', '已验证', '已验收', '已关闭', '已放弃'] as const;
 const TASK_DIRECTORY = '.tiller/task';
 const TASK_FILE = 'task.md';
-const LEGACY_TASK_DIRECTORY = '.tiller/work';
-const LEGACY_PRE_EXISTING_DIRECTORY = '.tiller/local/tasks';
+// Historical task text stays readable; retired launcher/runtime, confirmation and verification sidecars are not parsed.
+const HISTORICAL_TASK_DIRECTORY = '.tiller/work';
 const STABLE_REQUIREMENT_PREFIX = '.tiller/specs/';
 
 export type FlowType = typeof TYPES[number];
@@ -79,13 +73,12 @@ export interface FlowMeta {
 export interface FlowCriterion { id: string; text: string }
 export interface FlowConfirmation {
   gate: FlowGate; object: string; quote: string; by?: string; commit: string; subject: string; at: string;
-  style?: 'legacy';
 }
 export interface FlowVerification {
   id: string; criterion: string; test: string; command: string; result: FlowResult;
   cases: string[]; exitCode: number | null; commit: string; at: string; tree: string; source: 'executed' | 'reported';
   evidence: 'verified' | 'unverified' | 'not-run'; reason?: string; expectFail?: boolean; baseline?: string;
-  log?: string; legacyEvidence?: boolean;
+  log?: string;
 }
 export interface FlowClosure {
   action: 'close' | 'reopen'; status?: FlowCloseStatus; reason: string; at: string;
@@ -201,15 +194,6 @@ function parseMeta(marker: string, id: string): FlowMeta {
   const base = text(value.base, '基线提交', 64);
   if (!validCommit(base)) fail('INVALID_FLOW_TASK', '任务基线提交无效。');
   if (!Array.isArray(value.scope) || !value.scope.length || value.scope.some(item => typeof item !== 'string')) fail('INVALID_FLOW_TASK', '任务范围无效。');
-  const preExisting: Record<string, string> = {};
-  if (value.preExisting !== undefined) {
-    if (!value.preExisting || typeof value.preExisting !== 'object' || Array.isArray(value.preExisting)) fail('INVALID_FLOW_TASK', '开工前改动摘要格式无效。');
-    for (const [relative, digest] of Object.entries(value.preExisting as Record<string, unknown>)) {
-      validateRelativePath(relative);
-      if (typeof digest !== 'string' || !/^[a-f0-9]{64}$/u.test(digest)) fail('INVALID_FLOW_TASK', '开工前改动摘要无效。');
-      preExisting[relative] = digest;
-    }
-  }
   let plan: string | undefined;
   let item: string | undefined;
   if (value.plan !== undefined || value.item !== undefined) {
@@ -236,7 +220,7 @@ function parseMeta(marker: string, id: string): FlowMeta {
     validateRelativePath(value.requirementFile);
     requirementFile = value.requirementFile;
   }
-  return { version: 1, id, type, size, created, base, scope: scopeValues(value.scope as string[]), preExisting,
+  return { version: 1, id, type, size, created, base, scope: scopeValues(value.scope as string[]), preExisting: {},
     ...(format ? { format } : {}),
     ...(plan && item ? { plan, item } : {}),
     ...(slug ? { slug } : {}),
@@ -246,10 +230,6 @@ function parseMeta(marker: string, id: string): FlowMeta {
 
 function preExistingPath(id: string): string {
   return `${taskLocalRoot(id)}/pre-existing.json`;
-}
-
-function legacyPreExistingPath(id: string): string {
-  return `${LEGACY_PRE_EXISTING_DIRECTORY}/${id}/pre-existing.json`;
 }
 
 function preExistingValues(value: unknown): Record<string, string> | null {
@@ -265,7 +245,7 @@ function preExistingValues(value: unknown): Record<string, string> | null {
 }
 
 async function readPreExisting(root: string, id: string): Promise<{ values: Record<string, string>; issue?: string }> {
-  for (const relative of [preExistingPath(id), legacyPreExistingPath(id)]) {
+  for (const relative of [preExistingPath(id)]) {
     let content: string;
     try {
       const resolved = (await inspectSafePaths(root, [relative]))[0]!;
@@ -311,7 +291,7 @@ function subSectionBody(content: string, title: string): string {
   const next = /^#{1,3}\s+/mu.exec(rest);
   return rest.slice(0, next?.index ?? rest.length).trim();
 }
-const LEGACY_ACCEPTANCE_HEADING = ['验收条件', '（稳定）'].join('');
+const HISTORICAL_ACCEPTANCE_HEADING = ['验收条件', '（稳定）'].join('');
 function criteriaFromBody(body: string): FlowCriterion[] {
   const result: FlowCriterion[] = [];
   for (const line of body.split(/\r?\n/u)) {
@@ -323,10 +303,10 @@ function criteriaFromBody(body: string): FlowCriterion[] {
 function parseCriteria(content: string, requirement = sectionBody(content, '需求')): FlowCriterion[] {
   const nested = criteriaFromBody(subSectionBody(requirement, '验收条件'));
   if (nested.length) return nested;
-  const nestedLegacy = criteriaFromBody(subSectionBody(requirement, LEGACY_ACCEPTANCE_HEADING));
-  if (nestedLegacy.length) return nestedLegacy;
+  const nestedHistorical = criteriaFromBody(subSectionBody(requirement, HISTORICAL_ACCEPTANCE_HEADING));
+  if (nestedHistorical.length) return nestedHistorical;
   const topLevel = criteriaFromBody(sectionBody(content, '验收条件'));
-  return topLevel.length ? topLevel : criteriaFromBody(sectionBody(content, LEGACY_ACCEPTANCE_HEADING));
+  return topLevel.length ? topLevel : criteriaFromBody(sectionBody(content, HISTORICAL_ACCEPTANCE_HEADING));
 }
 function parseConfirmationSidecar(line: string): FlowConfirmation | null {
   const match = /^<!--\s*tiller-confirm:v1\s+(\{.*\})\s*-->$/u.exec(line);
@@ -342,50 +322,13 @@ function parseConfirmationSidecar(line: string): FlowConfirmation | null {
   const commit = record.commit;
   const subject = record.subject;
   const at = record.at;
-  const style = record.style;
   if (typeof gate !== 'string' || !CONFIRMATION_GATES.includes(gate as FlowGate)
     || typeof object !== 'string' || typeof quote !== 'string' || typeof by !== 'string'
     || typeof commit !== 'string' || !validCommit(commit)
     || typeof subject !== 'string' || !/^[a-f0-9]{64}$/u.test(subject)
-    || typeof at !== 'string' || !Number.isFinite(Date.parse(at))
-    || (style !== undefined && style !== 'legacy')) return null;
-  if (style === 'legacy') {
-    if (object !== LEGACY_CONFIRMATION_OBJECTS[gate as FlowGate] && object !== CONFIRMATION_OBJECTS[gate as FlowGate]) return null;
-    return { gate: gate as FlowGate, object, quote: normalizeLine(quote), ...(normalizeLine(by) ? { by: normalizeLine(by) } : {}),
-      commit, subject, at, style: 'legacy' };
-  }
+    || typeof at !== 'string' || !Number.isFinite(Date.parse(at))) return null;
   if (object !== CONFIRMATION_OBJECTS[gate as FlowGate] || !normalizeLine(by)) return null;
   return { gate: gate as FlowGate, object, quote: normalizeLine(quote), by: normalizeLine(by), commit, subject, at };
-}
-function parseLegacyConfirmations(content: string): FlowConfirmation[] {
-  const body = sectionBody(content, '确认');
-  const chunks = body.split(/^###\s+/mu).slice(1);
-  const result: FlowConfirmation[] = [];
-  for (const chunk of chunks) {
-    const lines = chunk.split(/\r?\n/u);
-    const gate = lines.shift()?.trim() as FlowGate | undefined;
-    if (!gate || !CONFIRMATION_GATES.includes(gate)) continue;
-    const field = (name: string) => {
-      const prefix = `- ${name}：`;
-      return lines.find(line => line.startsWith(prefix))?.slice(prefix.length).trim() ?? '';
-    };
-    const object = field('对象');
-    const part = field('确认部分');
-    const quote = field('用户原话');
-    const purpose = field('原话用途');
-    const by = field('确认人');
-    const commit = field('提交');
-    const subject = field('对象摘要');
-    const at = field('时间');
-    if (!validCommit(commit) || !/^[a-f0-9]{64}$/u.test(subject) || !Number.isFinite(Date.parse(at))) continue;
-    if (object === LEGACY_CONFIRMATION_OBJECTS[gate] && quote && purpose === LEGACY_QUOTE_PURPOSE) {
-      result.push({ gate, object, quote, commit, subject, at, style: 'legacy' });
-    } else if (object === CONFIRMATION_OBJECTS[gate] && by && (!part || part === CONFIRMATION_LABELS[gate])
-      && (!purpose || purpose === OPTIONAL_QUOTE_PURPOSE)) {
-      result.push({ gate, object, quote, by, commit, subject, at });
-    }
-  }
-  return result;
 }
 function parseConfirmations(content: string): FlowConfirmation[] {
   const body = sectionBody(content, '确认');
@@ -394,10 +337,10 @@ function parseConfirmations(content: string): FlowConfirmation[] {
     const parsed = markers.map(parseConfirmationSidecar);
     if (parsed.every((item): item is FlowConfirmation => item !== null)) return parsed;
   }
-  return parseLegacyConfirmations(content);
+  return [];
 }
 interface VerificationSidecar {
-  command: string; exitCode: number | null; tree: string; commit: string; legacyEvidence?: boolean;
+  command: string; exitCode: number | null; tree: string; commit: string;
 }
 function parseVerificationSidecar(lines: string[]): VerificationSidecar | null {
   const line = lines.map(value => value.trim()).find(value => value.startsWith('<!-- tiller-verify:v1 '));
@@ -412,13 +355,11 @@ function parseVerificationSidecar(lines: string[]): VerificationSidecar | null {
   const exitCode = record.exitCode;
   const tree = record.tree;
   const commit = record.commit;
-  const legacyEvidence = record.legacyEvidence;
   if (typeof command !== 'string' || !command.trim() || command.length > 4000
     || !(exitCode === null || Number.isInteger(exitCode))
     || typeof tree !== 'string' || !/^[a-f0-9]{64}$/u.test(tree)
-    || typeof commit !== 'string' || !validCommit(commit)
-    || (legacyEvidence !== undefined && typeof legacyEvidence !== 'boolean')) return null;
-  return { command, exitCode: exitCode as number | null, tree, commit, ...(legacyEvidence === true ? { legacyEvidence } : {}) };
+    || typeof commit !== 'string' || !validCommit(commit)) return null;
+  return { command, exitCode: exitCode as number | null, tree, commit };
 }
 function parseVerifications(content: string): FlowVerification[] {
   const body = sectionBody(content, '验证');
@@ -437,26 +378,21 @@ function parseVerifications(content: string): FlowVerification[] {
     const test = field('测试');
     const caseText = field('用例');
     const cases = caseText && caseText !== '无' ? caseText.split(/[,，\s]+/u).filter(Boolean) : [];
-    const command = sidecar?.command ?? field('命令');
     const resultValue = field('结果') as FlowResult;
-    const exitText = field('退出码');
-    const commit = sidecar?.commit ?? field('提交');
     const at = field('时间');
-    const tree = sidecar?.tree ?? field('代码树摘要');
     const source = field('来源') as FlowVerification['source'];
     const evidenceText = field('核实');
     const evidence: FlowVerification['evidence'] = evidenceText === '已核实' ? 'verified'
       : evidenceText === '未执行' ? 'not-run' : 'unverified';
-    const legacyEvidence = sidecar?.legacyEvidence === true || !evidenceText;
     const reason = field('理由');
     const expectFail = field('预期') === '失败先行';
     const baseline = field('基线提交');
     const log = field('日志');
-    if (criterion && test && command && RESULTS.includes(resultValue) && validCommit(commit)
-      && /^[a-f0-9]{64}$/u.test(tree) && Number.isFinite(Date.parse(at)) && (source === 'executed' || source === 'reported')) {
-      result.push({ id, criterion, test, command, result: resultValue, cases,
-        exitCode: sidecar ? sidecar.exitCode : exitText === '无' ? null : Number(exitText),
-        commit, at, tree, source, evidence, ...(legacyEvidence ? { legacyEvidence } : {}), ...(reason ? { reason } : {}), ...(expectFail ? { expectFail } : {}),
+    if (sidecar && criterion && test && RESULTS.includes(resultValue)
+      && Number.isFinite(Date.parse(at)) && (source === 'executed' || source === 'reported')) {
+      result.push({ id, criterion, test, command: sidecar.command, result: resultValue, cases,
+        exitCode: sidecar.exitCode, commit: sidecar.commit, at, tree: sidecar.tree, source, evidence,
+        ...(reason ? { reason } : {}), ...(expectFail ? { expectFail } : {}),
         ...(baseline && validCommit(baseline) ? { baseline } : {}), ...(log ? { log } : {}) });
     }
   }
@@ -558,7 +494,6 @@ function renderConfirmations(values: FlowConfirmation[]): string {
     const sidecar = JSON.stringify({
       gate: value.gate, object: value.object, subject: value.subject, commit: value.commit,
       by: normalizeLine(value.by ?? ''), quote: normalizeLine(value.quote), at: value.at,
-      ...(value.style === 'legacy' ? { style: 'legacy' } : {}),
     }).replaceAll('--', '\\u002d\\u002d');
     return `<!-- tiller-confirm:v1 ${sidecar} -->`;
   });
@@ -569,7 +504,6 @@ function renderVerifications(values: FlowVerification[]): string {
   return values.map(value => {
     const sidecar = JSON.stringify({
       command: value.command, exitCode: value.exitCode, tree: value.tree, commit: value.commit,
-      ...(value.legacyEvidence ? { legacyEvidence: true } : {}),
     }).replaceAll('--', '\\u002d\\u002d');
     return [
       `### ${value.id}`,
@@ -579,7 +513,7 @@ function renderVerifications(values: FlowVerification[]): string {
       `- 用例：${value.cases.length ? value.cases.join(', ') : '无'}`,
       `- 结果：${value.result}`,
       `- 来源：${value.source}`,
-      `- 核实：${value.legacyEvidence ? '未标注' : value.evidence === 'verified' ? '已核实' : value.evidence === 'not-run' ? '未执行' : '未核实'}`,
+      `- 核实：${value.evidence === 'verified' ? '已核实' : value.evidence === 'not-run' ? '未执行' : '未核实'}`,
       ...(value.reason ? [`- 理由：${value.reason}`] : []),
       ...(value.expectFail ? [`- 预期：失败先行`, ...(value.baseline ? [`- 基线提交：${value.baseline}`] : [])] : []),
       ...(value.log ? [`- 日志：${value.log}`] : []),
@@ -688,7 +622,7 @@ function importedCriteria(values: FlowCriterion[]): FlowCriterion[] {
 }
 const REQUIREMENT_SECTIONS = ['使用场景', '目标', '业务范围', '关键行为', '异常与边界'] as const;
 type RequirementSection = typeof REQUIREMENT_SECTIONS[number];
-const LEGACY_SCENARIO_HEADING = ['面向谁', '与问题'].join('');
+const HISTORICAL_SCENARIO_HEADING = ['面向谁', '与问题'].join('');
 interface ParsedRequirementFile {
   structured: boolean;
   preamble: string;
@@ -708,9 +642,9 @@ function parseRequirementFile(content: string): ParsedRequirementFile {
   for (const [index, heading] of headings.entries()) {
     const rawTitle = heading[1]!.trim();
     const title = rawTitle.replace(/^(?:\d+(?:\.\d+)*[.)、]?)\s*/u, '').trim();
-    const sectionTitle = title === LEGACY_SCENARIO_HEADING ? '使用场景' : title;
+    const sectionTitle = title === HISTORICAL_SCENARIO_HEADING ? '使用场景' : title;
     const body = normalized.slice((heading.index ?? 0) + heading[0].length, headings[index + 1]?.index ?? normalized.length).trim();
-    if (title === '验收条件' || title === LEGACY_ACCEPTANCE_HEADING) {
+    if (title === '验收条件' || title === HISTORICAL_ACCEPTANCE_HEADING) {
       criteria.push(...criteriaFromBody(body));
       continue;
     }
@@ -1015,7 +949,7 @@ export async function startFlow(rootInput: string, idInput: string, input: FlowS
     const base = (await head(root)) ?? 'no-git';
     const preExisting: Record<string, string> = {};
     for (const changed of (await changedFiles(root, base)) ?? []) {
-      if (excludedPath(changed, idInput) || changed.startsWith(`${TASK_DIRECTORY}/`) || changed.startsWith(`${LEGACY_TASK_DIRECTORY}/`)) continue;
+      if (excludedPath(changed, idInput) || changed.startsWith(`${TASK_DIRECTORY}/`) || changed.startsWith(`${HISTORICAL_TASK_DIRECTORY}/`)) continue;
       try { preExisting[changed] = sha(await readFile(path.join(root, changed), 'utf8')); }
       catch { /* Deleted pre-existing paths cannot be compared later. */ }
     }
@@ -1282,7 +1216,7 @@ function excludedPath(relative: string, id: string): boolean {
     || relative.startsWith('.tiller/local/') || relative.startsWith('.git/') || relative.includes('/node_modules/');
 }
 function taskRecordPath(relative: string): boolean {
-  return [TASK_DIRECTORY, LEGACY_TASK_DIRECTORY].some(directory => relative === directory || relative.startsWith(`${directory}/`));
+  return [TASK_DIRECTORY, HISTORICAL_TASK_DIRECTORY].some(directory => relative === directory || relative.startsWith(`${directory}/`));
 }
 function inScope(relative: string, scope: string[]): boolean {
   return scope.includes('.') || scope.some(root => relative === root || relative.startsWith(`${root}/`));
@@ -1353,7 +1287,7 @@ async function mirrorPrimaryDirtyIntoWorktree(primaryRoot: string, worktreeRoot:
   const changed = await changedFiles(primaryRoot, 'HEAD');
   if (!changed?.length) return;
   for (const relative of changed) {
-    if (excludedPath(relative, id) || relative.startsWith(`${TASK_DIRECTORY}/`) || relative.startsWith(`${LEGACY_TASK_DIRECTORY}/`)) continue;
+    if (excludedPath(relative, id) || relative.startsWith(`${TASK_DIRECTORY}/`) || relative.startsWith(`${HISTORICAL_TASK_DIRECTORY}/`)) continue;
     if (relative.startsWith('.tiller/local/')) continue;
     try {
       const source = await assertSafePath(primaryRoot, relative);
@@ -1588,7 +1522,6 @@ async function verificationProblem(
   if (run.result !== 'passed') return `${criterion} 最新验证结果为 ${run.result}。`;
   if (run.tree !== currentTree) return `${criterion} 的验证已过期：记录时的代码树与当前工作树不同（范围内代码已变化）。`;
   if (!(await testExists(root, run.test, contentCommit))) return `${criterion} 的测试引用不存在：${run.test}`;
-  if (run.legacyEvidence) return null;
   const missingReportReason = run.source === 'reported' && !run.reason;
   if (missingReportReason) return `${criterion} 的外部报告缺少理由；请重新记录并写明 --reason。`;
   if (run.source === 'reported' && options.allowReported !== true) {
@@ -2144,8 +2077,6 @@ export async function verifyFlow(rootInput: string, id: string, input: FlowVerif
     if (expectFail && task.meta.type !== 'bugfix') fail('INVALID_EXPECT_FAIL', '--expect-fail 仅适用于 bugfix 任务。');
     if (expectFail && references.length !== 1) fail('INVALID_EXPECT_FAIL', '失败先行验证只能引用一个具名测试；请用 --test 指定。');
     if (expectFail && !references[0]!.name) fail('INVALID_EXPECT_FAIL', '失败先行验证必须引用具名测试（文件::测试名）。');
-    const legacyRun = (input as { run?: unknown }).run;
-    if (legacyRun !== undefined) fail('VERIFY_LEGACY_USAGE', 'verify 不再接受 --run；使用 --test "文件::测试名" 或 --case CASE-xxx，由 tiller 自主执行测试。');
     const metadata = input.reported ? null : await readProjectMetadata(root);
     const entries: FlowVerification[] = [];
     const commit = await currentCommit(root, undefined);

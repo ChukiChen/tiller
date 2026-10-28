@@ -9,9 +9,6 @@ import type { ProjectMetadata } from './types.js';
 
 const execFileAsync = promisify(execFile);
 const LOCAL_DIRECTORY = '.tiller/local';
-const LEGACY_WORKTREE_DIRECTORY = '.tiller/local/worktrees';
-const LEGACY_SIDECAR_DIRECTORY = '.tiller/local/tasks';
-const LEGACY_LOG_DIRECTORY = '.tiller/local/logs';
 
 export interface TaskWorktreeEntry {
   repository: string;
@@ -55,24 +52,12 @@ function worktreeRoot(id: string): string {
   return relativePath(taskLocalRoot(id), 'worktrees');
 }
 
-function legacyWorktreeRoot(id: string): string {
-  return relativePath(LEGACY_WORKTREE_DIRECTORY, id);
-}
-
 function logDirectory(id: string): string {
   return relativePath(taskLocalRoot(id), 'logs');
 }
 
-function legacyLogDirectory(id: string): string {
-  return relativePath(LEGACY_LOG_DIRECTORY, id);
-}
-
 function sidecarPath(id: string): string {
   return relativePath(taskLocalRoot(id), 'worktrees.json');
-}
-
-function legacySidecarPath(id: string): string {
-  return relativePath(LEGACY_SIDECAR_DIRECTORY, id, 'worktrees.json');
 }
 
 function isWithin(relative: string, parent: string): boolean {
@@ -337,7 +322,7 @@ function parseState(text: string, id: string): TaskWorktreeState | null {
   const state = raw as Partial<TaskWorktreeState>;
   if (state.schemaVersion !== 1 || state.id !== id || typeof state.branch !== 'string' || typeof state.root !== 'string' ||
       !Array.isArray(state.worktrees)) return null;
-  if (state.root !== worktreeRoot(id) && state.root !== legacyWorktreeRoot(id)) return null;
+  if (state.root !== worktreeRoot(id)) return null;
   const entries: TaskWorktreeEntry[] = [];
   for (const value of state.worktrees) {
     if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
@@ -354,7 +339,7 @@ function parseState(text: string, id: string): TaskWorktreeState | null {
 
 async function readState(root: string, id: string): Promise<{ state: TaskWorktreeState | null; warning?: string }> {
   const warnings: string[] = [];
-  for (const relative of [sidecarPath(id), legacySidecarPath(id)]) {
+  for (const relative of [sidecarPath(id)]) {
     try {
       const text = await readTextIfExists(root, relative);
       if (text === null) continue;
@@ -383,19 +368,12 @@ function fallbackStateAt(metadata: ProjectMetadata, id: string, root: string): T
   ] };
 }
 
-function fallbackStates(metadata: ProjectMetadata, id: string): TaskWorktreeState[] {
-  return [
-    fallbackStateAt(metadata, id, worktreeRoot(id)),
-    fallbackStateAt(metadata, id, legacyWorktreeRoot(id)),
-  ];
-}
-
 export async function cleanupTaskWorktrees(rootInput: string, id: string, metadata: ProjectMetadata): Promise<TaskWorktreeCleanup> {
   const root = path.resolve(rootInput);
   const warnings: string[] = [];
   const loaded = await readState(root, id);
   if (loaded.warning) warnings.push(loaded.warning);
-  const states = loaded.state ? [loaded.state] : fallbackStates(metadata, id);
+  const states = loaded.state ? [loaded.state] : [fallbackStateAt(metadata, id, worktreeRoot(id))];
   const removedWorktrees: string[] = [];
   const missingWorktrees: string[] = [];
   const sources = new Set<string>();
@@ -405,7 +383,7 @@ export async function cleanupTaskWorktrees(rootInput: string, id: string, metada
     for (const entry of state.worktrees) {
       if (seen.has(entry.path)) continue;
       seen.add(entry.path);
-      if (!isWithin(entry.path, worktreeRoot(id)) && !isWithin(entry.path, legacyWorktreeRoot(id))) {
+      if (!isWithin(entry.path, worktreeRoot(id))) {
         warnings.push(`已跳过不在任务 worktree 目录内的路径：\`${entry.path}\`。`);
         continue;
       }
@@ -448,11 +426,8 @@ export async function cleanupTaskWorktrees(rootInput: string, id: string, metada
 
   for (const source of sources) await runGit(source, ['worktree', 'prune']);
   const logsRemoved = await removeRelative(root, logDirectory(id), true, '任务日志', warnings);
-  const legacyLogsRemoved = await removeRelative(root, legacyLogDirectory(id), true, '旧任务日志', warnings);
   await removeRelative(root, worktreeRoot(id), true, '任务 worktree 容器', warnings);
-  await removeRelative(root, legacyWorktreeRoot(id), true, '旧任务 worktree 容器', warnings);
   await removeRelative(root, taskLocalRoot(id), true, '任务本机目录', warnings);
-  await removeRelative(root, relativePath(LEGACY_SIDECAR_DIRECTORY, id), true, '旧任务旁路目录', warnings);
-  return { removedWorktrees, missingWorktrees, logsRemoved: logsRemoved || legacyLogsRemoved, warnings };
+  return { removedWorktrees, missingWorktrees, logsRemoved, warnings };
 }
 

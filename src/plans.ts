@@ -33,11 +33,10 @@ export interface PlanItem {
 export interface PlanConfirmation {
   object: string;
   quote?: string;
-  by?: string;
+  by: string;
   commit: string;
   subject: string;
   at: string;
-  style?: 'legacy';
 }
 
 export interface PlanMeta {
@@ -231,10 +230,10 @@ function parseMeta(raw: string, id: string): PlanMeta {
         || typeof entry.subject !== 'string' || !/^[a-f0-9]{64}$/u.test(entry.subject)
         || typeof entry.at !== 'string' || !Number.isFinite(Date.parse(entry.at))) fail('INVALID_PLAN', '规划确认记录不完整。');
       const quote = typeof entry.quote === 'string' ? entry.quote.trim() : '';
-      const by = typeof entry.by === 'string' && entry.by.trim() ? line(entry.by, '确认人', 200) : '';
-      if (!quote && !by) fail('INVALID_PLAN', '规划确认记录缺少确认人或用户原话。');
-      confirmations.push({ object: entry.object, ...(quote ? { quote } : {}), ...(by ? { by } : {}),
-        commit: entry.commit, subject: entry.subject, at: entry.at, ...(!by ? { style: 'legacy' as const } : {}) });
+      if (typeof entry.by !== 'string' || !entry.by.trim()) fail('INVALID_PLAN', '规划确认记录缺少确认人。');
+      const by = line(entry.by, '确认人', 200);
+      confirmations.push({ object: entry.object, ...(quote ? { quote } : {}), by,
+        commit: entry.commit, subject: entry.subject, at: entry.at });
     }
   }
   return { version: 1, id, created: data.created, title, goal, requirements, items, confirmations };
@@ -269,26 +268,16 @@ function renderPlan(meta: PlanMeta): string {
       ...(item.childPlan ? [`- 子规划：${item.childPlan}`] : []),
     ].join('\n')).join('\n\n'),
     '## 确认',
-    meta.confirmations.length ? meta.confirmations.map(confirmation => confirmation.style === 'legacy'
-      ? [
-          '### requirements',
-          `- 对象：${confirmation.object}`,
-          `- 用户原话：${confirmation.quote ?? ''}`,
-          '- 原话用途：确认凭证，不替代已写明的正文',
-          `- 提交：${confirmation.commit}`,
-          `- 对象摘要：${confirmation.subject}`,
-          `- 时间：${confirmation.at}`,
-        ].join('\n')
-      : [
-          '### requirements',
-          '- 确认部分：规划',
-          `- 对象：${confirmation.object}`,
-          `- 确认人：${confirmation.by ?? '未记录'}`,
-          ...(confirmation.quote ? [`- 用户原话：${confirmation.quote}`, '- 原话用途：可选附注，不替代已写明的正文'] : []),
-          `- 提交：${confirmation.commit}`,
-          `- 对象摘要：${confirmation.subject}`,
-          `- 时间：${confirmation.at}`,
-        ].join('\n')).join('\n\n') : '尚无确认。',
+    meta.confirmations.length ? meta.confirmations.map(confirmation => [
+      '### requirements',
+      '- 确认部分：规划',
+      `- 对象：${confirmation.object}`,
+      `- 确认人：${confirmation.by}`,
+      ...(confirmation.quote ? [`- 用户原话：${confirmation.quote}`, '- 原话用途：可选附注，不替代已写明的正文'] : []),
+      `- 提交：${confirmation.commit}`,
+      `- 对象摘要：${confirmation.subject}`,
+      `- 时间：${confirmation.at}`,
+    ].join('\n')).join('\n\n') : '尚无确认。',
   ];
   return `${parts.join('\n\n').trimEnd()}\n`;
 }
