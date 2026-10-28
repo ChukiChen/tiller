@@ -98,66 +98,6 @@
 
 ## 验证
 
-### run-1
-<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-332 historical merged PR with the same branch and init id cannot prove a new head before merge$' \u002d\u002dtest-reporter=./.tiller/local/verify-iSlkzZ/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-iSlkzZ/report.jsonl test/init-baseline.test.mjs","exitCode":0,"tree":"dac5be30300a09c6dede9438ab22e9c46472cbd10dd7263516fcff04432dd7d3","commit":"2289f57ccac28681b1e1e3c7af16970ee7426e01"} -->
-- 条件：AC-1
-- 测试：test/init-baseline.test.mjs::CASE-332 historical merged PR with the same branch and init id cannot prove a new head before merge
-- 用例：CASE-332
-- 结果：passed
-- 来源：executed
-- 核实：已核实
-- 日志：.tiller/local/20261028-init-proof-head/logs/run-1.log
-- 提交：2289f57ccac2
-- 时间：2026-10-28T12:34:45.804Z
-
-### run-2
-<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-332 historical merged PR with the same branch and init id cannot prove a new head before merge$' \u002d\u002dtest-reporter=./.tiller/local/verify-SqvJ4G/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-SqvJ4G/report.jsonl test/init-baseline.test.mjs","exitCode":0,"tree":"dac5be30300a09c6dede9438ab22e9c46472cbd10dd7263516fcff04432dd7d3","commit":"2289f57ccac28681b1e1e3c7af16970ee7426e01"} -->
-- 条件：AC-2
-- 测试：test/init-baseline.test.mjs::CASE-332 historical merged PR with the same branch and init id cannot prove a new head before merge
-- 用例：CASE-332
-- 结果：passed
-- 来源：executed
-- 核实：已核实
-- 日志：.tiller/local/20261028-init-proof-head/logs/run-2.log
-- 提交：2289f57ccac2
-- 时间：2026-10-28T12:34:47.554Z
-
-### run-3
-<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-331 CASE-333 same-day reinitialization records the new expected head and discards old proof$' \u002d\u002dtest-reporter=./.tiller/local/verify-eak7tl/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-eak7tl/report.jsonl test/init-baseline.test.mjs","exitCode":0,"tree":"dac5be30300a09c6dede9438ab22e9c46472cbd10dd7263516fcff04432dd7d3","commit":"2289f57ccac28681b1e1e3c7af16970ee7426e01"} -->
-- 条件：AC-3
-- 测试：test/init-baseline.test.mjs::CASE-331 CASE-333 same-day reinitialization records the new expected head and discards old proof
-- 用例：CASE-333
-- 结果：passed
-- 来源：executed
-- 核实：已核实
-- 日志：.tiller/local/20261028-init-proof-head/logs/run-3.log
-- 提交：2289f57ccac2
-- 时间：2026-10-28T12:34:49.379Z
-
-### run-4
-<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-332 historical merged PR with the same branch and init id cannot prove a new head before merge$' \u002d\u002dtest-reporter=./.tiller/local/verify-NEQcxS/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-NEQcxS/report.jsonl test/init-baseline.test.mjs","exitCode":0,"tree":"dac5be30300a09c6dede9438ab22e9c46472cbd10dd7263516fcff04432dd7d3","commit":"2289f57ccac28681b1e1e3c7af16970ee7426e01"} -->
-- 条件：AC-4
-- 测试：test/init-baseline.test.mjs::CASE-332 historical merged PR with the same branch and init id cannot prove a new head before merge
-- 用例：CASE-332
-- 结果：passed
-- 来源：executed
-- 核实：已核实
-- 日志：.tiller/local/20261028-init-proof-head/logs/run-4.log
-- 提交：2289f57ccac2
-- 时间：2026-10-28T12:34:54.527Z
-
-### run-5
-<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-334 managed rules describe expected tip, platform PR and local/CLI effective without writing merged$' \u002d\u002dtest-reporter=./.tiller/local/verify-i9PjpW/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-i9PjpW/report.jsonl test/rules.test.mjs","exitCode":0,"tree":"dac5be30300a09c6dede9438ab22e9c46472cbd10dd7263516fcff04432dd7d3","commit":"2289f57ccac28681b1e1e3c7af16970ee7426e01"} -->
-- 条件：AC-4
-- 测试：test/rules.test.mjs::CASE-334 managed rules describe expected tip, platform PR and local/CLI effective without writing merged
-- 用例：CASE-334
-- 结果：passed
-- 来源：executed
-- 核实：已核实
-- 日志：.tiller/local/20261028-init-proof-head/logs/run-5.log
-- 提交：2289f57ccac2
-- 时间：2026-10-28T12:34:56.126Z
-
 ### run-6
 <!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-332 historical merged PR with the same branch and init id cannot prove a new head before merge$' \u002d\u002dtest-reporter=./.tiller/local/verify-eBt7VY/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-eBt7VY/report.jsonl test/init-baseline.test.mjs","exitCode":0,"tree":"e632d3994c145f06d7b2282bf6f528fea48b2da4a04ec91f7f46b7089df9b335","commit":"6d24bf504f4e8b8978579fb56487fbd57f71c9e3"} -->
 - 条件：AC-1
@@ -220,28 +160,4 @@
 
 ## 自检
 
-- [x] 需求确认有效
-- [x] 设计确认有效
-- [x] 验收条件均有当前通过且绑定全局用例的测试引用
-- [x] 每条验收条件均映射到本次验证引用的全局用例
-- [x] 验收条件与用例通过 verify 的 AC→测试→CASE 记录关联
-- [x] 验证命令已执行且测试输出已核实
-- [x] 全局用例结构与引用有效
-- [ ] 改动未超出范围
-- [x] 未弱化仍存在的测试
-- [x] 评审无未清除阻塞项
-- [x] 记录不含密钥或本机绝对路径
-
-阻塞项：
-- 改动超出范围：.tiller/project.json、.tiller/usage.md、resources/rules/activities/delivery.md、resources/rules/core.md、resources/usage.md、STEER-CONFIRMER.txt
-
-提示：
-- 167 条历史用例仍以 <任务>#AC-n 记录关联 AC；这是可迁移的历史债，不阻断当前覆盖。
-- 144 条用例的关联 AC 为无；覆盖以需求字段和 verify 的 AC→测试→CASE 记录为准。
-- 本次改动涉及模块 initialization：建议回归该模块 61 条用例；建议同时回归经过它的场景 CASE-055, CASE-001。
-- 本次改动涉及模块 standards：建议回归该模块 37 条用例；建议同时回归经过它的场景 CASE-055。
-- 本次改动涉及模块 verification：建议回归该模块 45 条用例；建议同时回归经过它的场景 CASE-055, CASE-001。
-- 本次改动涉及模块 workflow：建议回归该模块 166 条用例；建议同时回归经过它的场景 CASE-055, CASE-001。
-- 需求“业务范围·做”包含交付路径 `.tiller/local/<init-id>/`；业务范围应写约束，交付路径请只记录在任务范围（--target）：`.tiller/task/20261028-init-proof-head/task.md`。
-- 需求“业务范围·做”包含交付路径 `activities/delivery.md`；业务范围应写约束，交付路径请只记录在任务范围（--target）：`.tiller/task/20261028-init-proof-head/task.md`。
-- 修改的测试文件移除了 2 个测试用例（请确认对应功能已删除；详情见 Git diff）。
+交付前运行 check；验收后运行 accept。
