@@ -70,41 +70,51 @@
 | --- | --- | --- | --- | --- |
 | 需求 | boon yu | 2026-10-28T00:17:40.854Z | d5c1c0c7ca4b | 既然不保留兼容旧逻辑，就代码与用例一起删掉。 |
 | 设计 | boon yu | 2026-10-28T00:17:44.282Z | 916814545dc4 | 既然不保留兼容旧逻辑，就代码与用例一起删掉。 |
+| 交付验收 | boon yu | 2026-10-28T00:21:59.764Z | 37443aab801e | — |
 
 <!-- tiller-confirm:v1 {"gate":"requirements","object":"需求正文（目标、范围与验收条件）","subject":"aca806aee96a811b73676f167ad9bb18661ddac06f073a8ba306990c0a8cab3a","commit":"d5c1c0c7ca4b2a31bc7330d58313822e8c664821","by":"boon yu","quote":"既然不保留兼容旧逻辑，就代码与用例一起删掉。","at":"2026-10-28T00:17:40.854Z"} -->
 <!-- tiller-confirm:v1 {"gate":"design","object":"设计正文","subject":"b8f4b9a2066d739d0ff341c2b6f2ca672a666fec2aade535c011f39dd15523cc","commit":"916814545dc47ea8e7648d509e5149b8482ac3e6","by":"boon yu","quote":"既然不保留兼容旧逻辑，就代码与用例一起删掉。","at":"2026-10-28T00:17:44.282Z"} -->
+<!-- tiller-confirm:v1 {"gate":"acceptance","object":"当前交付（需求、设计、验证与提交）","subject":"6e594a6d8f72b8c04b5add4d9214b684b7388739613d6307315934954615fbcf","commit":"37443aab801e1272640e3ac0c3fcd1cde80be9ee","by":"boon yu","quote":"","at":"2026-10-28T00:21:59.764Z"} -->
 
 ## 验证
 
-尚无验证。
+### run-1
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-319 initialization and package expose the current 0\\.5\\.0 contract without run\\.cjs$' \u002d\u002dtest-reporter=./.tiller/local/verify-tfkWoe/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-tfkWoe/report.jsonl test/package-contract.test.mjs","exitCode":0,"tree":"e5de1757d0205e4d409bfa9d5579aabba385271e11070fe581493878227ef8d3","commit":"37443aab801e1272640e3ac0c3fcd1cde80be9ee"} -->
+- 条件：AC-1
+- 测试：test/package-contract.test.mjs::CASE-319 initialization and package expose the current 0.5.0 contract without run.cjs
+- 用例：CASE-319
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/20261027-drop-compat/logs/run-1.log
+- 提交：37443aab801e
+- 时间：2026-10-28T00:18:10.877Z
+
+### run-2
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-283 CASE-309 合入后 close 不改共享 task\\.md 且重复 close 安全$' \u002d\u002dtest-reporter=./.tiller/local/verify-yAkaKs/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-yAkaKs/report.jsonl test/task-worktrees.test.mjs","exitCode":0,"tree":"e5de1757d0205e4d409bfa9d5579aabba385271e11070fe581493878227ef8d3","commit":"37443aab801e1272640e3ac0c3fcd1cde80be9ee"} -->
+- 条件：AC-2
+- 测试：test/task-worktrees.test.mjs::CASE-283 CASE-309 合入后 close 不改共享 task.md 且重复 close 安全
+- 用例：CASE-283, CASE-309
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/20261027-drop-compat/logs/run-2.log
+- 提交：37443aab801e
+- 时间：2026-10-28T00:18:14.607Z
 
 ## 自检
 
 - [x] 需求确认有效
-- [ ] 设计确认有效
-- [ ] 验收条件均有当前通过且绑定全局用例的测试引用
-- [ ] 每条验收条件均映射到本次验证引用的全局用例
-- [ ] 验收条件与用例通过 verify 的 AC→测试→CASE 记录关联
-- [ ] 验证命令已执行且测试输出已核实
+- [x] 设计确认有效
+- [x] 验收条件均有当前通过且绑定全局用例的测试引用
+- [x] 每条验收条件均映射到本次验证引用的全局用例
+- [x] 验收条件与用例通过 verify 的 AC→测试→CASE 记录关联
+- [x] 验证命令已执行且测试输出已核实
 - [x] 全局用例结构与引用有效
-- [ ] 改动未超出范围
-- [ ] 未弱化仍存在的测试
+- [x] 改动未超出范围
+- [x] 未弱化仍存在的测试
 - [x] 评审无未清除阻塞项
 - [x] 记录不含密钥或本机绝对路径
-
-阻塞项：
-- 过程卫生：设计确认提交 f408a7caae0a 后，工作区仍有未提交业务改动：src/flow.ts。请先提交或移出本任务。
-- AC-1 尚无验证。
-- AC-2 尚无验证。
-- 改动超出范围：.tiller/cases/modules/initialization/behavior.md、.tiller/cases/modules/initialization/interface.md、.tiller/cases/modules/initialization/performance.md、.tiller/cases/modules/initialization/security.md、.tiller/cases/modules/workflow/behavior.md、.tiller/cases/modules/workflow/interface.md、.tiller/context/project.md、.tiller/project.json、.tiller/rules/activities/delivery.md、.tiller/specs/decisions.md、.tiller/specs/design.md、.tiller/specs/modules/initialization/design.md、.tiller/specs/modules/initialization/requirements.md、.tiller/specs/modules/standards/design.md、.tiller/specs/modules/workflow/design.md、.tiller/specs/modules/workflow/hygiene-invariants.md、.tiller/specs/modules/workflow/no-close-materialize.md、.tiller/specs/modules/workflow/requirements.md、.tiller/specs/requirements.md、.tiller/usage.md、src/plans.ts、src/pr.ts、src/project-root.ts、src/task-worktrees.ts
-- 弱化测试断言：test/first-batch.test.mjs::${closeCase.id} close lifecycle behavior
-- 弱化测试断言：test/first-batch.test.mjs::CASE-308 abandon does not materialize an untracked task onto primary
-- 弱化测试断言：test/first-batch.test.mjs::CASE-058 abandoned tasks are terminal, reopenable, and not counted as active or accepted plan work
-- 弱化测试断言：test/rules.test.mjs::CASE-091 verification guidance requires execution, reporting reasons and failure-first evidence
-- 弱化测试断言：test/task-worktrees.test.mjs::CASE-196 CASE-209 CASE-287 project start creates a task-local worktree, sidecars and logs in one directory
-- 弱化测试断言：test/task-worktrees.test.mjs::CASE-197 CASE-210 CASE-287 workspace start keeps management and registered repositories under the task worktree root
-- 弱化测试断言：test/usage-resources.test.mjs::CASE-215 docs describe task-local layout and close cleanup lifecycle
-- 交付范围存在未提交改动：src/flow.ts
 
 提示：
 - 167 条历史用例仍以 <任务>#AC-n 记录关联 AC；这是可迁移的历史债，不阻断当前覆盖。
