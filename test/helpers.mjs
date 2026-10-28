@@ -233,11 +233,29 @@ export function cli(root, ...args) {
       cwd = checkout;
     }
   }
-  const result = spawnCaptured(process.execPath, [cliPath, ...effectiveArgs, '--json'], {
-    // Git-backed delivery commands spawn several processes; allow bounded headroom
-    // when the full suite runs concurrently on Windows.
-    cwd, encoding: 'utf8', timeout: 60_000,
-  });
+  let addedOrigin = false;
+  if (args[0] === 'init') {
+    const origin = spawnSync('git', ['remote', 'get-url', 'origin'], { cwd: root, encoding: 'utf8', timeout: 20_000 });
+    if (origin.status !== 0) {
+    const added = spawnSync('git', ['remote', 'add', 'origin', 'http://github@127.0.0.1:9/owner/repo.git'], {
+        cwd: root, encoding: 'utf8', timeout: 20_000,
+      });
+      assert.ifError(added.error);
+      assert.equal(added.status, 0, added.stderr);
+      addedOrigin = true;
+    }
+  }
+  let result;
+  try {
+    result = spawnCaptured(process.execPath, [cliPath, ...effectiveArgs, '--json'], {
+      // Git-backed delivery commands spawn several processes; allow bounded headroom
+      // when the full suite runs concurrently on Windows.
+      cwd, encoding: 'utf8', timeout: 60_000,
+      ...(addedOrigin ? { env: { GITHUB_TOKEN: 'test-token', GH_TOKEN: '', GITLAB_TOKEN: 'test-token', GL_TOKEN: '' } } : {}),
+    });
+  } finally {
+    if (addedOrigin) spawnSync('git', ['remote', 'remove', 'origin'], { cwd: root, encoding: 'utf8', timeout: 20_000 });
+  }
   assert.ifError(result.error && result.error.code !== 'EPERM' ? result.error : null);
   assert.equal(result.signal, null, result.stderr);
   let data;
@@ -270,8 +288,39 @@ export function settleInitBaseline(root, result) {
   return result;
 }
 
+export async function initializeWithTestEnvironment(options) {
+  const root = resolve(options.root);
+  const repository = spawnSync('git', ['rev-parse', '--is-inside-work-tree'], { cwd: root, encoding: 'utf8', timeout: 20_000 });
+  let addedOrigin = false;
+  const saved = Object.fromEntries(['GITHUB_TOKEN', 'GH_TOKEN', 'GITLAB_TOKEN', 'GL_TOKEN'].map(name => [name, process.env[name]]));
+  try {
+    if (repository.status === 0 && repository.stdout.trim() === 'true') {
+      const origin = spawnSync('git', ['remote', 'get-url', 'origin'], { cwd: root, encoding: 'utf8', timeout: 20_000 });
+      if (origin.status !== 0) {
+        const added = spawnSync('git', ['remote', 'add', 'origin', 'http://github@127.0.0.1:9/owner/repo.git'], {
+          cwd: root, encoding: 'utf8', timeout: 20_000,
+        });
+        assert.ifError(added.error);
+        assert.equal(added.status, 0, added.stderr);
+        addedOrigin = true;
+      }
+    }
+    process.env.GITHUB_TOKEN = 'test-token';
+    process.env.GH_TOKEN = '';
+    process.env.GITLAB_TOKEN = 'test-token';
+    process.env.GL_TOKEN = '';
+    return await initializeCore(options);
+  } finally {
+    for (const [name, value] of Object.entries(saved)) {
+      if (value === undefined) delete process.env[name];
+      else process.env[name] = value;
+    }
+    if (addedOrigin) spawnSync('git', ['remote', 'remove', 'origin'], { cwd: root, encoding: 'utf8', timeout: 20_000 });
+  }
+}
+
 export async function initializeSettled(options) {
-  const result = await initializeCore(options);
+  const result = await initializeWithTestEnvironment(options);
   if (result.initBaseline) settleInitBaseline(result.root ?? options.root, result);
   return result;
 }

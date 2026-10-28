@@ -167,8 +167,26 @@ function references(value: string[], modules = false): string[] | null {
 function caseCriteria(value: unknown): string[] | null {
   if (value === undefined) return [];
   if (!Array.isArray(value) || value.some(item => typeof item !== 'string'
-    || !/^((?:[0-9]{8}-)?[a-z][a-z0-9]*(?:-[a-z0-9]+)*)#(AC-\d+)$/u.test(item))) return null;
+    || !/^(?:AC-\d+|(?:[0-9]{8}-)?[a-z][a-z0-9]*(?:-[a-z0-9]+)*#AC-\d+)$/u.test(item))) return null;
   return [...new Set(value as string[])];
+}
+
+export function acceptanceCriteriaFromSpec(content: string): string[] {
+  const found: string[] = [];
+  let sectionLevel = 0;
+  for (const line of content.split(/\r?\n/u)) {
+    const heading = /^(#{1,6})\s+(.+?)\s*$/u.exec(line);
+    if (heading) {
+      const level = heading[1]!.length;
+      if (sectionLevel && level <= sectionLevel) sectionLevel = 0;
+      if (/验收条件/u.test(heading[2]!)) sectionLevel = level;
+      continue;
+    }
+    if (!sectionLevel) continue;
+    const criterion = /^\s*-\s*(AC-\d+)\s*[:：]\s*\S/u.exec(line)?.[1];
+    if (criterion) found.push(criterion);
+  }
+  return [...new Set(found)];
 }
 
 async function directoryNames(root: string, relative: string): Promise<string[] | null> {
@@ -242,7 +260,7 @@ export function parseCaseMarkdown(content: string, relative: string, kind: CaseS
     const checkedCriteria = caseCriteria(criteria);
     if (!checkedModules) issues.push(`${subject} 的模块列表无效。`);
     if (!checkedRequirements) issues.push(`${subject} 的需求引用无效。`);
-    if (checkedCriteria === null) issues.push(`${subject} 的关联 AC 必须为“无”、留空，或历史 <任务>#AC-<编号> 列表。`);
+    if (checkedCriteria === null) issues.push(`${subject} 的关联 AC 必须为 specs 的 AC-n 列表、留空、“无”，或历史 <任务>#AC-<编号> 列表。`);
     if (!preconditions.length) issues.push(`${subject} 缺少前置条件。`);
     if (!steps.length) issues.push(`${subject} 缺少步骤。`);
     if (!inputs.length) issues.push(`${subject} 缺少输入。`);
@@ -504,7 +522,7 @@ function renderCase(input: {
     `- 类型：${input.kind}`,
     `- 优先级：${input.priority}`,
     `- 模块：${input.modules.join(', ')}`,
-    `- 关联 AC：${input.criteria.length ? input.criteria.join(', ') : '无'}`,
+    `- 关联 AC：${input.criteria.join(', ')}`,
     `- 需求：${input.requirements.map(value => `\`${value}\``).join(', ')}`,
     '',
     '### 前置条件',
@@ -531,12 +549,17 @@ export async function addGlobalCase(rootInput: string, input: AddCaseInput) {
   const root = (await resolveTaskCheckout(rootInput, input.task)).taskRoot;
   const title = requiredText(input.title, '用例标题', 200);
   await assertTaskExists(root, input.task);
-  if (input.criteria?.length) {
-    throw Object.assign(new Error('case add 不再接受 --criterion；用例以“需求”字段挂稳定 specs，AC 覆盖由 verify 记录。'), {
-      code: 'INVALID_CASE_INPUT',
+  const criteria = [...new Set((input.criteria ?? []).map(value => value.trim()).filter(Boolean))];
+  if (!criteria.length) {
+    throw Object.assign(new Error('case add 需要至少一个 --criterion AC-n；关联 AC 必须来自所挂需求 specs 的验收条件。'), {
+      code: 'CASE_CRITERION_REQUIRED',
     });
   }
-  const criteria: string[] = [];
+  if (criteria.some(value => value.includes('#') || !/^AC-\d+$/u.test(value))) {
+    throw Object.assign(new Error('关联 AC 只接受需求 specs 中的 AC-n；拒绝任务#AC 或其他带作用域前缀的写法。'), {
+      code: 'CASE_CRITERION_INVALID',
+    });
+  }
   const priority = (input.priority ?? 'medium') as CasePriority;
   if (!CASE_PRIORITIES.includes(priority)) throw Object.assign(new Error(`优先级必须是：${CASE_PRIORITIES.join(', ')}。`), { code: 'INVALID_CASE_INPUT' });
   const expected = requiredText(input.expected, '预期结果', 4000);
@@ -575,6 +598,19 @@ export async function addGlobalCase(rootInput: string, input: AddCaseInput) {
       throw Object.assign(new Error(`需求引用必须指向稳定 specs 路径：${relative}`), { code: 'INVALID_CASE_INPUT' });
     }
     if (!(await fileExists(root, relative))) throw Object.assign(new Error(`需求引用文件不存在：${relative}`), { code: 'CASE_REFERENCE_NOT_FOUND' });
+  }
+  const availableCriteria = new Set<string>();
+  for (const reference of requirements) {
+    const relative = referencePath(reference)!;
+    for (const criterion of acceptanceCriteriaFromSpec(await readFile(path.join(root, relative), 'utf8'))) {
+      availableCriteria.add(criterion);
+    }
+  }
+  const missingCriteria = criteria.filter(value => !availableCriteria.has(value));
+  if (missingCriteria.length) {
+    throw Object.assign(new Error(`关联 AC 未在需求 specs 的验收条件中找到：${missingCriteria.join(', ')}；请先写入对应需求文件。`), {
+      code: 'CASE_CRITERION_NOT_FOUND',
+    });
   }
   const preconditions = outputList(input.preconditions, ['对应模块与运行环境可用。']);
   const steps = outputList(input.steps, ['执行覆盖本用例的测试。', '核对实际结果与预期结果一致。']);

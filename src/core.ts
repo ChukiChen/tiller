@@ -17,7 +17,10 @@ import {
   GITHUB_TEMPLATE, GITLAB_TEMPLATE, META, REQUIRED_MANAGED, RESOURCE_VERSION, SCHEMA_VERSION, SHARED_RESOURCES,
   managedFilesForPlatform, normalizePlatform, parseMetadata, templatePathsForPlatform,
 } from './project-metadata.js';
-import { createInitBaseline, readLocalInitBaseline, resolveInitBaselineStatus, type InitBaselineResult } from './init-baseline.js';
+import {
+  assertInitEnvironment, assertInitGitAvailable, createInitBaseline, readLocalInitBaseline, resolveInitBaselineStatus,
+  type InitBaselineResult,
+} from './init-baseline.js';
 import { assertSharedWritePaths } from './shared-paths.js';
 
 export {
@@ -284,7 +287,7 @@ export function buildIndexSection(mode: ProjectMode): string {
     '本入口只表示文件接入；宿主实际读取和规则执行尚未验证。', '',
     '## 资料分类', '',
     '- `specs/`：总体与模块需求、设计及长期决定。',
-    '- `cases/`：产品级测试设计与回归事实，保存编号、前置条件、步骤、输入、预期结果和稳定 specs 需求引用；关联 AC 对新用例为“无”，AC 覆盖由 verify 的 AC→测试→CASE 记录承担。',
+    '- `cases/`：产品级测试设计与回归事实，保存编号、前置条件、步骤、输入、预期结果、稳定 specs 需求引用和该文件的路径作用域 `AC-n`；历史“无”/`task#AC` 只读，AC 覆盖由 verify 的 AC→测试→CASE 记录承担。',
     '- `plans/`：大功能的规划与任务拆分，按需建立；单次任务仍以 `task.md` 为准。',
     '- `rules/`：通用规则及已有项目约定。',
     '- `context/`：项目背景、现状与资料索引。',
@@ -373,7 +376,7 @@ const SKELETON_FILES: { path: string; content: string }[] = [
   },
   {
     path: '.tiller/cases/index.md',
-    content: '# 全局用例\n\n这里是跨任务的测试设计与回归事实源；单次任务记录留在 `.tiller/task/<id>/task.md`。\n\n```text\ncases/modules/<模块>/{behavior,interface,performance,security}.md\ncases/scenarios/<场景>.md\n```\n\n模块名须与 `.tiller/specs/modules/` 一致。每条 Markdown 用例含前置条件、步骤、输入、预期结果、类型、优先级和稳定 specs 需求引用；新用例的关联 AC 写“无”。先用 `tiller case add` 登记用例，再让测试名引用 `CASE-NNN`；tiller 扫描测试建立反查。验收覆盖由任务 verify 的 AC→测试→CASE 记录承担，没有测试引用时用例显示为待实现。场景额外声明经过的 `modules`。\n',
+    content: '# 全局用例\n\n这里是跨任务的测试设计与回归事实源；单次任务记录留在 `.tiller/task/<id>/task.md`。\n\n```text\ncases/modules/<模块>/{behavior,interface,performance,security}.md\ncases/scenarios/<场景>.md\n```\n\n模块名须与 `.tiller/specs/modules/` 一致。每条 Markdown 用例含前置条件、步骤、输入、预期结果、类型、优先级和稳定 specs 需求引用；新用例用 `tiller case add --criterion AC-n` 登记所挂需求文件中的 AC，可多个，拒绝 `任务#AC`。历史“无”/`task#AC` 只读。随后让测试名引用 `CASE-NNN`；tiller 扫描测试建立反查。验收覆盖由任务 verify 的 AC→测试→CASE 记录承担，没有测试引用时用例显示为待实现。场景额外声明经过的 `modules`。\n',
   },
   { path: '.tiller/cases/modules/.gitkeep', content: '' },
   { path: '.tiller/cases/scenarios/.gitkeep', content: '' },
@@ -536,7 +539,12 @@ export async function initialize(options: InitializeOptions): Promise<Initialize
   const root = path.resolve(options.root);
   const mode = options.mode ?? 'project';
   if (mode !== 'project' && mode !== 'workspace') throw new Error('初始化方式必须为 project 或 workspace。');
-  await mkdir(root, { recursive: true });
+  await assertInitGitAvailable();
+  const rootExists = await lstat(root).then(stat => stat.isDirectory()).catch(error => {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return false;
+    throw error;
+  });
+  if (!rootExists) await mkdir(root, { recursive: true });
   const existingText = await readTextIfExists(root, META);
   // Unknown versions must not acquire a lock or leave other changes in that project.
   const existing = existingText === null ? null : parseMetadata(existingText);
@@ -546,6 +554,7 @@ export async function initialize(options: InitializeOptions): Promise<Initialize
   if (existing && options.platform !== undefined && options.platform !== existingPlatform) {
     throw new Error('已有工程的平台配置不同；重复初始化不会切换 github、gitlab 或 both。');
   }
+  const initEnvironment = await assertInitEnvironment(root, platform);
   const repositories = await normalizeRepositories(root, mode, options.repositories ?? []);
   if (existing && (existing.mode !== mode || !sameRepositoryScope(existing.repositories, repositories))) {
     throw new Error('初始化方式、仓库范围或路径与已有工程不同；重复初始化不会转换模式或修改范围。');
@@ -586,7 +595,7 @@ export async function initialize(options: InitializeOptions): Promise<Initialize
       if (!effective.length) return await withInitBaselineStatus(root, { ...inspection,
         changed: false, warnings, firstCommit: firstCommitSuggestion(inspection.metadata!) });
       // Prefer writing patch-up artifacts only into the init worktree when a baseline can be created.
-      const initialized = await createInitBaseline(root, inspection.metadata!, effective, platform);
+      const initialized = await createInitBaseline(root, inspection.metadata!, effective, platform, initEnvironment);
       warnings.push(...initialized.warnings, ...(initialized.baseline?.warnings ?? []));
       if (initialized.baseline) {
         return await withInitBaselineStatus(root, {
@@ -643,7 +652,7 @@ export async function initialize(options: InitializeOptions): Promise<Initialize
     changes.push({ path: META, before: null, after: `${JSON.stringify(metadata, null, 2)}\n` });
     const warnings = detected ? [`检测到 ${detected.file}，已写入 verify.runner=${detected.runner}。`] : [];
     // With Git HEAD, seed only the init worktree; primary stays clean until the init PR merges.
-    const initialized = await createInitBaseline(root, metadata, changes, platform);
+    const initialized = await createInitBaseline(root, metadata, changes, platform, initEnvironment);
     warnings.push(...initialized.warnings, ...(initialized.baseline?.warnings ?? []));
     if (initialized.baseline) {
       return await withInitBaselineStatus(root, {

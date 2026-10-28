@@ -6,6 +6,7 @@ import { realpathSync } from 'node:fs';
 import { initialize, inspectProjectStatus, recoverProject } from './core.js';
 import { adoptManagedFiles, applyUpgrade, planUpgrade } from './upgrade.js';
 import { addGlobalCase } from './cases.js';
+import { applyInitBaseline } from './init-apply.js';
 import {
   acceptFlow, attachFlowTask, checkFlow, closeFlow, confirmFlow, inspectFlow, reopenFlow, releaseFlow, resumeFlow, reviewFlow, startFlow,
   verifyFlow,
@@ -25,7 +26,7 @@ export function prOutputFormat(options: { json: boolean; tty: boolean | undefine
 const HELP = `tiller ${CLI_VERSION} — 默认工作流
 
 用法：
-  tiller init [path] [--mode project|workspace] [--platform github|gitlab|both] [--repo <repository-path> ...]
+  tiller init [path] [--mode project|workspace] [--platform github|gitlab|both] [--repo <repository-path> ...] [--apply]
   tiller status [path]
   tiller doctor [path]
   tiller plan start <YYYYMMDD-plan-id> --title <标题> --goal <目标> --spec <specs 引用> [--spec ...] --item "P-1=标题;size=small;deps=P-0;specs=<引用>;plan=<子规划>" [--item ...]
@@ -35,8 +36,8 @@ const HELP = `tiller ${CLI_VERSION} — 默认工作流
   tiller start <YYYYMMDD-task-id> --title <标题> (--requirement <需求正文> | --requirement-file <.tiller/specs/...>) [--criterion "AC-1=<验收条件>" ...] [--type feature] [--size small|standard] [--target <相对路径> ...] [--summary <中文摘要>] [--slug <英文描述>] [--plan <YYYYMMDD-plan-id> --item <条目>] [--skip-init-gate] [--path <root>]
   tiller resume [YYYYMMDD-task-id] [--path <root>]
   tiller confirm <YYYYMMDD-task-id> requirements|design|acceptance [--by <确认人>] [--quote "<可选原话>"] [--commit <oid>] [--path <root>]
-  tiller case add <YYYYMMDD-task-id> --module <模块> --kind behavior|interface|performance|security --title <标题> --expected "<预期结果>" [--precondition <条件> ...] [--step <步骤> ...] [--input <输入> ...] [--priority high|medium|low] [--spec <specs 引用> ...] [--path <root>]
-  tiller case add <YYYYMMDD-task-id> --scenario <场景名> --module <模块> [--module ...] --title <标题> --expected "<预期结果>" [--spec <specs 引用> ...] [--path <root>]
+  tiller case add <YYYYMMDD-task-id> --module <模块> --kind behavior|interface|performance|security --title <标题> --expected "<预期结果>" --criterion AC-n [--criterion ...] [--precondition <条件> ...] [--step <步骤> ...] [--input <输入> ...] [--priority high|medium|low] [--spec <specs 引用> ...] [--path <root>]
+  tiller case add <YYYYMMDD-task-id> --scenario <场景名> --module <模块> [--module ...] --title <标题> --expected "<预期结果>" --criterion AC-n [--criterion ...] [--spec <specs 引用> ...] [--path <root>]
   tiller verify <YYYYMMDD-task-id> --criterion AC-1 [--criterion ...] --test "<文件::测试名>" [--expect-fail] [--verbose] [--path <root>]
   tiller verify <YYYYMMDD-task-id> --criterion AC-1 [--criterion ...] --case CASE-NNN [--verbose] [--path <root>]
   tiller verify <YYYYMMDD-task-id> --criterion AC-1 --test "<文件::测试名>" --reported --command "<外部命令>" --result passed|failed|skipped --reason "<理由>" [--path <root>]
@@ -68,7 +69,7 @@ const HELP = `tiller ${CLI_VERSION} — 默认工作流
 - doctor [path] 扫描初始化基线、默认分支 specs 变更、残留任务分支，并从 active worktree 读取进行中任务检查 AC 缺口与数据模型；active 任务缺记录或检查失败按严重项处理，warning 不阻断。
 - check 对过薄文档给出可定位提示：空白或占位的 standard 设计、无有效条目的 .tiller/specs/decisions.md、空壳模块设计 design.md；需求“业务范围·做”中的交付路径给 warning；规格/背景未回写时列出路径与提纲。默认不单独阻断。verify 日志含显示命令、起止时间与退出码。当前分支未包含任务编号时 check 提示，分支名用“类型/任务编号[-描述]”。
 - 同一 AC 或 CASE 连续两次 verify 失败且无成功核实时，verify/check 要求停止自动重试并按 FLOW-05 报告证据与可选方案；成功核实清零。
-- case add 在测试之前登记测试设计（前置条件、步骤、输入、预期结果、类型、优先级、稳定 specs 需求），关联 AC 固定写“无”，不保存源码字段，自动分配 CASE 编号；测试名引用 CASE 编号形成反查。check 以 verify 的 AC→测试→CASE 记录核对当前验证，校验模块/场景结构并提示相关回归，同时检查范围、测试弱化、密钥和本机绝对路径。
+- case add 在测试之前登记测试设计（前置条件、步骤、输入、预期结果、类型、优先级、稳定 specs 需求），关联 AC 必须来自所挂需求 specs 的 AC-n，拒绝任务#AC；历史“无”与 task#AC 仍可读。不保存源码字段，自动分配 CASE 编号；测试名引用 CASE 编号形成反查。check 以 verify 的 AC→测试→CASE 记录核对当前验证，校验模块/场景结构并提示相关回归，同时检查范围、测试弱化、密钥和本机绝对路径。
 - pr 从 task.md 和 Git 提交生成五段 PR/MR 说明，默认用 tokenized HTTPS git push 推送分支并经平台 API 创建真实 PR/MR；--draft-only 才只输出草稿。提交用“类型(模块): 中文摘要”，分支用“类型/任务编号[-描述]”；check 只提示格式问题。
 - 验证运行器支持 node-test、junit-maven、junit-gradle 与 pytest；pytest 从私有 JUnit XML 核实。case add 对 junit 运行器输出“可扫描 Node 入口挂 CASE + 内部转调真实 runner”的适配器骨架，入口配置 node-test、真实 Java 仓库配置 junit 运行器，不按扩展名猜语言。upgrade 刷新未修改的受管文件，--adopt 保留用户当前内容并更新摘要；版本号只在正式发布时修改。
 `;
@@ -86,6 +87,11 @@ export async function runCli(rawArgs = process.argv.slice(2)): Promise<void> {
     const planIndex = normalizedArgs.findIndex((value, index) => index > commandIndex && value === '--plan');
     if (planIndex >= 0 && (normalizedArgs[planIndex + 1] === undefined || normalizedArgs[planIndex + 1]!.startsWith('-'))) {
       normalizedArgs[planIndex] = '--plan=preview';
+    }
+  }
+  if (commandIndex >= 0 && rawArgs[commandIndex] === 'init') {
+    for (let index = commandIndex + 1; index < normalizedArgs.length; index += 1) {
+      if (normalizedArgs[index] === '--apply') normalizedArgs[index] = '--init-apply';
     }
   }
   function output(value: unknown): void {
@@ -112,7 +118,7 @@ export async function runCli(rawArgs = process.argv.slice(2)): Promise<void> {
         expected: { type: 'string' }, precondition: { type: 'string', multiple: true }, step: { type: 'string', multiple: true },
         input: { type: 'string', multiple: true }, priority: { type: 'string' }, case: { type: 'string' },
         finding: { type: 'string', multiple: true }, blocking: { type: 'string', multiple: true },
-        resolve: { type: 'string', multiple: true }, apply: { type: 'string' }, abandon: { type: 'boolean' },
+        resolve: { type: 'string', multiple: true }, apply: { type: 'string' }, 'init-apply': { type: 'boolean' }, abandon: { type: 'boolean' },
         'skip-init-gate': { type: 'boolean' }, 'keep-branch': { type: 'boolean' }, 'draft-only': { type: 'boolean' },
         'clear-premature': { type: 'boolean' },
       },
@@ -149,10 +155,10 @@ export async function runCli(rawArgs = process.argv.slice(2)): Promise<void> {
           : second === 'confirm' ? ['path', 'quote', 'by', 'commit']
             : second === 'status' ? ['path']
               : second === 'attach' ? ['path', 'plan', 'item'] : [])
-          : caseCommand ? second === 'add' ? ['path', 'module', 'kind', 'scenario', 'title', 'spec', 'expected', 'precondition', 'step', 'input', 'priority'] : []
+          : caseCommand ? second === 'add' ? ['path', 'module', 'kind', 'scenario', 'title', 'spec', 'criterion', 'expected', 'precondition', 'step', 'input', 'priority'] : []
             : prCommand ? ['path', 'slug', 'summary', 'draft-only']
               : doctorCommand ? ['path']
-                : command === 'init' ? ['mode', 'repo', 'platform']
+                : command === 'init' ? ['mode', 'repo', 'platform', 'init-apply']
               : command === 'upgrade' ? ['plan', 'apply', 'adopt'] : [];
       for (const name of Object.keys(values)) {
         if (!['json', ...allowed].includes(name)) usage(`选项 --${name} 不适用于该命令。`);
@@ -288,8 +294,8 @@ export async function runCli(rawArgs = process.argv.slice(2)): Promise<void> {
         } else usage('plan 支持 start、confirm、status 或 attach。');
       } else if (caseCommand) {
         if (second !== 'add' || positionals.length !== 3) usage('case 支持 add <task-id>。');
-        if (!values.title || !values.module?.length || !values.expected) {
-          usage('case add 需要 --module、--title 和 --expected（预期结果）；关联 AC 固定写“无”。');
+        if (!values.title || !values.module?.length || !values.expected || !values.criterion?.length) {
+          usage('case add 需要 --module、--title、--expected（预期结果）和至少一个 --criterion AC-n。');
         }
         if (!values.scenario && !values.kind) usage('case add 需要 --kind，或使用 --scenario 登记端到端场景。');
         if (!values.scenario && values.module.length !== 1) usage('模块用例只能指定一个 --module；场景可重复 --module 声明经过模块。');
@@ -297,7 +303,7 @@ export async function runCli(rawArgs = process.argv.slice(2)): Promise<void> {
         const root = resolve(values.path ?? process.cwd());
         result = await addGlobalCase(root, {
           task: third!, title: values.title,
-          requirements: values.spec ?? [], modules: values.module,
+          requirements: values.spec ?? [], criteria: values.criterion ?? [], modules: values.module,
           preconditions: values.precondition ?? [], steps: values.step ?? [], inputs: values.input ?? [],
           expected: values.expected,
           ...(values.priority === undefined ? {} : { priority: values.priority }),
@@ -325,8 +331,16 @@ export async function runCli(rawArgs = process.argv.slice(2)): Promise<void> {
           if (mode === 'project' && values.repo) usage('--repo 仅适用于 workspace 模式。');
           const initialized = await initialize({ root, mode, ...(values.repo ? { repositories: values.repo } : {}),
             ...(values.platform === undefined ? {} : { platform: values.platform as 'github' | 'gitlab' | 'both' }) });
+          if (values['init-apply'] === true && !initialized.initBaseline) {
+            throw Object.assign(new Error('init --apply 需要可创建并推送的 Git 初始化基线；当前没有初始化基线，未执行自动合入。提交 Git HEAD 并配置 origin/token 后重试。'), {
+              code: 'INIT_APPLY_UNAVAILABLE',
+            });
+          }
+          const applied = values['init-apply'] === true
+            ? await applyInitBaseline(root, initialized.initBaseline!)
+            : null;
           ready = initialized.ready;
-          result = initialized;
+          result = applied ? { ...initialized, apply: applied } : initialized;
         } else if (command === 'status') {
           const status = await inspectProjectStatus(root);
           result = status; ready = status.ready;

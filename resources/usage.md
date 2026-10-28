@@ -1,6 +1,6 @@
 # tiller 使用指引
 
-安装后直接运行 PATH 中的 `tiller --help`；恢复 `tiller resume`。编号用 `YYYYMMDD-` 前缀（如 `20261023-fix`），缺则提示。
+安装后运行 PATH 中的 `tiller --help` 或 `tiller resume`。编号用 `YYYYMMDD-` 前缀（如 `20261023-fix`），缺日期提示。
 
 ## 默认工作流
 
@@ -20,7 +20,7 @@ tiller close <id> --reason "已合入"
 tiller doctor
 ```
 
-`start` 生成需求，standard 另生成设计；worktree 在 `.tiller/local/<id>/worktrees/`，任务记录只写入该 worktree（primary 不留种子）。`--requirement` 仅短目标单行，并生成含使用场景、目标、业务范围、关键行为、异常与边界的可确认骨架；完整需求与 AC-n 用 `--requirement-file`（限 `.tiller/specs/`）且以文件为准。“验收条件”的 `- AC-n: …` 会自动导入；有 AC 可省略 `--criterion`，无 AC 仍须提供。验收条件按路径作用域用 AC-n，不写模块前缀/对照列表。引用 specs 后的新增验收点须先回写全局，否则确认/检查/验收阻断。`--quote` 可选，`--by` 默认取 `git config user.name`。首次 `init` → 初始化 PR/MR → 人工合入 → `start`；pending 基线须按本次 expected tip 与平台 merged PR/MR 精确证明，`--skip-init-gate` 例外。`specs` 经任务 worktree，随任务 PR/MR 合入；禁止默认分支直改/直推。
+`start` 生成需求，standard 另生成设计；任务记录只写 `.tiller/local/<id>/worktrees/`，primary 无种子。`--requirement` 仅短目标单行，含场景、目标、范围、关键行为、异常与边界的骨架；完整需求与 AC-n 用 `--requirement-file`（限 `.tiller/specs/`）并以文件为准。“验收条件”的 `- AC-n: …` 自动导入；有 AC 可省略 `--criterion`，无 AC 仍须提供。验收条件按路径作用域用 AC-n，不写模块前缀/对照列表。引用 specs 后新增验收点须先回写，否则确认/检查/验收阻断。`--quote` 可选，`--by` 默认取 `git config user.name`。`init` → 初始化 PR/MR → 人工合入 → `start`；pending 基线须匹配 expected tip 与 merged PR/MR，`--skip-init-gate` 例外。`specs` 经任务 worktree，随任务 PR/MR 合入；禁止默认分支直改/直推。
 
 `review` 阻塞 `check`/`accept`；`release` 与已验收任务钉在验收提交。未验收终止用 `close --abandon`；再交付用 `reopen`。
 
@@ -46,8 +46,8 @@ accept 须在 pr 前；`confirm`/`accept` 写入确认后自动提交本任务�
 
 ## 规划与用例
 
-规划用 `plan start/confirm/status`，已有任务 `plan attach`；用例写 `.tiller/cases/modules/<模块>/` 或 `scenarios/`。`task → 需求`：任务挂 specs，复用同一套 AC-n，不写模块前缀或“对照”列表；`用例 → 需求`：用例挂 specs，关联 AC 固定写“无”，不写 `<任务>#AC-n`。用例写测试设计；测试名或紧邻注释引用 `CASE-NNN`。`verify --criterion <AC-N> --case CASE-NNN` 覆盖；AC 覆盖只认 verify 的 AC→测试→CASE。单任务只有 `.tiller/task/<id>/task.md`；外部仓 `.tiller/work/` 只读遗留；不提交全文快照或日志。
+规划用 `plan start/confirm/status`，已有任务 `plan attach`；用例写 `.tiller/cases/modules/<模块>/` 或 `scenarios/`。`task → 需求`：任务挂 specs 并复用同一套 AC-n；`用例 → 需求`：用 `case add --criterion AC-n`（可重复）登记 specs 验收条件，不写任务锚。历史“无”与 `task#AC` 只读。用例写测试设计；测试名或紧邻注释引用 `CASE-NNN`。`verify --criterion <AC-N> --case CASE-NNN` 覆盖；AC 覆盖只认 verify 的 AC→测试→CASE。单任务只有 `.tiller/task/<id>/task.md`；外部仓 `.tiller/work/` 只读遗留；不提交全文快照或日志。
 
 ## 接入与升级
 
-`init [--platform github|gitlab|both]` 只在 init worktree 写入受管产物并推送 PR/MR，primary 不预建未跟踪 `.tiller/` 种子；失败保留本机 worktree。本机 `.tiller/local/<init-id>/` 记录 expected tip 与 open PR/MR；`initBaseline` 由祖先或平台 API 按同 head 记录确认合入，effective 结论经 local marker 与 CLI 输出（不脏跟踪的 `project.json`）；`merge <init-id>` 写入同 head marker 并清理，网页合入可 `close <init-id>`。平台在初始化时选定，之后不能通过 CLI 切换；需手动修改 `.tiller/project.json` 并补齐对应模板。主路径直接使用 PATH 中的 `tiller`。`upgrade --adopt` 刷新未改项；兼容当前及上一资源契约。
+`init [--platform github|gitlab|both]` 创建目标/产物前预检 Git、origin 与 token；失败给指引且不写盘，`--apply` 同路径。成功只写 init worktree 并推 PR/MR，primary 无 `.tiller/` 残留。`.tiller/local/<init-id>/` 记 expected tip、open PR/MR；`initBaseline` 由祖先或平台 API 按同 head 确认，effective 经 local marker 与 CLI 输出；`merge <init-id>` 写 marker 并清理，网页合入用 `close <init-id>`。平台在初始化时选定，之后不能通过 CLI 切换；需手动修改 `.tiller/project.json` 并补齐对应模板；主路径用 PATH 中的 `tiller`。`upgrade --adopt` 刷新未改项；兼容当前及上一资源契约。

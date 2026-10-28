@@ -31,6 +31,16 @@ function empty(response, status = 204) {
   response.end();
 }
 
+function markMerged(state, gitRepo, branch) {
+  if (!branch) return;
+  const sha = state.refs.get(`refs/heads/${branch}`);
+  if (!sha) return;
+  state.mergedBranches.add(branch);
+  state.mergedHeads.set(branch, [...(state.mergedHeads.get(branch) ?? []), sha]);
+  state.refs.set('refs/heads/main', sha);
+  git(gitRepo, ['update-ref', 'refs/heads/main', sha]);
+}
+
 export async function startPlatformMock(t, options = {}) {
   const platform = options.platform ?? 'github';
   const objectStore = mkdtempSync(join(tmpdir(), 'tiller-api-objects-'));
@@ -166,10 +176,13 @@ export async function startPlatformMock(t, options = {}) {
           }
           return json(response, 200, pulls);
         }
-        if (request.method === 'PUT' && rest === 'pulls/1/merge') {
+        if (request.method === 'PUT' && /^pulls\/\d+\/merge$/u.test(rest)) {
           if (state.mode === 'failure') {
             return json(response, 405, { message: `merge rejected ${request.headers.authorization ?? ''}` });
           }
+          const branch = [...state.openIntegrations.entries()]
+            .find(([, items]) => items.some(item => `pulls/${item.number}/merge` === rest))?.[0];
+          markMerged(state, gitRepo, branch);
           return json(response, 200, { merged: true, message: 'Pull Request successfully merged' });
         }
         if (request.method === 'GET' && rest.startsWith('git/commits/')) {
@@ -236,6 +249,7 @@ export async function startPlatformMock(t, options = {}) {
           }
           const branch = decodeURIComponent(rest.slice('git/refs/heads/'.length));
           state.refs.delete(`refs/heads/${branch}`);
+          spawnSync('git', ['--git-dir', gitRepo, 'update-ref', '-d', `refs/heads/${branch}`], { encoding: 'utf8' });
           state.branchDeletes.push(branch);
           return empty(response);
         }
@@ -296,6 +310,8 @@ export async function startPlatformMock(t, options = {}) {
           if (state.mode === 'failure') {
             return json(response, 406, { message: `merge rejected ${request.headers['private-token'] ?? ''}` });
           }
+          const branch = [...state.openIntegrations.keys()].find(key => (state.openIntegrations.get(key) ?? []).some(item => item.number === 7));
+          markMerged(state, gitRepo, branch);
           return json(response, 200, { state: 'merged' });
         }
         if (request.method === 'DELETE' && rest.startsWith('repository/branches/')) {
@@ -310,6 +326,7 @@ export async function startPlatformMock(t, options = {}) {
           }
           const branch = decodeURIComponent(rest.slice('repository/branches/'.length));
           state.refs.delete(`refs/heads/${branch}`);
+          spawnSync('git', ['--git-dir', gitRepo, 'update-ref', '-d', `refs/heads/${branch}`], { encoding: 'utf8' });
           state.branchDeletes.push(branch);
           return empty(response);
         }

@@ -107,7 +107,13 @@
 
 无 `--requirement-file` 时，`renderStructuredRequirement` 用短目标生成可确认骨架：使用场景记录目标，目标写明短目标，业务范围写本次做/不做/假设，关键行为逐条列出 AC，异常与边界写失败和未完成边界。`--requirement-file` 的结构化正文仍优先，不注入短目标骨架。主路径文档和 package smoke 直接调用 PATH、`npx` 或安装包的 tiller。`commitSubjectIssue` 对 `specs`、`workflow`、`standards`、`initialization`、`verification` 等约定 scope 跳过模块存在性提示，其它未知模块仍报错。
 
-## 15. 规格溢出门禁
+## 15. 初始化预检、显式 apply 与验证摘要
+
+init 在创建目标目录、分支、worktree 或提交前先确认 PATH 上可执行 `git`，再对已有 Git HEAD 完成 origin 与平台 token 预检；Git 缺失时只返回安装与 PATH 自检指引，其它预检失败只返回对应设置指引。`init --apply` 是显式自动交付：默认 init 成功开出 PR/MR 后依次 squash、证明、close 与 primary 默认分支快进，任一步失败返回该步和续跑命令，不假报完成。不带旗标仍保持 pending，等待人工合入。
+
+`verify`、`check`、acceptance 提交复查和 `preExisting` 使用同一 Git 归一化内容摘要：文本 CRLF 与 LF 等价，二进制按 Git 形态保留原字节，符号链接按链接目标处理。摘要对齐工作区 blob 规则而不改用户换行配置或工作区文件，避免 Windows 检出仅因换行误报验证过期。
+
+## 16. 规格溢出门禁
 
 `flow.ts` 的 `referencedSpecPaths` 合并任务 `requirementFile` 与正文“需求来源”标注的 `.tiller/specs/*.md` 路径，避免把普通正文里顺带提到的路径误当验收来源；`specMountIssues` 读取这些文件，只解析行首 `- AC-n: …`，再按同一 `AC-n` 与规范化正文比对 `task.criteria`。缺失路径、未挂载 AC、正文差异和设计中不存在的 AC 引用都形成 `SPEC_OVERFLOW`。
 

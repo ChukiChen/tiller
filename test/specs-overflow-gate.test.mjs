@@ -163,7 +163,7 @@ test('CASE-337 accepted tasks stay on their acceptance evidence when referenced 
     '--size', 'small', '--target', 'src', '--target', 'test', '--target', '.tiller/specs', '--target', '.tiller/cases'));
   success(cli(root, 'confirm', id, 'requirements', '--by', 'Tiller Test'));
   const added = success(cli(root, 'case', 'add', id, '--module', 'workflow', '--kind', 'behavior',
-    '--title', '已验收历史行为', '--expected', '验收后 specs 变化不追溯失败', '--spec', specPath));
+    '--title', '已验收历史行为', '--expected', '验收后 specs 变化不追溯失败', '--criterion', 'AC-1', '--spec', specPath));
   put(root, 'test/overflow-accepted.test.mjs', [
     "import test from 'node:test';",
     "import assert from 'node:assert/strict';",
@@ -187,7 +187,7 @@ test('CASE-338 managed docs and case add require a scanned adapter entry for cro
   put(root, 'pom.xml', 'fixture build file\n');
   const initialized = success(cli(root, 'init'));
   assert.equal(initialized.metadata.verify.runner, 'junit-maven');
-  put(root, '.tiller/specs/modules/workflow/requirements.md', '# Workflow\n\n## Adapter\n\nUse the adapter.\n');
+  put(root, '.tiller/specs/modules/workflow/requirements.md', '# Workflow\n\n## Adapter\n\nUse the adapter.\n\n## 验收条件\n\n- AC-1: 适配器入口挂 CASE\n');
   put(root, 'src/value.mjs', 'export const value = 1;\n');
   baseline(root);
 
@@ -195,7 +195,7 @@ test('CASE-338 managed docs and case add require a scanned adapter entry for cro
   success(cli(root, 'start', id, '--title', '适配器骨架', '--requirement', '生成 Java 适配器骨架。',
     '--criterion', 'AC-1=适配器入口挂 CASE', '--size', 'small', '--target', 'src'));
   const added = success(cli(root, 'case', 'add', id, '--module', 'workflow', '--kind', 'interface',
-    '--title', 'Java adapter', '--expected', 'Node 入口转调 Maven'));
+    '--title', 'Java adapter', '--expected', 'Node 入口转调 Maven', '--criterion', 'AC-1'));
   assert.equal(added.runner, 'junit-maven');
   assert.match(added.skeleton, /import test from 'node:test'/u);
   assert.ok(added.skeleton.includes(added.id), added.skeleton);
@@ -225,7 +225,7 @@ test('CASE-339 a node adapter can call junit-maven and remain the CASE-linked ve
     '--criterion', 'AC-1=适配器真实转调', '--size', 'small', '--target', 'src', '--target', 'test'));
   success(cli(root, 'confirm', id, 'requirements', '--by', 'Tiller Test'));
   const added = success(cli(root, 'case', 'add', id, '--module', 'workflow', '--kind', 'interface',
-    '--title', 'Node 转调 Maven', '--expected', '真实 Maven 结果被核实', '--spec', specPath));
+    '--title', 'Node 转调 Maven', '--expected', '真实 Maven 结果被核实', '--criterion', 'AC-1', '--spec', specPath));
 
   const bin = join(root, 'fake-bin');
   mkdirSync(bin, { recursive: true });

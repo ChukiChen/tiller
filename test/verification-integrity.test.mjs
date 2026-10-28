@@ -30,7 +30,7 @@ async function project(t, testSource = "import test from 'node:test';\n\ntest('C
   await initialize({ root });
   put(root, 'src/value.mjs', 'export const value = 1;\n');
   put(root, 'test/value.test.mjs', testSource);
-  put(root, '.tiller/specs/modules/workflow/requirements.md', '# Workflow\n\n## Verification\n\nEvidence must be observed.\n');
+  put(root, '.tiller/specs/modules/workflow/requirements.md', '# Workflow\n\n## Verification\n\nEvidence must be observed.\n\n## 验收条件\n\n- AC-1: Evidence is observed.\n');
   put(root, '.tiller/specs/modules/workflow/design.md', '# Workflow design\n\nRun declared tests through verify.\n');
   git(root, 'init', '--quiet');
   git(root, 'config', 'user.name', 'Tiller Test');
@@ -52,7 +52,7 @@ function prepareTask(root, id, target) {
 
 function addCase(root, id, _testRef, name = 'value behavior') {
   return success(cli(root, 'case', 'add', id, '--module', 'workflow', '--kind', 'behavior', '--title', name,
-    '--expected', `${name} 通过测试`));
+    '--expected', `${name} 通过测试`, '--criterion', 'AC-1'));
 }
 
 function commitAll(root, message) {
@@ -346,7 +346,7 @@ test('CASE-089 CASE-094 bugfix verification requires baseline failure and curren
   const preparedMarker = join(root, '.tiller/local/baseline-prepared.txt');
   put(root, 'prepare-baseline.mjs', `import { writeFileSync } from 'node:fs';\nwriteFileSync(${JSON.stringify(preparedMarker)}, process.cwd());\n`);
   setVerifyConfig(root, { prepare: ['node', 'prepare-baseline.mjs'] });
-  put(root, '.tiller/specs/modules/workflow/requirements.md', '# Workflow\n\n## Verification\n\nEvidence must be observed.\n');
+  put(root, '.tiller/specs/modules/workflow/requirements.md', '# Workflow\n\n## Verification\n\nEvidence must be observed.\n\n## 验收条件\n\n- AC-1: Evidence is observed.\n');
   put(root, '.tiller/specs/modules/workflow/design.md', '# Workflow design\n\nRun declared tests through verify.\n');
   git(root, 'init', '--quiet');
   git(root, 'config', 'user.name', 'Tiller Test');
@@ -360,7 +360,7 @@ test('CASE-089 CASE-094 bugfix verification requires baseline failure and curren
     '--criterion', 'AC-1=失败先行且当前通过', '--type', 'bugfix', '--size', 'small',
     '--target', 'src', '--target', 'test', '--target', '.tiller/cases'));
   success(confirmTask(root, id, 'requirements', '--by', 'Tiller Test'));
-  success(cli(root, 'case', 'add', id, '--module', 'workflow', '--kind', 'behavior', '--title', '加法回归', '--expected', '基线失败且当前通过'));
+  success(cli(root, 'case', 'add', id, '--module', 'workflow', '--kind', 'behavior', '--title', '加法回归', '--expected', '基线失败且当前通过', '--criterion', 'AC-1'));
 
   const baseline = success(cli(root, 'verify', id, '--criterion', 'AC-1', '--test', testRef, '--expect-fail'));
   assert.equal(baseline.result, 'failed');

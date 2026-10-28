@@ -67,8 +67,11 @@ test('CASE-190 new task marker omits preExisting and keeps the snapshot in the l
   assert.equal(Object.hasOwn(meta, 'preExisting'), false);
   const sidecarPath = `.tiller/local/${id}/pre-existing.json`;
   const sidecar = JSON.parse(read(root, sidecarPath));
-  assert.equal(sidecar['docs/pre-existing.md'], hash('before the task\n'));
-  assert.equal((await readTask(root, id)).meta.preExisting['docs/pre-existing.md'], hash('before the task\n'));
+  const blob = git(root, 'hash-object', '--path=docs/pre-existing.md', '--', join(root, 'docs/pre-existing.md')).trim();
+  assert.match(blob, /^[a-f0-9]{40,64}$/u);
+  assert.notEqual(blob, hash('before the task\n'));
+  assert.equal(sidecar['docs/pre-existing.md'], blob);
+  assert.equal((await readTask(root, id)).meta.preExisting['docs/pre-existing.md'], blob);
 
   const checked = failure(cli(root, 'check', id));
   assert.deepEqual(checked.changedOutsideScope, []);

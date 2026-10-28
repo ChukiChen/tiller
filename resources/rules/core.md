@@ -20,13 +20,13 @@
 
 ## 测试与验证资料
 
-需求确认后把编号 AC 转为全局用例：用例“需求”指向稳定 `.tiller/specs/...`，关联 AC 写“无”；测试名/紧邻注释引用 `CASE-NNN`。`verify` 只声明 `--test`/`--case`，记录 AC→测试→CASE，由 tiller 自主执行并读私有报告；stdout/stderr 不参与判定，报告缺失/损坏、匹配数不为 1、失败或跳过即阻断。`check` 按记录核对，并提示“业务范围·做”中的交付路径。
+需求确认后把编号 AC 转为全局用例：用例“需求”指向稳定 `.tiller/specs/...`，`case add --criterion AC-n` 登记该需求文件中的验收条件；测试名/紧邻注释引用 `CASE-NNN`。`verify` 只声明 `--test`/`--case`，记录 AC→测试→CASE，由 tiller 自主执行并读私有报告；stdout/stderr 不参与判定，报告缺失/损坏、匹配数不为 1、失败或跳过即阻断。`check` 按记录核对，并提示“业务范围·做”中的交付路径。
 
 外部报告用 `--reported` 写明命令、结果和理由，默认阻断，放行用 `--allow-reported`；bugfix 用 `--expect-fail` 在基线留失败先行证据。standard 任务 `start` 必须 `--target`，small 缺省 `.`。`start` 建 `.tiller/local/<id>/worktrees/`；`accept` 先于 `pr`。`pr` 默认经平台 API 创建真实 PR/MR，`--draft-only` 仅预览；close/abandon 强拆 local，默认删本地与远端任务分支，`--keep-branch` 保留；422 视为已清理，其它删失败只提示，已验收 close 不写共享记录。
 
 首次接入 `init` → 初始化 PR/MR → 人工合入 → `start`；也可 `merge <init-id>`。网页合入后，`start` 经平台 API 查询同分支 merged PR/MR，并要求 head 与本次 expected tip 一致后确认合入；结论只经 local marker 与 CLI effective 状态表达，不回写 tracked 元信息。无 token、API 失败、head 不一致或无记录仍阻断，`--skip-init-gate` 例外。`close init-id` 默认删本地与远端 `chore/tiller-init`。`specs` 经任务 worktree，随任务 PR/MR 合入；禁止默认分支直改/直推。
 
-长期回归写 `.tiller/cases/modules/<模块>/`、`scenarios/`；用例存测试设计、稳定 specs 需求与预期，不存源码路径；关联 AC 写“无”，测试名或紧邻注释引用 CASE 编号，无引用待实现。
+长期回归写 `.tiller/cases/modules/<模块>/`、`scenarios/`；用例存测试设计、稳定 specs 需求与预期，不存源码路径；关联 AC 写所挂需求文件的 `AC-n`，测试名或紧邻注释引用 CASE 编号，无引用待实现。历史“无”/`task#AC` 只读。
 
 ## 任务记录约定
 

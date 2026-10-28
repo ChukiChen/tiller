@@ -69,7 +69,7 @@ for (const path of ['dist/cli.js', 'dist/flow.js', 'resources/entry.md', 'resour
 }
 assert.ok(!paths.has('resources/run.cjs'), 'resources/run.cjs must not be packaged');
 for (const path of [...paths]) assert.ok(!/^resources\/(?:workflows|templates)\//u.test(path), path);
-const expectedModules = ['branch-cleanup', 'branch-conventions', 'cases', 'cli', 'commit-conventions', 'confirmer', 'core', 'doctor', 'files', 'flow', 'init-baseline', 'plans', 'platform-api', 'pr', 'project-metadata', 'project-root', 'release', 'repository-paths', 'shared-paths', 'task-id', 'task-worktrees', 'test-output', 'test-reporter', 'types', 'upgrade'];
+const expectedModules = ['branch-cleanup', 'branch-conventions', 'cases', 'cli', 'commit-conventions', 'confirmer', 'core', 'doctor', 'files', 'flow', 'init-apply', 'init-baseline', 'plans', 'platform-api', 'pr', 'project-metadata', 'project-root', 'release', 'repository-paths', 'shared-paths', 'task-id', 'task-worktrees', 'test-output', 'test-reporter', 'types', 'upgrade'];
 const packagedModules = [...paths].filter(path => /^dist\/[^/]+\.js$/u.test(path)).map(path => path.slice(5, -3)).sort();
 assert.deepEqual(packagedModules, expectedModules);
 assert.ok(![...paths].some(path => /^(src|test|\.tiller|node_modules)\//u.test(path)));
@@ -122,7 +122,7 @@ assert.equal(readFileSync(join(target, 'AGENTS.md'), 'utf8'), `<!-- tiller:entry
 const invoke = (args, status = 0) => JSON.parse(run(process.execPath, [cli, ...args, '--json'], target, status));
 const taskId = '20261021-package-smoke';
 mkdirSync(join(target, '.tiller/specs/modules/package-smoke'), { recursive: true });
-writeFileSync(join(target, '.tiller/specs/modules/package-smoke/requirements.md'), '# Package smoke\n\n## Behavior\n\nThe packaged flow runs.\n');
+writeFileSync(join(target, '.tiller/specs/modules/package-smoke/requirements.md'), '# Package smoke\n\n## Behavior\n\nThe packaged flow runs.\n\n## 验收条件\n\n- AC-1: package starts a task\n');
 writeFileSync(join(target, '.tiller/specs/modules/package-smoke/design.md'), '# Package smoke design\n\nUse the installed CLI.\n');
 const planned = invoke(['plan', 'start', 'package-plan', '--title', 'Package plan', '--goal', 'Verify packaged planning',
   '--spec', '.tiller/specs/requirements.md', '--item', 'P-1=Package flow;size=small;deps=-;specs=.tiller/specs/requirements.md']);
@@ -158,7 +158,7 @@ writeFileSync(taskRecord, requirementRecord);
 invoke(['confirm', taskId, 'requirements', '--quote', 'Package smoke requirement confirmed']);
 const added = invoke(['case', 'add', taskId, '--module', 'package-smoke', '--kind', 'behavior', '--title', 'Packaged flow works',
   '--expected', 'the packaged test passes its named case',
-  '--spec', '.tiller/specs/modules/package-smoke/requirements.md']);
+  '--spec', '.tiller/specs/modules/package-smoke/requirements.md', '--criterion', 'AC-1']);
 assert.equal(added.id, 'CASE-001');
 mkdirSync(join(taskCheckout, 'test'), { recursive: true });
 writeFileSync(join(taskCheckout, 'test/package-smoke.test.mjs'), "import assert from 'node:assert/strict';\nimport test from 'node:test';\n\ntest('CASE-001 package flow works', () => { assert.equal(1, 1); });\n");

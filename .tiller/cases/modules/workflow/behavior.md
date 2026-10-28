@@ -1452,13 +1452,13 @@ close 删除本机任务目录和工作树，task.md 内容与哈希不变，重
 
 仅设置 GITHUB_TOKEN 且 PATH 无 github/gh 时，init 通过 mock HTTP 调用 Git Data API 推送 chore/tiller-init，并调用 pulls API 创建初始化 PR
 
-## CASE-248 init 缺 token 时保留本地并给出 API token 中文下一步
+## CASE-248 init 缺 token 时预检失败并给出 API token 中文下一步
 
 - 类型：behavior
 - 优先级：high
 - 模块：workflow
-- 关联 AC：20261026-api-remote-ops#AC-2, 20261026-api-remote-ops#AC-1
-- 需求：`.tiller/specs/modules/workflow/requirements.md`
+- 关联 AC：AC-1
+- 需求：`.tiller/specs/modules/initialization/requirements.md#6-验收条件`
 
 ### 前置条件
 
@@ -1467,7 +1467,7 @@ close 删除本机任务目录和工作树，task.md 内容与哈希不变，重
 ### 步骤
 
 1. 运行 init
-2. 检查 initBaseline、warnings 与 next
+2. 检查退出码、错误指引、`.tiller/local`、初始化分支与提交
 
 ### 输入
 
@@ -1475,7 +1475,7 @@ close 删除本机任务目录和工作树，task.md 内容与哈希不变，重
 
 ### 预期结果
 
-缺少 GITHUB_TOKEN/GH_TOKEN 或 GITLAB_TOKEN/GL_TOKEN 时 init 保留 worktree 与提交，警告和 next 提示设置 token/API，不以安装 github/gh/gitlab/glab 为主路径
+缺少 GITHUB_TOKEN/GH_TOKEN 或 GITLAB_TOKEN/GL_TOKEN 时 init 在写盘前非零退出，提示设置 token 与 API 地址，不创建本机目录、初始化分支或提交
 
 ## CASE-249 merge 经平台 API squash 合入成功后自动 close
 

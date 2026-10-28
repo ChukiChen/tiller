@@ -864,3 +864,80 @@ init 成功完成且不再执行 tag 创建或推送，不出现 tag 重名/冲�
 ### 预期结果
 
 所有出口保持 pending；close 返回稳定错误且保留 worktree、本地/远端分支和 open PR
+
+## CASE-346 init 预检失败不产生本次初始化产物
+
+- 类型：behavior
+- 优先级：high
+- 模块：initialization
+- 关联 AC：AC-1
+- 需求：`.tiller/specs/modules/initialization/requirements.md#6-验收条件`
+
+### 前置条件
+
+- 工程已有 Git HEAD。
+- 平台远端可解析，但测试环境清空 GitHub/GitLab token；或保留 token 但移除/破坏 origin。
+
+### 步骤
+
+1. 运行 `tiller init` 或 `tiller init --apply`。
+2. 检查退出码、错误指引、`.tiller/local`、`chore/tiller-init` 与本次提交。
+
+### 输入
+
+- 缺少 token，或 origin 缺失/不可解析的已提交工程。
+
+### 预期结果
+
+命令非零退出并指出要设置的 token 变量或 origin 修复方式；未创建本次 init 目录、worktree、分支或提交，磁盘无本次 init 产物。
+
+## CASE-340 init --apply 合入并快进主分支，失败不假成功
+
+- 类型：behavior
+- 优先级：high
+- 模块：initialization
+- 关联 AC：AC-2, AC-3
+- 需求：`.tiller/specs/modules/initialization/requirements.md#6-验收条件`
+
+### 前置条件
+
+- 工程有 Git HEAD，平台 mock 可创建 PR/MR 并处理 REST squash。
+- primary 当前位于平台默认分支。
+
+### 步骤
+
+1. 运行 `tiller init --apply` 并核对 API 合入、close、primary 快进与 `status`。
+2. 在平台拒绝合入时再次运行并核对失败输出、open PR/MR 与本机 worktree。
+3. 运行不带 `--apply` 的 init，确认仍停留在 pending。
+
+### 输入
+
+- 正常初始化工程与可模拟成功/失败的平台响应。
+
+### 预期结果
+
+成功路径完成 squash、close 与默认分支快进，primary 出现跟踪的受管文件；失败路径返回当前步骤和续跑命令，保留 open PR/MR 与本机事实；默认路径不自动合入。
+
+## CASE-345 init 预检拒绝不可用的 git
+
+- 类型：behavior
+- 优先级：medium
+- 模块：initialization
+- 关联 AC：AC-4
+- 需求：`.tiller/specs/modules/initialization/requirements.md`
+
+### 前置条件
+
+- 工程路径可用，但 PATH 中没有可执行的 git
+
+### 步骤
+
+1. 在 PATH 不含 git 的环境中分别运行 tiller init 与 tiller init --apply
+
+### 输入
+
+- 已有 Git HEAD 或尚未创建的初始化目标目录，并设置可解析 origin 与平台 token
+
+### 预期结果
+
+init 与 init --apply 均非零退出并给出 Git 安装指引；未创建目标目录、init 目录、worktree、分支或提交

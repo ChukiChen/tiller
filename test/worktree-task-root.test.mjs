@@ -22,7 +22,7 @@ function project(t) {
   const root = fixture(t);
   success(cli(root, 'init'));
   put(root, 'src/worktree-fixture.ts', 'export const worktreeFixture = true;\n');
-  put(root, '.tiller/specs/modules/workflow/requirements.md', '# Workflow\n\n## Worktree truth\n\nTask records follow the active checkout.\n');
+  put(root, '.tiller/specs/modules/workflow/requirements.md', '# Workflow\n\n## Worktree truth\n\nTask records follow the active checkout.\n\n## 验收条件\n\n- AC-1: Task commands use the active worktree record.\n');
   put(root, '.tiller/specs/modules/workflow/design.md', '# Workflow design\n\nResolve one task root per command.\n');
   git(root, 'add', '-A');
   git(root, 'commit', '--quiet', '-m', 'baseline');
@@ -43,7 +43,7 @@ test('CASE-302 CASE-293 CASE-295 start leaves no primary seed; worktree root com
   assert.equal(existsSync(join(worktree, taskPath(id))), true);
 
   const added = success(cli(worktree, 'case', 'add', id, '--module', 'workflow', '--kind', 'behavior',
-    '--title', 'Worktree root command record', '--expected', 'The worktree record is used.'));
+    '--title', 'Worktree root command record', '--expected', 'The worktree record is used.', '--criterion', 'AC-1'));
   assert.equal(added.path, '.tiller/cases/modules/workflow/behavior.md');
   assert.ok(existsSync(join(worktree, added.path)));
   assert.equal(existsSync(join(root, added.path)), false);
@@ -123,7 +123,7 @@ test('CASE-303 confirm and accept auto-commit task records', async t => {
   assert.match(log, /chore: 需求确认/u);
 
   const added = success(cli(worktree, 'case', 'add', id, '--module', 'workflow', '--kind', 'behavior',
-    '--title', 'Auto commit acceptance', '--expected', 'Accept commits task records.'));
+    '--title', 'Auto commit acceptance', '--expected', 'Accept commits task records.', '--criterion', 'AC-1'));
   const testName = `${added.id} auto commit acceptance`;
   put(worktree, 'test/auto-commit.test.mjs', `import test from 'node:test';\n\ntest('${testName}', () => {});\n`);
   git(worktree, 'add', '-A');

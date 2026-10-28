@@ -26,7 +26,7 @@
 - 类型：interface
 - 优先级：medium
 - 模块：workflow
-- 关联 AC：无
+- 关联 AC：AC-1
 - 需求：`.tiller/specs/modules/workflow/requirements.md`
 
 ### 前置条件
@@ -46,7 +46,7 @@
 命令返回非零，记录与输出一致。
 ```
 
-每条用例必须有稳定编号、标题、前置条件、步骤、输入、预期结果、类型、优先级、模块和稳定 specs 需求引用；新用例关联 AC 固定写“无”。覆盖由 `verify` 的 AC→测试→CASE 记录承担，用例不保存源码路径、测试引用字段或执行输出。
+每条用例必须有稳定编号、标题、前置条件、步骤、输入、预期结果、类型、优先级、模块和稳定 specs 需求引用；`case add --criterion AC-n` 可重复登记所挂需求文件中的路径作用域 AC-n。历史“无”、留空与 `task#AC` 仍可读取，但不再作为新写入格式。覆盖仍由 `verify` 的 AC→测试→CASE 记录承担，用例不保存源码路径、测试引用字段或执行输出。
 
 ## 测试引用与用例先行
 
@@ -55,10 +55,10 @@
 ```sh
 tiller case add <task-id> --module workflow --kind behavior --title "流程行为" \
   --precondition "需求已确认" --step "运行流程" --input "正常输入" \
-  --expected "流程完成"
+  --expected "流程完成" --criterion AC-1
 ```
 
-`case add` 不要求测试文件，自动分配未占用的 `CASE-NNN`，返回待实现状态和骨架。随后让测试名或测试前紧邻注释引用用例编号；tiller 扫描 `test/**/*.test.*` 与 `*.spec.*` 建立 case→tests 反查。
+`case add` 校验 AC-n 存在于所挂需求 specs，不要求测试文件，自动分配未占用的 `CASE-NNN`，返回待实现状态和骨架。随后让测试名或测试前紧邻注释引用用例编号；tiller 扫描 `test/**/*.test.*` 与 `*.spec.*` 建立 case→tests 反查。
 
 - 一个测试可引用多个 `CASE-NNN`，一个用例也可被多个测试覆盖。
 - 没有任何测试引用的用例显示「待实现」；测试引用不存在的编号会明确报错。
