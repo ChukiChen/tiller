@@ -319,6 +319,23 @@ test('CASE-320 fresh clone proves a squash-merged init from its tracked head ref
   assert.ok(mock.state.requests.some(item => item.method === 'GET' && item.search.includes('state=all')));
 });
 
+test('CASE-327 status overlays current merged init proof without rewriting tracked metadata', async t => {
+  const initialized = await initialize(t, { platform: 'github' });
+  if (!initialized) return;
+  const { root, result } = initialized;
+  const baseline = success(result).initBaseline;
+  okGit(root, 'merge', '--quiet', '--no-edit', baseline.branch);
+  assert.equal(JSON.parse(read(root, '.tiller/project.json')).initBaseline.status, 'pending');
+
+  const status = success(await cliAt(root, emptyTokens, 'status'));
+  assert.equal(status.initBaselineStatus.id, baseline.id);
+  assert.equal(status.initBaselineStatus.status, 'merged');
+  assert.equal(status.initBaselineStatus.trackedStatus, 'pending');
+  assert.match(status.initBaselineStatus.detail, /已合入|当前历史/u);
+  assert.equal(status.metadata.initBaseline.status, 'pending');
+  assert.equal(JSON.parse(read(root, '.tiller/project.json')).initBaseline.status, 'pending');
+});
+
 test('CASE-289 CASE-305 init leaves no untracked managed residue', async t => {
   const root = fixture(t);
   configure(root);

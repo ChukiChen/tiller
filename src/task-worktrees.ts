@@ -156,6 +156,15 @@ async function removeRelative(root: string, relative: string, recursive: boolean
   }
 }
 
+async function pathExists(target: string): Promise<boolean> {
+  try {
+    await lstat(target);
+    return true;
+  } catch (error) {
+    return (error as NodeJS.ErrnoException).code !== 'ENOENT';
+  }
+}
+
 async function discardTaskLocalArtifacts(root: string, id: string): Promise<void> {
   await removeRelative(root, worktreeRoot(id), true, '任务 worktree 容器');
   await removeRelative(root, sidecarPath(id), false, '任务 worktree 清单');
@@ -378,6 +387,15 @@ export async function cleanupTaskWorktrees(rootInput: string, id: string, metada
   const missingWorktrees: string[] = [];
   const sources = new Set<string>();
   const seen = new Set<string>();
+  const observedLogPaths = new Set<string>();
+  let logsExisted = false;
+  try {
+    const localLogPath = await assertSafePath(root, logDirectory(id));
+    observedLogPaths.add(localLogPath);
+    logsExisted = await pathExists(localLogPath);
+  } catch (error) {
+    warnings.push(`任务日志路径不安全，未探测：\`${logDirectory(id)}\`（${(error as Error).message}）。`);
+  }
 
   for (const state of states) {
     for (const entry of state.worktrees) {
@@ -407,6 +425,9 @@ export async function cleanupTaskWorktrees(rootInput: string, id: string, metada
         missingWorktrees.push(entry.path);
         continue;
       }
+      const worktreeLogPath = path.resolve(target, ...logDirectory(id).split('/'));
+      observedLogPaths.add(worktreeLogPath);
+      logsExisted = (await pathExists(worktreeLogPath)) || logsExisted;
       const source = entry.source === '.' ? root : path.resolve(root, ...entry.source.split('/'));
       sources.add(source);
       const repository = { source, sourceRelative: entry.source, label: entry.repository, target, targetRelative: entry.path };
@@ -425,9 +446,12 @@ export async function cleanupTaskWorktrees(rootInput: string, id: string, metada
   }
 
   for (const source of sources) await runGit(source, ['worktree', 'prune']);
-  const logsRemoved = await removeRelative(root, logDirectory(id), true, '任务日志', warnings);
+  await removeRelative(root, logDirectory(id), true, '任务日志', warnings);
   await removeRelative(root, worktreeRoot(id), true, '任务 worktree 容器', warnings);
   await removeRelative(root, taskLocalRoot(id), true, '任务本机目录', warnings);
+  let logsRemain = false;
+  for (const logPath of observedLogPaths) logsRemain = (await pathExists(logPath)) || logsRemain;
+  const logsRemoved = logsExisted && !logsRemain;
   return { removedWorktrees, missingWorktrees, logsRemoved, warnings };
 }
 

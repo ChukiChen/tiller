@@ -34,6 +34,14 @@ export interface InitBaseline {
   status?: 'pending' | 'merged';
 }
 
+export interface InitBaselineStatus {
+  id: string;
+  branch: string;
+  status: 'merged' | 'pending';
+  trackedStatus?: 'pending' | 'merged';
+  detail: string;
+}
+
 export interface ProjectInspection {
   root: string;
   initialized: boolean;
@@ -42,6 +50,7 @@ export interface ProjectInspection {
   issues: string[];
   hostVerification: 'not-verified';
   compatibility: 'read-write' | 'unsupported';
+  initBaselineStatus?: InitBaselineStatus;
 }
 
 export interface InitializeOptions {

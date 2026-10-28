@@ -3,7 +3,7 @@ import { parseArgs } from 'node:util';
 import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { realpathSync } from 'node:fs';
-import { initialize, inspectProject, recoverProject } from './core.js';
+import { initialize, inspectProjectStatus, recoverProject } from './core.js';
 import { adoptManagedFiles, applyUpgrade, planUpgrade } from './upgrade.js';
 import { addGlobalCase } from './cases.js';
 import {
@@ -328,7 +328,7 @@ export async function runCli(rawArgs = process.argv.slice(2)): Promise<void> {
           ready = initialized.ready;
           result = initialized;
         } else if (command === 'status') {
-          const status = await inspectProject(root);
+          const status = await inspectProjectStatus(root);
           result = status; ready = status.ready;
         } else result = await recoverProject(root);
       } else if (command === 'upgrade') {

@@ -79,6 +79,8 @@
 
 已验收 close 不写共享关闭事实，也不把 `.tiller/task/<id>/` 复制到 primary；清理前先验证主检出跟踪记录与当前任务记录一致、任务分支已进入默认历史，或平台 API 确认同分支 PR/MR 已合入。证明不足时以 `CLOSE_MERGE_PROOF_MISSING` 拒绝拆树、删本地目录与分支。证明有效后按清单或当前约定布局执行 `git worktree remove --force` 与 prune。abandon 不要求合入证明，但必须先把关闭段写入 primary 已有任务记录；primary 没有清理后仍可读取记录时以 `ABANDON_NOT_PERSISTABLE` 拒绝，**不**新建未跟踪种子。路径已缺失记入 `missingWorktrees` 并继续。Git 移除失败时仅对该受管目录强制删除并返回 warning；随后删除整棵 `.tiller/local/<id>/`（含 logs 与旁路）。`closeFlow` 经 `resolveTaskCheckout` 从任务 worktree 取得主仓与任务读取根：任务记录和 abandon 写回使用当前任务检出，worktree 清理与 `cleanupTaskBranches` 继续使用主仓，在管理仓与各业务仓删除同名本地分支并优先通过平台 API 删除远端；远端 404/422/已不存在视为已清理且不产生 warning，无 token、平台解析失败、其它远端 API 失败或当前分支无法安全切换只汇总 warning，不回滚本机清理。`--keep-branch` 跳过整段分支删除。清理后只有 primary 仍可读取任务记录时，返回的 `next` 才提示 `reopen`。合入后的历史靠默认分支快进/pull 取得已跟踪记录。重复 close 对缺失 worktree、local 与分支保持幂等。清理失败不阻断本机清理结果或放弃记录，其他任务路径不动。所有本机路径保持工程相对形式，不写入共享 task.md。
 
+`cleanupTaskWorktrees` 在拆树前探测主检出 `.tiller/local/<id>/logs` 与每个现存任务检出内的同编号日志目录。拆除与整棵本机目录删除完成后，若探测到过日志且这些路径均已不存在，则 `logsRemoved=true`；没有探测到日志或仍有日志残留时保持 false。字段语义是“清理后日志已不存在”，不要求主检出日志目录被单独作为一步删除。
+
 `project-root.ts` 的 `resolveTaskCheckout(input, id)` 是任务根、`--path` 与 cwd 的唯一解析入口。它先由 `resolveProjectRoot` 找主仓，再识别输入是否落在当前 `.tiller/local/<id>/worktrees/` 容器或清单登记的任务检出；命中时以该检出的管理根为 `taskRoot`，即使主仓也有同名 `task.md`。`case add`、`confirm`、`verify`、`check`、`accept`、`review`、`release`、`reopen`、`resume <id>`、`attach` 与 `pr` 读任务侧均使用该入口，不再各自 `path.resolve(rootInput)` 猜任务根。任务 worktree 缺少记录时仍返回该任务根，由 `readTask` 报 `TASK_NOT_FOUND`；显式 `--path primary` 才读取主仓副本。任务记录写入只更新当前检出及其它已存在的任务 worktree，不在 `taskRoot` 非 primary 时写回 primary；start 首次写入目标是管理/sole 任务 worktree，再按需同步到兄弟 worktree，不在 primary 留种子。`confirm`/`accept` 写入确认后自动提交本任务 `.tiller/task/<id>/`。
 
 ## 11. 初始化基线门禁
