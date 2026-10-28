@@ -85,19 +85,19 @@
 
 ## 11. 初始化基线门禁
 
-`startFlow` 在读任务记录前调用 `assertInitBaselineReady`。无 `initBaseline` 视为存量工程并放行；`status=merged` 直接放行；其余状态先执行 `git merge-base --is-ancestor <commit> HEAD`。祖先失败后解析平台与 token，按 `branch` 查询已合入 GitHub PR/GitLab MR；命中则调用 `markInitBaselineMerged` 写回并放行，覆盖网页 squash 导致提交非祖先的情形。无 token、平台解析/API 失败或无已合入记录仍返回 `INIT_BASELINE_PENDING` 并提示合入或 `--skip-init-gate`；跳过选项只属于 `start`，进入时写入 warning。
+`startFlow` 在读任务记录前调用 `assertInitBaselineReady`。无 `initBaseline` 视为存量工程并放行；有基线时先执行 `git merge-base --is-ancestor <commit> HEAD`，再读取并校验同一 `commit` 的 local merged marker。两者失败后解析平台与 token，按 `branch` 查询已合入 GitHub PR/GitLab MR：已知本地 tip 时精确匹配 head，fresh clone 无本地 tip 时按初始化编号匹配并读取平台返回 head；命中则只写 local merged marker 并放行，覆盖网页 squash 导致提交非祖先的情形。证明不读取 Git tag 或 `headRef`，也不依赖 tracked `status`。无 token、平台解析/API 失败或无已合入记录仍返回 `INIT_BASELINE_PENDING` 并提示合入或 `--skip-init-gate`；跳过选项只属于 `start`，进入时写入 warning。
 
 `initBaselineId` 识别 `<YYYYMMDD>-tiller-init`。`closeFlow` 对此类 id 不读取任务记录、不要求验收，也不允许 `--abandon`；复用 `cleanupTaskWorktrees` 清理该 id 的 worktree、日志与 local，再删除本地与远端 `chore/tiller-init`（`--keep-branch` 保留），保持其他任务目录不变。
 
 ## 12. 过程卫生自检
 
-`src/doctor.ts` 的 `doctorFlow` 先解析主工程根，再返回 `ready`、分支、逐项 `checks`、issues/warnings 与汇总。`init-baseline` 按祖先或 merged 状态检查初始化基线；`default-specs` 在当前为 main/master 时检查 `.tiller/specs` 的工作区脏改与相对 `origin/<branch>` 的未合入改动；`task-branches` 找出未挂载 worktree 的残留任务分支。进行中任务从 `git worktree list` 的 active 任务分支和 worktree 内的 `.tiller/task/<id>/task.md` 发现，`ac-coverage` 从 worktree 读取任务并复用任务阶段与 `inspectFlow`，`data-model` 扫描 primary 与这些 worktree 记录中的历史 `LIB-*` 与“验收条件（稳定）”标题；active 任务分支找不到记录时 fail，不按 primary 缺少任务目录跳过。fail 项使 CLI 退出码为 1，warn 项只报告。
+`src/doctor.ts` 的 `doctorFlow` 先解析主工程根，再返回 `ready`、分支、逐项 `checks`、issues/warnings 与汇总。`init-baseline` 按 local marker、祖先或平台 tip/PR 证明检查初始化基线，不读取 tag、`headRef` 或 tracked `status`；`default-specs` 在当前为 main/master 时检查 `.tiller/specs` 的工作区脏改与相对 `origin/<branch>` 的未合入改动；`task-branches` 找出未挂载 worktree 的残留任务分支。进行中任务从 `git worktree list` 的 active 任务分支和 worktree 内的 `.tiller/task/<id>/task.md` 发现，`ac-coverage` 从 worktree 读取任务并复用任务阶段与 `inspectFlow`，`data-model` 扫描 primary 与这些 worktree 记录中的历史 `LIB-*` 与“验收条件（稳定）”标题；active 任务分支找不到记录时 fail，不按 primary 缺少任务目录跳过。fail 项使 CLI 退出码为 1，warn 项只报告。
 
 ## 13. 狗粮路径卫生
 
 `startFlow` 在 applyChanges 写主树任务记录后调用 `syncTaskRecordsToWorktrees`，递归同步 `.tiller/task/<id>/`，拒绝符号链接；同步失败先拆本次 worktree，再删除主树本次任务目录并保留原始错误。`writeTask` 只在其他检出原本已有该记录时传播更新，避免为旧“仅 worktree 记录”场景重新制造主树副本。
 
-`init-baseline.ts` 提供 `proveInitBaselineMerged`，统一祖先、status=merged 与平台已合入 PR/MR 三种证明；start、doctor 与 close init-id 共用。init 基线成功写入 worktree 并提交后，`createInitBaseline` 对本次 changes 中除 `.tiller/project.json` 外、主树仍未跟踪且字节匹配 after 的受管路径精确删除，不用 `git clean`；内容被用户改写或已跟踪时保留。`skeletonChanges` 在 `src/`、`test/` 已存在且为空时向同一事务追加对应 `.gitkeep`，文件事务仅额外放行这两个固定目录标记。
+`init-baseline.ts` 提供 `proveInitBaselineMerged`，统一 local marker、祖先与平台 tracked tip/已合入 PR/MR 的证明；start、doctor、status 与 close init-id 共用。init 基线成功写入 worktree 并提交后，`createInitBaseline` 对本次 changes 中除 `.tiller/project.json` 外、主树仍未跟踪且字节匹配 after 的受管路径精确删除，不用 `git clean`；内容被用户改写或已跟踪时保留。`skeletonChanges` 在 `src/`、`test/` 已存在且为空时向同一事务追加对应 `.gitkeep`，文件事务仅额外放行这两个固定目录标记。
 
 `deleteRemoteBranch` 对 404、422 与 does not exist/not found 语义返回 `deleted: true`，`branch-cleanup` 因而计入 `remoteDeleted` 且不生成 warning。`cli.ts` 的 `prOutputFormat` 选择输出形态：显式 `--json` 或 stdout 非 TTY 使用稳定 JSON，TTY 保持 Markdown；draft-only 从工程元信息返回 platform，不解析远端或联网。
 

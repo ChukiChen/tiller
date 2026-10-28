@@ -274,7 +274,7 @@ test('CASE-239 init-id merge 通过 REST API 合入初始化分支并清理 loca
   assert.equal(merged.close.stage, '已关闭');
   assert.equal(existsSync(join(root, '.tiller/local', baseline.id)), false);
   assert.equal(JSON.parse(read(root, '.tiller/local/init-baseline-merged.json')).status, 'merged');
-  assert.equal(JSON.parse(read(root, '.tiller/project.json')).initBaseline.status, 'pending');
+  assert.equal(JSON.parse(read(root, '.tiller/project.json')).initBaseline.status, undefined);
   assert.match(merged.command, /pulls\/1\/merge \(squash\)/u);
   assert.ok(mock.state.requests.every(item => item.hasAuthorization));
 

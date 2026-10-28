@@ -108,7 +108,7 @@
 
 ### 前置条件
 
-- 存在 pending initBaseline；平台可证明分支已合入，或提交已是 HEAD 祖先。
+- 存在尚未写 local merged marker 的 initBaseline；平台可证明分支已合入，或提交已是 HEAD 祖先。
 
 ### 步骤
 
@@ -121,7 +121,7 @@
 
 ### 预期结果
 
-跟踪的 `project.json` 中 `initBaseline.status` 保持 pending 快照（若文件已在主干）；merged 记在 `.tiller/local/init-baseline-merged.json`；工作区不因仅 status 字段出现脏跟踪改动。
+跟踪的 `project.json` 中 `initBaseline` 只含 id/branch/commit，不含 status/headRef；本机快照保留 tip head；merged 只记在 `.tiller/local/init-baseline-merged.json`；工作区不因合入证明出现脏跟踪改动。
 
 ## CASE-319 新初始化与受管清单不含启动器
 
@@ -158,7 +158,7 @@ init 不写 `.tiller/run.cjs`，管理清单不登记该文件，升级预览无
 
 ### 前置条件
 
-- init 基线已合入，跟踪 project.json 的 initBaseline.status 仍为 pending
+- init 基线已合入，跟踪 project.json 不含 initBaseline.status 或 headRef
 
 ### 步骤
 
@@ -166,8 +166,33 @@ init 不写 `.tiller/run.cjs`，管理清单不登记该文件，升级预览无
 
 ### 输入
 
-- 已合入 init 基线与原始 pending 跟踪元信息
+- 已合入 init 基线与只含事实字段的跟踪元信息
 
 ### 预期结果
 
-status 增列当前 initBaseline 结论为 merged，同时保留跟踪元信息原始 pending；不改写 project.json
+status 只通过 initBaselineStatus 暴露当前结论 merged；metadata.initBaseline 只含事实字段，不出现 status/headRef，也不改写 project.json
+
+## CASE-330 初始化状态只暴露 effective 并剥离旧 status/headRef
+
+- 类型：interface
+- 优先级：high
+- 模块：initialization
+- 关联 AC：无
+- 需求：`.tiller/specs/modules/initialization/requirements.md`
+
+### 前置条件
+
+- project.json 或本机 baseline 带有旧 status/headRef 字段
+
+### 步骤
+
+1. 读取 init、status、doctor 的 JSON 输出
+2. 检查 metadata.initBaseline 与 initBaselineStatus
+
+### 输入
+
+- 尚未合入与已经合入的初始化基线
+
+### 预期结果
+
+metadata.initBaseline 只含 id/branch/commit，不含 status/headRef；本机快照可含 tip head；当前结论只出现在 initBaselineStatus，init 与 status 同形，doctor 不依赖旧字段

@@ -30,15 +30,12 @@ export interface InitBaseline {
   branch: string;
   commit: string;
   head?: string;
-  headRef?: string;
-  status?: 'pending' | 'merged';
 }
 
 export interface InitBaselineStatus {
   id: string;
   branch: string;
   status: 'merged' | 'pending';
-  trackedStatus?: 'pending' | 'merged';
   detail: string;
 }
 

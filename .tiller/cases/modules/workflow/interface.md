@@ -938,7 +938,7 @@ package.json 与 README 版本保持 0.5.0，全量质量命令通过且测试�
 
 ### 预期结果
 
-未合入默认返回 INIT_BASELINE_PENDING；--skip-init-gate 放行并警告；commit 成为 HEAD 祖先或 status=merged 后放行
+未合入默认返回 INIT_BASELINE_PENDING；--skip-init-gate 放行并警告；commit 成为 HEAD 祖先、存在 local merged marker 或平台按 tip 确认合入后放行
 
 ## CASE-234 README 面向最终用户的介绍与快速开始
 

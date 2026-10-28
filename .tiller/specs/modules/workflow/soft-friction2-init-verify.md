@@ -12,13 +12,13 @@ post-#43 狗粮后仍有三项软摩擦：设计确认前误跑 `verify` 会写�
 
 - 做：改 `src/` 中 `initialize` / `createInitBaseline` / `markInitBaselineMerged` / `proveInitBaselineMerged` / `verifyFlow` / 可选 clear 子命令或 confirm 修复路径；更新受管文档一句、initialization/workflow specs 与 decisions；CASE + 测试；必要 CLI/usage；按 worktree-only 同步 `scripts/package-smoke.mjs`。
 - 不做：升版本；放开 `--requirement` 多行完整需求；给 `pr`/`pull` 加“忽略未跟踪”特判作为主修复；CloudAgent；合入本 PR（由人审阅）；扩大到无关重构。
-- 假设：init 后、人工合入前，primary 可以没有完整 `.tiller/` 骨架；门禁可从 init worktree 或 `.tiller/local/` 读取 pending 基线。merged 证明优先 git 祖先 / 平台 API，本地标记仅缓存且不修改已跟踪 `project.json`。
+- 假设：init 后、人工合入前，primary 可以没有完整 `.tiller/` 骨架；门禁可从 init worktree 或 `.tiller/local/` 读取基线。merged 证明优先 local marker、git 祖先与平台 tip/API，本地标记仅缓存且不修改已跟踪 `project.json`。
 
 ## 关键行为
 
 1. **verify 顺序**：standard 任务在尚无有效设计确认时，`verify` 直接失败（稳定错误码 + 中文说明须先 `confirm … design`），不写入 verify 段。若历史已有过早 verify 段，提供一键清除（如 `tiller verify <id> --clear-premature` 或等价命令），清除后可再确认设计；过程卫生门禁（check/accept）仍保留。
 2. **init 只写 worktree**：有 Git HEAD 并创建初始化基线时，受管改动（含 `.tiller/**`、`AGENTS.md`、`.gitignore`、平台模板、`project.json`、空目录 gitkeep 等）只 `apply`/提交到 `.tiller/local/<YYYYMMDD-tiller-init>/worktrees`；primary 不预写这些文档，也不再依赖「先写 primary 再 cleanup」作为主路径。失败回滚不在 primary 留未跟踪受管树。
-3. **initBaseline 不脏跟踪文件**：init PR 内 `project.json` 记录基线 id/branch/commit（及初始 status 若保留）；`markInitBaselineMerged` / doctor / merge / close 证明合入后，把 merged 记在 `.tiller/local/`（已 gitignore），**不**把跟踪的 `.tiller/project.json` 改成仅工作区脏的 `status: merged`。primary 在 init 成功后对受管文件无未跟踪残留（含不再保留 META 最小例外）。
+3. **initBaseline 不脏跟踪文件**：init PR 内 `project.json` 只记录基线 id/branch/commit，不记录 status 或 headRef；本机快照保留 tip head。`markInitBaselineMerged` / doctor / merge / close 证明合入后，把 merged 记在 `.tiller/local/`（已 gitignore），**不**修改跟踪的 `.tiller/project.json`。primary 在 init 成功后对受管文件无未跟踪残留（含不再保留 META 最小例外）。
 
 ## 异常与边界
 
