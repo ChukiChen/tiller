@@ -97,11 +97,11 @@
 
 | 部分 | 确认人 | 时间 | 短提交 | 原话 |
 | --- | --- | --- | --- | --- |
-| 设计 | ChukiChen | 2026-10-28T14:20:47.283Z | 32ca2500a97e | — |
 | 需求 | ChukiChen | 2026-10-28T14:27:58.670Z | a5f998a70b45 | 并入 CRLF/LF tree digest 归一（AC-5） |
+| 设计 | ChukiChen | 2026-10-28T14:27:58.819Z | 860438196f51 | digest 对齐 Git blob/hash-object；不改用户 autocrlf |
 
-<!-- tiller-confirm:v1 {"gate":"design","object":"设计正文","subject":"37f9f882fcb90e3e721ba1cbe4a058a7146f2696c33695f9838212e0503e4eb5","commit":"32ca2500a97ea977880d65947dea1a7f9d171aa6","by":"ChukiChen","quote":"","at":"2026-10-28T14:20:47.283Z"} -->
 <!-- tiller-confirm:v1 {"gate":"requirements","object":"需求正文（目标、范围与验收条件）","subject":"f9815df6897d3c43a9c45ac3768bc4032007a50df8f4750426f5833e7d5f8016","commit":"a5f998a70b45cf5bcfdc5f8b3696f00d14af2c86","by":"ChukiChen","quote":"并入 CRLF/LF tree digest 归一（AC-5）","at":"2026-10-28T14:27:58.670Z"} -->
+<!-- tiller-confirm:v1 {"gate":"design","object":"设计正文","subject":"0545b9787bef660b4c8b55d57c818cd36536ea930950ca7e5d459534e009fe9b","commit":"860438196f515fc75ab0784f9fd6200a03f65baf","by":"ChukiChen","quote":"digest 对齐 Git blob/hash-object；不改用户 autocrlf","at":"2026-10-28T14:27:58.819Z"} -->
 
 ## 验证
 
