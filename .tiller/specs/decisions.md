@@ -277,3 +277,9 @@
 - 新 CASE 使用 `case add --criterion AC-n` 关联所挂需求 specs 的验收条件，拒绝任务作用域 `任务#AC`；历史“无”、留空与 `task#AC` 保持可读。
 - tree 摘要与 Git blob 的内容规则对齐：文本把 CRLF 归一为 LF，二进制保持原字节，符号链接按目标字节处理。verify、check、acceptance 与 preExisting 共用该规则；不修改用户 `core.autocrlf`，也不改写工作区换行。旧 64 位内容摘要保留兼容比较。
 
+## 2026-10-28 规格溢出先回写与跨语言适配器
+
+- 任务引用 `.tiller/specs/` 时，以引用路径和普通 `AC-n` 正文为唯一真相源。任务需求或设计新增、改写 specs 未覆盖的验收点时，`confirm requirements/design`、`check`、`accept` 以 `SPEC_OVERFLOW` 阻断，列出缺失路径、未挂载或正文不一致的 AC，并要求回写 specs（必要时 cases/rules）后重新确认。
+- 判定保持机械边界：只认路径与 AC-n 正文，不做语义猜测，也不自动改写全局文件；引用文件缺失、AC 不存在和无法挂载的验收点都失败，不静默降级。已验收任务继续按 acceptance 证据复核，不追溯改写旧确认。
+- 跨语言 CASE 采用「可扫描入口挂 CASE + 内部转调真实 runner」标准：Node 适配器测试名含 `CASE-NNN`，体内调用 Maven/Gradle；适配器入口配置 `node-test`，真实 Java 仓库配置 junit 运行器，不按扩展名猜语言。`case add` 对 junit 运行器输出带选择器 TODO 的 Node 骨架。
+- 代价是混合语言工程需要明确仓库/运行器边界，且适配器多一层进程；收益是无需本包实现 Java AST 扫描，多语言仍复用现有 verify 的 CASE 反查与证据链。版本保持 0.5.0。

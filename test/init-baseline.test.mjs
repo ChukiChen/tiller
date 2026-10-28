@@ -144,7 +144,7 @@ test('CASE-228 CASE-321 init creates a committed initialization worktree and a u
   assert.notEqual(merged.status, 0, 'initialization must not be merged automatically');
 });
 
-test('CASE-339 init preflight rejects missing token or invalid origin before creating artifacts', async t => {
+test('CASE-346 init preflight rejects missing token or invalid origin before creating artifacts', async t => {
   const root = fixture(t);
   configure(root);
   const head = okGit(root, 'rev-parse', 'HEAD');
@@ -276,7 +276,7 @@ test('CASE-247 init without platform CLI falls back to GitHub API push and REST 
   assert.ok(baseline.next.every(command => !/github pr create|\bgh\b/u.test(command)));
 });
 
-test('CASE-248 CASE-339 init without token fails preflight with API/token guidance and no local state', async t => {
+test('CASE-248 CASE-346 init without token fails preflight with API/token guidance and no local state', async t => {
   for (const platform of ['github', 'gitlab']) {
     const initialized = await initialize(t, { platform, token: false });
     const { root, result, mock } = initialized;

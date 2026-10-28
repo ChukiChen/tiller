@@ -30,7 +30,7 @@
 
 ## 任务记录约定
 
-轻量任务只维护 `.tiller/task/<id>/task.md`，依靠 Git 追溯；任务引用稳定 specs，需求含目标、范围、编号 AC，standard 设计含方案、取舍、影响、风险。长期结论同步 specs，未回写由 `check` 提示路径与提纲；大设计用 plan 拆分，已有任务用 `plan attach`。
+轻量任务只维护 `.tiller/task/<id>/task.md`，依靠 Git 追溯；任务引用稳定 specs，需求含目标、范围、编号 AC，standard 设计含方案、取舍、影响、风险。任务引用的 specs 路径与 `AC-n` 是验收真相源；新增验收点须先回写 specs，否则 `confirm`/`check`/`accept` 阻断。长期结论同步 specs，未回写由 `check` 提示路径与提纲；大设计用 plan 拆分，已有任务用 `plan attach`。
 
 确认前校验必填段；需求和设计独立摘要，正文变化使确认失效。验证留摘要与旁路，完整命令和输出只进日志。不提交全文快照、日志、自举工程或安装包；需要时从 Git 取回或重跑。不得记录密钥、凭据或本机路径。
 

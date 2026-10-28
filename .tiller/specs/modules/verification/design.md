@@ -67,3 +67,9 @@ Maven 在业务仓库根执行 `mvn -Dsurefire.reportsDirectory=<相对私有目
 ## 5. 边界
 
 该模块不提交原始输出、自举工程、安装包和全文文件快照。`verify` 只接受 `--test` 或 `--case`；子进程输出只写 `.tiller/local/<id>/logs/`，默认不显示，`--verbose` 时同时转发；日志至少记录显示命令、开始与结束时间和退出码，判定只读私有临时报告。`src/test-output.ts` 暴露 `TestRunner` 的构造命令与报告解析接口并注册适配器，`src/test-reporter.ts` 生成仅含测试事件和总结的 JSONL 报告。无法本机执行时使用 `verify --reported --command ... --result ... --reason`，`--allow-reported` 才放行；缺陷修复使用 `--expect-fail --test`。需要复查时从 `task.md` 的人读摘要与机器旁路取命令、提交、代码树和日志定位，并从 Git 或重跑取得事实。
+
+## 6. 跨语言 CASE 适配器
+
+不直接扫描的语言用可扫描入口桥接。`case add` 在 `junit-maven`/`junit-gradle` 下输出 Node 适配器骨架：测试名包含 `CASE-NNN`，体内用 `spawnSync` 调真实 runner，并留下 `Class#method`/`Class.method` 选择器 TODO。完整映射与工程配置由使用者补齐，tiller 不按扩展名猜语言，也不实现 Java AST 扫描。
+
+适配器入口仓库配置 `node-test`（或其它可扫描运行器），真实 Java 仓库配置 `junit-maven`/`junit-gradle`。`verify --case CASE-NNN` 仍按测试名扫描找到适配器，tiller 以适配器测试的真实退出码和私有报告核实；Maven/Gradle 失败、缺失或适配器没有 CASE 名都不能被记为通过。

@@ -324,6 +324,83 @@ function parseCriteria(content: string, requirement = sectionBody(content, '需�
   const topLevel = criteriaFromBody(sectionBody(content, '验收条件'));
   return topLevel.length ? topLevel : criteriaFromBody(sectionBody(content, HISTORICAL_ACCEPTANCE_HEADING));
 }
+
+const SPEC_REFERENCE_PATTERN = /\.tiller\/specs\/[A-Za-z0-9._/-]*?\.md\b/gu;
+const SPEC_REFERENCE_LINE = /(?:需求来源|需求引用|引用\s*specs|specs\s*引用)\s*[:：]?/u;
+
+function referencedSpecPaths(task: Pick<FlowTask, 'meta' | 'requirement' | 'design'>): string[] {
+  const paths = new Set<string>();
+  const add = (value: string): void => {
+    const normalized = value.replace(/\\/gu, '/').replace(/^\.\/+/u, '');
+    if (normalized.startsWith(STABLE_REQUIREMENT_PREFIX) && normalized.endsWith('.md')) paths.add(normalized);
+  };
+  if (task.meta.requirementFile) add(task.meta.requirementFile);
+  for (const line of `${task.requirement}\n${task.design}`.split(/\r?\n/u)) {
+    if (!SPEC_REFERENCE_LINE.test(line)) continue;
+    for (const match of line.matchAll(SPEC_REFERENCE_PATTERN)) add(match[0]);
+  }
+  return [...paths].sort();
+}
+
+function specCriteria(content: string): FlowCriterion[] {
+  const result: FlowCriterion[] = [];
+  for (const line of content.split(/\r?\n/u)) {
+    const match = /^[-*]\s+(AC-\d+)\s*[:：]\s*(.+)$/u.exec(line.trim());
+    if (match) result.push({ id: match[1]!, text: match[2]!.trim() });
+  }
+  return result;
+}
+
+function preview(value: string, maximum = 80): string {
+  return value.length <= maximum ? value : `${value.slice(0, maximum)}…`;
+}
+
+/**
+ * A task that cites stable specs may only mount acceptance points that exist in
+ * those specs. This is deliberately mechanical: path + AC-n text, no semantic
+ * guessing. New semantics must be written back to the cited specs first.
+ */
+async function specMountIssues(root: string, task: FlowTask): Promise<string[]> {
+  const references = referencedSpecPaths(task);
+  if (!references.length) return [];
+  const known = new Map<string, { path: string; text: string }[]>();
+  const issues: string[] = [];
+  for (const relative of references) {
+    const content = await readTextIfExists(root, relative);
+    if (content === null) {
+      issues.push(`引用的 specs 不存在：\`${relative}\``);
+      continue;
+    }
+    for (const criterion of specCriteria(content)) {
+      const entries = known.get(criterion.id) ?? [];
+      entries.push({ path: relative, text: criterion.text });
+      known.set(criterion.id, entries);
+    }
+  }
+  for (const criterion of task.criteria) {
+    const mounted = known.get(criterion.id);
+    if (!mounted?.length) {
+      issues.push(`任务验收点 \`${criterion.id}\` 未挂载到引用 specs`);
+      continue;
+    }
+    const text = normalizeLine(criterion.text);
+    if (!mounted.some(item => normalizeLine(item.text) === text)) {
+      const located = mounted.map(item => `${item.path}“${preview(normalizeLine(item.text))}”`).join('；');
+      issues.push(`任务验收点 \`${criterion.id}\` 正文与 specs 不一致：任务“${preview(text)}”；specs ${located}`);
+    }
+  }
+  for (const id of new Set([...task.design.matchAll(/\bAC-\d+\b/gu)].map(match => match[0]))) {
+    if (!known.has(id)) issues.push(`设计引用不存在的 specs 验收点 \`${id}\``);
+  }
+  return [...new Set(issues)];
+}
+
+function specOverflowMessage(issues: string[], references: string[]): string {
+  const targets = references.length
+    ? references.map(relative => `\`${relative}\``).join('、')
+    : '`.tiller/specs/`';
+  return `规格溢出：${issues.join('；')}。请先把新增或变更的行为与 AC-n 回写 ${targets}（必要时同步 \`.tiller/cases/\` 与 \`.tiller/rules/\`），提交后由确认人重新确认 requirements/design，再继续 check/accept；不要在 task.md 保留无法挂载的验收点。`;
+}
 function parseConfirmationSidecar(line: string): FlowConfirmation | null {
   const match = /^<!--\s*tiller-confirm:v1\s+(\{.*\})\s*-->$/u.exec(line);
   if (!match) return null;
@@ -1200,6 +1277,8 @@ export async function confirmFlow(rootInput: string, id: string, gateInput: stri
     const quote = input.quote === undefined ? '' : safeInput(text(input.quote, '用户原话', 4000), '用户原话');
     const by = safeInput(await resolveConfirmer(root, input.by), '确认人');
     const warnings: string[] = [];
+    const specIssues = await specMountIssues(root, task);
+    if (specIssues.length) fail('SPEC_OVERFLOW', specOverflowMessage(specIssues, referencedSpecPaths(task)));
     if (gate === 'requirements') {
       const missing = requirementFieldIssues(task);
       if (missing.length) fail('MISSING_REQUIREMENTS', `需求正文缺少可执行内容：${missing.join('、')}；请补齐后再确认。`);
@@ -1851,6 +1930,10 @@ async function evaluateFlow(root: string, id: string, task: FlowTask, options: F
     if (!design) issues.push('缺少设计确认。');
     else if (design.subject !== designSubject(task)) issues.push('设计确认后需求或设计已变化，需要重新确认。');
   }
+  if (!historicalAccepted) {
+    const specIssues = await specMountIssues(root, task);
+    if (specIssues.length) issues.push(specOverflowMessage(specIssues, referencedSpecPaths(task)));
+  }
   issues.push(...await processHygieneIssues(root, id, task, historicalAccepted));
   const library = await readCaseLibrary(root);
   issues.push(...library.issues);
@@ -2296,7 +2379,10 @@ function flowResult(value: string): FlowResult {
 
 export async function acceptFlow(rootInput: string, id: string, input: FlowConfirmInput = {}) {
   const root = (await resolveTaskCheckout(rootInput, id)).taskRoot;
-  assertTaskOpen(await readTask(root, id));
+  const task = await readTask(root, id);
+  assertTaskOpen(task);
+  const specIssues = await specMountIssues(root, task);
+  if (specIssues.length) fail('SPEC_OVERFLOW', specOverflowMessage(specIssues, referencedSpecPaths(task)));
   const checked = await checkFlow(root, id, {
     allowReported: input.allowReported === true,
     ignoreAcceptance: true,

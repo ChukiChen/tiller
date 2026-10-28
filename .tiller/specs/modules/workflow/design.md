@@ -112,3 +112,9 @@
 init 在创建目标目录、分支、worktree 或提交前先确认 PATH 上可执行 `git`，再对已有 Git HEAD 完成 origin 与平台 token 预检；Git 缺失时只返回安装与 PATH 自检指引，其它预检失败只返回对应设置指引。`init --apply` 是显式自动交付：默认 init 成功开出 PR/MR 后依次 squash、证明、close 与 primary 默认分支快进，任一步失败返回该步和续跑命令，不假报完成。不带旗标仍保持 pending，等待人工合入。
 
 `verify`、`check`、acceptance 提交复查和 `preExisting` 使用同一 Git 归一化内容摘要：文本 CRLF 与 LF 等价，二进制按 Git 形态保留原字节，符号链接按链接目标处理。摘要对齐工作区 blob 规则而不改用户换行配置或工作区文件，避免 Windows 检出仅因换行误报验证过期。
+
+## 16. 规格溢出门禁
+
+`flow.ts` 的 `referencedSpecPaths` 合并任务 `requirementFile` 与正文“需求来源”标注的 `.tiller/specs/*.md` 路径，避免把普通正文里顺带提到的路径误当验收来源；`specMountIssues` 读取这些文件，只解析行首 `- AC-n: …`，再按同一 `AC-n` 与规范化正文比对 `task.criteria`。缺失路径、未挂载 AC、正文差异和设计中不存在的 AC 引用都形成 `SPEC_OVERFLOW`。
+
+`confirmFlow` 在写入 requirements/design/acceptance 确认前运行该检查并直接失败；`evaluateFlow` 在未命中有效 acceptance 时把同一结果加入 check/accept 阻塞项，已验收任务按 acceptance 证据复核并跳过追溯失败。错误文案列出引用路径，要求先回写 specs（必要时 cases/rules）、提交后由确认人重新确认，不自动修改全局文件。判定保持机械边界：只认路径与 AC-n 正文，需要语义解释的新增约束仍由确认人复核。

@@ -109,10 +109,10 @@
 ## 验证
 
 ### run-1
-<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-339 init preflight rejects missing token or invalid origin before creating artifacts$' \u002d\u002dtest-reporter=./.tiller/local/verify-Y8p32A/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-Y8p32A/report.jsonl test/init-baseline.test.mjs","exitCode":0,"tree":"c55f4423d0ed85d51eee12e0683e23acb7f03f4d3be30991a8ba7f04324c519a","commit":"853a79d56475faab0a8876c96fc28342d3945f70"} -->
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-346 init preflight rejects missing token or invalid origin before creating artifacts$' \u002d\u002dtest-reporter=./.tiller/local/verify-Y8p32A/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-Y8p32A/report.jsonl test/init-baseline.test.mjs","exitCode":0,"tree":"c55f4423d0ed85d51eee12e0683e23acb7f03f4d3be30991a8ba7f04324c519a","commit":"853a79d56475faab0a8876c96fc28342d3945f70"} -->
 - 条件：AC-1
-- 测试：test/init-baseline.test.mjs::CASE-339 init preflight rejects missing token or invalid origin before creating artifacts
-- 用例：CASE-339
+- 测试：test/init-baseline.test.mjs::CASE-346 init preflight rejects missing token or invalid origin before creating artifacts
+- 用例：CASE-346
 - 结果：passed
 - 来源：executed
 - 核实：已核实
@@ -121,10 +121,10 @@
 - 时间：2026-10-28T16:11:28.391Z
 
 ### run-2
-<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-248 CASE-339 init without token fails preflight with API/token guidance and no local state$' \u002d\u002dtest-reporter=./.tiller/local/verify-LG79vf/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-LG79vf/report.jsonl test/init-baseline.test.mjs","exitCode":0,"tree":"c55f4423d0ed85d51eee12e0683e23acb7f03f4d3be30991a8ba7f04324c519a","commit":"853a79d56475faab0a8876c96fc28342d3945f70"} -->
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-248 CASE-346 init without token fails preflight with API/token guidance and no local state$' \u002d\u002dtest-reporter=./.tiller/local/verify-LG79vf/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-LG79vf/report.jsonl test/init-baseline.test.mjs","exitCode":0,"tree":"c55f4423d0ed85d51eee12e0683e23acb7f03f4d3be30991a8ba7f04324c519a","commit":"853a79d56475faab0a8876c96fc28342d3945f70"} -->
 - 条件：AC-1
-- 测试：test/init-baseline.test.mjs::CASE-248 CASE-339 init without token fails preflight with API/token guidance and no local state
-- 用例：CASE-339
+- 测试：test/init-baseline.test.mjs::CASE-248 CASE-346 init without token fails preflight with API/token guidance and no local state
+- 用例：CASE-346
 - 结果：passed
 - 来源：executed
 - 核实：已核实

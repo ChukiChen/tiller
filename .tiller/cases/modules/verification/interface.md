@@ -322,3 +322,53 @@ init 探测 pytest 工程并写入 verify.runner=pytest；case add 生成 pytest
 ### 预期结果
 
 不传 --criterion 时明确失败；合法输入生成 `- 关联 AC：AC-1, AC-2`；需求指向稳定 specs；任务#AC 与不存在的 AC 被拒绝，失败不写用例文件。
+
+## CASE-338 跨语言适配器标准进入受管文档与 case 骨架
+
+- 类型：interface
+- 优先级：high
+- 模块：verification
+- 关联 AC：AC-1, AC-3
+- 需求：`.tiller/specs/modules/verification/cross-language-case-adapter.md`
+
+### 前置条件
+
+- 工程配置 junit-maven 或 junit-gradle，需要验收不在扫描目录的 Java 测试。
+
+### 步骤
+
+1. 扫描受管 specs、rules、usage 和模板中的适配器标准。
+2. 运行 `tiller case add` 并读取骨架。
+
+### 输入
+
+- Java 运行器配置与 CASE 登记参数。
+
+### 预期结果
+
+文档规定可扫描入口挂 CASE、内部转调真实 runner 与仓库/运行器配置；骨架是带 CASE 名和转调 TODO 的 Node 测试，不假装自动生成完整 Maven 映射。
+
+## CASE-339 Node 适配器转调 junit-maven 并保留 CASE 关联
+
+- 类型：interface
+- 优先级：high
+- 模块：verification
+- 关联 AC：AC-2, AC-4
+- 需求：`.tiller/specs/modules/verification/cross-language-case-adapter.md`
+
+### 前置条件
+
+- 工程使用 node-test 扫描入口，内部需要执行 Maven Surefire 的 `Class#method`。
+
+### 步骤
+
+1. 编写引用 `CASE-NNN` 的 Node 适配器测试，内部转调 Maven。
+2. 运行 `tiller verify --criterion <AC-N> --case CASE-NNN`。
+
+### 输入
+
+- 可扫描适配器入口、Maven 选择器与真实 runner 结果。
+
+### 预期结果
+
+verify 通过现有扫描找到适配器和 CASE 引用并核实结果；真实 runner 失败时适配器测试失败，不因入口存在而假绿。

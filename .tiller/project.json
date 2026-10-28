@@ -15,15 +15,15 @@
     ".gitignore": "be3b4c440af6f29b4dd5418e67a251ea1afb32edb5d7b81aaa9957998de7eba9",
     ".tiller/index.md": "d2a06c3efc30d9b492eb2fd2b8574348498a1c8596888bd6e4b975445d1151e0",
     ".tiller/rules/index.md": "6bf17c95cf0a5b061601ad8b7534edc71d0e9bed208c65400325f9eb018a1c13",
-    ".tiller/rules/core.md": "4aa9361639e43ed7ce2d4b70319e0a5cc7d9e417cc4fe33de465ab42e68fbec3",
+    ".tiller/rules/core.md": "4a21b047e89d12f6825e869d6e5d0959f64a70652a55638a945fb98dfe9ec79d",
     ".tiller/rules/activities/requirements.md": "d422ee8e9595ada1da5dab372a772d4788e07cdd3c1e430cd5efea148d8191f5",
     ".tiller/rules/activities/design.md": "093e38a3e2f8b1b5bbcc833955e7900205829585d88422c3d5680c391bfe4483",
     ".tiller/rules/activities/implementation.md": "10e4e1e6692243fe2facd80829ee1fd5a13a1128ff70276b26789227f8593e45",
     ".tiller/rules/activities/delivery.md": "0758a8444a6b1f76d8180b240bd836e7bb804cb7f1c681f0dbc3fde063cf2c53",
     ".tiller/rules/quality/documents.md": "b3368483a9ca6c2a45ff142b6fa37455ade64dca17f004a195f6c01748ffc74b",
     ".tiller/rules/quality/code.md": "d316f24ed06a13194ab03aa1b2a3beedda23d92a1a04c3b6587954e0c3e09b82",
-    ".tiller/rules/quality/verification.md": "dc8ceb8c067025d027976de4ad31f8d9ff9c1871b8f09b5238f562107e2bf86c",
-    ".tiller/usage.md": "51fdb5ffcf65365f12587f5329fd79c19aef8a765fb6a06d0b4777925139cae3",
+    ".tiller/rules/quality/verification.md": "855bef190198e0bb73ad88a66a308b7020c97f2e3702d50da732f650c1d91638",
+    ".tiller/usage.md": "66d62f6f47e7a8142a990de95dacf6f7b469c7857f534c26aacb6891770d17fb",
     ".github/pull_request_template.md": "76169f57652bd136127ac9cec64c29293bd5b6d92039948a01963c4e043aafd4"
   },
   "createdAt": "2026-10-14T11:03:37.128Z"

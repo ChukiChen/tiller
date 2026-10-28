@@ -59,7 +59,7 @@ const HELP = `tiller ${CLI_VERSION} — 默认工作流
 - small：需求确认 → 实现 → 验证；standard：需求 → 设计 → 实现 → 验证。确认记录人、时间、摘要和提交，原话可选。
 - 默认人工节点只有需求、设计和交付验收；规划、合入、发布按需确认，没有阶段或审计命令。
 - 大功能可先写 .tiller/plans/<id>.md 并确认；start 挂到条目时默认继承粒度，依赖未验收会阻塞。
-- task.md 是唯一任务记录：start 生成结构化需求，并引用所实现的稳定 specs；--requirement 仅短目标单行，完整需求正文与 AC-n 只用 --requirement-file（必须位于 .tiller/specs/），文件“验收条件”中的 - AC-n: 正文会导入任务，因此可省略 --criterion；文件无 AC-n 时仍须提供。确认（含 accept）写入后自动提交本任务记录。任务只引用同一 specs 路径与 AC-n，不写模块前缀或“对照”平行列表；确认前校验正文，原话只作可选附注。verify 自主执行测试并从私有报告核实。
+- task.md 是唯一任务记录：start 生成结构化需求，并引用所实现的稳定 specs；--requirement 仅短目标单行，完整需求正文与 AC-n 只用 --requirement-file（必须位于 .tiller/specs/），文件“验收条件”中的 - AC-n: 正文会导入任务，因此可省略 --criterion；文件无 AC-n 时仍须提供。确认（含 accept）写入后自动提交本任务记录。任务只引用同一 specs 路径与 AC-n，不写模块前缀或“对照”平行列表；确认前校验正文，原话只作可选附注。任务引用 specs 后，新增或改写的验收点必须先回写全局 specs（必要时 cases/rules），否则 confirm/check/accept 以 SPEC_OVERFLOW 阻断并要求重新确认。verify 自主执行测试并从私有报告核实。
 - review 记录独立评审发现；未解决阻塞项会阻断 check/accept。release 只做发布门禁，不发布包。check 汇总发布清单；已验收任务按验收提交读取代码树与测试，之后代码漂移不误报过期。
 - start 只把任务记录写入任务 worktree，不在 primary 留种子；confirm/accept 写确认后自动提交本任务 .tiller/task/<id>/。
 - 阶段由 task.md 事实推导；accept 须在 pr 前；pr 默认用 tokenized HTTPS git push 推送任务分支并经平台 API 创建真实 PR/MR，GitHub Git Data API 只在 git 推送失败时可选回退；返回 URL 与编号；--draft-only 仅输出五段草稿。重复 accept 按当前工作区重新核实，改代码后先重新 verify。审阅后用 merge 经 REST API squash 合入并自动 close；merge/close 默认删除本地与远端任务分支，close init-id 同样清理 chore/tiller-init；--keep-branch 保留，分支已不存在或 422 视为已清理，其它删除失败只记 warning。token 从 GITHUB_TOKEN/GH_TOKEN 或 GITLAB_TOKEN/GL_TOKEN 读取，不依赖平台 CLI；网页合入后仍需手动 close，且 close 先验证合入证明，证明不足不清理；未验收终止用 --abandon，须先在 primary 持久化放弃事件；仅当任务记录仍可读取时才提示 reopen。
@@ -71,7 +71,7 @@ const HELP = `tiller ${CLI_VERSION} — 默认工作流
 - 同一 AC 或 CASE 连续两次 verify 失败且无成功核实时，verify/check 要求停止自动重试并按 FLOW-05 报告证据与可选方案；成功核实清零。
 - case add 在测试之前登记测试设计（前置条件、步骤、输入、预期结果、类型、优先级、稳定 specs 需求），关联 AC 必须来自所挂需求 specs 的 AC-n，拒绝任务#AC；历史“无”与 task#AC 仍可读。不保存源码字段，自动分配 CASE 编号；测试名引用 CASE 编号形成反查。check 以 verify 的 AC→测试→CASE 记录核对当前验证，校验模块/场景结构并提示相关回归，同时检查范围、测试弱化、密钥和本机绝对路径。
 - pr 从 task.md 和 Git 提交生成五段 PR/MR 说明，默认用 tokenized HTTPS git push 推送分支并经平台 API 创建真实 PR/MR；--draft-only 才只输出草稿。提交用“类型(模块): 中文摘要”，分支用“类型/任务编号[-描述]”；check 只提示格式问题。
-- 验证运行器支持 node-test、junit-maven、junit-gradle 与 pytest；pytest 从私有 JUnit XML 核实。upgrade 刷新未修改的受管文件，--adopt 保留用户当前内容并更新摘要；版本号只在正式发布时修改。
+- 验证运行器支持 node-test、junit-maven、junit-gradle 与 pytest；pytest 从私有 JUnit XML 核实。case add 对 junit 运行器输出“可扫描 Node 入口挂 CASE + 内部转调真实 runner”的适配器骨架，入口配置 node-test、真实 Java 仓库配置 junit 运行器，不按扩展名猜语言。upgrade 刷新未修改的受管文件，--adopt 保留用户当前内容并更新摘要；版本号只在正式发布时修改。
 `;
 
 function usage(message: string): never {
