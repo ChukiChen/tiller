@@ -88,11 +88,11 @@
 
 | 部分 | 确认人 | 时间 | 短提交 | 原话 |
 | --- | --- | --- | --- | --- |
-| 设计 | ChukiChen | 2026-10-28T14:45:48.427Z | 87a65400d12e | 门禁对照specs；适配器为标准路径 |
 | 需求 | ChukiChen | 2026-10-28T16:05:08.271Z | aa13d0f80af3 | — |
+| 设计 | ChukiChen | 2026-10-28T16:05:08.375Z | 03d39d868233 | — |
 
-<!-- tiller-confirm:v1 {"gate":"design","object":"设计正文","subject":"0cfc0c309b3307ae90792d666c4e70664b7d9c3daa090df107cde75556a2ec26","commit":"87a65400d12e82bf86dfd1fc162e2814c819945c","by":"ChukiChen","quote":"门禁对照specs；适配器为标准路径","at":"2026-10-28T14:45:48.427Z"} -->
 <!-- tiller-confirm:v1 {"gate":"requirements","object":"需求正文（目标、范围与验收条件）","subject":"2b55e7c2bf4b3a2b1fe42c25dce1ec1e630d02f0568a3bbb9c913f23bd560c7f","commit":"aa13d0f80af37286ee74ed99dfbe03175a09793e","by":"ChukiChen","quote":"","at":"2026-10-28T16:05:08.271Z"} -->
+<!-- tiller-confirm:v1 {"gate":"design","object":"设计正文","subject":"521c367cd2539d02216282668f50047f75bc91a9b335468b0236311f1ae5d93c","commit":"03d39d868233c79df40f2a6668574cea9bb61a5e","by":"ChukiChen","quote":"","at":"2026-10-28T16:05:08.375Z"} -->
 
 ## 验证
 
