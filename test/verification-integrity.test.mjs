@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import test from 'node:test';
 import { parseMetadata } from '../dist/core.js';
-import { readTask, verifyFlow } from '../dist/flow.js';
+import { verifyFlow } from '../dist/flow.js';
 import { namePattern, runnerFor, TEST_RUNNERS } from '../dist/test-output.js';
 import { applyUpgrade, planUpgrade } from '../dist/upgrade.js';
 import {    cli, confirmTask, failure, fixture, initializeSettled, put, success, taskRecordRoot, read, commitFixtures } from './helpers.mjs';
@@ -76,7 +76,7 @@ function reportLine(values) {
   return JSON.stringify({ type: 'pass', outcome: 'passed', ...values });
 }
 
-test('CASE-086 verify executes the recorded command, rejects legacy inputs and reads old records', async t => {
+test('CASE-086 verify executes and records the declared test command', async t => {
   const root = await project(t);
   const id = '20261022-verify-single-command';
   prepareTask(root, id);
@@ -84,11 +84,6 @@ test('CASE-086 verify executes the recorded command, rejects legacy inputs and r
   put(root, 'src/value.mjs', 'export const value = 2;\n');
   commitAll(root, 'feat(workflow): 实现验证示例');
 
-  const legacy = failure(cli(root, 'verify', id, '--criterion', 'AC-1', '--test', 'test/value.test.mjs::CASE-001 value behavior',
-    '--run', 'node test/value.test.mjs'));
-  assert.equal(legacy.error.code, 'INVALID_ARGUMENT');
-  assert.match(legacy.error.message, /--run/u);
-  assert.match(legacy.error.message, /--test/u);
   const externalWithoutFlag = failure(cli(root, 'verify', id, '--criterion', 'AC-1',
     '--test', 'test/value.test.mjs::CASE-001 value behavior', '--command', 'node test/value.test.mjs'));
   assert.equal(externalWithoutFlag.error.code, 'INVALID_ARGUMENT');
@@ -114,10 +109,6 @@ test('CASE-086 verify executes the recorded command, rejects legacy inputs and r
   assert.equal(fileLevel.entries[0].evidence, 'verified');
   assert.doesNotMatch(fileLevel.entries[0].command, /--test-name-pattern/u);
 
-  put(taskRecordRoot(root, id), taskFile(id), read(taskRecordRoot(root, id), taskFile(id)).replace('\n- 核实：已核实', ''));
-  const legacyRecord = success(cli(root, 'check', id));
-  assert.equal(legacyRecord.ready, true, legacyRecord.issues.join('\n'));
-  assert.ok(!legacyRecord.issues.some(issue => issue.includes('未核实')), legacyRecord.issues.join('\n'));
 });
 
 test('CASE-201 verification records keep a concise human summary and a complete machine sidecar', async t => {
@@ -157,55 +148,6 @@ test('CASE-201 verification records keep a concise human summary and a complete 
   assert.ok(!human.includes(verified.commit));
   assert.equal(verified.log, `.tiller/local/${id}/logs/run-1.log`);
   assert.ok(existsSync(join(taskRecordRoot(root, id), verified.log)));
-  assert.equal(success(cli(root, 'check', id)).ready, true);
-});
-
-test('CASE-202 legacy verification bullets remain parseable and are rewritten in the concise format', async t => {
-  const root = await project(t);
-  const id = '20261024-legacy-verification-record';
-  prepareTask(root, id);
-  addCase(root, id, 'test/value.test.mjs::CASE-001 value behavior');
-  put(root, 'src/value.mjs', 'export const value = 5;\n');
-  commitAll(root, 'feat(workflow): 准备旧验证记录');
-
-  const verified = success(cli(root, 'verify', id, '--criterion', 'AC-1',
-    '--test', 'test/value.test.mjs::CASE-001 value behavior'));
-  const run = verified.entries[0];
-  const content = read(taskRecordRoot(root, id), taskFile(id));
-  const legacy = [
-    '### run-1',
-    `- 条件：${run.criterion}`,
-    `- 测试：${run.test}`,
-    `- 用例：${run.cases.join(', ')}`,
-    `- 命令：${run.command}`,
-    '- 结果：passed',
-    '- 退出码：0',
-    `- 提交：${run.commit}`,
-    `- 代码树摘要：${run.tree}`,
-    '- 来源：executed',
-    `- 时间：${run.at}`,
-  ].join('\n');
-  put(taskRecordRoot(root, id), taskFile(id), content.replace(/### run-1[\s\S]*?(?=\n## 自检)/u, () => `${legacy}\n`));
-
-  const parsed = await readTask(root, id);
-  assert.equal(parsed.verifications.length, 1);
-  assert.deepEqual({
-    command: parsed.verifications[0].command,
-    exitCode: parsed.verifications[0].exitCode,
-    tree: parsed.verifications[0].tree,
-    commit: parsed.verifications[0].commit,
-    legacyEvidence: parsed.verifications[0].legacyEvidence,
-  }, { command: run.command, exitCode: 0, tree: run.tree, commit: run.commit, legacyEvidence: true });
-  assert.equal(success(cli(root, 'check', id)).ready, true);
-
-  success(cli(root, 'review', id, '--by', 'Tiller Test'));
-  const rendered = read(taskRecordRoot(root, id), taskFile(id));
-  assert.deepEqual(verificationSidecars(rendered)[0], {
-    command: run.command, exitCode: 0, tree: run.tree, commit: run.commit, legacyEvidence: true,
-  });
-  const human = rendered.replace(/^<!-- tiller-verify:v1 .* -->$/gmu, '');
-  assert.match(human, /^- 核实：未标注$/mu);
-  assert.doesNotMatch(human, /^- (?:命令|退出码|代码树摘要)：/mu);
   assert.equal(success(cli(root, 'check', id)).ready, true);
 });
 

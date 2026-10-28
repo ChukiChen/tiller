@@ -1,6 +1,6 @@
 # tiller 使用指引
 
-安装后直接运行 PATH 中的 `tiller --help`；恢复 `tiller resume`。主路径只使用同一个 PATH CLI，不依赖 runtime bind。编号用 `YYYYMMDD-` 前缀（如 `20261023-fix`），缺则提示。
+安装后直接运行 PATH 中的 `tiller --help`；恢复 `tiller resume`。编号用 `YYYYMMDD-` 前缀（如 `20261023-fix`），缺则提示。
 
 ## 默认工作流
 
@@ -26,7 +26,7 @@ tiller doctor
 
 `standard` 须先设计确认再 `verify`（过早 verify 以 `VERIFY_BEFORE_DESIGN` 拒绝）；历史错序段用 `verify --clear-premature` 清除。确认后有未提交业务改动时，`check` 仍阻断 `accept`。
 
-accept 须在 pr 前；`confirm`/`accept` 写入确认后自动提交本任务记录（含 acceptance），一般无需再手搓一轮；`PR_NOT_ACCEPTED`/`PR_TASK_RECORDS_DIRTY` 仍阻断未验收或未提交记录。重复 accept 重查当前树，改码先 verify。`pr <id>` 默认 tokenized git push 并经平台 API 创建真实 PR/MR；Git Data API 仅失败回退。返回 URL/编号；`--draft-only` 仅五段草稿。审阅后 `merge <id>` 经 GitHub/GitLab REST API squash 后 close；合入即交付完成。merge/close 默认删本地与远端分支，`--keep-branch` 保留；不存在/422 已清理，其它失败 warning；worktree 根先拆树并删分支。网页合入手动 close，失败不清理，收尾不改 `task.md`、不 materialize 未跟踪 task、不写 `.tiller/local/closed/`，仍兼容清理旧三棵树布局；合入后靠快进/pull 读已跟踪记录。
+accept 须在 pr 前；`confirm`/`accept` 写入确认后自动提交本任务记录（含 acceptance），一般无需再手搓一轮；`PR_NOT_ACCEPTED`/`PR_TASK_RECORDS_DIRTY` 仍阻断未验收或未提交记录。重复 accept 重查当前树，改码先 verify。`pr <id>` 默认 tokenized git push 并经平台 API 创建真实 PR/MR；Git Data API 仅失败回退。返回 URL/编号；`--draft-only` 仅五段草稿。审阅后 `merge <id>` 经 GitHub/GitLab REST API squash 后 close；合入即交付完成。merge/close 默认删本地与远端分支，`--keep-branch` 保留；不存在/422 已清理，其它失败 warning；worktree 根先拆树并删分支。网页合入手动 close，失败不清理；收尾不改 `task.md`、不 materialize 未跟踪 task，只清理 `.tiller/local/<id>/` 与分支。合入后靠快进/pull 读已跟踪记录。
 
 `doctor [path]` 查基线、默认分支 specs 脏改、残留任务分支与 AC 缺口；严重失败。
 
@@ -34,7 +34,7 @@ accept 须在 pr 前；`confirm`/`accept` 写入确认后自动提交本任务�
 
 ## 验证
 
-`verify` 只声明测试，由 tiller 构造并执行并读私有临时报告；stdout/stderr 不参与判定。报告缺失或损坏、匹配 0 个或多个测试、失败或跳过均不核实；`--run` 已删除。standard 必须 `--target`，small 缺省 `.`。
+`verify` 只声明测试，由 tiller 构造并执行并读私有临时报告；stdout/stderr 不参与判定。报告缺失或损坏、匹配 0 个或多个测试、失败或跳过均不核实。standard 必须 `--target`，small 缺省 `.`。
 
 日志含命令、起止与退出码，写 `.tiller/local/<任务编号>/logs/run-<序号>.log`（`--verbose`）；`task.md` 留摘要，证据进旁路。`verify.prepare` 失败即止；`verify.runner` 支持 `node-test`/`junit-maven`/`junit-gradle`/`pytest`（pytest 用私有 JUnit XML）；`case add` 骨架按 runner 生成。
 
@@ -50,4 +50,4 @@ accept 须在 pr 前；`confirm`/`accept` 写入确认后自动提交本任务�
 
 ## 接入与升级
 
-`init [--platform github|gitlab|both]` 只在 init worktree 写入受管产物并推送 PR/MR，primary 不预建未跟踪 `.tiller/` 种子；失败保留本机 worktree。`initBaseline` 由祖先或平台 API 确认合入，merged 记在 `.tiller/local/`（不脏跟踪的 `project.json`）；`merge <init-id>` 标记并清理，网页合入可 `close <init-id>`。平台在初始化时选定，之后不能通过 CLI 切换；需手动修改 `.tiller/project.json` 并补齐对应模板。主路径不需要自动或手动 `runtime bind`。`upgrade --adopt` 刷新未改项；兼容当前及上一资源契约。
+`init [--platform github|gitlab|both]` 只在 init worktree 写入受管产物并推送 PR/MR，primary 不预建未跟踪 `.tiller/` 种子；失败保留本机 worktree。`initBaseline` 由祖先或平台 API 确认合入，merged 记在 `.tiller/local/`（不脏跟踪的 `project.json`）；`merge <init-id>` 标记并清理，网页合入可 `close <init-id>`。平台在初始化时选定，之后不能通过 CLI 切换；需手动修改 `.tiller/project.json` 并补齐对应模板。主路径直接使用 PATH 中的 `tiller`。`upgrade --adopt` 刷新未改项；兼容当前及上一资源契约。

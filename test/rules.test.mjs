@@ -4,7 +4,7 @@ import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import test from 'node:test';
-import { cli, fixture, success } from './helpers.mjs';
+import { cli, fixture, put, success } from './helpers.mjs';
 import { readCaseLibrary } from '../dist/cases.js';
 import { managedFilesForPlatform, RULES, sha256 } from '../dist/core.js';
 
@@ -44,7 +44,7 @@ test('CASE-103 core and usage describe the only supported default-flow record pa
   assert.doesNotMatch(core, /advanced|上一版本升级/u);
   const usage = read('usage.md');
   for (const command of ['start', 'resume', 'confirm', 'verify', 'review', 'check', 'accept', 'release', 'close', 'pr']) assert.ok(usage.includes(`tiller ${command}`), command);
-  assert.doesNotMatch(usage, /node \.tiller\/run\.cjs|tiller runtime (?:status|bind)/u);
+  assert.match(usage, /PATH 中的 `tiller`/u);
   assert.match(usage, /reopen/u);
   assert.match(usage, /--size small/u);
   assert.match(usage, /standard 另生成/u);
@@ -109,7 +109,7 @@ test('CASE-091 verification guidance requires execution, reporting reasons and f
   assert.match(usage, /--allow-reported/u);
   assert.match(usage, /--expect-fail/u);
   assert.match(usage, /基线.*工作树/u);
-  assert.match(usage, /--run.*已删除/u);
+  assert.match(usage, /tiller 构造并执行/u);
 
   const core = read('rules/core.md');
   assert.match(core, /verify.*自主执行|tiller 自主执行/u);
@@ -264,15 +264,16 @@ test('CASE-048 global cases use module kinds and scenarios with resolvable named
   const kinds = ['behavior', 'interface', 'performance', 'security'];
   const library = await readCaseLibrary(repository);
   assert.deepEqual(library.issues, []);
-  assert.equal(library.cases.length, 318);
-  assert.deepEqual(library.cases.map(item => item.id).sort(),
-    Array.from({ length: 318 }, (_, index) => `CASE-${String(index + 1).padStart(3, '0')}`));
+  assert.equal(library.cases.length, 296);
+  const ids = library.cases.map(item => item.id);
+  assert.equal(new Set(ids).size, ids.length);
+  assert.ok(ids.every(id => /^CASE-\d{3}$/u.test(id)));
   assert.deepEqual(library.modules.map(item => ({ module: item.module, behavior: item.behavior, interface: item.interface,
     performance: item.performance, security: item.security })), [
-    { module: 'initialization', behavior: 31, interface: 10, performance: 11, security: 17 },
+    { module: 'initialization', behavior: 30, interface: 6, performance: 7, security: 10 },
     { module: 'standards', behavior: 22, interface: 15, performance: 0, security: 0 },
     { module: 'verification', behavior: 13, interface: 13, performance: 15, security: 4 },
-    { module: 'workflow', behavior: 102, interface: 56, performance: 0, security: 7 },
+    { module: 'workflow', behavior: 98, interface: 54, performance: 0, security: 7 },
   ]);
   assert.equal(library.scenarios.length, 2);
   for (const item of library.scenarios) assert.ok(item.modules.length > 0 && item.modules.every(module => specs.includes(module)));
@@ -312,7 +313,7 @@ test('CASE-048 global cases use module kinds and scenarios with resolvable named
 test('CASE-245 全局用例库同步文档 CLI 名称与版本', async () => {
   const library = await readCaseLibrary(repository);
   assert.deepEqual(library.issues, []);
-  assert.equal(library.cases.length, 318);
+  assert.equal(library.cases.length, 296);
   const added = library.cases.filter(item => Number(item.id.slice(5)) >= 242 && Number(item.id.slice(5)) <= 245);
   assert.deepEqual(added.map(item => item.id), ['CASE-242', 'CASE-243', 'CASE-244', 'CASE-245']);
   const standards = library.modules.find(item => item.module === 'standards');
@@ -603,14 +604,21 @@ test('CASE-314 0.5.0 发布契约与完整质量门禁保持覆盖', () => {
   assert.match(smoke, /Package smoke passed/u);
 });
 
-test('CASE-163 recent accepted tasks are closed without fabricating legacy acceptance', () => {
-  const stages = new Map(success(cli(repository, 'resume')).tasks.map(item => [item.id, item.stage]));
-  for (const id of [
+test('CASE-163 recent accepted tasks are closed without fabricating legacy acceptance', t => {
+  const root = fixture(t);
+  success(cli(root, 'init'));
+  const ids = [
     '20261022-first-batch', '20261022-round8', '20261022-round9', '20261022-round11',
     '20261022-round12', '20261022-round13', '20261022-round14', '20261022-round15',
     '20261022-round16', '20261022-round17', '20261023-migrate-work',
     '20261023-case-backfill', '20261023-specs-pure-req',
-  ]) assert.equal(stages.get(id), '已关闭', id);
+  ];
+  for (const id of ids) {
+    const relative = `.tiller/task/${id}/task.md`;
+    put(root, relative, readFileSync(join(repository, relative), 'utf8'));
+  }
+  const stages = new Map(success(cli(root, 'resume')).tasks.map(item => [item.id, item.stage]));
+  for (const id of ids) assert.equal(stages.get(id), '已关闭', id);
 });
 
 test('CASE-164 historical empty AC cases stay warned without fabricated backfill', async () => {
@@ -620,7 +628,7 @@ test('CASE-164 historical empty AC cases stay warned without fabricated backfill
   assert.match(decisions, /不批量回填/u);
   assert.match(decisions, /不.*冒充历史来源/u);
   const library = await readCaseLibrary(repository);
-  assert.equal(library.cases.filter(item => item.criteria.length === 0).length, 146);
+  assert.equal(library.cases.filter(item => item.criteria.length === 0).length, 129);
 });
 
 test('CASE-165 project rules and context match 0.5.0 without stale workflow guidance', () => {

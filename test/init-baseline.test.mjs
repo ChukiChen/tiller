@@ -110,7 +110,6 @@ test('CASE-228 init creates a committed initialization worktree and creates the 
   const merged = git(root, 'merge-base', '--is-ancestor', baseline.commit, before);
   assert.notEqual(merged.status, 0, 'initialization must not be merged automatically');
 });
-
 test('CASE-229 failed PR creation keeps the worktree and commit and returns API/token next steps', async t => {
   const initialized = await initialize(t, { mode: 'pr-failure' });
   if (!initialized) return;
@@ -406,25 +405,4 @@ test('CASE-233 initialization baseline stays at version 0.5.0 with named test co
   for (const id of ['CASE-228', 'CASE-229', 'CASE-230', 'CASE-231', 'CASE-232', 'CASE-233', 'CASE-247', 'CASE-248']) {
     assert.match(source, new RegExp(`test\\('[^'\\n]*${id}\\b`, 'u'));
   }
-});
-
-test('CASE-313 main path uses one PATH tiller without init runtime binding', async t => {
-  const root = fixture(t);
-  success(cli(root, 'init'));
-  assert.equal(existsSync(join(root, '.tiller/local/runtime.json')), false);
-  const started = success(cli(root, 'start', '20261027-path-only-tiller', '--title', 'PATH 单一 tiller',
-    '--requirement', '主路径只使用 PATH 中的 tiller。', '--criterion', 'AC-1=不依赖 bind', '--size', 'small',
-    '--target', 'src'));
-  assert.ok(started.worktreeRoot);
-
-  for (const relative of ['README.md', 'resources/usage.md', '.tiller/usage.md']) {
-    const content = read(repository, relative);
-    assert.match(content, /tiller start|tiller init/u, relative);
-    assert.doesNotMatch(content, /node \.tiller\/run\.cjs|tiller runtime (?:status|bind)/u, relative);
-  }
-  const smoke = read(repository, 'scripts/package-smoke.mjs');
-  assert.match(smoke, /const cli = join\(install, 'node_modules\/tiller\/dist\/cli\.js'\)/u);
-  assert.doesNotMatch(smoke, /spawnSync\([^)]*\.tiller\/run\.cjs|invoke\(\['runtime', '(?:status|bind)'\]/su);
-  const help = success(cli(root, '--help')).help;
-  assert.doesNotMatch(help, /runtime (?:status|bind)/u);
 });

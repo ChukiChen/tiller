@@ -15,7 +15,7 @@ export const RULES = [
   'rules/activities/implementation.md', 'rules/activities/delivery.md',
   'rules/quality/documents.md', 'rules/quality/code.md', 'rules/quality/verification.md',
 ] as const;
-export const SHARED_RESOURCES = [...RULES, 'usage.md', 'run.cjs'] as const;
+export const SHARED_RESOURCES = [...RULES, 'usage.md'] as const;
 export const PREVIOUS_MANAGED = ['AGENTS.md', '.gitignore', '.tiller/index.md', ...SHARED_RESOURCES.map(name => `.tiller/${name}`)];
 export const PLATFORM_TEMPLATES: Record<ProjectPlatform, readonly string[]> = {
   github: [GITHUB_TEMPLATE],

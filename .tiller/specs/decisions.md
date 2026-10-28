@@ -54,7 +54,7 @@
 
 - `confirm`、`accept` 和 `plan confirm` 的 `--quote` 改为可选；`--by` 指定确认人，缺省取 Git `user.name`，再退回系统用户。
 - 确认前校验结构化必填段；确认记录自动保存确认部分、确认人、时间、提交和摘要。
-- 旧 task.md、旧 quote 确认及其摘要继续有效；不为兼容而恢复全文快照或证据包。
+- 历史 task.md 正文仍可读；确认只认当前紧凑表与机器旁路。不为兼容恢复全文快照或证据包。
 
 ## 2026-10-22 提交、分支与 PR/MR
 
@@ -68,12 +68,12 @@
 
 ## 2026-10-22 自主验证与防伪
 
-- `verify` 只声明 `--test "<文件::测试名>"`，由 tiller 通过适配器构造并执行精确匹配的 node:test 命令；删除 `--run`，历史记录的命令字段继续可读。
+- `verify` 只声明 `--test "<文件::测试名>"`，由 tiller 通过适配器构造并执行精确匹配的 node:test 命令。
 - 结果只从私有临时报告读取，stdout/stderr 不参与判定。报告缺失/损坏、匹配 0 个或多个、失败或跳过均不能核实为通过。适配器接口与注册在 `src/test-output.ts`。
 - `project.json` 可选 `verify.runner`（缺省 node-test）和 `verify.prepare`（参数数组）；准备失败即验证失败，升级保留该用户配置。
 - 无法本机执行时允许 `--reported --command --result --reason`，理由必填；`check`/`accept` 默认阻断，只有 `--allow-reported` 放行，`pr` 标明未执行。
 - bugfix 任务必须用 `--expect-fail --test` 在任务基线临时工作树复用同一适配器和私有报告路径留下失败证据，并保留当前同一测试的已核实通过证据。
-- standard 任务 `start` 必须声明 `--target`；small 继续缺省 `.`。新证据检查不回溯污染旧格式记录，已验收历史任务保持原结果。
+- standard 任务 `start` 必须声明 `--target`；small 继续缺省 `.`。已验收历史任务仍按原 acceptance 提交复查；缺少当前核实旁路的记录按未核实处理。
 
 ## 2026-10-23 评审、发布与验收提交
 
@@ -106,7 +106,7 @@
 
 ## 2026-10-24 文档模板与任务标记
 
-- 新任务的开工前改动摘要写 `.tiller/local/<id>/pre-existing.json`，共享 `tiller-task:v1` 标记不再序列化 `preExisting`；旧标记与旧旁路继续读取，运行时合并，范围与过程卫生检查语义不变。
+- 新任务的开工前改动摘要写 `.tiller/local/<id>/pre-existing.json`；只从该任务本机旁路读取。
 - 新任务需求的固定章节为使用场景、目标、业务范围、关键行为、异常与边界、验收条件；业务路径只进任务范围。standard 设计使用方案、失败处理、取舍、影响与风险、验证入口。
 - 确认拒绝空白或占位关键章节，取舍缺失保留提示；旧任务的“范围”章节继续兼容。初始化和规则只提供简短章节提示，不提供长示例。
 
@@ -119,9 +119,9 @@
 
 ## 2026-10-26 任务本机目录聚合
 
-- `.tiller/local/<id>/` 聚合 `worktrees/`、`logs/`、`pre-existing.json` 和 `worktrees.json`，新写入不再创建 `.tiller/local/worktrees|logs|tasks/<id>/`。
-- close 与 abandon 拆除 worktree 后删除整棵任务本机目录，并兼容清理旧布局三路径；缺失幂等，不触碰其他任务目录。已验收 close 只做本机清理，abandon 仍写共享放弃记录。
-- sidecar 和开工前摘要读取先新后旧；旧 `TaskWorktreeState.root` 仍可解析用于拆除；不自动搬迁进行中旧任务，也不在 reopen 时重建。
+- `.tiller/local/<id>/` 聚合 `worktrees/`、`logs/`、`pre-existing.json` 和 `worktrees.json`。
+- close 与 abandon 拆除 worktree 后只删除整棵任务本机目录；缺失幂等，也不触碰其他任务目录。已验收 close 只做本机清理，abandon 仍写共享放弃记录。
+- sidecar 和开工前摘要只读取当前任务本机目录；不在 reopen 时重建 worktree。
 
 ## 2026-10-26 PR 前同步任务记录
 
@@ -220,9 +220,9 @@
 - 代价：合入前 primary 可能尚无完整骨架，须先合入 init PR；测试夹具用 settle 物化文件。
 - standard 过早 `verify` 以 `VERIFY_BEFORE_DESIGN` 拒绝；历史错序段用 `verify --clear-premature` 清除。
 
-## 2026-10-27 close 不合入后 materialize / 不写 closed 标记
+## 2026-10-27 close 保持共享任务记录
 
-- 决定：`close`/`merge` 自动 close 与 abandon **不再**把 `.tiller/task/<id>/` 复制到 primary；也不再读写 `.tiller/local/closed/<id>.json`。合入后的任务记录靠默认分支快进/pull；close 只清 worktree 与分支。
+- 决定：`close`/`merge` 自动 close 与 abandon 只清理任务 worktree、任务本机目录与分支；合入后的任务记录靠默认分支快进/pull 读取。
 - 代价：从未合入就 close 的任务不会在 primary 留下未跟踪副本；reopen/plan 仅在记录仍可解析（通常已跟踪）时可用。
 - abandon 若 primary 已有该任务文件则刷新已有副本，仍不新建未跟踪种子。
 
@@ -230,7 +230,7 @@
 
 - merge/close 后 primary 不保留 tiller 生成的未跟踪任务树；合入记录只通过默认分支快进/pull 成为跟踪文件。自动化测试以 `git status` 与 `git merge --ff-only` 锁住该不变式，避免收尾副作用再次出现。
 - `--requirement` 保持单行短目标通道，但 start 会把短目标展开为可确认的结构化需求骨架，并逐条写入 AC；`--requirement-file` 仍以文件为准。代价是骨架中的业务范围与异常边界采用保守默认值，确认人仍需按实际目标复核。
-- 主路径、狗粮和 package smoke 统一调用 PATH、`npx` 或打包入口的 tiller；init 不再自动写 runtime binding，也不把 bind 作为合入后步骤。可选的历史 runtime 命令不进入主路径说明或验收。
+- 主路径、狗粮和 package smoke 统一调用 PATH、`npx` 或打包入口的 tiller。
 - commit scope 的 `specs`、`workflow`、`standards`、`initialization`、`verification` 视为约定名称，不再按模块目录误报；未知模块仍提示。
 
 ## 2026-10-27 任务生命周期以 worktree 事实为准
@@ -238,4 +238,10 @@
 - `doctor` 从 active 任务 worktree 读取任务记录检查 AC 覆盖与数据模型；primary 没有 `.tiller/task/` 不再表示没有进行中任务，active 任务分支缺记录直接失败。
 - 已验收 `close` 先验证主检出跟踪记录、默认历史或平台 API 的合入证明，证明不足时保留 worktree、本机目录和分支。清理后没有可读取记录时，结果不提示 `reopen`。
 - `abandon` 先确认 primary 已有清理后仍可读取的任务记录，再写放弃事件并清理；无法持久化时拒绝破坏性清理，不创建未跟踪 primary 种子。
+
+## 2026-10-28 单一入口与当前任务目录
+
+- 主路径只使用 PATH、`npx` 或安装包中的 `tiller`；受管清单只包含入口、规则、使用指引和平台模板。
+- `close`/`abandon` 只处理当前任务的 worktree、`.tiller/local/<id>/` 与分支。
+- 历史 task 正文继续可读；已退役的确认和验证旁路不参与解析或校验。
 

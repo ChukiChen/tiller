@@ -3,7 +3,6 @@ import { existsSync, mkdirSync, readFileSync, renameSync, rmSync, statSync } fro
 import { join, sep } from 'node:path';
 import { spawn, spawnSync } from 'node:child_process';
 import test from 'node:test';
-import { cleanupTaskWorktrees } from '../dist/task-worktrees.js';
 import { cli, cliPath, confirmTask, failure, fixture, put, spawnCaptured, success, taskRecordRoot} from './helpers.mjs';
 import { startPlatformMock } from './platform-api-mock.mjs';
 
@@ -112,18 +111,6 @@ function taskLocalPath(id, relative = '') {
   return ['.tiller/local', id, relative].filter(Boolean).join('/');
 }
 
-function legacyWorktreePath(id, relative = '') {
-  return ['.tiller/local/worktrees', id, relative].filter(Boolean).join('/');
-}
-
-function legacyLogPath(id, relative = '') {
-  return ['.tiller/local/logs', id, relative].filter(Boolean).join('/');
-}
-
-function legacySidecarPath(id, relative = '') {
-  return ['.tiller/local/tasks', id, relative].filter(Boolean).join('/');
-}
-
 test('CASE-196 CASE-209 CASE-287 project start creates a task-local worktree, sidecars and logs in one directory', async t => {
   const root = project(t);
   const id = '20261024-project-worktree';
@@ -143,9 +130,9 @@ test('CASE-196 CASE-209 CASE-287 project start creates a task-local worktree, si
   assert.ok(existsSync(join(root, taskLocalPath(id, 'pre-existing.json'))));
   put(root, taskLocalPath(id, 'logs/run-1.log'), 'task log\n');
   assert.ok(existsSync(join(root, taskLocalPath(id, 'logs/run-1.log'))));
-  assert.equal(existsSync(join(root, legacyWorktreePath(id))), false);
-  assert.equal(existsSync(join(root, legacySidecarPath(id))), false);
-  assert.equal(existsSync(join(root, legacyLogPath(id))), false);
+  assert.equal(state.id, id);
+  assert.equal(state.branch, started.worktrees[0].branch);
+  assert.equal(state.worktrees[0].repository, 'management');
 });
 
 test('CASE-197 CASE-210 CASE-287 workspace start keeps management and registered repositories under the task worktree root', async t => {
@@ -170,9 +157,9 @@ test('CASE-197 CASE-210 CASE-287 workspace start keeps management and registered
   const state = JSON.parse(readFileSync(join(root, taskLocalPath(id, 'worktrees.json')), 'utf8'));
   assert.equal(state.root, worktreePath(id));
   assert.deepEqual(state.worktrees.map(item => item.path).sort(), started.worktrees.map(item => item.path).sort());
-  assert.equal(existsSync(join(root, legacyWorktreePath(id, 'management'))), false);
-  assert.equal(existsSync(join(root, legacySidecarPath(id))), false);
-  assert.equal(existsSync(join(root, legacyLogPath(id))), false);
+  assert.equal(state.id, id);
+  assert.equal(state.branch, branch);
+  assert.ok(state.worktrees.some(item => item.repository === 'management'));
 });
 
 test('CASE-208 worktree branch and path use the task id once when slug is already its suffix', async t => {
@@ -277,7 +264,7 @@ test('CASE-280 worktree 根 close 可读取仅存在于 worktree 的任务记录
   assert.equal(branchExists(root, started.worktrees[0].branch), false);
 });
 
-test('CASE-283 CASE-309 合入后 close 不改共享 task.md、无 closed 标记且重复 close 安全', async t => {
+test('CASE-283 CASE-309 合入后 close 不改共享 task.md 且重复 close 安全', async t => {
   const root = project(t);
   const id = '20261027-repeat-close';
   const started = startTask(root, id);
@@ -299,12 +286,12 @@ test('CASE-283 CASE-309 合入后 close 不改共享 task.md、无 closed 标记
 
   const first = success(cli(root, 'close', id, '--reason', '合入后收尾'));
   assert.equal(first.stage, '已验收');
+  assert.equal(first.worktrees.length, 1);
   assert.equal(existsSync(join(root, started.worktreeRoot)), false);
   const second = success(cli(root, 'close', id, '--reason', '重复收尾'));
   assert.equal(second.stage, '已验收');
   assert.equal(readFileSync(taskPath, 'utf8'), before);
   assert.ok(existsSync(taskPath), 'shared task.md stays after close');
-  assert.equal(existsSync(join(root, `.tiller/local/closed/${id}.json`)), false);
 });
 
 test('CASE-199 tasks without worktrees still close or abandon and clear task-local logs', async t => {
@@ -343,77 +330,6 @@ test('CASE-199 tasks without worktrees still close or abandon and clear task-loc
   assert.ok(abandoned.missingWorktrees.includes(worktreePath(abandonedId)));
   assert.equal(abandoned.logsRemoved, true);
   assert.equal(existsSync(join(root, taskLocalPath(abandonedId))), false);
-});
-
-test('CASE-212 close cleans legacy worktrees, logs and sidecars without touching other task paths', async t => {
-  const root = project(t);
-  const acceptedId = '20261024-legacy-close-layout';
-  const abandonedId = '20261024-legacy-abandon-layout';
-  const bystanderId = '20261024-legacy-bystander';
-  startTask(root, acceptedId);
-  startTask(root, abandonedId);
-  acceptTask(root, acceptedId);
-  // Persist abandoned start seed onto primary before dismantling the worktree (no auto-commit yet).
-  mkdirSync(join(taskRecordRoot(root, abandonedId), `.tiller/task/${abandonedId}`), { recursive: true });
-  put(root, `.tiller/task/${abandonedId}/task.md`,
-    readFileSync(join(root, worktreePath(abandonedId), `.tiller/task/${abandonedId}/task.md`), 'utf8'));
-  put(root, `.tiller/task/${acceptedId}/task.md`,
-    readFileSync(join(taskRecordRoot(root, acceptedId), `.tiller/task/${acceptedId}/task.md`), 'utf8'));
-  for (const relative of [
-    '.tiller/cases/modules/workflow/behavior.md',
-    `test/${acceptedId}.test.mjs`,
-    '.tiller/specs/modules/workflow/requirements.md',
-    '.tiller/specs/modules/workflow/design.md',
-  ]) put(root, relative, readFileSync(join(root, worktreePath(acceptedId), relative), 'utf8'));
-  commit(root, 'chore(workflow): 模拟合入旧任务记录');
-
-  const legacyPaths = (id) => {
-    const current = worktreePath(id);
-    const legacy = legacyWorktreePath(id);
-    const branch = `feat/${id}`;
-    git(root, 'worktree', 'remove', '--force', join(root, current));
-    git(root, 'worktree', 'prune');
-    mkdirSync(join(root, '.tiller/local/worktrees'), { recursive: true });
-    git(root, 'worktree', 'add', join(root, legacy), branch);
-    put(root, legacySidecarPath(id, 'worktrees.json'), `${JSON.stringify({
-      schemaVersion: 1, id, branch, root: legacy,
-      worktrees: [{ repository: 'management', source: '.', path: legacy, branch }],
-    }, null, 2)}\n`);
-    put(root, legacySidecarPath(id, 'pre-existing.json'), '{}\n');
-    put(root, legacyLogPath(id, 'run-1.log'), `${id}\n`);
-    rmSync(join(root, taskLocalPath(id)), { recursive: true, force: true });
-    return legacy;
-  };
-  const acceptedLegacy = legacyPaths(acceptedId);
-  const abandonedLegacy = legacyPaths(abandonedId);
-  const movedStage = success(cli(root, 'resume', acceptedId));
-  assert.equal(movedStage.stage, '已验收', movedStage.stageReason);
-  put(root, legacyWorktreePath(bystanderId, 'sentinel.txt'), 'keep\n');
-  put(root, legacySidecarPath(bystanderId, 'pre-existing.json'), '{}\n');
-  put(root, legacyLogPath(bystanderId, 'run-1.log'), 'keep\n');
-
-  const closed = success(cli(root, 'close', acceptedId, '--reason', '旧任务收尾'));
-  assert.deepEqual(closed.worktrees, [acceptedLegacy]);
-  assert.equal(closed.logsRemoved, true);
-  for (const path of [acceptedLegacy, legacyLogPath(acceptedId), legacySidecarPath(acceptedId), taskLocalPath(acceptedId)]) {
-    assert.equal(existsSync(join(root, path)), false, path);
-  }
-  assert.ok(existsSync(join(root, legacyWorktreePath(bystanderId, 'sentinel.txt'))));
-  assert.ok(existsSync(join(root, legacySidecarPath(bystanderId, 'pre-existing.json'))));
-  assert.ok(existsSync(join(root, legacyLogPath(bystanderId, 'run-1.log'))));
-
-  const metadata = JSON.parse(readFileSync(join(root, '.tiller/project.json'), 'utf8'));
-  const repeated = await cleanupTaskWorktrees(root, acceptedId, metadata);
-  assert.deepEqual(repeated.removedWorktrees, []);
-  assert.equal(repeated.logsRemoved, false);
-
-  const abandoned = success(cli(root, 'close', abandonedId, '--reason', '旧任务放弃', '--abandon'));
-  assert.deepEqual(abandoned.worktrees, [abandonedLegacy]);
-  assert.equal(abandoned.logsRemoved, true);
-  for (const path of [abandonedLegacy, legacyLogPath(abandonedId), legacySidecarPath(abandonedId), taskLocalPath(abandonedId)]) {
-    assert.equal(existsSync(join(root, path)), false, path);
-  }
-  assert.ok(existsSync(join(root, legacyWorktreePath(bystanderId, 'sentinel.txt'))));
 });
 
 test('CASE-316 close reports no executable reopen when only platform merge evidence survives', async t => {

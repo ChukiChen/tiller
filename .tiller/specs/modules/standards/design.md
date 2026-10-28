@@ -13,7 +13,7 @@
 
 ## 2. 接入与同步
 
-`init` 把入口写入 `AGENTS.md` 固定区段，将规则、usage 和启动器复制到 `.tiller/`，并按摘要管理当前平台 PR/MR 模板。`upgrade` 只刷新未修改文件并补齐当前平台模板。项目自有规则、已有模板和区段外入口正文保持原样。usage 说明 `review`、`release`、`--requirement-file`、`--target`、`--allow-reported` 和已验收任务按 acceptance 提交复查；规则索引和交付/验证细则分担操作细节，入口与核心规则只保留底线。提交主题为 `类型(模块): 中文摘要`，PR/MR 标题尾加 `[任务编号]`，分支为 `类型/任务编号[-描述]`；`confirm --by` 指定确认人，`--quote` 可选。
+`init` 把入口写入 `AGENTS.md` 固定区段，将规则和 usage 复制到 `.tiller/`，并按摘要管理当前平台 PR/MR 模板。`upgrade` 只刷新未修改文件并补齐当前平台模板。项目自有规则、已有模板和区段外入口正文保持原样。usage 说明 `review`、`release`、`--requirement-file`、`--target`、`--allow-reported` 和已验收任务按 acceptance 提交复查；规则索引和交付/验证细则分担操作细节，入口与核心规则只保留底线。提交主题为 `类型(模块): 中文摘要`，PR/MR 标题尾加 `[任务编号]`，分支为 `类型/任务编号[-描述]`；`confirm --by` 指定确认人，`--quote` 可选。
 
 ## 3. 检查方式
 

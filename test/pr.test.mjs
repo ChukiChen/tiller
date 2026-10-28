@@ -277,6 +277,9 @@ test('CASE-296 worktree PR push and cleanup keep primary as the main checkout', 
   const worktree = join(root, started.worktreeRoot);
   const branch = started.worktrees[0].branch;
   assert.equal(existsSync(join(root, `.tiller/task/${id}/task.md`)), false);
+  const primaryMetadata = JSON.parse(read(root, '.tiller/project.json'));
+  delete primaryMetadata.managedFiles['.tiller/usage.md'];
+  put(root, '.tiller/project.json', `${JSON.stringify(primaryMetadata, null, 2)}\n`);
   const remoteHead = git(root, 'rev-parse', 'HEAD').trim();
   const mock = await startPlatformMock(t, { platform: 'github', remoteHead });
   git(root, 'remote', 'add', 'origin', `${mock.origin}/owner/repo.git`);
