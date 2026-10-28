@@ -31,7 +31,7 @@
 - README 非空；npm 项目还需有效的包名/版本，且 README 包含当前版本。非 npm 项目跳过包项。
 - 任务范围内没有未提交改动。发布前仍需单独取得授权，并绑定当前提交和目标。
 
-已验收任务可用 `merge <id>` 调用 GitHub/GitLab REST API 以 squash 合入，成功后自动用 `close --reason` 清理本机，失败不清理；网页合入后仍需手动 `close`。Token 从 `GITHUB_TOKEN`/`GH_TOKEN` 或 `GITLAB_TOKEN`/`GL_TOKEN` 读取，永不记录或打印。`merge` 与 `close` 默认删除任务的本地与远端分支；`close <init-id>` 同样处理 `chore/tiller-init`。`--keep-branch` 可显式保留分支；分支已不存在或删除接口返回 404/422 视为已清理，无 token 或其它删除失败只记 warning，不回滚已合入结果或阻断本机收尾。在任务 worktree 根执行时，先解析主工程根并拆除该任务 worktree，再由主仓删除本地分支；重复 close 安全。收尾强拆该任务 worktree 并删除整棵 `.tiller/local/<id>/`（含日志与旁路），只识别当前任务本机布局，不触碰其他任务目录。`close` 不写共享 `task.md`，合入后不因收尾产生脏记录。初始化基线由 `start`、`doctor` 与 `close <init-id>` 先判祖先，再通过平台 API 查询同分支已合入 PR/MR；确认后写回 merged，无 token、API 失败或无记录仍返回 `INIT_BASELINE_PENDING`。确认不再推进的未验收任务用 `close --reason ... --abandon`，仍写共享放弃原因和时间；终止任务先 `reopen --reason` 才能继续，已验收任务再次交付也可 `reopen`。
+已验收任务可用 `merge <id>` 调用 GitHub/GitLab REST API 以 squash 合入，成功后自动用 `close --reason` 清理本机，失败不清理；网页合入后仍需手动 `close`。Token 从 `GITHUB_TOKEN`/`GH_TOKEN` 或 `GITLAB_TOKEN`/`GL_TOKEN` 读取，永不记录或打印。`merge` 与 `close` 默认删除任务的本地与远端分支；`close <init-id>` 同样处理 `chore/tiller-init`。`--keep-branch` 可显式保留分支；分支已不存在或删除接口返回 404/422 视为已清理，无 token 或其它删除失败只记 warning，不回滚已合入结果或阻断本机收尾。在任务 worktree 根执行时，先解析主工程根并拆除该任务 worktree，再由主仓删除本地分支；重复 close 安全。收尾强拆该任务 worktree 并删除整棵 `.tiller/local/<id>/`（含日志与旁路），只识别当前任务本机布局，不触碰其他任务目录。`close` 不写共享 `task.md`，合入后不因收尾产生脏记录。初始化基线由 `start`、`doctor` 与 `close <init-id>` 先判祖先，再通过平台 API 查询同分支已合入 PR/MR；确认后只写入本地 merged 标记，无 token、API 失败或无记录仍返回 `INIT_BASELINE_PENDING`。确认不再推进的未验收任务用 `close --reason ... --abandon`，仍写共享放弃原因和时间；终止任务先 `reopen --reason` 才能继续，已验收任务再次交付也可 `reopen`。
 
 ## 提交、分支与 PR/MR
 

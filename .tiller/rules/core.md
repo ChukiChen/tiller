@@ -24,7 +24,7 @@
 
 外部报告用 `--reported` 写明命令、结果和理由，默认阻断，放行用 `--allow-reported`；bugfix 用 `--expect-fail` 在基线留失败先行证据。standard 任务 `start` 必须 `--target`，small 缺省 `.`。`start` 建 `.tiller/local/<id>/worktrees/`；`accept` 先于 `pr`。`pr` 默认经平台 API 创建真实 PR/MR，`--draft-only` 仅预览；close/abandon 强拆 local，默认删本地与远端任务分支，`--keep-branch` 保留；422 视为已清理，其它删失败只提示，已验收 close 不写共享记录。
 
-首次接入 `init` → 初始化 PR/MR → 人工合入 → `start`；也可 `merge <init-id>`。网页合入后，`start` 经平台 API 确认同分支 PR/MR 已合入并写回 merged；无 token、API 失败或无记录仍阻断，`--skip-init-gate` 例外。`close init-id` 默认删本地与远端 `chore/tiller-init`。`specs` 经任务 worktree，随任务 PR/MR 合入；禁止默认分支直改/直推。
+首次接入 `init` → 初始化 PR/MR → 人工合入 → `start`；也可 `merge <init-id>`。网页合入后，`start` 经平台 API 确认同分支 PR/MR 已合入并只写入本地 merged 标记；无 token、API 失败或无记录仍阻断，`--skip-init-gate` 例外。`close init-id` 默认删本地与远端 `chore/tiller-init`。`specs` 经任务 worktree，随任务 PR/MR 合入；禁止默认分支直改/直推。
 
 长期回归写 `.tiller/cases/modules/<模块>/`、`scenarios/`；用例存测试设计、稳定 specs 需求与预期，不存源码路径；关联 AC 写“无”，测试名或紧邻注释引用 CASE 编号，无引用待实现。
 

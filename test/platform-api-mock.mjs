@@ -129,7 +129,7 @@ export async function startPlatformMock(t, options = {}) {
           const value = JSON.parse(body.toString('utf8'));
           const branch = value.head;
           const sha = state.refs.get(`refs/heads/${branch}`);
-          const pull = { number: 1, url: 'https://example.invalid/tiller/pr/1', base: 'main', sha };
+          const pull = { number: 1, url: 'https://example.invalid/tiller/pr/1', base: 'main', sha, title: value.title };
           state.openIntegrations.set(branch, [...(state.openIntegrations.get(branch) ?? []), pull]);
           if (state.mode === 'pr-created-lost') {
             return json(response, 500, { message: 'PR create response lost after the pull request was stored' });
@@ -148,6 +148,7 @@ export async function startPlatformMock(t, options = {}) {
             const heads = state.mergedHeads.get(branch) ?? (tip ? [tip] : []);
             return json(response, 200, heads.map((sha, index) => ({
               number: index + 1, state: 'closed', merged: true, merged_at: '2026-10-26T00:00:00Z',
+              title: 'chore(tiller): 完成工程初始化 [20261028-tiller-init]',
               head: { ref: branch, ...(sha ? { sha } : {}) },
             })));
           }
@@ -156,7 +157,7 @@ export async function startPlatformMock(t, options = {}) {
           const pulls = (state.openIntegrations.get(branch) ?? [])
             .filter(item => item.sha)
             .map(item => ({
-              number: item.number, html_url: item.url, base: { ref: item.base },
+              number: item.number, html_url: item.url, title: item.title, base: { ref: item.base },
               head: { ref: branch, sha: item.sha },
             }));
           if (!pulls.length && state.openDefault) {
@@ -253,7 +254,7 @@ export async function startPlatformMock(t, options = {}) {
           const value = JSON.parse(body.toString('utf8'));
           const branch = value.source_branch;
           const sha = state.refs.get(`refs/heads/${branch}`);
-          const mergeRequest = { number: 7, url: 'https://example.invalid/tiller/mr/7', base: 'main', sha };
+          const mergeRequest = { number: 7, url: 'https://example.invalid/tiller/mr/7', base: 'main', sha, title: value.title };
           state.openIntegrations.set(branch, [...(state.openIntegrations.get(branch) ?? []), mergeRequest]);
           if (state.mode === 'pr-created-lost') {
             return json(response, 500, { message: 'MR create response lost after the merge request was stored' });
@@ -271,6 +272,7 @@ export async function startPlatformMock(t, options = {}) {
             const heads = state.mergedHeads.get(branch) ?? (tip ? [tip] : []);
             return json(response, 200, heads.map((sha, index) => ({
               iid: index + 1, state: 'merged', merged_at: '2026-10-26T00:00:00Z', source_branch: branch,
+              title: 'chore(tiller): 完成工程初始化 [20261028-tiller-init]',
               ...(sha ? { sha } : {}),
             })));
           }
@@ -278,7 +280,7 @@ export async function startPlatformMock(t, options = {}) {
           const mergeRequests = (state.openIntegrations.get(branch) ?? [])
             .filter(item => item.sha)
             .map(item => ({
-              iid: item.number, web_url: item.url, source_branch: branch, target_branch: item.base,
+              iid: item.number, web_url: item.url, title: item.title, source_branch: branch, target_branch: item.base,
               sha: item.sha, diff_refs: { head_sha: item.sha },
             }));
           if (!mergeRequests.length && state.openDefault) {

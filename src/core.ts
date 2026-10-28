@@ -8,7 +8,7 @@ import {
   recoverChanges, validateRelativePath, withProjectLock,
 } from './files.js';
 import type {
-  FileChange, InitBaselineStatus, InitializeOptions, ProjectInspection, ProjectMetadata, ProjectMode, ProjectPlatform,
+  FileChange, InitializeOptions, ProjectInspection, ProjectMetadata, ProjectMode, ProjectPlatform,
   RepositoryRecord,
 } from './types.js';
 import type { TextReadInput } from './files.js';
@@ -17,7 +17,7 @@ import {
   GITHUB_TEMPLATE, GITLAB_TEMPLATE, META, REQUIRED_MANAGED, RESOURCE_VERSION, SCHEMA_VERSION, SHARED_RESOURCES,
   managedFilesForPlatform, normalizePlatform, parseMetadata, templatePathsForPlatform,
 } from './project-metadata.js';
-import { createInitBaseline, proveInitBaselineMerged, readLocalInitBaseline, type InitBaselineResult } from './init-baseline.js';
+import { createInitBaseline, readLocalInitBaseline, resolveInitBaselineStatus, type InitBaselineResult } from './init-baseline.js';
 import { assertSharedWritePaths } from './shared-paths.js';
 
 export {
@@ -90,6 +90,12 @@ function firstCommitSuggestion(metadata: ProjectMetadata): InitializeResult['fir
     message: '建议先提交受管入口，再开始业务改动。',
     paths: [META, ...Object.keys(metadata.managedFiles)],
   };
+}
+
+async function withInitBaselineStatus(root: string, result: InitializeResult): Promise<InitializeResult> {
+  if (!result.metadata) return result;
+  const initBaselineStatus = await resolveInitBaselineStatus(root, result.metadata);
+  return initBaselineStatus ? { ...result, initBaselineStatus } : result;
 }
 
 function gitEnvironment(): NodeJS.ProcessEnv {
@@ -485,28 +491,9 @@ export async function inspectProject(root: string): Promise<ProjectInspection> {
 
 export async function inspectProjectStatus(root: string): Promise<ProjectInspection> {
   const result = await inspectProjectState(root);
-  const baseline = result.metadata?.initBaseline;
-  if (!baseline) return result;
-  let initBaselineStatus: InitBaselineStatus;
-  try {
-    const proof = await proveInitBaselineMerged(root, result.metadata!);
-    initBaselineStatus = {
-      id: baseline.id,
-      branch: baseline.branch,
-      status: proof.merged ? 'merged' : 'pending',
-      ...(baseline.status ? { trackedStatus: baseline.status } : {}),
-      detail: proof.detail,
-    };
-  } catch (error) {
-    initBaselineStatus = {
-      id: baseline.id,
-      branch: baseline.branch,
-      status: 'pending',
-      ...(baseline.status ? { trackedStatus: baseline.status } : {}),
-      detail: `无法确认初始化基线合入状态：${(error as Error).message}`,
-    };
-  }
-  return { ...result, initBaselineStatus };
+  if (!result.metadata) return result;
+  const initBaselineStatus = await resolveInitBaselineStatus(root, result.metadata);
+  return initBaselineStatus ? { ...result, initBaselineStatus } : result;
 }
 
 /** Read only the current metadata contract. Whole-project health is an explicit inspection.
@@ -589,23 +576,25 @@ export async function initialize(options: InitializeOptions): Promise<Initialize
           ? `检测到 ${detected.file}，verify.runner 为 ${detected.runner}。`
           : `检测到 ${detected.file}，但当前 verify.runner 为 ${existing.verify.runner}；请确认是否需要切换为 ${detected.runner}。`);
       }
-      if (!effective.length) return { ...inspection, changed: false, warnings,
-        firstCommit: firstCommitSuggestion(inspection.metadata!) };
+      if (!effective.length) return await withInitBaselineStatus(root, { ...inspection,
+        changed: false, warnings, firstCommit: firstCommitSuggestion(inspection.metadata!) });
       // Prefer writing patch-up artifacts only into the init worktree when a baseline can be created.
       const initialized = await createInitBaseline(root, inspection.metadata!, effective, platform);
       warnings.push(...initialized.warnings, ...(initialized.baseline?.warnings ?? []));
       if (initialized.baseline) {
-        return {
+        return await withInitBaselineStatus(root, {
           root, initialized: true, ready: true, metadata: initialized.metadata, issues: [],
           hostVerification: 'not-verified' as const, compatibility: 'read-write' as const,
           changed: true, warnings, firstCommit: firstCommitSuggestion(initialized.metadata),
           initBaseline: initialized.baseline,
-        };
+        });
       }
       await applyChanges(root, effective);
       const completed = await inspectProject(root);
       if (!completed.ready) throw new Error(`补齐项目骨架后检查未通过：${completed.issues.join('\n')}`);
-      return { ...completed, changed: true, warnings, firstCommit: firstCommitSuggestion(completed.metadata!) };
+      return await withInitBaselineStatus(root, {
+        ...completed, changed: true, warnings, firstCommit: firstCommitSuggestion(completed.metadata!),
+      });
     }
     if (await hasPendingTransaction(root)) throw new Error('存在未完成事务，请先执行 tiller recover。');
     const changes: FileChange[] = await skeletonChanges(root);
@@ -650,17 +639,19 @@ export async function initialize(options: InitializeOptions): Promise<Initialize
     const initialized = await createInitBaseline(root, metadata, changes, platform);
     warnings.push(...initialized.warnings, ...(initialized.baseline?.warnings ?? []));
     if (initialized.baseline) {
-      return {
+      return await withInitBaselineStatus(root, {
         root, initialized: true, ready: true, metadata: initialized.metadata, issues: [],
         hostVerification: 'not-verified' as const, compatibility: 'read-write' as const,
         changed: true, warnings, firstCommit: firstCommitSuggestion(initialized.metadata),
         initBaseline: initialized.baseline,
-      };
+      });
     }
     await applyChanges(root, changes);
     const inspection = await inspectProject(root);
     if (!inspection.ready) throw new Error(`文件接入后检查未通过：${inspection.issues.join('\n')}`);
-    return { ...inspection, changed: true, warnings, firstCommit: firstCommitSuggestion(inspection.metadata!) };
+    return await withInitBaselineStatus(root, {
+      ...inspection, changed: true, warnings, firstCommit: firstCommitSuggestion(inspection.metadata!),
+    });
   });
 }
 

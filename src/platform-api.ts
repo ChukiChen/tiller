@@ -54,6 +54,10 @@ export interface MergedIntegration {
   command: string;
 }
 
+export interface MergedInitIntegration extends MergedIntegration {
+  head: string;
+}
+
 export interface OpenIntegration {
   url: string;
   number: number;
@@ -403,6 +407,40 @@ export async function findMergedIntegration(
   return merged ? { number: merged.iid!, command: `gitlab-api GET ${endpoint}` } : null;
 }
 
+export async function findMergedInitIntegration(
+  repository: PlatformRepository,
+  token: PlatformToken,
+  branch: string,
+  id: string,
+  fetchImpl: FetchLike = globalThis.fetch,
+): Promise<MergedInitIntegration | null> {
+  const marker = `[${id}]`;
+  const hasMarker = (title: unknown): boolean => typeof title === 'string' && title.includes(marker);
+  if (repository.platform === 'github') {
+    const endpoint = `${githubRepoPath(repository)}/pulls?state=all&head=${encodeURIComponent(`${repository.owner}:${branch}`)}`;
+    const pulls = await api<Array<{
+      number?: number; state?: string; merged?: boolean; merged_at?: string | null;
+      title?: string; head?: { ref?: string; sha?: string };
+    }>>(repository, token, fetchImpl, 'GET', endpoint);
+    const merged = pulls?.find(item => typeof item.number === 'number'
+      && (item.merged === true || (item.state === 'closed' && Boolean(item.merged_at)))
+      && hasMarker(item.title));
+    const head = commitTip(merged?.head?.sha);
+    return merged && head ? { number: merged.number!, head, command: `github-api GET ${endpoint}` } : null;
+  }
+
+  const endpoint = `/projects/${gitlabProjectPath(repository)}/merge_requests?state=all&source_branch=${encodeURIComponent(branch)}`;
+  const mergeRequests = await api<Array<{
+    iid?: number; state?: string; merged_at?: string | null; title?: string;
+    sha?: string; diff_refs?: { head_sha?: string };
+  }>>(repository, token, fetchImpl, 'GET', endpoint);
+  const merged = mergeRequests?.find(item => typeof item.iid === 'number'
+    && (item.state === 'merged' || Boolean(item.merged_at))
+    && hasMarker(item.title));
+  const head = commitTip(merged?.sha ?? merged?.diff_refs?.head_sha);
+  return merged && head ? { number: merged.iid!, head, command: `gitlab-api GET ${endpoint}` } : null;
+}
+
 function commitTip(value: unknown): string | null {
   if (typeof value !== 'string') return null;
   const normalized = value.trim().toLowerCase();
@@ -586,15 +624,6 @@ async function tokenizedPushRef(root: string, repository: PlatformRepository, to
     fail('PLATFORM_PUSH_FAILED', `tokenized HTTPS git push 失败：${redact(detail, token.value)}`);
   }
   return { method: 'tokenized-git', command: `git push ${remote} ${ref}`, warnings };
-}
-
-export async function pushTag(
-  root: string,
-  repository: PlatformRepository,
-  token: PlatformToken,
-  tag: string,
-): Promise<PushResult> {
-  return tokenizedPushRef(root, repository, token, `${tag}:${tag}`, []);
 }
 
 export async function pushBranch(

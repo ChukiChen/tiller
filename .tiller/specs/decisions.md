@@ -144,7 +144,7 @@
 ## 2026-10-26 初始化集成基线与 start 门禁
 
 - 有 Git HEAD 时，`init` 在独立初始化 worktree 提交受管基线并尝试创建同标题 PR/MR；远端失败保留本地和可复制命令，任何路径都不自动合入。
-- 基线使用两笔同标题提交：首笔承载受管改动并写入 `initBaseline.commit`，次笔写入引用首笔的元信息。门禁先看首笔是否为 HEAD 祖先，再通过平台 API 查询同分支已合入 PR/MR；确认后写回 merged，覆盖网页 squash 改写提交的情形。
+- 基线使用两笔标题可区分的提交：首笔承载受管改动并写入 `initBaseline.commit`，次笔只写入引用首笔的 tracked 元信息，最终 tip `head` 记入本机快照。门禁先看首笔是否为 HEAD 祖先，再校验 local marker 与基线提交，最后通过平台 API 查询同分支、同 tip 已合入 PR/MR；确认后只写 local marker，覆盖网页 squash 改写提交的情形。
 - `start` 对仍无合入证据的基线返回 `INIT_BASELINE_PENDING`，`--skip-init-gate` 放行并警告；无标记的存量工程默认放行。`close <init-id>` 清理该初始化本机目录、本地分支与远端分支，不改共享任务记录。
 - `pr` 与 `init` 使用同一平台 HTTP API 通道；人工合入和发布授权不变。
 
@@ -168,7 +168,7 @@
 
 ## 2026-10-26 流程稳定性收口
 
-- 初始化基线保持“祖先判定优先”，失败后用平台 API 按 `chore/tiller-init` 查询 GitHub PR/GitLab MR；确认已合入时自动写回 `status=merged` 并放行 `start`。无 token、API 失败或无已合入记录均不得静默放行，`--skip-init-gate` 仍是唯一显式旁路。
+- 初始化基线保持“祖先判定优先，其次校验 local marker”，失败后用平台 API 按 `chore/tiller-init` 与已知 tip 查询 GitHub PR/GitLab MR；确认已合入时写入 local merged marker 并放行 `start`。无 token、API 失败或无已合入记录均不得静默放行，`--skip-init-gate` 仍是唯一显式旁路。
 - `merge` 与 `close` 默认删除本地及远端任务分支，`close <init-id>` 对应 `chore/tiller-init`；`--keep-branch` 显式保留。分支已不存在、缺少 token、当前分支无法安全切换或平台删除失败都只进入 warnings，不回滚已合入或本机清理。
 - 全局用例彻底移除“源码”字段与旧 `--source` 参数，模板、解析器、文档和存量用例同步迁移；关联只由测试名或紧邻注释引用 `CASE-NNN`。遗留“源码”行读取时忽略，新写入不再生成。
 - `check` 扫描需求“业务范围·做”中的交付文件路径并给出可定位 warning，默认不阻断；交付路径仍只应写入任务范围。
@@ -194,7 +194,7 @@
 ## 2026-10-27 狗粮路径卫生
 
 - start 在任务 worktree 建立后只向该 worktree 写入 `.tiller/task/<id>/`（多仓再同步兄弟 worktree），失败回滚且清理 primary 残留；后续任务记录只传播到原本已有该记录的检出，不写回 primary。
-- doctor 与 close init-id 复用 start 的祖先/status/API 合入证明，squash 不要求 SHA 祖先；证据不足仍保持 pending，不伪造 merged。
+- doctor 与 close init-id 复用 start 的 local marker/祖先/tip API 合入证明，squash 不要求 SHA 祖先；证据不足时 effective 仍为 pending，不伪造 merged。
 - init 以初始化 worktree 提交为事实源，成功后精确删除主树本次写入且仍未跟踪的受管文件，仅保留 `.tiller/project.json`；不使用 `git clean`。缺失或空的 `src/`/`test/` 在同一初始化变更中补 `.gitkeep`，不覆盖非空目录中的用户文件。
 - `pr` 的 TTY 默认保持 Markdown，显式 `--json` 或非 TTY 默认稳定 JSON；draft-only 仍不联网。远端分支 404/422/不存在语义统一计入已清理且不进 warnings。
 
@@ -245,10 +245,11 @@
 - `close`/`abandon` 只处理当前任务的 worktree、`.tiller/local/<id>/` 与分支。
 - 历史 task 正文继续可读；已退役的确认和验证旁路不参与解析或校验。
 
-## 2026-10-28 平台结果可重建与 init head 锚点
+## 2026-10-28 平台结果可重建与 init tip 锚点
 
-- init 的跟踪元信息用稳定 tag ref 记录 squash 前 PR head。提交不可能包含自身 SHA，因此不在同一提交内伪造 head；tag ref 可在分支删除后解析到准确 head，并随远端保留。
-- init 第二个提交标题与基线提交不同，init PR 标题包含 init id；fresh clone 先解析跟踪 head ref，再以平台同分支、同 head 的已合入 PR/MR 证明基线。
+- init 的本机基线快照用 tip SHA `head` 记录 squash 前 PR head；tracked 元信息只写 `id`/`branch`/`commit`，不创建或推送 Git tag，也不写 `headRef`/`status`。提交不可能包含自身 SHA，因此最终 tip 只落本机快照与 init 结果。
+- init 第二个提交标题与基线提交不同，init PR 标题包含 init id；本地存在 tip 时按同分支、同 head 的已合入 PR/MR 精确证明，fresh clone 无本地 tip 时按分支与 init id 查询平台并采用平台返回的 head。
+- tracked 元信息只保存事实快照；current 合入结论只由 local marker、祖先判定与平台记录推导，并通过 CLI 的 `initBaselineStatus` 输出 effective 值。旧 `status`/`headRef` 读取时忽略并剥离，不提供双字段兼容出口。
 - `close <init-id>` 只有证明成功才清理；证明失败保留全部 init 事实。
 
 ## 2026-10-28 accepted abandon 自动提交

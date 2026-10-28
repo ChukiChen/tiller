@@ -114,26 +114,28 @@ test('CASE-228 CASE-321 init creates a committed initialization worktree and a u
   assert.equal(okGit(worktree, 'status', '--porcelain'), '');
   assert.equal(okGit(worktree, 'merge-base', '--is-ancestor', baseline.commit, 'HEAD'), '');
   assert.match(baseline.head, /^[a-f0-9]{40,64}$/u);
-  assert.equal(baseline.headRef, `refs/tags/tiller-init/${baseline.id}`);
-  assert.equal(okGit(worktree, 'rev-parse', '--verify', `${baseline.headRef}^{commit}`), baseline.head);
+  assert.equal(baseline.headRef, undefined);
+  assert.equal(baseline.status, undefined);
+  assert.equal(data.initBaselineStatus.status, 'pending');
 
   assert.equal(existsSync(join(root, '.tiller/project.json')), false, 'primary must not seed project.json');
   const metadata = JSON.parse(read(worktree, '.tiller/project.json'));
   assert.deepEqual(metadata.initBaseline, {
-    id: baseline.id, branch: baseline.branch, commit: baseline.commit, headRef: baseline.headRef, status: 'pending',
+    id: baseline.id, branch: baseline.branch, commit: baseline.commit,
   });
   const localBaseline = JSON.parse(read(root, `.tiller/local/${baseline.id}/baseline.json`));
   assert.equal(localBaseline.id, baseline.id);
-  assert.equal(localBaseline.status, 'pending');
   assert.equal(localBaseline.commit, baseline.commit);
   assert.equal(localBaseline.head, baseline.head);
-  assert.equal(localBaseline.headRef, baseline.headRef);
+  assert.equal(localBaseline.headRef, undefined);
+  assert.equal(localBaseline.status, undefined);
   const initRequests = mock.state.requests;
   assert.ok(!initRequests.some(item => item.path.includes('/git/')));
   assert.ok(initRequests.some(item => item.method === 'POST' && item.path.endsWith('/pulls')));
   const created = initRequests.find(item => item.method === 'POST' && item.path.endsWith('/pulls'));
   assert.equal(JSON.parse(created.body).title, `chore(tiller): 完成工程初始化 [${baseline.id}]`);
-  assert.equal(mock.state.refs.get(baseline.headRef), baseline.head);
+  assert.deepEqual([...mock.state.refs.keys()].filter(ref => ref.startsWith('refs/tags/')), []);
+  assert.equal(okGit(root, 'tag', '--list', 'tiller-init/*'), '');
   assert.ok(initRequests.filter(item => /\/git\/|pulls/u.test(item.path)).every(item => item.hasAuthorization));
   assert.deepEqual(data.warnings.filter(warning => warning.includes('回退')), []);
 
@@ -213,7 +215,8 @@ test('CASE-253 CASE-306 init baseline merged through the platform API unlocks st
       '--size', 'small', '--target', '.'));
 
     const metadata = JSON.parse(read(join(root, baseline.worktree), '.tiller/project.json'));
-    assert.equal(metadata.initBaseline.status, 'pending', 'tracked project.json keeps pending snapshot');
+    assert.equal(metadata.initBaseline.status, undefined, 'tracked project.json has no status snapshot');
+    assert.equal(metadata.initBaseline.headRef, undefined, 'tracked project.json has no tag ref');
     assert.equal(existsSync(join(root, '.tiller/project.json')), false);
     const marker = JSON.parse(read(root, '.tiller/local/init-baseline-merged.json'));
     assert.equal(marker.id, baseline.id);
@@ -238,13 +241,13 @@ test('CASE-288 doctor and close use platform merge evidence for a pending init b
   assert.equal(report.ready, true, report.issues.join('\n'));
   assert.ok(report.checks.some(check => check.id === 'init-baseline' && check.status === 'pass'));
   assert.equal(JSON.parse(read(root, '.tiller/local/init-baseline-merged.json')).status, 'merged');
-  assert.equal(JSON.parse(read(join(root, baseline.worktree), '.tiller/project.json')).initBaseline.status, 'pending');
+  assert.equal(JSON.parse(read(join(root, baseline.worktree), '.tiller/project.json')).initBaseline.status, undefined);
   assert.equal(existsSync(join(root, '.tiller/project.json')), false);
 
   // Removing the local marker should still allow close to re-prove and rewrite local merged.
   rmSync(join(root, '.tiller/local/init-baseline-merged.json'), { force: true });
-  // Snapshot pending before close removes the init worktree.
-  assert.equal(JSON.parse(read(join(root, baseline.worktree), '.tiller/project.json')).initBaseline.status, 'pending');
+  // The tracked snapshot has no status field before close removes the init worktree.
+  assert.equal(JSON.parse(read(join(root, baseline.worktree), '.tiller/project.json')).initBaseline.status, undefined);
   success(await cliAt(root, environment, 'close', baseline.id, '--reason', '初始化基线已合入'));
   assert.equal(JSON.parse(read(root, '.tiller/local/init-baseline-merged.json')).status, 'merged');
   assert.equal(existsSync(join(root, baseline.worktree)), false);
@@ -263,15 +266,15 @@ test('CASE-288 ancestor proof records merged for doctor and close init-id', asyn
   const report = success(await cliAt(root, emptyTokens, 'doctor'));
   assert.equal(report.ready, true, report.issues?.join('\n'));
   assert.equal(JSON.parse(read(root, '.tiller/local/init-baseline-merged.json')).status, 'merged');
-  assert.equal(JSON.parse(read(root, '.tiller/project.json')).initBaseline.status, 'pending');
+  assert.equal(JSON.parse(read(root, '.tiller/project.json')).initBaseline.status, undefined);
 
   rmSync(join(root, '.tiller/local/init-baseline-merged.json'), { force: true });
   success(await cliAt(root, emptyTokens, 'close', baseline.id, '--reason', '初始化基线已合入'));
   assert.equal(JSON.parse(read(root, '.tiller/local/init-baseline-merged.json')).status, 'merged');
-  assert.equal(JSON.parse(read(root, '.tiller/project.json')).initBaseline.status, 'pending');
+  assert.equal(JSON.parse(read(root, '.tiller/project.json')).initBaseline.status, undefined);
 });
 
-test('CASE-320 fresh clone proves a squash-merged init from its tracked head ref after branch deletion', async t => {
+test('CASE-320 fresh clone proves a squash-merged init from its tracked tip SHA after branch deletion', async t => {
   const initialized = await initialize(t, { mainBranch: 'main' });
   if (!initialized) return;
   const { root, environment, result, mock } = initialized;
@@ -286,7 +289,7 @@ test('CASE-320 fresh clone proves a squash-merged init from its tracked head ref
   assert.equal(git(root, 'show-ref', '--verify', '--quiet', `refs/heads/${baseline.branch}`).status, 0);
 
   // Simulate the squash merge landing only the final tree on main; the init commits
-  // themselves are absent from main history. The tag keeps the original PR head.
+  // themselves are absent from main history. The tracked tip SHA keeps the PR head.
   okGit(root, 'checkout', baseline.head, '--', '.');
   okGit(root, 'add', '-A');
   okGit(root, 'commit', '--quiet', '-m', 'chore(tiller): squash 初始化基线');
@@ -298,12 +301,13 @@ test('CASE-320 fresh clone proves a squash-merged init from its tracked head ref
   await okGitAsync(cloneParent, 'clone', '--quiet', '--branch', 'main', `${mock.origin}/owner/repo.git`, 'repo');
   const clone = join(cloneParent, 'repo');
   configure(clone);
-  assert.equal(okGit(clone, 'rev-parse', '--verify', `${baseline.headRef}^{commit}`), baseline.head);
   assert.equal(await okGitAsync(clone, 'ls-remote', '--heads', 'origin', baseline.branch), '');
+  assert.equal(await okGitAsync(clone, 'ls-remote', '--tags', 'origin', 'tiller-init/*'), '');
   assert.equal(existsSync(join(clone, '.tiller/local/init-baseline-merged.json')), false);
   const tracked = JSON.parse(read(clone, '.tiller/project.json')).initBaseline;
-  assert.equal(tracked.headRef, baseline.headRef);
-  assert.equal(tracked.status, 'pending');
+  assert.equal(tracked.head, undefined);
+  assert.equal(tracked.headRef, undefined);
+  assert.equal(tracked.status, undefined);
 
   mock.setMergedHeads(baseline.branch, [baseline.head]);
   const report = success(await cliAt(clone, environment, 'doctor'));
@@ -325,15 +329,116 @@ test('CASE-327 status overlays current merged init proof without rewriting track
   const { root, result } = initialized;
   const baseline = success(result).initBaseline;
   okGit(root, 'merge', '--quiet', '--no-edit', baseline.branch);
-  assert.equal(JSON.parse(read(root, '.tiller/project.json')).initBaseline.status, 'pending');
+  assert.equal(JSON.parse(read(root, '.tiller/project.json')).initBaseline.status, undefined);
 
   const status = success(await cliAt(root, emptyTokens, 'status'));
   assert.equal(status.initBaselineStatus.id, baseline.id);
   assert.equal(status.initBaselineStatus.status, 'merged');
-  assert.equal(status.initBaselineStatus.trackedStatus, 'pending');
+  assert.equal(status.initBaselineStatus.trackedStatus, undefined);
   assert.match(status.initBaselineStatus.detail, /已合入|当前历史/u);
-  assert.equal(status.metadata.initBaseline.status, 'pending');
-  assert.equal(JSON.parse(read(root, '.tiller/project.json')).initBaseline.status, 'pending');
+  assert.equal(status.metadata.initBaseline.status, undefined);
+  assert.equal(status.metadata.initBaseline.headRef, undefined);
+  assert.equal(JSON.parse(read(root, '.tiller/project.json')).initBaseline.status, undefined);
+});
+
+test('CASE-329 init uses tip SHA and platform proof without tags or headRef', async t => {
+  const initialized = await initialize(t, { platform: 'github' });
+  if (!initialized) return;
+  const { root, environment, result, mock } = initialized;
+  const data = success(result);
+  const baseline = data.initBaseline;
+  assert.equal(okGit(root, 'tag', '--list', 'tiller-init/*'), '');
+  assert.deepEqual([...mock.state.refs.keys()].filter(ref => ref.startsWith('refs/tags/')), []);
+  assert.equal(baseline.headRef, undefined);
+  assert.equal(JSON.parse(read(join(root, baseline.worktree), '.tiller/project.json')).initBaseline.head, undefined);
+
+  mock.setMergedHeads(baseline.branch, [baseline.head]);
+  mock.resetRequests();
+  okGit(root, 'checkout', baseline.head, '--', '.');
+  okGit(root, 'add', '-A');
+  okGit(root, 'commit', '--quiet', '-m', 'chore(tiller): squash 初始化基线');
+  okGit(root, 'worktree', 'remove', '--force', join(root, baseline.worktree));
+  okGit(root, 'branch', '-D', baseline.branch);
+  mock.state.refs.delete(`refs/heads/${baseline.branch}`);
+  assert.ok(existsSync(join(root, '.tiller/local', baseline.id, 'baseline.json')));
+
+  const status = success(await cliAt(root, environment, 'status'));
+  assert.equal(status.initBaselineStatus.status, 'merged');
+  assert.match(status.initBaselineStatus.detail, /平台确认合入/u);
+  const doctor = success(await cliAt(root, environment, 'doctor'));
+  assert.equal(doctor.ready, true, doctor.issues.join('\n'));
+  const started = success(await cliAt(root, environment, 'start', '20261028-tip-proof',
+    '--title', 'Tip proof', '--requirement', 'Tip SHA and platform proof do not need tags.',
+    '--criterion', 'AC-1=Start succeeds after branch deletion', '--size', 'small', '--target', '.'));
+  assert.equal(started.id, '20261028-tip-proof');
+  assert.ok(mock.state.requests.some(item => item.method === 'GET'
+    && item.search.includes(`head=owner%3A${encodeURIComponent(baseline.branch)}`)));
+  assert.equal(okGit(root, 'tag', '--list', 'tiller-init/*'), '');
+
+  const closed = success(await cliAt(root, environment, 'close', baseline.id, '--reason', '初始化基线已合入'));
+  assert.equal(closed.stage, '已关闭');
+  assert.equal(existsSync(join(root, '.tiller/local', baseline.id)), false);
+});
+
+test('CASE-330 init and status expose effective state while stripping legacy tracked fields', async t => {
+  const initialized = await initialize(t, { platform: 'github' });
+  if (!initialized) return;
+  const { root, result } = initialized;
+  const data = success(result);
+  const baseline = data.initBaseline;
+  assert.deepEqual(Object.keys(data.initBaselineStatus).sort(), ['branch', 'detail', 'id', 'status']);
+  assert.equal(data.initBaselineStatus.status, 'pending');
+  assert.equal(data.initBaselineStatus.trackedStatus, undefined);
+  const initialMetadata = JSON.parse(read(join(root, baseline.worktree), '.tiller/project.json'));
+  assert.deepEqual(initialMetadata.initBaseline, {
+    id: baseline.id, branch: baseline.branch, commit: baseline.commit,
+  });
+
+  okGit(root, 'merge', '--quiet', '--no-edit', baseline.branch);
+  const trackedPath = '.tiller/project.json';
+  const legacy = JSON.parse(read(root, trackedPath));
+  legacy.initBaseline.status = 'pending';
+  legacy.initBaseline.headRef = `refs/tags/tiller-init/${baseline.id}`;
+  const legacyText = `${JSON.stringify(legacy, null, 2)}\n`;
+  put(root, trackedPath, legacyText);
+  const status = success(await cliAt(root, emptyTokens, 'status'));
+  assert.equal(status.initBaselineStatus.status, 'merged');
+  assert.equal(status.initBaselineStatus.trackedStatus, undefined);
+  assert.deepEqual(Object.keys(status.initBaselineStatus).sort(), ['branch', 'detail', 'id', 'status']);
+  assert.deepEqual(status.metadata.initBaseline, {
+    id: baseline.id, branch: baseline.branch, commit: baseline.commit,
+  });
+  assert.equal(read(root, trackedPath), legacyText, 'reading status must not rewrite tracked legacy fields');
+  const doctor = success(await cliAt(root, emptyTokens, 'doctor'));
+  assert.equal(doctor.ready, true, doctor.issues.join('\n'));
+});
+
+test('CASE-331 same-day reinitialization leaves an existing tiller-init tag untouched', async t => {
+  const initialized = await initialize(t, { platform: 'github' });
+  if (!initialized) return;
+  const { root, environment, result, mock } = initialized;
+  const first = success(result).initBaseline;
+  const oldHead = first.head;
+  okGit(root, 'tag', `tiller-init/${first.id}`, oldHead);
+  okGit(root, 'worktree', 'remove', '--force', join(root, first.worktree));
+  okGit(root, 'branch', '-D', first.branch);
+  okGit(root, '--git-dir', mock.gitRepo, 'update-ref', '-d', `refs/heads/${first.branch}`);
+  mock.state.refs.delete(`refs/heads/${first.branch}`);
+  rmSync(join(root, '.tiller/local', first.id), { recursive: true, force: true });
+  put(root, '.tiller/local/init-baseline-merged.json', `${JSON.stringify({
+    id: first.id, status: 'merged', at: '2026-10-28T00:00:00.000Z', commit: first.commit, branch: first.branch,
+  }, null, 2)}\n`);
+  mock.resetRequests();
+
+  const second = success(await cliAt(root, environment, 'init', '--platform', 'github'));
+  assert.equal(second.initBaseline.id, first.id);
+  assert.notEqual(second.initBaseline.head, oldHead);
+  assert.equal(second.initBaselineStatus.status, 'pending', 'a marker for the previous same-day baseline is stale');
+  assert.equal(okGit(root, 'rev-parse', `refs/tags/tiller-init/${first.id}`), oldHead);
+  assert.deepEqual([...mock.state.refs.keys()].filter(ref => ref.startsWith('refs/tags/')), []);
+  assert.doesNotMatch(JSON.stringify(second), /tag.*(?:冲突|failed)|matches more than one/iu);
+  assert.deepEqual(Object.keys(JSON.parse(read(join(root, second.initBaseline.worktree), '.tiller/project.json')).initBaseline).sort(),
+    ['branch', 'commit', 'id']);
 });
 
 test('CASE-289 CASE-305 init leaves no untracked managed residue', async t => {
@@ -358,7 +463,7 @@ test('CASE-289 CASE-305 init leaves no untracked managed residue', async t => {
   }
   const worktreeMeta = join(created.initBaseline.worktree, '.tiller/project.json');
   assert.ok(existsSync(join(root, worktreeMeta)), worktreeMeta);
-  assert.equal(JSON.parse(read(root, worktreeMeta)).initBaseline.status, 'pending');
+  assert.equal(JSON.parse(read(root, worktreeMeta)).initBaseline.status, undefined);
   assert.equal(read(root, 'notes/user-file.txt'), 'keep user data\n');
 });
 
@@ -413,10 +518,10 @@ test('CASE-254 missing token or platform API failure keeps the init gate closed'
   assert.equal(queryFailure.error.code, 'INIT_BASELINE_PENDING');
   assert.match(queryFailure.error.message, /平台合入状态查询失败|query rejected/u);
   assert.ok(mock.state.requests.some(item => item.method === 'GET' && item.search.includes('state=all')));
-  assert.equal(JSON.parse(read(join(root, baseline.worktree), '.tiller/project.json')).initBaseline.status, 'pending');
+  assert.equal(JSON.parse(read(join(root, baseline.worktree), '.tiller/project.json')).initBaseline.status, undefined);
   assert.equal(existsSync(join(root, '.tiller/project.json')), false);
   assert.equal(existsSync(join(root, '.tiller/task/20261026-init-query-failure/task.md')), false);
-  assert.equal(baseline.status, 'pending');
+  assert.equal(baseline.status, undefined);
 });
 
 test('CASE-230 close init-id only clears that initialization local and preserves task locals', async t => {
@@ -468,8 +573,8 @@ test('CASE-231 start blocks a pending initialization commit, supports skip and m
     id: baselinePending.id, status: 'merged', at: '2026-10-27T00:00:00.000Z', commit: baselinePending.commit, branch: baselinePending.branch,
   }, null, 2)}\n`);
   success(await cliAt(statusRoot, {}, 'start', '20261026-init-status-merged', ...common));
-  assert.equal(baselinePending.status, 'pending');
-  assert.equal(JSON.parse(read(join(statusRoot, baselinePending.worktree), '.tiller/project.json')).initBaseline.status, 'pending');
+  assert.equal(baselinePending.status, undefined);
+  assert.equal(JSON.parse(read(join(statusRoot, baselinePending.worktree), '.tiller/project.json')).initBaseline.status, undefined);
 });
 
 test('CASE-232 usage, core and delivery document initialization order and task worktree specs', () => {
@@ -499,7 +604,8 @@ test('CASE-233 initialization baseline stays at version 0.5.0 with named test co
   assert.equal(JSON.parse(read(repository, '.tiller/project.json')).resourceVersion, '0.5.0');
   assert.match(read(repository, 'src/cli.ts'), /CLI_VERSION = '0\.5\.0'/u);
   const source = read(repository, 'test/init-baseline.test.mjs');
-  for (const id of ['CASE-228', 'CASE-229', 'CASE-230', 'CASE-231', 'CASE-232', 'CASE-233', 'CASE-247', 'CASE-248']) {
+  for (const id of ['CASE-228', 'CASE-229', 'CASE-230', 'CASE-231', 'CASE-232', 'CASE-233', 'CASE-247', 'CASE-248',
+    'CASE-329', 'CASE-330', 'CASE-331']) {
     assert.match(source, new RegExp(`test\\('[^'\\n]*${id}\\b`, 'u'));
   }
 });

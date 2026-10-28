@@ -1916,7 +1916,7 @@ start 返回后任务 worktree 内存在 .tiller/task/<id>/task.md，无需从 p
 
 ### 预期结果
 
-init 分支经 squash/合入后 doctor init-baseline 通过；close init-id 在可证明合入时写回 merged
+init 分支经 squash/合入后 doctor init-baseline 通过；close init-id 在可证明合入时只写 local merged marker
 
 ## CASE-289 init 后 main 无未跟踪受管残留
 

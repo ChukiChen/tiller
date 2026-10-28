@@ -17,7 +17,7 @@
 ## 关键行为
 
 1. start：创建任务 worktree 后，任务记录（至少 `.tiller/task/<id>/task.md` 及开工所需旁路）在 worktree 内立即可用，无需从 primary 手工拷贝。
-2. doctor：初始化基线在平台已 squash/合入后应判定通过（祖先、status=merged、或与 start 同等的 API 合入证明）；不必等到下一次 start 才变绿。close init-id 在能证明已合入时应写回 merged（若尚未写）。
+2. doctor：初始化基线在平台已 squash/合入后应判定通过（祖先、local merged marker、或与 start 同等的 tip/API 合入证明）；不必等到下一次 start 才变绿。close init-id 在能证明已合入时只写 local merged marker。
 3. init：受管文件写入与提交以初始化 worktree/基线分支为准；默认分支 cwd 不留下需 hard reset 才能 pull 的未跟踪受管残留（保留 project.json 基线元信息所需的最小例外须文档化且可测）。
 4. pr：成功创建真实 PR/MR 后，在保持人类可读的同时提供机器友好输出（`--json` 稳定字段必含 url/number/branch/title 等；非 TTY 默认可走 JSON 或等价稳定结构）；`--draft-only` 行为保持不联网。
 5. close/merge 删远端：分支已不存在或平台返回 404/422/“does not exist” 等视为已清理，不进 warnings；与文档「安静处理」一致。
@@ -26,7 +26,7 @@
 ## 验收条件
 
 - AC-1: start 完成后任务 worktree 内存在可读的 `.tiller/task/<id>/task.md`（及开工旁路若有），无需从 primary 手工拷贝即可在 worktree 继续 case/confirm
-- AC-2: 初始化基线经 squash/合入后，doctor 的 init-baseline 检查通过（不依赖下一次 start）；能证明合入时 close init-id 写回 status=merged
+- AC-2: 初始化基线经 squash/合入后，doctor 的 init-baseline 检查通过（不依赖下一次 start）；能证明合入时 close init-id 只写 local merged marker，不改 tracked status
 - AC-3: 首次 init 成功后，默认分支工作区对受管文件无未跟踪残留（或仅有文档化的最小例外），无需 hard reset 即可与远端同步
 - AC-4: tiller pr 成功时机器可解析稳定字段（`--json` 与/或非 TTY 默认）；人类 TTY 仍可读；`--draft-only` 不联网且输出可用
 - AC-5: 删除已不存在的远端任务分支（404/422/不存在语义）时 close/merge 不产生 warnings，并视为已清理

@@ -616,7 +616,7 @@ init 生成的项目 requirements.md 与 design.md 及 modules/README.md 包含�
 
 ### 预期结果
 
-创建 .tiller/local/<YYYYMMDD-tiller-init>/worktrees，分支为 chore/tiller-init，提交受管初始化改动，并以固定标题尝试创建 PR/MR，不自动合入
+创建 .tiller/local/<YYYYMMDD-tiller-init>/worktrees，分支为 chore/tiller-init，提交受管初始化改动，并以固定标题尝试创建 PR/MR，不创建或推送 tag，不自动合入
 
 ## CASE-229 init 开 PR 失败时保留本地并返回 token/API 下一步
 
@@ -664,7 +664,7 @@ init 生成的项目 requirements.md 与 design.md 及 modules/README.md 包含�
 
 ### 预期结果
 
-调用 GitHub REST API 以 squash 合入 chore/tiller-init；成功后 initBaseline 标为 merged、删除该 init local，后续 start 不再被初始化门禁阻断
+调用 GitHub REST API 以 squash 合入 chore/tiller-init；成功后只写 local merged marker、删除该 init local，后续 start 不再被初始化门禁阻断
 
 ## CASE-253 init 基线经平台 API 确认已合入后放行 start
 
@@ -676,7 +676,7 @@ init 生成的项目 requirements.md 与 design.md 及 modules/README.md 包含�
 
 ### 前置条件
 
-- 初始化基线为 pending，平台 API 可查到同分支已合入 PR/MR。
+- 初始化基线尚无 local merged marker，平台 API 可查到同分支、同 tip head 已合入 PR/MR。
 
 ### 步骤
 
@@ -688,7 +688,7 @@ init 生成的项目 requirements.md 与 design.md 及 modules/README.md 包含�
 
 ### 预期结果
 
-start 放行，project.json 基线状态更新为 merged。
+start 放行，merged 只写入 .tiller/local/ marker；project.json 不增加 status 字段。
 
 ## CASE-256 close init-id 后默认删除初始化本地与远端分支
 
@@ -792,3 +792,51 @@ doctor/start 仅凭跟踪元信息与平台证据放行；证明失败时 close 
 
 跟踪元信息包含可解析到 squash 前 PR head 的稳定引用；第二个提交标题与基线提交不同或收敛为单个提交；init PR 标题包含 init id，能区分重复初始化。
 
+## CASE-329 init 不创建 tag 且合入证明只依赖 tip 与平台
+
+- 类型：behavior
+- 优先级：high
+- 模块：initialization
+- 关联 AC：无
+- 需求：`.tiller/specs/modules/initialization/requirements.md`
+
+### 前置条件
+
+- 工程有 Git HEAD，托管平台可通过 mock 查询已合入 PR/MR
+
+### 步骤
+
+1. 运行 init 并检查本地与远端 refs
+2. 删除本地初始化分支与任何标签后，用 status、doctor、start、close 验证合入证明
+
+### 输入
+
+- 已创建但尚未合入的初始化基线，以及平台已合入记录
+
+### 预期结果
+
+init 不创建或推送 tiller-init tag，跟踪元信息不含 headRef/status；分支删除后仍可按本地或平台返回的 tip SHA 与 PR/MR 证明合入，start/doctor/close 不解析标签或 headRef
+
+## CASE-331 同日重初始化不受残留 tiller-init tag 影响
+
+- 类型：behavior
+- 优先级：high
+- 模块：initialization
+- 关联 AC：无
+- 需求：`.tiller/specs/modules/initialization/requirements.md`
+
+### 前置条件
+
+- 工程已存在同名初始化标签和同日初始化编号
+
+### 步骤
+
+1. 清理本机初始化目录后再次运行 init
+
+### 输入
+
+- 同日旧 tag 与新的初始化调用
+
+### 预期结果
+
+init 成功完成且不再执行 tag 创建或推送，不出现 tag 重名/冲突错误，结果仍以 tip SHA 与平台 PR/MR 作为合入事实

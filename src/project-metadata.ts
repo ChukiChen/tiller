@@ -38,6 +38,27 @@ export function managedFilesForPlatform(platform: ProjectPlatform = 'github'): s
   return [...PREVIOUS_MANAGED, ...templatePathsForPlatform(platform)];
 }
 
+export function parseInitBaseline(value: unknown): InitBaseline {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    throw new Error('初始化基线标记格式无效。');
+  }
+  const baseline = value as Record<string, unknown>;
+  if (typeof baseline.id !== 'string' || !/^[0-9]{8}-tiller-init$/u.test(baseline.id) ||
+      typeof baseline.branch !== 'string' || !baseline.branch.trim() || baseline.branch.length > 200 ||
+      typeof baseline.commit !== 'string' || !/^[a-f0-9]{7,64}$/u.test(baseline.commit)) {
+    throw new Error('初始化基线标记不完整或无效。');
+  }
+  if (baseline.head !== undefined && (typeof baseline.head !== 'string' || !/^[a-f0-9]{40,64}$/u.test(baseline.head))) {
+    throw new Error('初始化基线 head 标记无效。');
+  }
+  return {
+    id: baseline.id,
+    branch: baseline.branch,
+    commit: baseline.commit,
+    ...(baseline.head === undefined ? {} : { head: baseline.head }),
+  };
+}
+
 export function parseMetadata(text: string): ProjectMetadata {
   let value: unknown;
   try { value = JSON.parse(text); } catch { throw new Error('工程元信息不是有效 JSON。'); }
@@ -50,31 +71,7 @@ export function parseMetadata(text: string): ProjectMetadata {
   const platform = normalizePlatform(data.platform);
   if (data.verify !== undefined) normalizeVerifyConfig(data.verify, '工程');
   if (data.initBaseline !== undefined) {
-    if (!data.initBaseline || typeof data.initBaseline !== 'object' || Array.isArray(data.initBaseline)) {
-      throw new Error('初始化基线标记格式无效。');
-    }
-    const baseline = data.initBaseline as Record<string, unknown>;
-    if (typeof baseline.id !== 'string' || !/^[0-9]{8}-tiller-init$/u.test(baseline.id) ||
-        typeof baseline.branch !== 'string' || !baseline.branch.trim() || baseline.branch.length > 200 ||
-        typeof baseline.commit !== 'string' || !/^[a-f0-9]{7,64}$/u.test(baseline.commit) ||
-        (baseline.status !== undefined && baseline.status !== 'pending' && baseline.status !== 'merged')) {
-      throw new Error('初始化基线标记不完整或无效。');
-    }
-    if (baseline.head !== undefined && (typeof baseline.head !== 'string' || !/^[a-f0-9]{40,64}$/u.test(baseline.head))) {
-      throw new Error('初始化基线 head 标记无效。');
-    }
-    if (baseline.headRef !== undefined && (typeof baseline.headRef !== 'string'
-      || baseline.headRef.length > 300 || !/^refs\/(?:tags|heads)\/[A-Za-z0-9._/-]+$/u.test(baseline.headRef))) {
-      throw new Error('初始化基线 head 引用无效。');
-    }
-    data.initBaseline = {
-      id: baseline.id,
-      branch: baseline.branch,
-      commit: baseline.commit,
-      ...(baseline.head === undefined ? {} : { head: baseline.head }),
-      ...(baseline.headRef === undefined ? {} : { headRef: baseline.headRef }),
-      ...(baseline.status === undefined ? {} : { status: baseline.status }),
-    } satisfies InitBaseline;
+    data.initBaseline = parseInitBaseline(data.initBaseline);
   }
   const repositories = readRepositoryRecords({
     repositories: data.repositories,
