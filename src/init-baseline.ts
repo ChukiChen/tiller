@@ -451,8 +451,18 @@ export async function resolveInitBaselineStatus(rootInput: string, metadata: Pro
   }
 }
 
+/** Validate the local Git executable before init creates a target or writes any artifact. */
+export async function assertInitGitAvailable(): Promise<void> {
+  const result = await run(process.cwd(), 'git', ['--version']);
+  if (!result.ok) {
+    fail('INIT_PREFLIGHT_GIT',
+      '初始化预检失败：PATH 中没有可执行的 git（git --version 未通过）。请安装 Git（见 https://git-scm.com/downloads），确认 git --version 可运行且 PATH 包含其安装目录后重试；本次未创建初始化目录、分支或提交。');
+  }
+}
+
 /** Validate the remote path before init acquires a lock or writes any artifact. */
 export async function assertInitEnvironment(rootInput: string, platform: ProjectPlatform): Promise<InitEnvironment> {
+  await assertInitGitAvailable();
   const root = path.resolve(rootInput);
   const inside = await git(root, ['rev-parse', '--is-inside-work-tree']);
   const head = await gitHead(root);

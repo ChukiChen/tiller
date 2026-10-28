@@ -109,6 +109,6 @@
 
 ## 15. 初始化预检、显式 apply 与验证摘要
 
-有 Git HEAD 的 init 在任何目录、分支或提交写入前完成 origin 与平台 token 预检；失败只返回设置指引。`init --apply` 是显式自动交付：默认 init 成功开出 PR/MR 后依次 squash、证明、close 与 primary 默认分支快进，任一步失败返回该步和续跑命令，不假报完成。不带旗标仍保持 pending，等待人工合入。
+init 在创建目标目录、分支、worktree 或提交前先确认 PATH 上可执行 `git`，再对已有 Git HEAD 完成 origin 与平台 token 预检；Git 缺失时只返回安装与 PATH 自检指引，其它预检失败只返回对应设置指引。`init --apply` 是显式自动交付：默认 init 成功开出 PR/MR 后依次 squash、证明、close 与 primary 默认分支快进，任一步失败返回该步和续跑命令，不假报完成。不带旗标仍保持 pending，等待人工合入。
 
 `verify`、`check`、acceptance 提交复查和 `preExisting` 使用同一 Git 归一化内容摘要：文本 CRLF 与 LF 等价，二进制按 Git 形态保留原字节，符号链接按链接目标处理。摘要对齐工作区 blob 规则而不改用户换行配置或工作区文件，避免 Windows 检出仅因换行误报验证过期。

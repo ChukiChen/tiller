@@ -22,7 +22,7 @@ tiller init .
 
 tiller 会写入 `AGENTS.md` 和 `.tiller` 下的工作约定，并创建初始化 PR/MR，标题为 `chore(tiller): 完成工程初始化`。
 
-tiller 使用 tokenized HTTPS git 推送初始化分支，并通过 GitHub/GitLab REST API 创建 PR/MR；创建与合入使用平台 API，请设置 `GITHUB_TOKEN`（或 `GH_TOKEN`）或 `GITLAB_TOKEN`（或 `GL_TOKEN`），无需安装额外命令行工具。
+tiller 需要 PATH 中可执行的 Git。初始化使用 tokenized HTTPS git 推送分支，并通过 GitHub/GitLab REST API 创建 PR/MR；创建与合入使用平台 API，请设置 `GITHUB_TOKEN`（或 `GH_TOKEN`）或 `GITLAB_TOKEN`（或 `GL_TOKEN`），无需安装其他命令行工具。
 
 审阅后合入初始化 PR/MR，再回到主干执行 `git pull`，让本地包含初始化改动。合入与本机清理由 AI 按 tiller 约定完成。
 

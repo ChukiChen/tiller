@@ -278,13 +278,13 @@ test('CASE-048 global cases use module kinds and scenarios with resolvable named
   const kinds = ['behavior', 'interface', 'performance', 'security'];
   const library = await readCaseLibrary(repository);
   assert.deepEqual(library.issues, []);
-  assert.equal(library.cases.length, 317);
+  assert.equal(library.cases.length, 318);
   const ids = library.cases.map(item => item.id);
   assert.equal(new Set(ids).size, ids.length);
   assert.ok(ids.every(id => /^CASE-\d{3}$/u.test(id)));
   assert.deepEqual(library.modules.map(item => ({ module: item.module, behavior: item.behavior, interface: item.interface,
     performance: item.performance, security: item.security })), [
-    { module: 'initialization', behavior: 37, interface: 9, performance: 7, security: 10 },
+    { module: 'initialization', behavior: 38, interface: 9, performance: 7, security: 10 },
     { module: 'standards', behavior: 22, interface: 15, performance: 0, security: 0 },
     { module: 'verification', behavior: 16, interface: 13, performance: 15, security: 4 },
     { module: 'workflow', behavior: 102, interface: 58, performance: 0, security: 7 },
@@ -327,7 +327,7 @@ test('CASE-048 global cases use module kinds and scenarios with resolvable named
 test('CASE-245 全局用例库同步文档 CLI 名称与版本', async () => {
   const library = await readCaseLibrary(repository);
   assert.deepEqual(library.issues, []);
-  assert.equal(library.cases.length, 317);
+  assert.equal(library.cases.length, 318);
   const added = library.cases.filter(item => Number(item.id.slice(5)) >= 242 && Number(item.id.slice(5)) <= 245);
   assert.deepEqual(added.map(item => item.id), ['CASE-242', 'CASE-243', 'CASE-244', 'CASE-245']);
   const standards = library.modules.find(item => item.module === 'standards');

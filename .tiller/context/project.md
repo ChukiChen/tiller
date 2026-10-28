@@ -21,7 +21,7 @@ tiller 是一套开源的 AI 软件工程方法论与工具集，帮助开发者
 - `doctor [path]` 自检初始化基线、默认分支 specs 脏改、残留任务分支，并从 active worktree 读取进行中任务检查 AC 缺口与数据模型；active 任务分支缺少记录或检查失败按严重项处理，warning 不阻断。
 - 提交主题采用 `类型(模块): 中文摘要`，PR/MR 标题加任务编号，分支使用 `类型/任务编号[-描述]`；格式问题只提示。
 - `init` 生成最小工程骨架和当前平台模板，`upgrade` 只刷新未修改的受管文件并兼容当前及直接兼容的上一资源契约。
-- 有 Git HEAD 的 `init` 在写盘、建分支或提交前校验 origin 与平台 token；显式 `init --apply` 才依次 squash、证明、close 并快进 primary 默认分支，失败停在该步。验证 tree 摘要按 Git blob 内容规则归一文本换行并保留二进制字节，避免 Windows CRLF 假过期。
+- `init` 在创建目标目录或任何初始化产物前校验 PATH 上可执行的 `git`，有 Git HEAD 时再校验 origin 与平台 token；显式 `init --apply` 才依次 squash、证明、close 并快进 primary 默认分支，失败停在该步。验证 tree 摘要按 Git blob 内容规则归一文本换行并保留二进制字节，避免 Windows CRLF 假过期。
 
 当前共享资料以 `.tiller/specs/`、`.tiller/context/`、`.tiller/cases/`、`.tiller/plans/` 和 `.tiller/task/` 为准；被替代的过程内容只从 Git 历史追溯。`project.json` 的 `resourceVersion`、包版本、CLI 版本和资源常量保持 0.5.0，功能开发不升版。运行器现含 `node-test`、`junit-maven`、`junit-gradle` 和 `pytest`；`upgrade --adopt` 可保留受管文件本地修改，`plan attach` 可补记已有任务的规划归属。
 

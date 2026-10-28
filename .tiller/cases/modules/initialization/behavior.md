@@ -917,3 +917,27 @@ init 成功完成且不再执行 tag 创建或推送，不出现 tag 重名/冲�
 ### 预期结果
 
 成功路径完成 squash、close 与默认分支快进，primary 出现跟踪的受管文件；失败路径返回当前步骤和续跑命令，保留 open PR/MR 与本机事实；默认路径不自动合入。
+
+## CASE-345 init 预检拒绝不可用的 git
+
+- 类型：behavior
+- 优先级：medium
+- 模块：initialization
+- 关联 AC：AC-4
+- 需求：`.tiller/specs/modules/initialization/requirements.md`
+
+### 前置条件
+
+- 工程路径可用，但 PATH 中没有可执行的 git
+
+### 步骤
+
+1. 在 PATH 不含 git 的环境中分别运行 tiller init 与 tiller init --apply
+
+### 输入
+
+- 已有 Git HEAD 或尚未创建的初始化目标目录，并设置可解析 origin 与平台 token
+
+### 预期结果
+
+init 与 init --apply 均非零退出并给出 Git 安装指引；未创建目标目录、init 目录、worktree、分支或提交

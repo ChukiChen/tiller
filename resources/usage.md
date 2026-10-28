@@ -50,4 +50,4 @@ accept 须在 pr 前；`confirm`/`accept` 写入确认后自动提交本任务�
 
 ## 接入与升级
 
-`init [--platform github|gitlab|both]` 只在 init worktree 写入受管产物并推送 PR/MR，primary 不预建未跟踪 `.tiller/` 种子；失败保留本机 worktree。本机 `.tiller/local/<init-id>/` 记录 expected tip 与 open PR/MR；`initBaseline` 由祖先或平台 API 按同 head 记录确认合入，effective 结论经 local marker 与 CLI 输出（不脏跟踪的 `project.json`）；`merge <init-id>` 写入同 head marker 并清理，网页合入可 `close <init-id>`。平台在初始化时选定，之后不能通过 CLI 切换；需手动修改 `.tiller/project.json` 并补齐对应模板。主路径直接使用 PATH 中的 `tiller`。`upgrade --adopt` 刷新未改项；兼容当前及上一资源契约。
+`init [--platform github|gitlab|both]` 要求可执行的 Git，并在创建目标或初始化产物前预检；缺失时给出安装指引且不写盘，`--apply` 同路径。成功后只在 init worktree 写入受管产物并推送 PR/MR，primary 不预建未跟踪 `.tiller/` 种子；失败保留本机 worktree。本机 `.tiller/local/<init-id>/` 记录 expected tip 与 open PR/MR；`initBaseline` 由祖先或平台 API 按同 head 记录确认合入，effective 结论经 local marker 与 CLI 输出（不脏跟踪的 `project.json`）；`merge <init-id>` 写入同 head marker 并清理，网页合入可 `close <init-id>`。平台在初始化时选定，之后不能通过 CLI 切换；需手动修改 `.tiller/project.json` 并补齐对应模板。主路径直接使用 PATH 中的 `tiller`。`upgrade --adopt` 刷新未改项；兼容当前及上一资源契约。

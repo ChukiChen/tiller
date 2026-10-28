@@ -272,7 +272,7 @@
 
 ## 2026-10-28 初始化预检、显式交付与 Git 归一化摘要
 
-- `init` 仅在工程有 Git HEAD 时要求远端交付能力：写 worktree、分支或提交前先解析 origin 并检查平台 token，失败非零退出且不产生本次 init 产物。无 Git HEAD 的本地降级路径不要求 token。
+- `init` 在创建目标目录、worktree、分支或提交前先确认 PATH 上可执行 `git`；缺失时给出安装指引且不产生本次 init 产物。有 Git HEAD 时再要求远端交付能力：解析 origin 并检查平台 token，失败非零退出且不留下本次产物。无 Git HEAD 的本地降级路径不要求 token。
 - `init --apply` 是显式自动交付，按 squash、本机证明、init-id close、primary 默认分支快进依次执行；任一步失败停在该步并返回续跑命令。无旗标仍只开 PR/MR，等待人工合入。
 - 新 CASE 使用 `case add --criterion AC-n` 关联所挂需求 specs 的验收条件，拒绝任务作用域 `任务#AC`；历史“无”、留空与 `task#AC` 保持可读。
 - tree 摘要与 Git blob 的内容规则对齐：文本把 CRLF 归一为 LF，二进制保持原字节，符号链接按目标字节处理。verify、check、acceptance 与 preExisting 共用该规则；不修改用户 `core.autocrlf`，也不改写工作区换行。旧 64 位内容摘要保留兼容比较。

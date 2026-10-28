@@ -40,6 +40,6 @@
 
 ## 7. 预检与显式 apply
 
-`initialize` 在取得工程锁、创建初始化 worktree 或分支、写受管文件与提交之前调用 `assertInitEnvironment`。只有工程根同时是 Git 工作副本根且有 HEAD 时才要求远端：`resolvePlatformRepository` 解析 origin，`platformToken` 读取当前平台 token；任一失败立即返回非零，并给出 origin 修复方式与 `GITHUB_TOKEN`/`GH_TOKEN` 或 `GITLAB_TOKEN`/`GL_TOKEN` 设置指引。该路径不创建 `.tiller/local/<init-id>/`、`chore/tiller-init`、提交或 primary 受管文件。无 Git HEAD 的本地降级路径保持原有行为。
+`initialize` 在创建目标目录、取得工程锁、创建初始化 worktree 或分支、写受管文件与提交之前先确认 PATH 上可执行 `git`（`git --version`），再调用 `assertInitEnvironment`。Git 不可执行时立即以 `INIT_PREFLIGHT_GIT` 非零退出，给出安装地址与 `git --version` 自检指引，且不创建目标目录、`.tiller/local/<init-id>/`、`chore/tiller-init`、提交或 primary 受管文件；`init --apply` 复用同一路径。只有工程根同时是 Git 工作副本根且有 HEAD 时才要求远端：`resolvePlatformRepository` 解析 origin，`platformToken` 读取当前平台 token；任一失败立即返回非零，并给出 origin 修复方式与 `GITHUB_TOKEN`/`GH_TOKEN` 或 `GITLAB_TOKEN`/`GL_TOKEN` 设置指引。该路径同样不产生本次 init 产物。无 Git HEAD 的本地降级路径保持原有行为，但仍要求 Git 可执行。
 
 CLI 的显式 `init --apply` 先执行默认 init 并取得同 expected head 绑定的 open PR/MR，再按顺序调用平台 REST API squash、写入本机合入证明、执行 init-id close，并在 primary 当前位于目标默认分支时用 tokenized `git fetch` 与 `git merge --ff-only` 快进。合入失败、证明写入失败、close 失败或快进失败都停在对应步骤，返回已完成事实、保留必要的 PR/MR 或本机状态，并提示 `tiller merge`、`tiller close` 或 `git pull --ff-only` 的续跑命令。未提供 `--apply` 时仍只开 PR/MR 并保持 pending。

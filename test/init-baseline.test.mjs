@@ -174,6 +174,33 @@ test('CASE-339 init preflight rejects missing token or invalid origin before cre
   assertNoArtifacts();
 });
 
+test('CASE-345 init preflight rejects unavailable git before creating artifacts for init and --apply', async t => {
+  const root = fixture(t);
+  configure(root);
+  const head = okGit(root, 'rev-parse', 'HEAD');
+  const mock = await startPlatformMock(t, { remoteHead: head });
+  okGit(root, 'remote', 'add', 'origin', `${mock.origin}/owner/repo.git`);
+  const environment = {
+    PATH: '', GITHUB_TOKEN: 'mock-token', GH_TOKEN: '', GITLAB_TOKEN: '', GL_TOKEN: '',
+  };
+
+  for (const apply of [false, true]) {
+    const target = apply ? 'new-project-apply' : 'new-project';
+    const result = await cliAt(root, environment,
+      'init', target, '--platform', 'github', ...(apply ? ['--apply'] : []));
+    const data = failure(result);
+    assert.equal(data.error.code, 'INIT_PREFLIGHT_GIT');
+    assert.match(data.error.message, /安装 Git/u);
+    assert.match(data.error.message, /git --version/u);
+    assert.equal(existsSync(join(root, target)), false);
+    assert.equal(existsSync(join(root, '.tiller/local')), false);
+    assert.equal(existsSync(join(root, '.tiller/project.json')), false);
+    assert.notEqual(git(root, 'show-ref', '--verify', '--quiet', 'refs/heads/chore/tiller-init').status, 0);
+    assert.equal(okGit(root, 'rev-parse', 'HEAD'), head);
+  }
+  assert.equal(mock.state.requests.length, 0);
+});
+
 test('CASE-340 init --apply merges, cleans up and fast-forwards; rejected merge stays resumable', async t => {
   for (const platform of ['github', 'gitlab']) {
     const initialized = await initialize(t, { platform, mainBranch: 'main', apply: true });
