@@ -148,3 +148,26 @@
 
 init 不写 `.tiller/run.cjs`，管理清单不登记该文件，升级预览无变更。
 
+## CASE-327 status 展示 init 当前合入证明
+
+- 类型：interface
+- 优先级：high
+- 模块：initialization
+- 关联 AC：无
+- 需求：`.tiller/specs/modules/initialization/requirements.md`
+
+### 前置条件
+
+- init 基线已合入，跟踪 project.json 的 initBaseline.status 仍为 pending
+
+### 步骤
+
+1. 运行 tiller status <root> 并读取 JSON
+
+### 输入
+
+- 已合入 init 基线与原始 pending 跟踪元信息
+
+### 预期结果
+
+status 增列当前 initBaseline 结论为 merged，同时保留跟踪元信息原始 pending；不改写 project.json

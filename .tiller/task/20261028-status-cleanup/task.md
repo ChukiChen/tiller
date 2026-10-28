@@ -79,8 +79,52 @@
 
 ## 验证
 
-尚无验证。
+### run-1
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-327 status overlays current merged init proof without rewriting tracked metadata$' \u002d\u002dtest-reporter=./.tiller/local/verify-KM3Y6X/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-KM3Y6X/report.jsonl test/init-baseline.test.mjs","exitCode":0,"tree":"115edab605482cba3674fd0088e4fb2ae755e089191b3c16be140fd331520a26","commit":"854b7485507f820d87b32761e7ff732e45bda786"} -->
+- 条件：AC-1
+- 测试：test/init-baseline.test.mjs::CASE-327 status overlays current merged init proof without rewriting tracked metadata
+- 用例：CASE-327
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/20261028-status-cleanup/logs/run-1.log
+- 提交：854b7485507f
+- 时间：2026-10-28T06:59:43.082Z
+
+### run-2
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-328 cleanup reports logs removed when logs existed inside the task worktree$' \u002d\u002dtest-reporter=./.tiller/local/verify-xUTnul/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-xUTnul/report.jsonl test/task-worktrees.test.mjs","exitCode":0,"tree":"115edab605482cba3674fd0088e4fb2ae755e089191b3c16be140fd331520a26","commit":"854b7485507f820d87b32761e7ff732e45bda786"} -->
+- 条件：AC-2
+- 测试：test/task-worktrees.test.mjs::CASE-328 cleanup reports logs removed when logs existed inside the task worktree
+- 用例：CASE-328
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/20261028-status-cleanup/logs/run-2.log
+- 提交：854b7485507f
+- 时间：2026-10-28T06:59:46.856Z
 
 ## 自检
 
-交付前运行 check；验收后运行 accept。
+- [x] 需求确认有效
+- [ ] 设计确认有效
+- [x] 验收条件均有当前通过且绑定全局用例的测试引用
+- [x] 每条验收条件均映射到本次验证引用的全局用例
+- [x] 验收条件与用例通过 verify 的 AC→测试→CASE 记录关联
+- [x] 验证命令已执行且测试输出已核实
+- [x] 全局用例结构与引用有效
+- [x] 改动未超出范围
+- [x] 未弱化仍存在的测试
+- [x] 评审无未清除阻塞项
+- [x] 记录不含密钥或本机绝对路径
+
+阻塞项：
+- 过程卫生：设计确认提交 b6353de349ae 后，工作区仍有未提交业务改动：src/cli.ts、src/core.ts、src/task-worktrees.ts、src/types.ts、test/case-redesign.test.mjs、test/init-baseline.test.mjs、test/review-release.test.mjs、test/rules.test.mjs 等 9 项。请先提交或移出本任务。
+- 交付范围存在未提交改动：.tiller/cases/modules/initialization/interface.md、.tiller/cases/modules/workflow/behavior.md、.tiller/specs/modules/initialization/design.md、.tiller/specs/modules/initialization/requirements.md、.tiller/specs/modules/workflow/design.md、.tiller/specs/modules/workflow/requirements.md、src/cli.ts、src/core.ts、src/task-worktrees.ts、src/types.ts、test/case-redesign.test.mjs、test/init-baseline.test.mjs、test/review-release.test.mjs、test/rules.test.mjs、test/task-worktrees.test.mjs
+
+提示：
+- 167 条历史用例仍以 <任务>#AC-n 记录关联 AC；这是可迁移的历史债，不阻断当前覆盖。
+- 138 条用例的关联 AC 为无；覆盖以需求字段和 verify 的 AC→测试→CASE 记录为准。
+- 本次改动涉及模块 initialization：建议回归该模块 56 条用例；建议同时回归经过它的场景 CASE-055, CASE-001。
+- 本次改动涉及模块 standards：建议回归该模块 37 条用例；建议同时回归经过它的场景 CASE-055。
+- 本次改动涉及模块 verification：建议回归该模块 45 条用例；建议同时回归经过它的场景 CASE-055, CASE-001。
+- 本次改动涉及模块 workflow：建议回归该模块 165 条用例；建议同时回归经过它的场景 CASE-055, CASE-001。

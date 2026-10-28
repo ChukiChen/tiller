@@ -2506,3 +2506,27 @@ abandon 接受已验收任务；先自动写入并提交放弃事件，再清理
 ### 预期结果
 
 任务记录保留完整子标题和正文，层级仍从属于 `### 关键行为`，不折叠进目标或丢成顶层摘要。
+
+## CASE-328 cleanup 如实报告日志随任务本机目录清理
+
+- 类型：behavior
+- 优先级：high
+- 模块：workflow
+- 关联 AC：无
+- 需求：`.tiller/specs/modules/workflow/requirements.md`, `.tiller/specs/modules/workflow/lifecycle-truth.md`
+
+### 前置条件
+
+- 任务日志曾位于 .tiller/local/<id>/logs，close/merge 将拆除整棵任务本机目录
+
+### 步骤
+
+1. 执行 close 或 merge cleanup 并读取 JSON
+
+### 输入
+
+- 日志文件存在且日志目录随任务本机目录一并删除
+
+### 预期结果
+
+logsRemoved 为 true，不再因日志目录已随后续本机目录删除而误报 false

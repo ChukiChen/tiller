@@ -205,6 +205,25 @@ test('CASE-198 CASE-211 close and abandon remove the whole task-local directory 
   assert.equal(existsSync(join(root, taskLocalPath(bystanderId, 'logs/run-1.log'))), true);
 });
 
+test('CASE-328 cleanup reports logs removed when logs existed inside the task worktree', async t => {
+  const root = project(t);
+  const id = '20261028-worktree-local-logs';
+  const started = startTask(root, id);
+  const worktree = join(root, started.worktreeRoot);
+  const branch = started.worktrees[0].branch;
+  acceptTask(root, id);
+  const nestedLog = join(worktree, taskLocalPath(id, 'logs/run-1.log'));
+  put(worktree, taskLocalPath(id, 'logs/run-1.log'), 'verification log\n');
+  assert.ok(existsSync(nestedLog));
+  assert.equal(existsSync(join(root, taskLocalPath(id, 'logs'))), false);
+
+  git(root, 'merge', '--quiet', '--no-edit', branch);
+  const closed = success(cli(root, 'close', id, '--reason', '合入后清理'));
+  assert.equal(closed.logsRemoved, true);
+  assert.equal(existsSync(worktree), false);
+  assert.equal(existsSync(join(root, taskLocalPath(id))), false);
+});
+
 test('CASE-280 worktree 根 close 可删本地任务分支', async t => {
   const root = project(t);
   const id = '20261027-worktree-root-close';

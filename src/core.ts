@@ -7,14 +7,17 @@ import {
   applyChanges, assertSafePath, hasPendingTransaction, readTextIfExists, readTextInputs,
   recoverChanges, validateRelativePath, withProjectLock,
 } from './files.js';
-import type { FileChange, InitializeOptions, ProjectInspection, ProjectMetadata, ProjectMode, ProjectPlatform, RepositoryRecord } from './types.js';
+import type {
+  FileChange, InitBaselineStatus, InitializeOptions, ProjectInspection, ProjectMetadata, ProjectMode, ProjectPlatform,
+  RepositoryRecord,
+} from './types.js';
 import type { TextReadInput } from './files.js';
 import { validateRepositoryMappings } from './repository-paths.js';
 import {
   GITHUB_TEMPLATE, GITLAB_TEMPLATE, META, REQUIRED_MANAGED, RESOURCE_VERSION, SCHEMA_VERSION, SHARED_RESOURCES,
   managedFilesForPlatform, normalizePlatform, parseMetadata, templatePathsForPlatform,
 } from './project-metadata.js';
-import { createInitBaseline, readLocalInitBaseline, type InitBaselineResult } from './init-baseline.js';
+import { createInitBaseline, proveInitBaselineMerged, readLocalInitBaseline, type InitBaselineResult } from './init-baseline.js';
 import { assertSharedWritePaths } from './shared-paths.js';
 
 export {
@@ -478,6 +481,32 @@ async function inspectProjectState(root: string): Promise<ProjectInspection> {
 
 export async function inspectProject(root: string): Promise<ProjectInspection> {
   return inspectProjectState(root);
+}
+
+export async function inspectProjectStatus(root: string): Promise<ProjectInspection> {
+  const result = await inspectProjectState(root);
+  const baseline = result.metadata?.initBaseline;
+  if (!baseline) return result;
+  let initBaselineStatus: InitBaselineStatus;
+  try {
+    const proof = await proveInitBaselineMerged(root, result.metadata!);
+    initBaselineStatus = {
+      id: baseline.id,
+      branch: baseline.branch,
+      status: proof.merged ? 'merged' : 'pending',
+      ...(baseline.status ? { trackedStatus: baseline.status } : {}),
+      detail: proof.detail,
+    };
+  } catch (error) {
+    initBaselineStatus = {
+      id: baseline.id,
+      branch: baseline.branch,
+      status: 'pending',
+      ...(baseline.status ? { trackedStatus: baseline.status } : {}),
+      detail: `无法确认初始化基线合入状态：${(error as Error).message}`,
+    };
+  }
+  return { ...result, initBaselineStatus };
 }
 
 /** Read only the current metadata contract. Whole-project health is an explicit inspection.
