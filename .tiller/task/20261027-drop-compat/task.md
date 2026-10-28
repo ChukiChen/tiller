@@ -68,11 +68,11 @@
 
 | 部分 | 确认人 | 时间 | 短提交 | 原话 |
 | --- | --- | --- | --- | --- |
-| 设计 | boon yu | 2026-10-27T15:54:44.579Z | f408a7caae0a | — |
 | 需求 | boon yu | 2026-10-28T00:17:40.854Z | d5c1c0c7ca4b | 既然不保留兼容旧逻辑，就代码与用例一起删掉。 |
+| 设计 | boon yu | 2026-10-28T00:17:44.282Z | 916814545dc4 | 既然不保留兼容旧逻辑，就代码与用例一起删掉。 |
 
-<!-- tiller-confirm:v1 {"gate":"design","object":"设计正文","subject":"24108382fb5c9b404219258474d62785ab0681415e1777e41736e890349b8add","commit":"f408a7caae0a3811fad7b09c602956ed7bbbc365","by":"boon yu","quote":"","at":"2026-10-27T15:54:44.579Z"} -->
 <!-- tiller-confirm:v1 {"gate":"requirements","object":"需求正文（目标、范围与验收条件）","subject":"aca806aee96a811b73676f167ad9bb18661ddac06f073a8ba306990c0a8cab3a","commit":"d5c1c0c7ca4b2a31bc7330d58313822e8c664821","by":"boon yu","quote":"既然不保留兼容旧逻辑，就代码与用例一起删掉。","at":"2026-10-28T00:17:40.854Z"} -->
+<!-- tiller-confirm:v1 {"gate":"design","object":"设计正文","subject":"b8f4b9a2066d739d0ff341c2b6f2ca672a666fec2aade535c011f39dd15523cc","commit":"916814545dc47ea8e7648d509e5149b8482ac3e6","by":"boon yu","quote":"既然不保留兼容旧逻辑，就代码与用例一起删掉。","at":"2026-10-28T00:17:44.282Z"} -->
 
 ## 验证
 
