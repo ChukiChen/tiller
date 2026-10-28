@@ -315,12 +315,14 @@ test('${closeCase.id} close lifecycle behavior', () => assert.equal(1, 1));
   });
   assert.equal(status.status, 0, status.stderr);
   assert.doesNotMatch(status.stdout, /^\?\?/mu);
+  assert.equal(closed.worktrees.length, 1);
   assert.doesNotMatch(beforeClose, /^## 关闭$/mu);
 
   const listed = success(cli(root, 'resume'));
   assert.equal(listed.tasks.find(entry => entry.id === id).stage, '已验收');
   const reopened = success(cli(root, 'reopen', id, '--reason', '需要再次交付'));
   assert.equal(reopened.stage, '已验证');
+  assert.equal(existsSync(join(root, `.tiller/local/${id}`)), false);
   const checked = success(cli(root, 'check', id));
   assert.equal(checked.confirmations.find(entry => entry.gate === 'acceptance').confirmed, false);
   success(cli(root, 'accept', id, '--quote', '重新验收关闭流程'));
@@ -348,6 +350,7 @@ test('CASE-308 abandon does not materialize an untracked task onto primary', asy
   const abandoned = success(cli(root, 'close', id, '--reason', '需求取消', '--abandon'));
   assert.equal(abandoned.stage, '已放弃');
   assert.match(read(root, `.tiller/task/${id}/task.md`), /^- 状态：已放弃$/mu);
+  assert.match(abandoned.next, /reopen/u);
 });
 
 test('CASE-058 abandoned tasks are terminal, reopenable, and not counted as active or accepted plan work', async t => {
@@ -372,6 +375,7 @@ test('CASE-058 abandoned tasks are terminal, reopenable, and not counted as acti
   commitAll(root, 'chore(workflow): 模拟已合入任务记录后放弃');
   const abandoned = success(cli(root, 'close', id, '--reason', '需求取消', '--abandon'));
   assert.equal(abandoned.stage, '已放弃');
+  assert.match(abandoned.next, /reopen/u);
   assert.match(read(root, `.tiller/task/${id}/task.md`), /^- 状态：已放弃$/mu);
   const status = success(cli(root, 'plan', 'status', 'abandon-plan'));
   assert.equal(status.items[0].status, '已放弃');

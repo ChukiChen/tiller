@@ -469,7 +469,7 @@ function parseTask(content: string, id: string, relative: string): FlowTask {
 export async function readTask(root: string, id: string): Promise<FlowTask> {
   validateTaskId(id);
   const { primary, taskRoot } = await resolveTaskCheckout(root, id);
-  await readProjectMetadata(primary);
+  await readProjectMetadata(taskRoot);
   const relative = taskPath(id);
   const content = await readTextIfExists(taskRoot, relative);
   if (content === null) fail('TASK_NOT_FOUND', `任务 ${id} 不存在；请先执行 start。`);

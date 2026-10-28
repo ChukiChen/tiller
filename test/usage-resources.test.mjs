@@ -248,4 +248,5 @@ test('CASE-215 docs describe task-local layout and close cleanup lifecycle', () 
   assert.match(requirements, /FLOW-34|任务 worktree 生命周期|\.tiller\/local\//u);
   assert.match(design, /worktrees\//u);
   assert.match(decisions, /聚合|worktrees\.json/u);
+  assert.match(decisions, /\.tiller\/local\/<id>\//u);
 });

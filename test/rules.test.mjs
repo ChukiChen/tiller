@@ -109,6 +109,7 @@ test('CASE-091 verification guidance requires execution, reporting reasons and f
   assert.match(usage, /--allow-reported/u);
   assert.match(usage, /--expect-fail/u);
   assert.match(usage, /基线.*工作树/u);
+  assert.match(usage, /tiller 构造并执行/u);
 
   const core = read('rules/core.md');
   assert.match(core, /verify.*自主执行|tiller 自主执行/u);

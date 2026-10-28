@@ -130,6 +130,9 @@ test('CASE-196 CASE-209 CASE-287 project start creates a task-local worktree, si
   assert.ok(existsSync(join(root, taskLocalPath(id, 'pre-existing.json'))));
   put(root, taskLocalPath(id, 'logs/run-1.log'), 'task log\n');
   assert.ok(existsSync(join(root, taskLocalPath(id, 'logs/run-1.log'))));
+  assert.equal(state.id, id);
+  assert.equal(state.branch, started.worktrees[0].branch);
+  assert.equal(state.worktrees[0].repository, 'management');
 });
 
 test('CASE-197 CASE-210 CASE-287 workspace start keeps management and registered repositories under the task worktree root', async t => {
@@ -154,6 +157,9 @@ test('CASE-197 CASE-210 CASE-287 workspace start keeps management and registered
   const state = JSON.parse(readFileSync(join(root, taskLocalPath(id, 'worktrees.json')), 'utf8'));
   assert.equal(state.root, worktreePath(id));
   assert.deepEqual(state.worktrees.map(item => item.path).sort(), started.worktrees.map(item => item.path).sort());
+  assert.equal(state.id, id);
+  assert.equal(state.branch, branch);
+  assert.ok(state.worktrees.some(item => item.repository === 'management'));
 });
 
 test('CASE-208 worktree branch and path use the task id once when slug is already its suffix', async t => {
@@ -280,6 +286,7 @@ test('CASE-283 CASE-309 合入后 close 不改共享 task.md 且重复 close 安
 
   const first = success(cli(root, 'close', id, '--reason', '合入后收尾'));
   assert.equal(first.stage, '已验收');
+  assert.equal(first.worktrees.length, 1);
   assert.equal(existsSync(join(root, started.worktreeRoot)), false);
   const second = success(cli(root, 'close', id, '--reason', '重复收尾'));
   assert.equal(second.stage, '已验收');
