@@ -92,9 +92,11 @@
 | --- | --- | --- | --- | --- |
 | 需求 | boon yu | 2026-10-28T12:35:59.047Z | ce4584876658 | — |
 | 设计 | boon yu | 2026-10-28T12:35:59.166Z | 06ebe86a8cf7 | — |
+| 交付验收 | boon yu | 2026-10-28T12:36:29.984Z | 42ee03a3d318 | — |
 
 <!-- tiller-confirm:v1 {"gate":"requirements","object":"需求正文（目标、范围与验收条件）","subject":"bd56db5616e12878941ca5a8028916bc3d30ed7e98530d0b82b3a9b1d9150bed","commit":"ce45848766580084d6e2797ccf70348385cc9078","by":"boon yu","quote":"","at":"2026-10-28T12:35:59.047Z"} -->
 <!-- tiller-confirm:v1 {"gate":"design","object":"设计正文","subject":"9e91e8b2037cb56fa4fef65fe7c5e1d86b373193a8254a70b3b03f86f15f8486","commit":"06ebe86a8cf71f3ce91e06644cec3d48851e9d5c","by":"boon yu","quote":"","at":"2026-10-28T12:35:59.166Z"} -->
+<!-- tiller-confirm:v1 {"gate":"acceptance","object":"当前交付（需求、设计、验证与提交）","subject":"f0455fdb9c138c55cfcad33632a0418bb1df981678125b55011e4a3eb4ab89b0","commit":"42ee03a3d318ffb3b4965a23e122b018f8a85582","by":"boon yu","quote":"","at":"2026-10-28T12:36:29.984Z"} -->
 
 ## 验证
 
@@ -160,4 +162,25 @@
 
 ## 自检
 
-交付前运行 check；验收后运行 accept。
+- [x] 需求确认有效
+- [x] 设计确认有效
+- [x] 验收条件均有当前通过且绑定全局用例的测试引用
+- [x] 每条验收条件均映射到本次验证引用的全局用例
+- [x] 验收条件与用例通过 verify 的 AC→测试→CASE 记录关联
+- [x] 验证命令已执行且测试输出已核实
+- [x] 全局用例结构与引用有效
+- [x] 改动未超出范围
+- [x] 未弱化仍存在的测试
+- [x] 评审无未清除阻塞项
+- [x] 记录不含密钥或本机绝对路径
+
+提示：
+- 167 条历史用例仍以 <任务>#AC-n 记录关联 AC；这是可迁移的历史债，不阻断当前覆盖。
+- 144 条用例的关联 AC 为无；覆盖以需求字段和 verify 的 AC→测试→CASE 记录为准。
+- 本次改动涉及模块 initialization：建议回归该模块 61 条用例；建议同时回归经过它的场景 CASE-055, CASE-001。
+- 本次改动涉及模块 standards：建议回归该模块 37 条用例；建议同时回归经过它的场景 CASE-055。
+- 本次改动涉及模块 verification：建议回归该模块 45 条用例；建议同时回归经过它的场景 CASE-055, CASE-001。
+- 本次改动涉及模块 workflow：建议回归该模块 166 条用例；建议同时回归经过它的场景 CASE-055, CASE-001。
+- 需求“业务范围·做”包含交付路径 `.tiller/local/<init-id>/`；业务范围应写约束，交付路径请只记录在任务范围（--target）：`.tiller/task/20261028-init-proof-head/task.md`。
+- 需求“业务范围·做”包含交付路径 `activities/delivery.md`；业务范围应写约束，交付路径请只记录在任务范围（--target）：`.tiller/task/20261028-init-proof-head/task.md`。
+- 修改的测试文件移除了 2 个测试用例（请确认对应功能已删除；详情见 Git diff）。
