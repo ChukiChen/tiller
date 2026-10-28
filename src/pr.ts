@@ -64,8 +64,8 @@ function fail(code: string, message: string): never {
   throw Object.assign(new Error(message), { code });
 }
 
-async function mergeTarget(root: string, taskRoot: string, id: string): Promise<{ branch: string; init: boolean }> {
-  const metadata = await readProjectMetadata(root);
+async function mergeTarget(taskRoot: string, id: string): Promise<{ branch: string; init: boolean }> {
+  const metadata = await readProjectMetadata(taskRoot);
   if (isInitBaselineId(id)) {
     const baseline = metadata.initBaseline;
     if (!baseline || baseline.id !== id) fail('INIT_BASELINE_NOT_FOUND', `工程元信息中没有初始化基线 ${id}。`);
@@ -290,10 +290,10 @@ export async function pullRequestFlow(
   id: string,
   options: { slug?: string; summary?: string; draftOnly?: boolean } = {},
 ): Promise<PullRequestCreated | PullRequestPreview> {
-  const { primary: root } = await resolveTaskCheckout(rootInput, id);
+  const { primary: root, taskRoot } = await resolveTaskCheckout(rootInput, id);
   const draft = await draftPullRequest(rootInput, id, options);
   if (options.draftOnly) {
-    const metadata = await readProjectMetadata(root);
+    const metadata = await readProjectMetadata(taskRoot);
     return {
       ...draft,
       platform: metadata.platform ?? 'github',
@@ -302,7 +302,7 @@ export async function pullRequestFlow(
     };
   }
 
-  const metadata = await readProjectMetadata(root);
+  const metadata = await readProjectMetadata(taskRoot);
   let repository: PlatformRepository;
   try {
     repository = await resolvePlatformRepository(root, metadata.platform ?? 'github');
@@ -352,7 +352,7 @@ export async function pullRequestFlow(
 
 export async function mergeFlow(rootInput: string, id: string, options: { keepBranch?: boolean } = {}): Promise<MergeResult> {
   const { primary: root, taskRoot } = await resolveTaskCheckout(rootInput, id);
-  const metadata = await readProjectMetadata(root);
+  const metadata = await readProjectMetadata(taskRoot);
   let repository;
   try {
     repository = await resolvePlatformRepository(root, metadata.platform ?? 'github');
@@ -362,7 +362,7 @@ export async function mergeFlow(rootInput: string, id: string, options: { keepBr
   const platform = repository.platform;
   const token = platformToken(platform);
   if (!token) fail('MERGE_TOKEN_MISSING', tokenGuidance(platform, repository.apiBase));
-  const target = await mergeTarget(root, taskRoot, id);
+  const target = await mergeTarget(taskRoot, id);
   let merged;
   try {
     merged = platform === 'github'

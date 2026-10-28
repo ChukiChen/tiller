@@ -2277,7 +2277,7 @@ export async function closeFlow(rootInput: string, id: string, reasonInput: stri
   const { primary: root, taskRoot } = await resolveTaskCheckout(rootInput, id);
   const reason = safeInput(text(reasonInput, '关闭原因', 4000), '关闭原因');
   return withProjectLock(root, async () => {
-    const metadata = await readProjectMetadata(root);
+    const metadata = await readProjectMetadata(taskRoot);
     if (isInitBaselineId(id)) {
       if (abandon) fail('INIT_BASELINE_CLOSE', '初始化基线不是任务，不能使用 --abandon；直接 close 只清理本机目录。');
       if (metadata.initBaseline && metadata.initBaseline.status !== 'merged') {
