@@ -1,6 +1,6 @@
 # 任务溢出回写与跨语言CASE适配器标准
 
-<!-- tiller-task:v1 {"version":1,"id":"20261028-specs-overflow-gate","type":"feature","size":"standard","created":"2026-10-28T14:39:43.922Z","base":"7c2816e4b164366564f2c7a98d5a0d43f3d816d7","scope":["src","test",".tiller/specs",".tiller/rules",".tiller/cases",".tiller/usage.md","resources"],"format":"structured","slug":"specs-overflow-gate","summary":"任务溢出须回写specs；跨语言CASE适配器成标准"} -->
+<!-- tiller-task:v1 {"version":1,"id":"20261028-specs-overflow-gate","type":"feature","size":"standard","created":"2026-10-28T14:39:43.922Z","base":"7c2816e4b164366564f2c7a98d5a0d43f3d816d7","scope":["src","test",".tiller/specs",".tiller/rules",".tiller/cases",".tiller/usage.md",".tiller/context",".tiller/project.json","resources"],"format":"structured","slug":"specs-overflow-gate","summary":"任务溢出须回写specs；跨语言CASE适配器成标准"} -->
 
 ## 需求
 
@@ -88,11 +88,11 @@
 
 | 部分 | 确认人 | 时间 | 短提交 | 原话 |
 | --- | --- | --- | --- | --- |
-| 需求 | ChukiChen | 2026-10-28T14:45:45.504Z | 7c2816e4b164 | 溢出回写+跨语言CASE适配器标准 |
 | 设计 | ChukiChen | 2026-10-28T14:45:48.427Z | 87a65400d12e | 门禁对照specs；适配器为标准路径 |
+| 需求 | ChukiChen | 2026-10-28T16:05:08.271Z | aa13d0f80af3 | — |
 
-<!-- tiller-confirm:v1 {"gate":"requirements","object":"需求正文（目标、范围与验收条件）","subject":"c068e956e5c31239a71642687b2b8a3d792e3fe014e2d15b3eb0d10fc28a0f4e","commit":"7c2816e4b164366564f2c7a98d5a0d43f3d816d7","by":"ChukiChen","quote":"溢出回写+跨语言CASE适配器标准","at":"2026-10-28T14:45:45.504Z"} -->
 <!-- tiller-confirm:v1 {"gate":"design","object":"设计正文","subject":"0cfc0c309b3307ae90792d666c4e70664b7d9c3daa090df107cde75556a2ec26","commit":"87a65400d12e82bf86dfd1fc162e2814c819945c","by":"ChukiChen","quote":"门禁对照specs；适配器为标准路径","at":"2026-10-28T14:45:48.427Z"} -->
+<!-- tiller-confirm:v1 {"gate":"requirements","object":"需求正文（目标、范围与验收条件）","subject":"2b55e7c2bf4b3a2b1fe42c25dce1ec1e630d02f0568a3bbb9c913f23bd560c7f","commit":"aa13d0f80af37286ee74ed99dfbe03175a09793e","by":"ChukiChen","quote":"","at":"2026-10-28T16:05:08.271Z"} -->
 
 ## 验证
 
@@ -158,4 +158,25 @@
 
 ## 自检
 
-交付前运行 check；验收后运行 accept。
+- [x] 需求确认有效
+- [x] 设计确认有效
+- [x] 验收条件均有当前通过且绑定全局用例的测试引用
+- [x] 每条验收条件均映射到本次验证引用的全局用例
+- [x] 验收条件与用例通过 verify 的 AC→测试→CASE 记录关联
+- [x] 验证命令已执行且测试输出已核实
+- [x] 全局用例结构与引用有效
+- [ ] 改动未超出范围
+- [x] 未弱化仍存在的测试
+- [x] 评审无未清除阻塞项
+- [x] 记录不含密钥或本机绝对路径
+
+阻塞项：
+- 改动超出范围：.tiller/context/project.md、.tiller/project.json
+
+提示：
+- 167 条历史用例仍以 <任务>#AC-n 记录关联 AC；这是可迁移的历史债，不阻断当前覆盖。
+- 149 条用例的关联 AC 为无；覆盖以需求字段和 verify 的 AC→测试→CASE 记录为准。
+- 本次改动涉及模块 initialization：建议回归该模块 61 条用例；建议同时回归经过它的场景 CASE-055, CASE-001。
+- 本次改动涉及模块 standards：建议回归该模块 37 条用例；建议同时回归经过它的场景 CASE-055。
+- 本次改动涉及模块 verification：建议回归该模块 47 条用例；建议同时回归经过它的场景 CASE-055, CASE-001。
+- 本次改动涉及模块 workflow：建议回归该模块 169 条用例；建议同时回归经过它的场景 CASE-055, CASE-001。
