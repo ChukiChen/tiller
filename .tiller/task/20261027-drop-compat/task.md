@@ -70,11 +70,11 @@
 | --- | --- | --- | --- | --- |
 | 需求 | boon yu | 2026-10-28T00:17:40.854Z | d5c1c0c7ca4b | 既然不保留兼容旧逻辑，就代码与用例一起删掉。 |
 | 设计 | boon yu | 2026-10-28T00:17:44.282Z | 916814545dc4 | 既然不保留兼容旧逻辑，就代码与用例一起删掉。 |
-| 交付验收 | boon yu | 2026-10-28T00:21:59.764Z | 37443aab801e | — |
+| 交付验收 | boon yu | 2026-10-28T00:25:39.037Z | ad0d5b398c62 | — |
 
 <!-- tiller-confirm:v1 {"gate":"requirements","object":"需求正文（目标、范围与验收条件）","subject":"aca806aee96a811b73676f167ad9bb18661ddac06f073a8ba306990c0a8cab3a","commit":"d5c1c0c7ca4b2a31bc7330d58313822e8c664821","by":"boon yu","quote":"既然不保留兼容旧逻辑，就代码与用例一起删掉。","at":"2026-10-28T00:17:40.854Z"} -->
 <!-- tiller-confirm:v1 {"gate":"design","object":"设计正文","subject":"b8f4b9a2066d739d0ff341c2b6f2ca672a666fec2aade535c011f39dd15523cc","commit":"916814545dc47ea8e7648d509e5149b8482ac3e6","by":"boon yu","quote":"既然不保留兼容旧逻辑，就代码与用例一起删掉。","at":"2026-10-28T00:17:44.282Z"} -->
-<!-- tiller-confirm:v1 {"gate":"acceptance","object":"当前交付（需求、设计、验证与提交）","subject":"6e594a6d8f72b8c04b5add4d9214b684b7388739613d6307315934954615fbcf","commit":"37443aab801e1272640e3ac0c3fcd1cde80be9ee","by":"boon yu","quote":"","at":"2026-10-28T00:21:59.764Z"} -->
+<!-- tiller-confirm:v1 {"gate":"acceptance","object":"当前交付（需求、设计、验证与提交）","subject":"2e9f967c94a69a885afca2a30b0cc8da740a8ffd88292e69b7fc430244ca3607","commit":"ad0d5b398c627235a07738b1ad5877ce08b76deb","by":"boon yu","quote":"","at":"2026-10-28T00:25:39.037Z"} -->
 
 ## 验证
 
@@ -102,6 +102,42 @@
 - 提交：37443aab801e
 - 时间：2026-10-28T00:18:14.607Z
 
+### run-3
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-319 initialization and package expose the current 0\\.5\\.0 contract without run\\.cjs$' \u002d\u002dtest-reporter=./.tiller/local/verify-e8ww4P/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-e8ww4P/report.jsonl test/package-contract.test.mjs","exitCode":0,"tree":"cb70a77bce523aee0fa9dca969a83eab87defff72d73e4a2dec8ff614ecfa974","commit":"ad0d5b398c627235a07738b1ad5877ce08b76deb"} -->
+- 条件：AC-1
+- 测试：test/package-contract.test.mjs::CASE-319 initialization and package expose the current 0.5.0 contract without run.cjs
+- 用例：CASE-319
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/20261027-drop-compat/logs/run-3.log
+- 提交：ad0d5b398c62
+- 时间：2026-10-28T00:25:27.143Z
+
+### run-4
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-283 CASE-309 合入后 close 不改共享 task\\.md 且重复 close 安全$' \u002d\u002dtest-reporter=./.tiller/local/verify-BAwkVw/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-BAwkVw/report.jsonl test/task-worktrees.test.mjs","exitCode":0,"tree":"cb70a77bce523aee0fa9dca969a83eab87defff72d73e4a2dec8ff614ecfa974","commit":"ad0d5b398c627235a07738b1ad5877ce08b76deb"} -->
+- 条件：AC-2
+- 测试：test/task-worktrees.test.mjs::CASE-283 CASE-309 合入后 close 不改共享 task.md 且重复 close 安全
+- 用例：CASE-283, CASE-309
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/20261027-drop-compat/logs/run-4.log
+- 提交：ad0d5b398c62
+- 时间：2026-10-28T00:25:27.865Z
+
+### run-5
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-296 worktree PR push and cleanup keep primary as the main checkout$' \u002d\u002dtest-reporter=./.tiller/local/verify-rbMiew/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-rbMiew/report.jsonl test/pr.test.mjs","exitCode":0,"tree":"cb70a77bce523aee0fa9dca969a83eab87defff72d73e4a2dec8ff614ecfa974","commit":"ad0d5b398c627235a07738b1ad5877ce08b76deb"} -->
+- 条件：AC-2
+- 测试：test/pr.test.mjs::CASE-296 worktree PR push and cleanup keep primary as the main checkout
+- 用例：CASE-296
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/20261027-drop-compat/logs/run-5.log
+- 提交：ad0d5b398c62
+- 时间：2026-10-28T00:25:29.737Z
+
 ## 自检
 
 - [x] 需求确认有效
@@ -125,3 +161,4 @@
 - 本次改动涉及模块 workflow：建议回归该模块 159 条用例及经过它的场景 CASE-055, CASE-001。
 - 删除 2 个测试文件（请确认对应功能已删除；详情见 Git diff）。
 - 修改的测试文件移除了 9 个测试用例（请确认对应功能已删除；详情见 Git diff）。
+- 交付验收后任务对象已变化，需要重新验收。
