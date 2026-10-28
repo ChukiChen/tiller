@@ -1,6 +1,6 @@
 # 初始化合入证明绑定本次 head
 
-<!-- tiller-task:v1 {"version":1,"id":"20261028-init-proof-head","type":"feature","size":"standard","created":"2026-10-28T12:05:31.601Z","base":"eb5d5c1f864736e053ce227efca27b7f38c1c065","scope":["src","test",".tiller/specs",".tiller/rules",".tiller/cases"],"format":"structured","slug":"init-proof-head","summary":"平台证明须匹配 expected head"} -->
+<!-- tiller-task:v1 {"version":1,"id":"20261028-init-proof-head","type":"feature","size":"standard","created":"2026-10-28T12:05:31.601Z","base":"eb5d5c1f864736e053ce227efca27b7f38c1c065","scope":["src","test",".tiller/specs",".tiller/rules",".tiller/cases",".tiller/usage.md",".tiller/project.json","resources/rules","resources/usage.md"],"format":"structured","slug":"init-proof-head","summary":"平台证明须匹配 expected head"} -->
 
 ## 需求
 
@@ -90,11 +90,11 @@
 
 | 部分 | 确认人 | 时间 | 短提交 | 原话 |
 | --- | --- | --- | --- | --- |
-| 需求 | boon yu | 2026-10-28T12:05:51.573Z | eb5d5c1f8647 | — |
 | 设计 | boon yu | 2026-10-28T12:05:51.760Z | df11349fa145 | — |
+| 需求 | boon yu | 2026-10-28T12:35:59.047Z | ce4584876658 | — |
 
-<!-- tiller-confirm:v1 {"gate":"requirements","object":"需求正文（目标、范围与验收条件）","subject":"931f03d3e50e3b34b30bf2b9b522b73e45a3fec90fa2263f22f6304fcfd2e7bc","commit":"eb5d5c1f864736e053ce227efca27b7f38c1c065","by":"boon yu","quote":"","at":"2026-10-28T12:05:51.573Z"} -->
 <!-- tiller-confirm:v1 {"gate":"design","object":"设计正文","subject":"5e66b69f1af6cd45310aafe9f6f7e278f8233197f62980ef4fe04e350535973c","commit":"df11349fa145d82ceb694c017fcec37798e6fca5","by":"boon yu","quote":"","at":"2026-10-28T12:05:51.760Z"} -->
+<!-- tiller-confirm:v1 {"gate":"requirements","object":"需求正文（目标、范围与验收条件）","subject":"bd56db5616e12878941ca5a8028916bc3d30ed7e98530d0b82b3a9b1d9150bed","commit":"ce45848766580084d6e2797ccf70348385cc9078","by":"boon yu","quote":"","at":"2026-10-28T12:35:59.047Z"} -->
 
 ## 验证
 
@@ -160,4 +160,28 @@
 
 ## 自检
 
-交付前运行 check；验收后运行 accept。
+- [x] 需求确认有效
+- [x] 设计确认有效
+- [x] 验收条件均有当前通过且绑定全局用例的测试引用
+- [x] 每条验收条件均映射到本次验证引用的全局用例
+- [x] 验收条件与用例通过 verify 的 AC→测试→CASE 记录关联
+- [x] 验证命令已执行且测试输出已核实
+- [x] 全局用例结构与引用有效
+- [ ] 改动未超出范围
+- [x] 未弱化仍存在的测试
+- [x] 评审无未清除阻塞项
+- [x] 记录不含密钥或本机绝对路径
+
+阻塞项：
+- 改动超出范围：.tiller/project.json、.tiller/usage.md、resources/rules/activities/delivery.md、resources/rules/core.md、resources/usage.md、STEER-CONFIRMER.txt
+
+提示：
+- 167 条历史用例仍以 <任务>#AC-n 记录关联 AC；这是可迁移的历史债，不阻断当前覆盖。
+- 144 条用例的关联 AC 为无；覆盖以需求字段和 verify 的 AC→测试→CASE 记录为准。
+- 本次改动涉及模块 initialization：建议回归该模块 61 条用例；建议同时回归经过它的场景 CASE-055, CASE-001。
+- 本次改动涉及模块 standards：建议回归该模块 37 条用例；建议同时回归经过它的场景 CASE-055。
+- 本次改动涉及模块 verification：建议回归该模块 45 条用例；建议同时回归经过它的场景 CASE-055, CASE-001。
+- 本次改动涉及模块 workflow：建议回归该模块 166 条用例；建议同时回归经过它的场景 CASE-055, CASE-001。
+- 需求“业务范围·做”包含交付路径 `.tiller/local/<init-id>/`；业务范围应写约束，交付路径请只记录在任务范围（--target）：`.tiller/task/20261028-init-proof-head/task.md`。
+- 需求“业务范围·做”包含交付路径 `activities/delivery.md`；业务范围应写约束，交付路径请只记录在任务范围（--target）：`.tiller/task/20261028-init-proof-head/task.md`。
+- 修改的测试文件移除了 2 个测试用例（请确认对应功能已删除；详情见 Git diff）。
