@@ -158,6 +158,66 @@
 - 提交：2289f57ccac2
 - 时间：2026-10-28T12:34:56.126Z
 
+### run-6
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-332 historical merged PR with the same branch and init id cannot prove a new head before merge$' \u002d\u002dtest-reporter=./.tiller/local/verify-eBt7VY/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-eBt7VY/report.jsonl test/init-baseline.test.mjs","exitCode":0,"tree":"e632d3994c145f06d7b2282bf6f528fea48b2da4a04ec91f7f46b7089df9b335","commit":"6d24bf504f4e8b8978579fb56487fbd57f71c9e3"} -->
+- 条件：AC-1
+- 测试：test/init-baseline.test.mjs::CASE-332 historical merged PR with the same branch and init id cannot prove a new head before merge
+- 用例：CASE-332
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/20261028-init-proof-head/logs/run-6.log
+- 提交：6d24bf504f4e
+- 时间：2026-10-28T12:36:02.682Z
+
+### run-7
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-332 historical merged PR with the same branch and init id cannot prove a new head before merge$' \u002d\u002dtest-reporter=./.tiller/local/verify-u3AlCl/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-u3AlCl/report.jsonl test/init-baseline.test.mjs","exitCode":0,"tree":"e632d3994c145f06d7b2282bf6f528fea48b2da4a04ec91f7f46b7089df9b335","commit":"6d24bf504f4e8b8978579fb56487fbd57f71c9e3"} -->
+- 条件：AC-2
+- 测试：test/init-baseline.test.mjs::CASE-332 historical merged PR with the same branch and init id cannot prove a new head before merge
+- 用例：CASE-332
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/20261028-init-proof-head/logs/run-7.log
+- 提交：6d24bf504f4e
+- 时间：2026-10-28T12:36:04.207Z
+
+### run-8
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-331 CASE-333 same-day reinitialization records the new expected head and discards old proof$' \u002d\u002dtest-reporter=./.tiller/local/verify-JnFN0k/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-JnFN0k/report.jsonl test/init-baseline.test.mjs","exitCode":0,"tree":"e632d3994c145f06d7b2282bf6f528fea48b2da4a04ec91f7f46b7089df9b335","commit":"6d24bf504f4e8b8978579fb56487fbd57f71c9e3"} -->
+- 条件：AC-3
+- 测试：test/init-baseline.test.mjs::CASE-331 CASE-333 same-day reinitialization records the new expected head and discards old proof
+- 用例：CASE-333
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/20261028-init-proof-head/logs/run-8.log
+- 提交：6d24bf504f4e
+- 时间：2026-10-28T12:36:05.728Z
+
+### run-9
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-332 historical merged PR with the same branch and init id cannot prove a new head before merge$' \u002d\u002dtest-reporter=./.tiller/local/verify-Z66zUM/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-Z66zUM/report.jsonl test/init-baseline.test.mjs","exitCode":0,"tree":"e632d3994c145f06d7b2282bf6f528fea48b2da4a04ec91f7f46b7089df9b335","commit":"6d24bf504f4e8b8978579fb56487fbd57f71c9e3"} -->
+- 条件：AC-4
+- 测试：test/init-baseline.test.mjs::CASE-332 historical merged PR with the same branch and init id cannot prove a new head before merge
+- 用例：CASE-332
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/20261028-init-proof-head/logs/run-9.log
+- 提交：6d24bf504f4e
+- 时间：2026-10-28T12:36:06.894Z
+
+### run-10
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-334 managed rules describe expected tip, platform PR and local/CLI effective without writing merged$' \u002d\u002dtest-reporter=./.tiller/local/verify-aZgRjH/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-aZgRjH/report.jsonl test/rules.test.mjs","exitCode":0,"tree":"e632d3994c145f06d7b2282bf6f528fea48b2da4a04ec91f7f46b7089df9b335","commit":"6d24bf504f4e8b8978579fb56487fbd57f71c9e3"} -->
+- 条件：AC-4
+- 测试：test/rules.test.mjs::CASE-334 managed rules describe expected tip, platform PR and local/CLI effective without writing merged
+- 用例：CASE-334
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/20261028-init-proof-head/logs/run-10.log
+- 提交：6d24bf504f4e
+- 时间：2026-10-28T12:36:08.460Z
+
 ## 自检
 
 - [x] 需求确认有效
