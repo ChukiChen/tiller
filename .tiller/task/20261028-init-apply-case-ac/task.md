@@ -98,11 +98,11 @@
 
 | 部分 | 确认人 | 时间 | 短提交 | 原话 |
 | --- | --- | --- | --- | --- |
-| 设计 | ChukiChen | 2026-10-28T14:27:58.819Z | 860438196f51 | digest 对齐 Git blob/hash-object；不改用户 autocrlf |
 | 需求 | ChukiChen | 2026-10-28T15:31:15.327Z | bd510a92eeb4 | 预检增加 git 已安装检查 |
+| 设计 | ChukiChen | 2026-10-28T15:31:15.435Z | 7810c316e337 | assertInitEnvironment 检查 git 可执行 |
 
-<!-- tiller-confirm:v1 {"gate":"design","object":"设计正文","subject":"0545b9787bef660b4c8b55d57c818cd36536ea930950ca7e5d459534e009fe9b","commit":"860438196f515fc75ab0784f9fd6200a03f65baf","by":"ChukiChen","quote":"digest 对齐 Git blob/hash-object；不改用户 autocrlf","at":"2026-10-28T14:27:58.819Z"} -->
 <!-- tiller-confirm:v1 {"gate":"requirements","object":"需求正文（目标、范围与验收条件）","subject":"3d2e55b89c1d9b74742d805e9e5e31b7774d0dd9ce1c6fed9cae7f919bcc4db0","commit":"bd510a92eeb4908b33c5661ea0597f62d3e0f632","by":"ChukiChen","quote":"预检增加 git 已安装检查","at":"2026-10-28T15:31:15.327Z"} -->
+<!-- tiller-confirm:v1 {"gate":"design","object":"设计正文","subject":"da26154b7c7382832443206f20c545e047dc245b470d1ec946fa2b2a1a4de071","commit":"7810c316e337aa01258a326f79baf14694c4fbf8","by":"ChukiChen","quote":"assertInitEnvironment 检查 git 可执行","at":"2026-10-28T15:31:15.435Z"} -->
 
 ## 验证
 
