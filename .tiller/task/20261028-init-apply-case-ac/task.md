@@ -100,11 +100,11 @@
 | --- | --- | --- | --- | --- |
 | 需求 | ChukiChen | 2026-10-28T16:11:09.493Z | 6f3414e3ea17 | 保留未提交改动继续；实现 AC-6；全量 test→verify→check→accept |
 | 设计 | ChukiChen | 2026-10-28T16:11:09.635Z | 33599477d664 | assertInitEnvironment 检查 git 可执行 |
-| 交付验收 | ChukiChen | 2026-10-28T16:11:52.600Z | 853a79d56475 | — |
+| 交付验收 | ChukiChen | 2026-10-28T17:15:26.280Z | 72138de8ef06 | — |
 
 <!-- tiller-confirm:v1 {"gate":"requirements","object":"需求正文（目标、范围与验收条件）","subject":"d25a858b497f7ce4294c00a64dcfacc21004d450d41773d95c25865e733c4122","commit":"6f3414e3ea176ed20de422e6cd99cf594d6a5eea","by":"ChukiChen","quote":"保留未提交改动继续；实现 AC-6；全量 test→verify→check→accept","at":"2026-10-28T16:11:09.493Z"} -->
 <!-- tiller-confirm:v1 {"gate":"design","object":"设计正文","subject":"73a1c686bfc7db55a9254b5bdc99ccecd66bd145f22a678bdabb253c59cd1ca7","commit":"33599477d664048a6555d587d1cedc173c420227","by":"ChukiChen","quote":"assertInitEnvironment 检查 git 可执行","at":"2026-10-28T16:11:09.635Z"} -->
-<!-- tiller-confirm:v1 {"gate":"acceptance","object":"当前交付（需求、设计、验证与提交）","subject":"df48108f3ab9536b9440cdcbac4379d0bf5ef1406a782722de5b369987b0fdb2","commit":"853a79d56475faab0a8876c96fc28342d3945f70","by":"ChukiChen","quote":"","at":"2026-10-28T16:11:52.600Z"} -->
+<!-- tiller-confirm:v1 {"gate":"acceptance","object":"当前交付（需求、设计、验证与提交）","subject":"503dfa55f6404daeece2228207cf3327c90b4021eed67f70689b85aa418b2380","commit":"72138de8ef060f7ef7810771a4ad0bb300205f49","by":"ChukiChen","quote":"","at":"2026-10-28T17:15:26.280Z"} -->
 
 ## 验证
 
@@ -192,6 +192,102 @@
 - 提交：853a79d56475
 - 时间：2026-10-28T16:11:35.971Z
 
+### run-8
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-346 init preflight rejects missing token or invalid origin before creating artifacts$' \u002d\u002dtest-reporter=./.tiller/local/verify-q27K75/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-q27K75/report.jsonl test/init-baseline.test.mjs","exitCode":0,"tree":"7960f0611cdc205c997c950f11278db5f9c9e82e25be22f8daa08ab28726078d","commit":"72138de8ef060f7ef7810771a4ad0bb300205f49"} -->
+- 条件：AC-1
+- 测试：test/init-baseline.test.mjs::CASE-346 init preflight rejects missing token or invalid origin before creating artifacts
+- 用例：CASE-346
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/20261028-init-apply-case-ac/logs/run-18.log
+- 提交：72138de8ef06
+- 时间：2026-10-28T17:14:16.842Z
+
+### run-9
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-248 CASE-346 init without token fails preflight with API/token guidance and no local state$' \u002d\u002dtest-reporter=./.tiller/local/verify-DZsW6J/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-DZsW6J/report.jsonl test/init-baseline.test.mjs","exitCode":0,"tree":"7960f0611cdc205c997c950f11278db5f9c9e82e25be22f8daa08ab28726078d","commit":"72138de8ef060f7ef7810771a4ad0bb300205f49"} -->
+- 条件：AC-1
+- 测试：test/init-baseline.test.mjs::CASE-248 CASE-346 init without token fails preflight with API/token guidance and no local state
+- 用例：CASE-346
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/20261028-init-apply-case-ac/logs/run-19.log
+- 提交：72138de8ef06
+- 时间：2026-10-28T17:14:16.842Z
+
+### run-10
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-340 init \u002d\u002dapply merges, cleans up and fast-forwards; rejected merge stays resumable$' \u002d\u002dtest-reporter=./.tiller/local/verify-mKtzW7/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-mKtzW7/report.jsonl test/init-baseline.test.mjs","exitCode":0,"tree":"7960f0611cdc205c997c950f11278db5f9c9e82e25be22f8daa08ab28726078d","commit":"72138de8ef060f7ef7810771a4ad0bb300205f49"} -->
+- 条件：AC-2
+- 测试：test/init-baseline.test.mjs::CASE-340 init --apply merges, cleans up and fast-forwards; rejected merge stays resumable
+- 用例：CASE-340
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/20261028-init-apply-case-ac/logs/run-20.log
+- 提交：72138de8ef06
+- 时间：2026-10-28T17:14:34.028Z
+
+### run-11
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-263 CASE-341 case add requires specs AC and rejects task#AC$' \u002d\u002dtest-reporter=./.tiller/local/verify-8hlKFG/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-8hlKFG/report.jsonl test/case-redesign.test.mjs","exitCode":0,"tree":"7960f0611cdc205c997c950f11278db5f9c9e82e25be22f8daa08ab28726078d","commit":"72138de8ef060f7ef7810771a4ad0bb300205f49"} -->
+- 条件：AC-3
+- 测试：test/case-redesign.test.mjs::CASE-263 CASE-341 case add requires specs AC and rejects task#AC
+- 用例：CASE-341
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/20261028-init-apply-case-ac/logs/run-21.log
+- 提交：72138de8ef06
+- 时间：2026-10-28T17:15:05.252Z
+
+### run-12
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-266 CASE-342 historical task AC and empty criteria stay readable without hard blocking$' \u002d\u002dtest-reporter=./.tiller/local/verify-pm6Lyw/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-pm6Lyw/report.jsonl test/case-redesign.test.mjs","exitCode":0,"tree":"7960f0611cdc205c997c950f11278db5f9c9e82e25be22f8daa08ab28726078d","commit":"72138de8ef060f7ef7810771a4ad0bb300205f49"} -->
+- 条件：AC-4
+- 测试：test/case-redesign.test.mjs::CASE-266 CASE-342 historical task AC and empty criteria stay readable without hard blocking
+- 用例：CASE-342
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/20261028-init-apply-case-ac/logs/run-22.log
+- 提交：72138de8ef06
+- 时间：2026-10-28T17:15:08.173Z
+
+### run-13
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-343 managed docs use specs AC-n and keep version 0\\.5\\.0$' \u002d\u002dtest-reporter=./.tiller/local/verify-ay7WId/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-ay7WId/report.jsonl test/rules.test.mjs","exitCode":0,"tree":"7960f0611cdc205c997c950f11278db5f9c9e82e25be22f8daa08ab28726078d","commit":"72138de8ef060f7ef7810771a4ad0bb300205f49"} -->
+- 条件：AC-4
+- 测试：test/rules.test.mjs::CASE-343 managed docs use specs AC-n and keep version 0.5.0
+- 用例：CASE-343
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/20261028-init-apply-case-ac/logs/run-23.log
+- 提交：72138de8ef06
+- 时间：2026-10-28T17:15:09.801Z
+
+### run-14
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-344 CRLF workspace and LF commit share tree digest without hiding byte changes$' \u002d\u002dtest-reporter=./.tiller/local/verify-6pl2qQ/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-6pl2qQ/report.jsonl test/case-redesign.test.mjs","exitCode":0,"tree":"7960f0611cdc205c997c950f11278db5f9c9e82e25be22f8daa08ab28726078d","commit":"72138de8ef060f7ef7810771a4ad0bb300205f49"} -->
+- 条件：AC-5
+- 测试：test/case-redesign.test.mjs::CASE-344 CRLF workspace and LF commit share tree digest without hiding byte changes
+- 用例：CASE-344
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/20261028-init-apply-case-ac/logs/run-24.log
+- 提交：72138de8ef06
+- 时间：2026-10-28T17:15:11.220Z
+
+### run-15
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-345 init preflight rejects unavailable git before creating artifacts for init and \u002d\u002dapply$' \u002d\u002dtest-reporter=./.tiller/local/verify-LoF7n5/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-LoF7n5/report.jsonl test/init-baseline.test.mjs","exitCode":0,"tree":"7960f0611cdc205c997c950f11278db5f9c9e82e25be22f8daa08ab28726078d","commit":"72138de8ef060f7ef7810771a4ad0bb300205f49"} -->
+- 条件：AC-6
+- 测试：test/init-baseline.test.mjs::CASE-345 init preflight rejects unavailable git before creating artifacts for init and --apply
+- 用例：CASE-345
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/20261028-init-apply-case-ac/logs/run-25.log
+- 提交：72138de8ef06
+- 时间：2026-10-28T17:15:15.959Z
+
 ## 自检
 
 - [x] 需求确认有效
@@ -211,7 +307,8 @@
 - 143 条用例的关联 AC 为无；覆盖以需求字段和 verify 的 AC→测试→CASE 记录为准。
 - 本次改动涉及模块 initialization：建议回归该模块 64 条用例；建议同时回归经过它的场景 CASE-055, CASE-001。
 - 本次改动涉及模块 standards：建议回归该模块 37 条用例；建议同时回归经过它的场景 CASE-055。
-- 本次改动涉及模块 verification：建议回归该模块 48 条用例；建议同时回归经过它的场景 CASE-055, CASE-001。
-- 本次改动涉及模块 workflow：建议回归该模块 167 条用例；建议同时回归经过它的场景 CASE-055, CASE-001。
+- 本次改动涉及模块 verification：建议回归该模块 50 条用例；建议同时回归经过它的场景 CASE-055, CASE-001。
+- 本次改动涉及模块 workflow：建议回归该模块 170 条用例；建议同时回归经过它的场景 CASE-055, CASE-001。
 - 需求“业务范围·做”包含交付路径 `.tiller/local/<init-id>/`；业务范围应写约束，交付路径请只记录在任务范围（--target）：`.tiller/task/20261028-init-apply-case-ac/task.md`。
 - 修改的测试文件移除了 4 个测试用例（请确认对应功能已删除；详情见 Git diff）。
+- 交付验收后任务对象已变化，需要重新验收。
