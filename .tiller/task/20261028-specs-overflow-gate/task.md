@@ -96,87 +96,66 @@
 
 ## 验证
 
-### run-1
-<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-335 specs overflow blocks confirm, check and accept until the referenced specs are written back$' \u002d\u002dtest-reporter=./.tiller/local/verify-adbnG8/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-adbnG8/report.jsonl test/specs-overflow-gate.test.mjs","exitCode":0,"tree":"fa7b50f409bcdd67add104ea396656183a06095f601c8c26fec1d28928d2f25c","commit":"da6e41cfd38e569b8ace2289853f34960d28dd1a"} -->
+### run-6
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-335 specs overflow blocks confirm, check and accept until the referenced specs are written back$' \u002d\u002dtest-reporter=./.tiller/local/verify-iqMbtu/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-iqMbtu/report.jsonl test/specs-overflow-gate.test.mjs","exitCode":0,"tree":"d0567520a7bbd7b495d769d7c45b0f025407732e95108f628646700a9bc48154","commit":"31eece0802b8186fd509abd078631bccf790dacf"} -->
 - 条件：AC-1
 - 测试：test/specs-overflow-gate.test.mjs::CASE-335 specs overflow blocks confirm, check and accept until the referenced specs are written back
 - 用例：CASE-335
 - 结果：passed
 - 来源：executed
 - 核实：已核实
-- 日志：.tiller/local/20261028-specs-overflow-gate/logs/run-1.log
-- 提交：da6e41cfd38e
-- 时间：2026-10-28T16:04:19.164Z
+- 日志：.tiller/local/20261028-specs-overflow-gate/logs/run-6.log
+- 提交：31eece0802b8
+- 时间：2026-10-28T16:05:12.281Z
 
-### run-2
-<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-336 spec gate uses referenced paths and AC-n and rejects missing specs, unmounted ACs and divergent text$' \u002d\u002dtest-reporter=./.tiller/local/verify-REIwkl/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-REIwkl/report.jsonl test/specs-overflow-gate.test.mjs","exitCode":0,"tree":"fa7b50f409bcdd67add104ea396656183a06095f601c8c26fec1d28928d2f25c","commit":"da6e41cfd38e569b8ace2289853f34960d28dd1a"} -->
+### run-7
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-336 spec gate uses referenced paths and AC-n and rejects missing specs, unmounted ACs and divergent text$' \u002d\u002dtest-reporter=./.tiller/local/verify-rgfh6G/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-rgfh6G/report.jsonl test/specs-overflow-gate.test.mjs","exitCode":0,"tree":"d0567520a7bbd7b495d769d7c45b0f025407732e95108f628646700a9bc48154","commit":"31eece0802b8186fd509abd078631bccf790dacf"} -->
 - 条件：AC-2
 - 测试：test/specs-overflow-gate.test.mjs::CASE-336 spec gate uses referenced paths and AC-n and rejects missing specs, unmounted ACs and divergent text
 - 用例：CASE-336
 - 结果：passed
 - 来源：executed
 - 核实：已核实
-- 日志：.tiller/local/20261028-specs-overflow-gate/logs/run-2.log
-- 提交：da6e41cfd38e
-- 时间：2026-10-28T16:04:24.131Z
+- 日志：.tiller/local/20261028-specs-overflow-gate/logs/run-7.log
+- 提交：31eece0802b8
+- 时间：2026-10-28T16:05:13.545Z
 
-### run-3
-<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-337 accepted tasks stay on their acceptance evidence when referenced specs change later$' \u002d\u002dtest-reporter=./.tiller/local/verify-9pcPjf/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-9pcPjf/report.jsonl test/specs-overflow-gate.test.mjs","exitCode":0,"tree":"fa7b50f409bcdd67add104ea396656183a06095f601c8c26fec1d28928d2f25c","commit":"da6e41cfd38e569b8ace2289853f34960d28dd1a"} -->
+### run-8
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-337 accepted tasks stay on their acceptance evidence when referenced specs change later$' \u002d\u002dtest-reporter=./.tiller/local/verify-y9Jhjw/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-y9Jhjw/report.jsonl test/specs-overflow-gate.test.mjs","exitCode":0,"tree":"d0567520a7bbd7b495d769d7c45b0f025407732e95108f628646700a9bc48154","commit":"31eece0802b8186fd509abd078631bccf790dacf"} -->
 - 条件：AC-3
 - 测试：test/specs-overflow-gate.test.mjs::CASE-337 accepted tasks stay on their acceptance evidence when referenced specs change later
 - 用例：CASE-337
 - 结果：passed
 - 来源：executed
 - 核实：已核实
-- 日志：.tiller/local/20261028-specs-overflow-gate/logs/run-3.log
-- 提交：da6e41cfd38e
-- 时间：2026-10-28T16:04:25.441Z
+- 日志：.tiller/local/20261028-specs-overflow-gate/logs/run-8.log
+- 提交：31eece0802b8
+- 时间：2026-10-28T16:05:14.849Z
 
-### run-4
-<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-338 managed docs and case add require a scanned adapter entry for cross-language CASE coverage$' \u002d\u002dtest-reporter=./.tiller/local/verify-1IOCqm/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-1IOCqm/report.jsonl test/specs-overflow-gate.test.mjs","exitCode":0,"tree":"fa7b50f409bcdd67add104ea396656183a06095f601c8c26fec1d28928d2f25c","commit":"da6e41cfd38e569b8ace2289853f34960d28dd1a"} -->
+### run-9
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-338 managed docs and case add require a scanned adapter entry for cross-language CASE coverage$' \u002d\u002dtest-reporter=./.tiller/local/verify-lB3FWh/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-lB3FWh/report.jsonl test/specs-overflow-gate.test.mjs","exitCode":0,"tree":"d0567520a7bbd7b495d769d7c45b0f025407732e95108f628646700a9bc48154","commit":"31eece0802b8186fd509abd078631bccf790dacf"} -->
 - 条件：AC-4
 - 测试：test/specs-overflow-gate.test.mjs::CASE-338 managed docs and case add require a scanned adapter entry for cross-language CASE coverage
 - 用例：CASE-338
 - 结果：passed
 - 来源：executed
 - 核实：已核实
-- 日志：.tiller/local/20261028-specs-overflow-gate/logs/run-4.log
-- 提交：da6e41cfd38e
-- 时间：2026-10-28T16:04:26.981Z
+- 日志：.tiller/local/20261028-specs-overflow-gate/logs/run-9.log
+- 提交：31eece0802b8
+- 时间：2026-10-28T16:05:16.746Z
 
-### run-5
-<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-339 a node adapter can call junit-maven and remain the CASE-linked verification entry$' \u002d\u002dtest-reporter=./.tiller/local/verify-m5nAjI/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-m5nAjI/report.jsonl test/specs-overflow-gate.test.mjs","exitCode":0,"tree":"fa7b50f409bcdd67add104ea396656183a06095f601c8c26fec1d28928d2f25c","commit":"da6e41cfd38e569b8ace2289853f34960d28dd1a"} -->
+### run-10
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-339 a node adapter can call junit-maven and remain the CASE-linked verification entry$' \u002d\u002dtest-reporter=./.tiller/local/verify-J32pYk/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-J32pYk/report.jsonl test/specs-overflow-gate.test.mjs","exitCode":0,"tree":"d0567520a7bbd7b495d769d7c45b0f025407732e95108f628646700a9bc48154","commit":"31eece0802b8186fd509abd078631bccf790dacf"} -->
 - 条件：AC-5
 - 测试：test/specs-overflow-gate.test.mjs::CASE-339 a node adapter can call junit-maven and remain the CASE-linked verification entry
 - 用例：CASE-339
 - 结果：passed
 - 来源：executed
 - 核实：已核实
-- 日志：.tiller/local/20261028-specs-overflow-gate/logs/run-5.log
-- 提交：da6e41cfd38e
-- 时间：2026-10-28T16:04:27.848Z
+- 日志：.tiller/local/20261028-specs-overflow-gate/logs/run-10.log
+- 提交：31eece0802b8
+- 时间：2026-10-28T16:05:17.618Z
 
 ## 自检
 
-- [x] 需求确认有效
-- [x] 设计确认有效
-- [x] 验收条件均有当前通过且绑定全局用例的测试引用
-- [x] 每条验收条件均映射到本次验证引用的全局用例
-- [x] 验收条件与用例通过 verify 的 AC→测试→CASE 记录关联
-- [x] 验证命令已执行且测试输出已核实
-- [x] 全局用例结构与引用有效
-- [ ] 改动未超出范围
-- [x] 未弱化仍存在的测试
-- [x] 评审无未清除阻塞项
-- [x] 记录不含密钥或本机绝对路径
-
-阻塞项：
-- 改动超出范围：.tiller/context/project.md、.tiller/project.json
-
-提示：
-- 167 条历史用例仍以 <任务>#AC-n 记录关联 AC；这是可迁移的历史债，不阻断当前覆盖。
-- 149 条用例的关联 AC 为无；覆盖以需求字段和 verify 的 AC→测试→CASE 记录为准。
-- 本次改动涉及模块 initialization：建议回归该模块 61 条用例；建议同时回归经过它的场景 CASE-055, CASE-001。
-- 本次改动涉及模块 standards：建议回归该模块 37 条用例；建议同时回归经过它的场景 CASE-055。
-- 本次改动涉及模块 verification：建议回归该模块 47 条用例；建议同时回归经过它的场景 CASE-055, CASE-001。
-- 本次改动涉及模块 workflow：建议回归该模块 169 条用例；建议同时回归经过它的场景 CASE-055, CASE-001。
+交付前运行 check；验收后运行 accept。
