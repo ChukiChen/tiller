@@ -98,7 +98,65 @@
 
 ## 验证
 
-尚无验证。
+### run-1
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-332 historical merged PR with the same branch and init id cannot prove a new head before merge$' \u002d\u002dtest-reporter=./.tiller/local/verify-iSlkzZ/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-iSlkzZ/report.jsonl test/init-baseline.test.mjs","exitCode":0,"tree":"dac5be30300a09c6dede9438ab22e9c46472cbd10dd7263516fcff04432dd7d3","commit":"2289f57ccac28681b1e1e3c7af16970ee7426e01"} -->
+- 条件：AC-1
+- 测试：test/init-baseline.test.mjs::CASE-332 historical merged PR with the same branch and init id cannot prove a new head before merge
+- 用例：CASE-332
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/20261028-init-proof-head/logs/run-1.log
+- 提交：2289f57ccac2
+- 时间：2026-10-28T12:34:45.804Z
+
+### run-2
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-332 historical merged PR with the same branch and init id cannot prove a new head before merge$' \u002d\u002dtest-reporter=./.tiller/local/verify-SqvJ4G/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-SqvJ4G/report.jsonl test/init-baseline.test.mjs","exitCode":0,"tree":"dac5be30300a09c6dede9438ab22e9c46472cbd10dd7263516fcff04432dd7d3","commit":"2289f57ccac28681b1e1e3c7af16970ee7426e01"} -->
+- 条件：AC-2
+- 测试：test/init-baseline.test.mjs::CASE-332 historical merged PR with the same branch and init id cannot prove a new head before merge
+- 用例：CASE-332
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/20261028-init-proof-head/logs/run-2.log
+- 提交：2289f57ccac2
+- 时间：2026-10-28T12:34:47.554Z
+
+### run-3
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-331 CASE-333 same-day reinitialization records the new expected head and discards old proof$' \u002d\u002dtest-reporter=./.tiller/local/verify-eak7tl/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-eak7tl/report.jsonl test/init-baseline.test.mjs","exitCode":0,"tree":"dac5be30300a09c6dede9438ab22e9c46472cbd10dd7263516fcff04432dd7d3","commit":"2289f57ccac28681b1e1e3c7af16970ee7426e01"} -->
+- 条件：AC-3
+- 测试：test/init-baseline.test.mjs::CASE-331 CASE-333 same-day reinitialization records the new expected head and discards old proof
+- 用例：CASE-333
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/20261028-init-proof-head/logs/run-3.log
+- 提交：2289f57ccac2
+- 时间：2026-10-28T12:34:49.379Z
+
+### run-4
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-332 historical merged PR with the same branch and init id cannot prove a new head before merge$' \u002d\u002dtest-reporter=./.tiller/local/verify-NEQcxS/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-NEQcxS/report.jsonl test/init-baseline.test.mjs","exitCode":0,"tree":"dac5be30300a09c6dede9438ab22e9c46472cbd10dd7263516fcff04432dd7d3","commit":"2289f57ccac28681b1e1e3c7af16970ee7426e01"} -->
+- 条件：AC-4
+- 测试：test/init-baseline.test.mjs::CASE-332 historical merged PR with the same branch and init id cannot prove a new head before merge
+- 用例：CASE-332
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/20261028-init-proof-head/logs/run-4.log
+- 提交：2289f57ccac2
+- 时间：2026-10-28T12:34:54.527Z
+
+### run-5
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-334 managed rules describe expected tip, platform PR and local/CLI effective without writing merged$' \u002d\u002dtest-reporter=./.tiller/local/verify-i9PjpW/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-i9PjpW/report.jsonl test/rules.test.mjs","exitCode":0,"tree":"dac5be30300a09c6dede9438ab22e9c46472cbd10dd7263516fcff04432dd7d3","commit":"2289f57ccac28681b1e1e3c7af16970ee7426e01"} -->
+- 条件：AC-4
+- 测试：test/rules.test.mjs::CASE-334 managed rules describe expected tip, platform PR and local/CLI effective without writing merged
+- 用例：CASE-334
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/20261028-init-proof-head/logs/run-5.log
+- 提交：2289f57ccac2
+- 时间：2026-10-28T12:34:56.126Z
 
 ## 自检
 
