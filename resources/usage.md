@@ -46,7 +46,7 @@ accept 须在 pr 前；`confirm`/`accept` 写入确认后自动提交本任务�
 
 ## 规划与用例
 
-规划用 `plan start/confirm/status`，已有任务 `plan attach`；用例写 `.tiller/cases/modules/<模块>/` 或 `scenarios/`。`task → 需求`：任务挂 specs，复用同一套 AC-n，不写模块前缀或“对照”列表；`用例 → 需求`：用例挂 specs，关联 AC 固定写“无”，不写 `<任务>#AC-n`。用例写测试设计；测试名或紧邻注释引用 `CASE-NNN`。`verify --criterion <AC-N> --case CASE-NNN` 覆盖；AC 覆盖只认 verify 的 AC→测试→CASE。单任务只有 `.tiller/task/<id>/task.md`；外部仓 `.tiller/work/` 只读遗留；不提交全文快照或日志。
+规划用 `plan start/confirm/status`，已有任务 `plan attach`；用例写 `.tiller/cases/modules/<模块>/` 或 `scenarios/`。`task → 需求`：任务挂 specs，复用同一套 AC-n，不写模块前缀或“对照”列表；`用例 → 需求`：用例挂 specs，用 `case add --criterion AC-n`（可重复）登记该文件存在的验收条件，不写 `<任务>#AC-n`。历史“无”与 `task#AC` 只读。用例写测试设计；测试名或紧邻注释引用 `CASE-NNN`。`verify --criterion <AC-N> --case CASE-NNN` 覆盖；AC 覆盖只认 verify 的 AC→测试→CASE。单任务只有 `.tiller/task/<id>/task.md`；外部仓 `.tiller/work/` 只读遗留；不提交全文快照或日志。
 
 ## 接入与升级
 

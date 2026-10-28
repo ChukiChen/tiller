@@ -86,7 +86,7 @@ test('CASE-300 stable requirement files suppress generic specs writeback warning
 test('CASE-187 repeated failures stop retries only for the same AC or CASE and a verified pass resets the count', async t => {
   const root = fixture(t);
   success(cli(root, 'init'));
-  put(root, '.tiller/specs/modules/workflow/requirements.md', '# Workflow\n\n## Failure handling\n\nStop repeated retries.\n');
+  put(root, '.tiller/specs/modules/workflow/requirements.md', '# Workflow\n\n## Failure handling\n\nStop repeated retries.\n\n## 验收条件\n\n- AC-1: Repeated failures are visible.\n');
   put(root, 'src/value.mjs', 'export const value = 1;\n');
   put(root, 'test/fail.test.mjs', "import assert from 'node:assert/strict';\nimport test from 'node:test';\ntest('failing attempt', () => assert.equal(1, 2));\n");
   put(root, 'test/pass.test.mjs', "import assert from 'node:assert/strict';\nimport test from 'node:test';\ntest('recovery attempt', () => assert.equal(1, 1));\n");
@@ -129,7 +129,7 @@ test('CASE-187 repeated failures stop retries only for the same AC or CASE and a
   git(root, 'add', 'test/case-fail.test.mjs');
   git(root, 'commit', '--quiet', '-m', 'add case failure');
   const added = success(cli(root, 'case', 'add', id, '--module', 'workflow', '--kind', 'behavior',
-    '--title', 'Case retry stop', '--expected', 'The same case stops after two failures.'));
+    '--title', 'Case retry stop', '--expected', 'The same case stops after two failures.', '--criterion', 'AC-1'));
   cli(root, 'verify', id, '--criterion', 'AC-1', '--case', added.id);
   const caseSecond = cli(root, 'verify', id, '--criterion', 'AC-1', '--case', added.id);
   assert.equal(caseSecond.status, 1);
@@ -152,7 +152,7 @@ test('CASE-188 pytest detection, skeleton, command construction and private XML 
   const root = fixture(t);
   put(root, 'pytest.ini', '[pytest]\n');
   success(cli(root, 'init'));
-  put(root, '.tiller/specs/modules/verification/requirements.md', '# Verification\n\n## Python runner\n\nUse pytest.\n');
+  put(root, '.tiller/specs/modules/verification/requirements.md', '# Verification\n\n## Python runner\n\nUse pytest.\n\n## 验收条件\n\n- AC-1: pytest results are verified.\n');
   put(root, '.tiller/specs/modules/verification/design.md', '# Verification design\n\nRead private JUnit XML.\n');
   put(root, 'src/app.py', 'value = 1\n');
   put(root, 'tests/__init__.py', '');
@@ -165,7 +165,7 @@ test('CASE-188 pytest detection, skeleton, command construction and private XML 
     '--criterion', 'AC-1=pytest results are verified', '--size', 'small', '--target', 'src', '--target', 'tests', '--target', '.tiller/cases'));
   success(confirmTask(root, id, 'requirements'));
   const added = success(cli(root, 'case', 'add', id, '--module', 'verification', '--kind', 'interface',
-    '--title', 'pytest XML evidence', '--expected', 'Private XML proves the named pytest result.'));
+    '--title', 'pytest XML evidence', '--expected', 'Private XML proves the named pytest result.', '--criterion', 'AC-1'));
   assert.equal(added.runner, 'pytest');
   assert.match(added.skeleton, new RegExp(`# ${added.id}`, 'u'));
   assert.match(added.skeleton, new RegExp(`def test_case_${added.id.replace(/[^0-9]/gu, '')}\\(`, 'u'));

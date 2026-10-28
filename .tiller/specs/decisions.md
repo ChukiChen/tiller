@@ -22,7 +22,7 @@
 
 - 产品级回归事实放 `.tiller/cases/`，模块名与 specs 一致，类型只允许 behavior/interface/performance/security，跨模块路径放 scenarios。
 - 需求确认后先改全局用例，再写测试和实现。
-- 新用例的关联 AC 写“无”，以“需求”字段挂稳定 `.tiller/specs/...`；历史空 `criteria` 或 `task#AC` 只作可迁移 warning，不批量伪造。
+- 新用例的关联 AC 写所挂稳定 `.tiller/specs/...` 中的路径作用域 `AC-n`，可多个；历史空 `criteria`、`无` 或 `task#AC` 只作可迁移 warning，不批量伪造。
 - `check` 以 `verify` 的 AC→测试→CASE→当前验证记录核对覆盖；编号全局唯一且稳定。
 
 ## 2026-10-22 规划
@@ -87,7 +87,7 @@
 
 - 历史用例为空关联 AC 或仍写 `task#AC` 时，`check` 长期只提示，不阻断日常自检；该状态作为已知历史债务接受。
 - 不批量回填，也不以占位、推测或当前任务 AC 冒充历史来源。只有能确认原始依据时才补充。
-- 新用例关联 AC 固定为“无”，需求字段指向稳定 specs；AC 覆盖由任务 verify 记录承担。
+- 新用例关联 AC 使用所挂稳定 specs 的 `AC-n`，需求字段同样指向 specs；AC 覆盖仍由任务 verify 记录承担。
 
 ## 2026-10-23 多仓库验证与 Java 运行器
 
@@ -160,7 +160,7 @@
 
 ## 2026-10-22 用例作为测试设计资产
 
-- 用例改为 Markdown 测试设计，写在测试之前，必须包含前置条件、步骤、输入、预期结果、类型、优先级与稳定 specs 需求；关联 AC 可为空或“无”。不保存源码字段或测试引用字段，也不恢复旧关联命令。
+- 用例改为 Markdown 测试设计，写在测试之前，必须包含前置条件、步骤、输入、预期结果、类型、优先级与稳定 specs 需求；新用例关联该文件的 `AC-n`，历史空值或“无”仍可读。不保存源码字段或测试引用字段。
 - 关联方向改为 test→case：测试名或紧邻注释引用 `CASE-NNN`，tiller 扫描测试建立 case→tests 反查。一个测试可覆盖多个用例，一个用例可被多个测试覆盖；无引用显示待实现，未知编号报错。
 - `case add` 不要求测试已存在，只按用例标题分配未占用编号，避免正文示例编号导致跳号；`verify --case` 执行覆盖用例的全部测试并走私有报告核实。
 - `check` 分阶段：确认后要求每个 AC 有带完整测试设计的用例；验证或验收时要求每个用例有当前通过、已核实且未过期的引用测试，覆盖由 verify 的 AC→测试→CASE 记录承担。
@@ -178,7 +178,7 @@
 - 任务是短暂交付物：`task.md` 通过正文或“需求来源”引用稳定 `.tiller/specs/...`；全局用例的“需求”字段挂 specs，不再用 `taskId#AC` 作为主要链接。
 - specs 的验收条件使用普通 `AC-1`/`AC-2`…，由文件路径区分模块；禁止给 AC 编号加模块前缀或另造其它编号。`VER-CASE-REQ-*`、`FLOW-SPEC-AC-*` 等可保留为叙述性能力小节标题，但不作为验收条件编号。
 - 任务通过“需求来源”挂 specs，验收条件复用该文件的同一套 `AC-n` 正文；不写模块前缀或“对照”平行列表，也不把 `taskId#AC` 当用例锚。
-- 新用例的“关联 AC”固定写“无”；`case add` 不要求 `--criterion`，继续要求存在的稳定 specs 需求路径。误传 `--criterion` 明确拒绝，不写入 `task#AC`。
+- 新用例的“关联 AC”使用 `case add --criterion AC-n`，可重复；编号必须存在于所挂稳定 specs 需求文件的验收条件中。`任务#AC` 明确拒绝，不写入旧式任务锚。
 - AC 覆盖只认 `verify` 记录的 AC→测试→CASE 与测试扫描；历史 `task#AC` 和空关联 AC 保持可读，只给可迁移 warning，不阻断已验收历史。
 - `start --requirement-file` 与任务“需求来源”只允许 `.tiller/specs/` 下相对路径；`.tiller/local/` 等临时或其它路径明确失败，并提示先写入或拷贝进 specs。
 - `start --requirement-file` 保留多行/结构化需求并始终写“需求来源”路径；文件“验收条件”（历史“验收条件（稳定）”仅作读取别名）中的 `- AC-n: ...` 导入任务并以文件为准，可省略 `--criterion`；文件无 AC 时仍要求命令行条件。新渲染只写“验收条件”。
@@ -269,4 +269,11 @@
 - `pr` 在创建前和创建失败后都按 head branch + head SHA 查询开放 PR/MR；命中即复用，查重失败时不盲目创建。
 - requirement-file 的顶层 `##` 是任务需求章节，深层标题随所属正文保留并降级到任务记录层级；全局 specs 任务标题使用 `specs` scope。
 - check 将同一模块的覆盖缺失与回归建议合并为一条非阻断提示，并统一去重。
+
+## 2026-10-28 初始化预检、显式交付与 Git 归一化摘要
+
+- `init` 仅在工程有 Git HEAD 时要求远端交付能力：写 worktree、分支或提交前先解析 origin 并检查平台 token，失败非零退出且不产生本次 init 产物。无 Git HEAD 的本地降级路径不要求 token。
+- `init --apply` 是显式自动交付，按 squash、本机证明、init-id close、primary 默认分支快进依次执行；任一步失败停在该步并返回续跑命令。无旗标仍只开 PR/MR，等待人工合入。
+- 新 CASE 使用 `case add --criterion AC-n` 关联所挂需求 specs 的验收条件，拒绝任务作用域 `任务#AC`；历史“无”、留空与 `task#AC` 保持可读。
+- tree 摘要与 Git blob 的内容规则对齐：文本把 CRLF 归一为 LF，二进制保持原字节，符号链接按目标字节处理。verify、check、acceptance 与 preExisting 共用该规则；不修改用户 `core.autocrlf`，也不改写工作区换行。旧 64 位内容摘要保留兼容比较。
 

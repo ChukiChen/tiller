@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { spawn, spawnSync } from 'node:child_process';
@@ -90,7 +90,7 @@ async function initialize(t, options = {}) {
       ? { GITHUB_TOKEN: 'mock-token', GH_TOKEN: '', GITLAB_TOKEN: '', GL_TOKEN: '' }
       : { GITHUB_TOKEN: '', GH_TOKEN: '', GITLAB_TOKEN: 'mock-token', GL_TOKEN: '' };
   const environment = tokenEnvironment;
-  const result = await cliAt(root, environment, 'init', '--platform', platform);
+  const result = await cliAt(root, environment, 'init', '--platform', platform, ...(options.apply ? ['--apply'] : []));
   return { root, result, mock, environment };
 }
 
@@ -143,6 +143,74 @@ test('CASE-228 CASE-321 init creates a committed initialization worktree and a u
   const merged = git(root, 'merge-base', '--is-ancestor', baseline.commit, before);
   assert.notEqual(merged.status, 0, 'initialization must not be merged automatically');
 });
+
+test('CASE-339 init preflight rejects missing token or invalid origin before creating artifacts', async t => {
+  const root = fixture(t);
+  configure(root);
+  const head = okGit(root, 'rev-parse', 'HEAD');
+  const mock = await startPlatformMock(t, { remoteHead: head });
+  okGit(root, 'remote', 'add', 'origin', `${mock.origin}/owner/repo.git`);
+
+  const assertNoArtifacts = () => {
+    assert.equal(existsSync(join(root, '.tiller/local')), false);
+    assert.equal(existsSync(join(root, '.tiller/project.json')), false);
+    assert.notEqual(git(root, 'show-ref', '--verify', '--quiet', 'refs/heads/chore/tiller-init').status, 0);
+    assert.equal(okGit(root, 'rev-parse', 'HEAD'), head);
+  };
+
+  const noToken = failure(await cliAt(root, emptyTokens, 'init', '--platform', 'github'));
+  assert.equal(noToken.error.code, 'INIT_PREFLIGHT_TOKEN');
+  assert.match(noToken.error.message, /GITHUB_TOKEN.*GH_TOKEN/u);
+  assertNoArtifacts();
+
+  const noTokenApply = failure(await cliAt(root, emptyTokens, 'init', '--platform', 'github', '--apply'));
+  assert.equal(noTokenApply.error.code, 'INIT_PREFLIGHT_TOKEN');
+  assertNoArtifacts();
+
+  okGit(root, 'remote', 'set-url', 'origin', 'not-a-valid-remote');
+  const invalidOrigin = failure(await cliAt(root, { ...emptyTokens, GITHUB_TOKEN: 'mock-token' }, 'init', '--platform', 'github'));
+  assert.equal(invalidOrigin.error.code, 'INIT_PREFLIGHT_REMOTE');
+  assert.match(invalidOrigin.error.message, /origin.*git remote add origin/u);
+  assertNoArtifacts();
+});
+
+test('CASE-340 init --apply merges, cleans up and fast-forwards; rejected merge stays resumable', async t => {
+  for (const platform of ['github', 'gitlab']) {
+    const initialized = await initialize(t, { platform, mainBranch: 'main', apply: true });
+    const { root, result, mock } = initialized;
+    const data = success(result);
+    const baseline = data.initBaseline;
+    assert.equal(data.apply.merged, true);
+    assert.equal(data.apply.branch, 'chore/tiller-init');
+    assert.equal(data.apply.base, 'main');
+    assert.equal(data.apply.fastForward.branch, 'main');
+    assert.equal(existsSync(join(root, baseline.worktree)), false);
+    assert.equal(existsSync(join(root, `.tiller/local/${baseline.id}`)), false);
+    assert.equal(existsSync(join(root, '.tiller/project.json')), true);
+    assert.equal(existsSync(join(root, '.tiller/usage.md')), true);
+    assert.equal(okGit(root, 'branch', '--show-current'), 'main');
+    assert.equal(okGit(root, 'status', '--porcelain'), '');
+    assert.equal(okGit(root, 'rev-parse', 'HEAD'), okGit(root, 'rev-parse', 'refs/remotes/origin/main'));
+    assert.equal(mock.state.refs.has('refs/heads/chore/tiller-init'), false);
+    assert.ok(mock.state.requests.some(request => request.method === 'PUT' && request.path.endsWith('/merge')
+      && (platform === 'github' ? request.body.includes('squash') : true)));
+    const status = success(await cliAt(root, emptyTokens, 'status'));
+    assert.equal(status.initBaselineStatus.status, 'merged');
+  }
+
+  const failed = await initialize(t, { platform: 'github', mainBranch: 'main', mode: 'failure', apply: true });
+  const failureData = failure(failed.result);
+  assert.equal(failureData.error.code, 'INIT_APPLY_MERGE_FAILED');
+  assert.match(failureData.error.message, /tiller merge [0-9]{8}-tiller-init/u);
+  assert.match(failureData.error.message, /git pull --ff-only/u);
+  const ids = readdirSync(join(failed.root, '.tiller/local')).filter(name => /^[0-9]{8}-tiller-init$/u.test(name));
+  assert.equal(ids.length, 1);
+  const localBaseline = JSON.parse(read(failed.root, `.tiller/local/${ids[0]}/baseline.json`));
+  assert.ok(existsSync(join(failed.root, '.tiller/local', ids[0], 'worktrees')));
+  assert.equal(existsSync(join(failed.root, '.tiller/project.json')), false);
+  assert.equal(existsSync(join(failed.root, '.tiller/local/init-baseline-merged.json')), false);
+  assert.ok([...failed.mock.state.openIntegrations.values()].some(items => items.some(item => item.sha === localBaseline.head)));
+});
 test('CASE-229 failed PR creation keeps the worktree and commit and returns API/token next steps', async t => {
   const initialized = await initialize(t, { mode: 'pr-failure' });
   if (!initialized) return;
@@ -181,20 +249,17 @@ test('CASE-247 init without platform CLI falls back to GitHub API push and REST 
   assert.ok(baseline.next.every(command => !/github pr create|\bgh\b/u.test(command)));
 });
 
-test('CASE-248 init without token keeps local state and gives API/token guidance in Chinese', async t => {
+test('CASE-248 CASE-339 init without token fails preflight with API/token guidance and no local state', async t => {
   for (const platform of ['github', 'gitlab']) {
     const initialized = await initialize(t, { platform, token: false });
-    if (!initialized) return;
-    const { result, mock } = initialized;
-    const data = success(result);
-    const baseline = data.initBaseline;
-    assert.ok(existsSync(join(initialized.root, baseline.worktree)));
+    const { root, result, mock } = initialized;
+    const data = failure(result);
+    assert.equal(data.error.code, 'INIT_PREFLIGHT_TOKEN');
+    assert.match(data.error.message, platform === 'github' ? /GITHUB_TOKEN.*GH_TOKEN/u : /GITLAB_TOKEN.*GL_TOKEN/u);
     assert.equal(mock.state.requests.length, 0);
-    assert.ok(data.warnings.some(warning => warning.includes('缺少') && warning.includes('token')), data.warnings.join('\n'));
-    const next = baseline.next.join('\n');
-    assert.match(next, platform === 'github' ? /GITHUB_TOKEN/u : /GITLAB_TOKEN/u);
-    assert.match(next, /tiller init|REST API/u);
-    assert.doesNotMatch(next, /github pr create|gitlab mr create|\bgh\b|\bglab\b/u);
+    assert.equal(existsSync(join(root, '.tiller/local')), false);
+    assert.equal(existsSync(join(root, '.tiller/project.json')), false);
+    assert.equal(git(root, 'show-ref', '--verify', '--quiet', 'refs/heads/chore/tiller-init').status === 0, false);
   }
 });
 

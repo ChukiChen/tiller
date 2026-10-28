@@ -162,3 +162,11 @@ merge 或 close 结束后，primary 不得因 tiller materialize、任务种子�
 ### FLOW-42 平台结果可重建与放弃先提交
 
 PR/MR 与初始化合入状态以平台可重建事实为准。创建任务交付前与创建结果不确定时，按 head branch 与 head SHA 查询开放记录，命中即复用，避免响应丢失后的同树重复。已验收但未合入的任务可放弃：先把放弃事件写入主检出任务记录并自动提交，再清理 worktree、本机目录与分支；无法持久化时不清理。requirement-file 保留关键行为的嵌套层级；全局 specs 任务标题使用 `specs` scope；同类非阻断检查提示合并去重。
+
+### FLOW-43 初始化预检与显式自动合入
+
+有 Git HEAD 的初始化在创建 worktree、分支或提交前检查 origin 与平台 token；失败立即返回设置指引且不留下本次产物。只有用户显式选择自动合入时，才在 PR/MR 创建后经平台 REST API squash 合入、证明并清理、快进 primary 默认分支；任一步失败停在该步并返回续跑命令，默认初始化仍等待人工合入。
+
+## 验收条件
+
+- AC-1: rules、usage、CASE 与测试说明新建用例关联需求 specs 的 `AC-n`，历史 `无`/`task#AC` 保持可读，版本保持 0.5.0

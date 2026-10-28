@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 import { execFile, spawn } from 'node:child_process';
-import { copyFile, lstat, mkdir, mkdtemp, readFile, readdir, rm, symlink, writeFile } from 'node:fs/promises';
+import { copyFile, lstat, mkdir, mkdtemp, readFile, readdir, readlink, rm, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -163,6 +163,22 @@ async function git(root: string, args: string[]): Promise<{ ok: boolean; stdout:
     return { ok: false, stdout: item.stdout ?? '', stderr: item.stderr ?? (error as Error).message, code: item.code ?? null };
   }
 }
+async function gitBytes(root: string, args: string[]): Promise<{ ok: boolean; stdout: Buffer; stderr: string }> {
+  try {
+    const result = await execFileAsync('git', args, {
+      cwd: root, encoding: 'buffer', maxBuffer: 64 * 1024 * 1024,
+      env: { ...process.env, LC_ALL: 'C' },
+    }) as unknown as { stdout: Buffer; stderr: Buffer };
+    return { ok: true, stdout: result.stdout, stderr: result.stderr.toString('utf8') };
+  } catch (error) {
+    const item = error as { stdout?: Buffer; stderr?: Buffer };
+    return {
+      ok: false,
+      stdout: item.stdout ?? Buffer.alloc(0),
+      stderr: item.stderr?.toString('utf8') ?? (error as Error).message,
+    };
+  }
+}
 async function head(root: string): Promise<string | null> {
   const result = await git(root, ['rev-parse', 'HEAD']);
   return result.ok && /^[a-f0-9]{40,64}$/u.test(result.stdout.trim()) ? result.stdout.trim() : null;
@@ -238,7 +254,7 @@ function preExistingValues(value: unknown): Record<string, string> | null {
   for (const [relative, digest] of Object.entries(value as Record<string, unknown>)) {
     try { validateRelativePath(relative); }
     catch { return null; }
-    if (typeof digest !== 'string' || !/^[a-f0-9]{64}$/u.test(digest)) return null;
+    if (typeof digest !== 'string' || !/^[a-f0-9]{40,64}$/u.test(digest)) return null;
     result[relative] = digest;
   }
   return result;
@@ -981,7 +997,7 @@ export async function startFlow(rootInput: string, idInput: string, input: FlowS
     const preExisting: Record<string, string> = {};
     for (const changed of (await changedFiles(root, base)) ?? []) {
       if (excludedPath(changed, idInput) || changed.startsWith(`${TASK_DIRECTORY}/`) || changed.startsWith(`${HISTORICAL_TASK_DIRECTORY}/`)) continue;
-      try { preExisting[changed] = sha(await readFile(path.join(root, changed), 'utf8')); }
+      try { preExisting[changed] = await fileDigest(root, changed); }
       catch { /* Deleted pre-existing paths cannot be compared later. */ }
     }
     const created = new Date().toISOString();
@@ -1279,23 +1295,108 @@ async function scopeFiles(root: string, scope: string[], id: string): Promise<st
   if (!result.ok) return walkFiles(root, scope, id);
   return [...new Set(result.stdout.split('\0').filter(Boolean))].filter(relative => !excludedPath(relative, id) && inScope(relative, scope)).sort();
 }
+type GitObjectFormat = 'sha1' | 'sha256';
+const gitObjectFormats = new Map<string, GitObjectFormat | null>();
+
+async function gitObjectFormat(root: string): Promise<GitObjectFormat | null> {
+  const absolute = path.resolve(root);
+  if (gitObjectFormats.has(absolute)) return gitObjectFormats.get(absolute) ?? null;
+  const result = await git(root, ['rev-parse', '--show-object-format']);
+  const format = result.ok && (result.stdout.trim() === 'sha1' || result.stdout.trim() === 'sha256')
+    ? result.stdout.trim() as GitObjectFormat : null;
+  gitObjectFormats.set(absolute, format);
+  return format;
+}
+
+function isGitBinary(content: Buffer): boolean {
+  return content.subarray(0, 8000).includes(0);
+}
+
+function normalizeGitText(content: Buffer): Buffer {
+  if (isGitBinary(content) || !content.includes(Buffer.from('\r\n'))) return content;
+  const parts: Buffer[] = [];
+  let start = 0;
+  for (let index = 0; index < content.length - 1; index += 1) {
+    if (content[index] !== 13 || content[index + 1] !== 10) continue;
+    parts.push(content.subarray(start, index), Buffer.from('\n'));
+    start = index + 2;
+    index += 1;
+  }
+  parts.push(content.subarray(start));
+  return Buffer.concat(parts);
+}
+
+async function contentDigest(root: string, content: Buffer, normalize = true): Promise<string> {
+  const normalized = normalize ? normalizeGitText(content) : content;
+  const format = await gitObjectFormat(root);
+  if (!format) return createHash('sha256').update(normalized).digest('hex');
+  return createHash(format).update(Buffer.from(`blob ${normalized.length}\0`)).update(normalized).digest('hex');
+}
+
+async function legacyFileDigest(root: string, relative: string): Promise<string> {
+  return sha(await readFile(path.join(root, relative), 'utf8'));
+}
+
+async function fileDigest(root: string, relative: string): Promise<string> {
+  const absolute = path.join(root, relative);
+  const stat = await lstat(absolute);
+  if (stat.isSymbolicLink()) return contentDigest(root, Buffer.from(await readlink(absolute), 'utf8'), false);
+  const hashed = await git(root, ['hash-object', `--path=${relative}`, '--', absolute]);
+  if (hashed.ok && /^[a-f0-9]{40,64}$/u.test(hashed.stdout.trim())) return hashed.stdout.trim();
+  return contentDigest(root, await readFile(absolute));
+}
+
+interface PreExistingDigests { digest: string; legacy: string }
+
+async function worktreePreExistingDigests(root: string, relative: string): Promise<PreExistingDigests> {
+  const [digest, legacy] = await Promise.all([fileDigest(root, relative), legacyFileDigest(root, relative)]);
+  return { digest, legacy };
+}
+
+async function commitPreExistingDigests(root: string, commit: string, relative: string): Promise<PreExistingDigests | null> {
+  const listed = await git(root, ['ls-tree', '-z', commit, '--', relative]);
+  if (!listed.ok) return null;
+  for (const record of listed.stdout.split('\0').filter(Boolean)) {
+    const tab = record.indexOf('\t');
+    if (tab < 0) continue;
+    const [mode, type, object] = record.slice(0, tab).split(' ');
+    if (!mode || type !== 'blob' || !object || record.slice(tab + 1) !== relative) continue;
+    const content = await gitBytes(root, ['cat-file', 'blob', object]);
+    if (!content.ok) return null;
+    return { digest: object, legacy: sha(content.stdout.toString('utf8')) };
+  }
+  return null;
+}
+
+async function matchesPreExisting(root: string, expected: string, relative: string, commit?: string): Promise<boolean> {
+  const current = commit
+    ? await commitPreExistingDigests(root, commit, relative)
+    : await worktreePreExistingDigests(root, relative).catch(() => null);
+  return current !== null && (current.digest === expected || current.legacy === expected);
+}
+
 export async function treeDigest(root: string, scope: string[], id: string): Promise<string> {
   const entries: [string, string][] = [];
   for (const relative of await scopeFiles(root, scope, id)) {
-    try { entries.push([relative, sha(await readFile(path.join(root, relative), 'utf8'))]); }
+    try { entries.push([relative, await fileDigest(root, relative)]); }
     catch { /* A file removed during measurement is a stale observation. */ }
   }
   return sha(JSON.stringify(entries));
 }
 async function treeDigestAtCommit(root: string, scope: string[], id: string, commit: string): Promise<string | null> {
-  const listed = await git(root, ['ls-tree', '-r', '-z', '--name-only', commit, '--', ...scope]);
+  const listed = await git(root, ['ls-tree', '-r', '-z', commit, '--', ...scope]);
   if (!listed.ok) return null;
   const entries: [string, string][] = [];
-  for (const relative of listed.stdout.split('\0').filter(Boolean).sort()) {
+  for (const record of listed.stdout.split('\0').filter(Boolean)) {
+    const tab = record.indexOf('\t');
+    if (tab < 0) continue;
+    const [, type, object] = record.slice(0, tab).split(' ');
+    const relative = record.slice(tab + 1);
+    if (type !== 'blob' || !object) continue;
     if (excludedPath(relative, id) || !inScope(relative, scope)) continue;
-    const content = await git(root, ['show', `${commit}:${relative}`]);
-    if (content.ok) entries.push([relative, sha(content.stdout)]);
+    entries.push([relative, object]);
   }
+  entries.sort((left, right) => left[0] < right[0] ? -1 : left[0] > right[0] ? 1 : 0);
   return sha(JSON.stringify(entries));
 }
 
@@ -1364,8 +1465,7 @@ function businessChange(relative: string): boolean {
 async function unchangedPreExisting(root: string, task: FlowTask, relative: string): Promise<boolean> {
   const expected = task.meta.preExisting[relative];
   if (expected === undefined) return false;
-  try { return sha(await readFile(path.join(root, relative), 'utf8')) === expected; }
-  catch { return false; }
+  return await matchesPreExisting(root, expected, relative);
 }
 
 async function processHygieneIssues(
@@ -1813,12 +1913,7 @@ async function evaluateFlow(root: string, id: string, task: FlowTask, options: F
   else for (const relative of changed) {
     if (excludedPath(relative, id) || taskRecordPath(relative)) continue;
     if (task.meta.preExisting[relative] !== undefined) {
-      try {
-        const content = context.commit
-          ? (await git(root, ['show', `${context.commit}:${relative}`])).stdout
-          : await readFile(path.join(root, relative), 'utf8');
-        if (sha(content) === task.meta.preExisting[relative]) continue;
-      } catch { /* Missing pre-existing files are reported as changes. */ }
+      if (await matchesPreExisting(root, task.meta.preExisting[relative]!, relative, context.commit)) continue;
     }
     if (!inScope(relative, task.meta.scope)) changedOutsideScope.push(relative);
   }

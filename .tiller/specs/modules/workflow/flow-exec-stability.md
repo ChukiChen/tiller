@@ -8,7 +8,7 @@
 
 1. 单一交付通道：`tiller pr` 经平台 HTTP API 推送任务分支并创建真实 PR/MR（非仅草稿）；与既有 `merge` squash、`push` API 路径统一；缺 token 时给出清晰中文提示。
 2. 可执行阶段机与硬门禁：保持并强化过程卫生（specs 经任务 worktree、requirement-file 仅 specs、AC-n 由文件导入）；文档/usage/AGENTS/CLI 只描述主路径，不示范草稿手搓或默认分支直推 specs。
-3. 单一数据模型：任务 AC ≡ specs 路径作用域 `AC-n`；CASE 挂需求文件、关联 AC 为「无」；覆盖只认 verify 图；新写入禁止 `LIB-` 前缀、「对照」平行列表与「验收条件（稳定）」作主标题（历史别名可解析）。
+3. 单一数据模型：任务 AC ≡ specs 路径作用域 `AC-n`；CASE 挂需求文件并登记同一文件的 `AC-n`；覆盖只认 verify 图；新写入禁止 `LIB-` 前缀、「对照」平行列表与「验收条件（稳定）」作主标题（历史别名可解析），也禁止 `任务#AC`，历史“无”与 task#AC 只读。
 4. worktree/close 幂等：在任务 worktree 根执行 merge/close 时也能干净删除本地/远端分支；远端已删或 422 视为成功或安静 warning；重复 close 安全。
 5. 验收与记录闭环：accept 必须在 pr 前；合入后不再改写共享 `.tiller/task/<id>/task.md`；PR 五段正文与 verify 摘要由 tiller 生成。
 6. 自检入口：提供 `doctor`（或等价）过程卫生扫描（基线、默认分支 specs 脏改、AC 覆盖缺口提示、残留任务分支等），全流程演示可将其视为绿条。

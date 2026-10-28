@@ -43,6 +43,7 @@ export interface InitBaselineResult {
   head: string;
   worktree: string;
   prUrl?: string;
+  base?: string;
   warnings: string[];
   next: string[];
 }
@@ -57,6 +58,12 @@ export interface InitBaselineProof {
   merged: boolean;
   detail: string;
   marked: boolean;
+}
+
+export interface InitEnvironment {
+  remoteRequired: boolean;
+  repository?: PlatformRepository;
+  token?: PlatformToken;
 }
 
 function fail(code: string, message: string): never {
@@ -126,6 +133,7 @@ async function createCommit(root: string, message: string): Promise<string> {
 interface RemoteAttempt {
   prUrl?: string;
   prNumber?: number;
+  base?: string;
   next: string[];
 }
 
@@ -153,16 +161,16 @@ function initPrTitle(id: string): string {
 }
 
 async function attemptRemote(id: string, worktree: string, platform: ProjectPlatform,
-  warnings: string[]): Promise<RemoteAttempt> {
+  warnings: string[], environment?: InitEnvironment): Promise<RemoteAttempt> {
   let repository: PlatformRepository;
   try {
-    repository = await resolvePlatformRepository(worktree, platform);
+    repository = environment?.repository ?? await resolvePlatformRepository(worktree, platform);
   } catch (error) {
     warnings.push(`无法解析远端仓库：${(error as Error).message}`);
     return { next: pendingNext(id) };
   }
 
-  const token = platformToken(repository.platform);
+  const token = environment?.token ?? platformToken(repository.platform);
   if (!token) {
     const guidance = tokenGuidance(repository.platform, repository.apiBase);
     warnings.push(guidance);
@@ -177,7 +185,7 @@ async function attemptRemote(id: string, worktree: string, platform: ProjectPlat
     const existing = await findOpenIntegration(repository, token, INIT_BRANCH, head);
     if (existing) {
       return {
-        prUrl: existing.url, prNumber: existing.number,
+        prUrl: existing.url, prNumber: existing.number, base: existing.base,
         next: [`人工合入 ${INIT_BRANCH} 后运行：tiller close ${id} --reason "初始化基线已合入"`],
       };
     }
@@ -185,7 +193,7 @@ async function attemptRemote(id: string, worktree: string, platform: ProjectPlat
       ? await createPullRequest(repository, token, { branch: INIT_BRANCH, title: initPrTitle(id), body: INIT_PR_BODY })
       : await createMergeRequest(repository, token, { branch: INIT_BRANCH, title: initPrTitle(id), body: INIT_PR_BODY });
     return {
-      prUrl: created.url, prNumber: created.number,
+      prUrl: created.url, prNumber: created.number, base: created.base,
       next: [`人工合入 ${INIT_BRANCH} 后运行：tiller close ${id} --reason "初始化基线已合入"`],
     };
   } catch (error) {
@@ -194,7 +202,7 @@ async function attemptRemote(id: string, worktree: string, platform: ProjectPlat
       const existing = head ? await findOpenIntegration(repository, token, INIT_BRANCH, head) : null;
       if (existing) {
         return {
-          prUrl: existing.url, prNumber: existing.number,
+          prUrl: existing.url, prNumber: existing.number, base: existing.base,
           next: [`人工合入 ${INIT_BRANCH} 后运行：tiller close ${id} --reason "初始化基线已合入"`],
         };
       }
@@ -443,8 +451,32 @@ export async function resolveInitBaselineStatus(rootInput: string, metadata: Pro
   }
 }
 
+/** Validate the remote path before init acquires a lock or writes any artifact. */
+export async function assertInitEnvironment(rootInput: string, platform: ProjectPlatform): Promise<InitEnvironment> {
+  const root = path.resolve(rootInput);
+  const inside = await git(root, ['rev-parse', '--is-inside-work-tree']);
+  const head = await gitHead(root);
+  const top = await gitTop(root);
+  const expectedTop = await realpath(root).catch(() => root);
+  if (!inside.ok || inside.stdout.trim() !== 'true' || !head || top !== expectedTop) {
+    return { remoteRequired: false };
+  }
+
+  let repository: PlatformRepository;
+  try {
+    repository = await resolvePlatformRepository(root, platform);
+  } catch (error) {
+    const platformName = platform === 'gitlab' ? 'GitLab' : 'GitHub';
+    fail('INIT_PREFLIGHT_REMOTE',
+      `初始化预检失败：${(error as Error).message}。请先运行 git remote add origin <${platformName} HTTPS 或 SSH 仓库地址>，确认 origin 可解析后重试；同时设置 ${platform === 'gitlab' ? 'GITLAB_TOKEN/GL_TOKEN' : 'GITHUB_TOKEN/GH_TOKEN'}。`);
+  }
+  const token = platformToken(repository.platform);
+  if (!token) fail('INIT_PREFLIGHT_TOKEN', `初始化预检失败：${tokenGuidance(repository.platform, repository.apiBase)}`);
+  return { remoteRequired: true, repository, token };
+}
+
 export async function createInitBaseline(rootInput: string, metadata: ProjectMetadata,
-  changes: FileChange[], platform: ProjectPlatform): Promise<InitBaselineOutcome> {
+  changes: FileChange[], platform: ProjectPlatform, environment?: InitEnvironment): Promise<InitBaselineOutcome> {
   const root = path.resolve(rootInput);
   if (metadata.initBaseline) {
     return {
@@ -489,7 +521,7 @@ export async function createInitBaseline(rootInput: string, metadata: ProjectMet
       ...changes,
       { path: META, before: null, after: `${JSON.stringify(nextMetadata, null, 2)}\n` },
     ]);
-    const remote = await attemptRemote(id, target, platform, warnings);
+    const remote = await attemptRemote(id, target, platform, warnings, environment);
     await writeLocalBaseline(root, {
       ...finalBaseline,
       ...(remote.prUrl ? { prUrl: remote.prUrl } : {}),
@@ -501,7 +533,7 @@ export async function createInitBaseline(rootInput: string, metadata: ProjectMet
     return {
       baseline: {
         id, branch: INIT_BRANCH, commit, head: worktreeHead, worktree,
-        ...(remote.prUrl ? { prUrl: remote.prUrl } : {}), warnings, next,
+        ...(remote.prUrl ? { prUrl: remote.prUrl } : {}), ...(remote.base ? { base: remote.base } : {}), warnings, next,
       },
       metadata: nextMetadata,
       warnings: [],

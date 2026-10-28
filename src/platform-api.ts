@@ -68,6 +68,13 @@ export interface BranchDeleteResult {
   method: 'platform-api' | 'tokenized-git';
 }
 
+export interface FastForwardResult {
+  branch: string;
+  before: string;
+  after: string;
+  command: string;
+}
+
 interface GitTreeEntry { path: string; mode: string; type: string; sha: string | null }
 interface GitCommitMetadata {
   author: { name: string; email: string; date: string };
@@ -341,12 +348,16 @@ export async function mergePullRequest(
   token: PlatformToken,
   branch: string,
   fetchImpl: FetchLike = globalThis.fetch,
+  expectedHead?: string,
 ): Promise<MergeResult> {
   if (repository.platform !== 'github') fail('PLATFORM_INVALID', 'mergePullRequest 只接受 GitHub 仓库。');
   const owner = repository.owner!;
-  const pulls = await api<Array<{ number?: number }>>(repository, token, fetchImpl, 'GET',
+  const expected = expectedHead === undefined ? null : commitTip(expectedHead);
+  if (expectedHead !== undefined && !expected) fail('PLATFORM_INVALID', 'mergePullRequest 的 expected head 格式无效。');
+  const pulls = await api<Array<{ number?: number; head?: { sha?: string } }>>(repository, token, fetchImpl, 'GET',
     `${githubRepoPath(repository)}/pulls?state=open&head=${encodeURIComponent(`${owner}:${branch}`)}`);
-  const number = pulls?.find(item => typeof item.number === 'number')?.number;
+  const number = pulls?.find(item => typeof item.number === 'number'
+    && (!expected || commitTip(item.head?.sha) === expected))?.number;
   if (!number) fail('MERGE_REQUEST_NOT_FOUND', `没有找到分支 ${branch} 的开放 GitHub PR；请确认 PR 已创建且状态为 open。`);
   const endpoint = `${githubRepoPath(repository)}/pulls/${number}/merge`;
   const merged = await api<{ merged?: boolean; message?: string }>(repository, token, fetchImpl, 'PUT', endpoint, { merge_method: 'squash' });
@@ -359,17 +370,60 @@ export async function mergeMergeRequest(
   token: PlatformToken,
   branch: string,
   fetchImpl: FetchLike = globalThis.fetch,
+  expectedHead?: string,
 ): Promise<MergeResult> {
   if (repository.platform !== 'gitlab') fail('PLATFORM_INVALID', 'mergeMergeRequest 只接受 GitLab 仓库。');
   const project = gitlabProjectPath(repository);
-  const mergeRequests = await api<Array<{ iid?: number }>>(repository, token, fetchImpl, 'GET',
+  const expected = expectedHead === undefined ? null : commitTip(expectedHead);
+  if (expectedHead !== undefined && !expected) fail('PLATFORM_INVALID', 'mergeMergeRequest 的 expected head 格式无效。');
+  const mergeRequests = await api<Array<{ iid?: number; sha?: string; diff_refs?: { head_sha?: string } }>>(repository, token, fetchImpl, 'GET',
     `/projects/${project}/merge_requests?state=opened&source_branch=${encodeURIComponent(branch)}`);
-  const iid = mergeRequests?.find(item => typeof item.iid === 'number')?.iid;
+  const iid = mergeRequests?.find(item => typeof item.iid === 'number'
+    && (!expected || commitTip(item.sha ?? item.diff_refs?.head_sha) === expected))?.iid;
   if (!iid) fail('MERGE_REQUEST_NOT_FOUND', `没有找到分支 ${branch} 的开放 GitLab MR；请确认 MR 已创建且状态为 opened。`);
   const endpoint = `/projects/${project}/merge_requests/${iid}/merge`;
   const merged = await api<{ state?: string }>(repository, token, fetchImpl, 'PUT', endpoint, { squash: true });
   if (merged?.state !== 'merged') fail('MERGE_REJECTED', `GitLab 未合入 MR !${iid}：state=${merged?.state ?? '空'}`);
   return { number: iid, command: `gitlab-api PUT ${endpoint} (squash)` };
+}
+
+export async function fastForwardDefaultBranch(
+  root: string,
+  repository: PlatformRepository,
+  token: PlatformToken,
+  branch: string,
+): Promise<FastForwardResult> {
+  const current = await execFileAsync('git', ['branch', '--show-current'], {
+    cwd: root, encoding: 'utf8', env: { ...process.env, LC_ALL: 'C', GIT_TERMINAL_PROMPT: '0' },
+  }).then(result => result.stdout.trim()).catch(() => '');
+  if (current !== branch) {
+    fail('INIT_APPLY_PRIMARY_BRANCH', `primary 当前检出为 ${current || 'detached HEAD'}，不是默认分支 ${branch}；请先运行 git checkout ${branch} 后重试。`);
+  }
+  const before = await execFileAsync('git', ['rev-parse', '--verify', 'HEAD^{commit}'], {
+    cwd: root, encoding: 'utf8', env: { ...process.env, LC_ALL: 'C', GIT_TERMINAL_PROMPT: '0' },
+  }).then(result => result.stdout.trim()).catch(() => '');
+  const remote = `${repository.webBase}/${repository.projectPath}.git`;
+  const tracking = `refs/remotes/origin/${branch}`;
+  const command = `git fetch ${remote} +refs/heads/${branch}:${tracking} && git merge --ff-only ${tracking}`;
+  try {
+    await execFileAsync('git', ['fetch', '--no-tags', remote, `+refs/heads/${branch}:${tracking}`], {
+      cwd: root, encoding: 'utf8', maxBuffer: 16 * 1024 * 1024,
+      env: tokenizedGitEnvironment(repository, token),
+    });
+    await execFileAsync('git', ['merge', '--ff-only', tracking], {
+      cwd: root, encoding: 'utf8', maxBuffer: 16 * 1024 * 1024,
+      env: { ...process.env, LC_ALL: 'C', GIT_TERMINAL_PROMPT: '0' },
+    });
+  } catch (error) {
+    const item = error as { stdout?: string; stderr?: string };
+    const detail = item.stderr?.trim() || item.stdout?.trim() || (error as Error).message;
+    fail('INIT_APPLY_FAST_FORWARD_FAILED', `默认分支 ${branch} 快进失败：${redact(detail, token.value)}`);
+  }
+  const after = await execFileAsync('git', ['rev-parse', '--verify', 'HEAD^{commit}'], {
+    cwd: root, encoding: 'utf8', env: { ...process.env, LC_ALL: 'C', GIT_TERMINAL_PROMPT: '0' },
+  }).then(result => result.stdout.trim()).catch(() => '');
+  if (!commitTip(after)) fail('INIT_APPLY_FAST_FORWARD_FAILED', `默认分支 ${branch} 快进后无法读取 HEAD。`);
+  return { branch, before, after, command };
 }
 
 export async function findMergedIntegration(

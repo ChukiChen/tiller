@@ -319,3 +319,82 @@ check 给出 specs 回写告警，但不新增阻断。
 ### 预期结果
 
 稳定验收条件正文在 .tiller/specs；任务与用例引用 specs 条件；覆盖不依赖 taskId#AC
+
+## CASE-341 case add 写入需求 specs 的 AC-n 并拒绝任务#AC
+
+- 类型：behavior
+- 优先级：high
+- 模块：verification
+- 关联 AC：AC-1, AC-2
+- 需求：`.tiller/specs/modules/verification/requirements.md#7-验收条件`
+
+### 前置条件
+
+- 已确认任务与模块需求 specs 存在；需求文件含 `- AC-1:`、`- AC-2:` 验收条件。
+
+### 步骤
+
+1. 运行 `tiller case add ... --criterion AC-1 --criterion AC-2`。
+2. 检查用例正文的关联 AC 与需求路径。
+3. 分别尝试不存在的 AC、`任务#AC-n` 与非 specs 需求路径。
+
+### 输入
+
+- 合法 specs AC 列表，以及不存在、任务作用域和非 specs 的边界输入。
+
+### 预期结果
+
+合法输入写入 `- 关联 AC：AC-1, AC-2` 和对应 specs 路径；不存在或 `任务#AC` 被拒绝，失败时不写用例文件。
+
+## CASE-342 历史空关联 AC 与 task#AC 保持可读
+
+- 类型：behavior
+- 优先级：medium
+- 模块：verification
+- 关联 AC：AC-3
+- 需求：`.tiller/specs/modules/verification/requirements.md#7-验收条件`
+
+### 前置条件
+
+- 用例库包含历史「关联 AC：无」、留空和 `task#AC` 记录。
+
+### 步骤
+
+1. 解析历史用例库并运行全量检查。
+2. 核对历史记录的关联 AC 与迁移提示。
+
+### 输入
+
+- 既有 Markdown 用例。
+
+### 预期结果
+
+历史三种写法均可读取；空值与 task#AC 只产生迁移提示，不因新写入规则阻断历史用例。
+
+## CASE-344 CRLF 工作区与 LF 提交共用 tree 摘要且不掩盖实质变化
+
+- 类型：behavior
+- 优先级：high
+- 模块：verification
+- 关联 AC：AC-4
+- 需求：`.tiller/specs/modules/verification/requirements.md#7-验收条件`
+
+### 前置条件
+
+- 工程位于 Git 仓库，任务范围内的文本在提交中为 LF。
+- 测试模拟 Windows 检出：工作区改为 CRLF，Git clean 后与索引无差异。
+- 范围内另有一个含 NUL 字节的二进制文件。
+
+### 步骤
+
+1. 运行 `verify` 记录通过结果，再把文本工作区文件改为 CRLF，运行 `check`。
+2. 修改二进制文件的一个字节，运行 `check` 并核对过期提示。
+3. 恢复二进制内容，完成 `accept` 后再次运行 `check`。
+
+### 输入
+
+- 仅换行风格不同的文本、被改写一个字节的二进制，以及保持 LF blob 的验收提交。
+
+### 预期结果
+
+文本 CRLF 与 LF 提交产生相同 tree 摘要，`verify`、`check` 与 acceptance 复查均不因换行误报过期；二进制内容变化仍使验证过期，且既有的验收提交复查继续可用。

@@ -34,6 +34,12 @@
 
 已有 `initBaseline` 的重复初始化只提示在原分支核对，不新建冲突分支；同日 re-init 写入新的 expected head 前清除旧 merged marker，旧 marker 的 commit/head 不能放行新 tip。`close <init-id>` 复用任务 local 的受控清理逻辑，按 id 移除 worktree 登记与整棵本机目录，并默认删除本地与远端的 `chore/tiller-init`；`--keep-branch` 保留分支，删除失败只返回 warning；合入证明失败时在清理前中止。
 
-基线创建成功后，主树只保留 `.tiller/project.json` 作为待合入元信息；本次写入且内容仍匹配、仍为未跟踪的受管文件被精确删除，不使用 `git clean`，用户改写或已跟踪文件保留。`doctor` 与 `close <init-id>` 复用同一祖先/merged/平台 API 合入证明。初始化骨架发现根目录缺失或存在空 `src/`/`test/` 时，在同一受管变更集追加对应 `.gitkeep`；非空目录不覆盖用户内容。
+基线创建成功后，primary 不保留本次 init 的受管文件或元信息种子；本次写入且内容仍匹配、仍为未跟踪的受管文件被精确删除，不使用 `git clean`，用户改写或已跟踪文件保留。`doctor` 与 `close <init-id>` 复用同一祖先/merged/平台 API 合入证明。初始化骨架发现根目录缺失或存在空 `src/`/`test/` 时，在同一受管变更集追加对应 `.gitkeep`；非空目录不覆盖用户内容。
 
 `tiller status` 与成功创建的 `tiller init` 都在结果上叠加只读的 `initBaselineStatus`：存在基线时调用 `proveInitBaselineMerged`，输出 effective `status=merged|pending` 与证明说明。`metadata.initBaseline` 只暴露 `id`、`branch`、`commit`；旧 `status`、`headRef` 及本地快照中的 expected head 不进入 tracked 元信息，也不作为 tracked 结论。无基线时不生成该字段；证明失败或未合入时 effective 为 pending，但 tracked 元信息不出现该字段，也不把结论写回 `project.json`。
+
+## 7. 预检与显式 apply
+
+`initialize` 在取得工程锁、创建初始化 worktree 或分支、写受管文件与提交之前调用 `assertInitEnvironment`。只有工程根同时是 Git 工作副本根且有 HEAD 时才要求远端：`resolvePlatformRepository` 解析 origin，`platformToken` 读取当前平台 token；任一失败立即返回非零，并给出 origin 修复方式与 `GITHUB_TOKEN`/`GH_TOKEN` 或 `GITLAB_TOKEN`/`GL_TOKEN` 设置指引。该路径不创建 `.tiller/local/<init-id>/`、`chore/tiller-init`、提交或 primary 受管文件。无 Git HEAD 的本地降级路径保持原有行为。
+
+CLI 的显式 `init --apply` 先执行默认 init 并取得同 expected head 绑定的 open PR/MR，再按顺序调用平台 REST API squash、写入本机合入证明、执行 init-id close，并在 primary 当前位于目标默认分支时用 tokenized `git fetch` 与 `git merge --ff-only` 快进。合入失败、证明写入失败、close 失败或快进失败都停在对应步骤，返回已完成事实、保留必要的 PR/MR 或本机状态，并提示 `tiller merge`、`tiller close` 或 `git pull --ff-only` 的续跑命令。未提供 `--apply` 时仍只开 PR/MR 并保持 pending。

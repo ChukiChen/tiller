@@ -54,3 +54,10 @@ post-#45 狗粮主路径已通，但仍有入口与卫生摩擦：`--requirement
 - `--requirement-file` 保留 `## 关键行为` 下的嵌套标题与正文，任务记录层级不丢失。
 - 全局 specs 任务的 PR 标题优先使用 `specs` scope，不因正文路径引用误推模块。
 - check 对同一模块的覆盖缺失与回归建议合并去重，非阻断提示不重复刷屏。
+
+### 初始化预检、显式交付与摘要不变式
+
+- 有 Git HEAD 的 init 在创建 `.tiller/local/<init-id>/`、`chore/tiller-init` 或提交之前校验可解析 origin 与平台 token；失败不留下本次 init 产物。
+- `init --apply` 只在显式旗标下执行 squash、证明、close 与 primary 默认分支快进；每一步失败都保留可续跑事实并返回非零，不带旗标仍停在 pending。
+- 新写 CASE 的关联 AC 来自所挂需求 specs 的路径作用域 `AC-n`，拒绝 `任务#AC`；历史“无”与 `task#AC` 可读但不作为新写入。
+- verify、check、acceptance 与 preExisting 的 tree 摘要使用 Git 文本换行归一和二进制原字节规则；CRLF/LF 无实质差异时一致，真正字节变化仍使验证过期。

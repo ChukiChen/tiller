@@ -298,12 +298,12 @@ init 探测 pytest 工程并写入 verify.runner=pytest；case add 生成 pytest
 
 无源码登记成功且模板无源码行；--source 作为未知选项失败。
 
-## CASE-263 case add 无需 criterion 且关联 AC 为无
+## CASE-263 case add 要求需求 specs 中的 AC-n
 
 - 类型：interface
 - 优先级：high
 - 模块：verification
-- 关联 AC：无
+- 关联 AC：AC-1, AC-2
 - 需求：`.tiller/specs/modules/verification/requirements.md`
 
 ### 前置条件
@@ -312,13 +312,13 @@ init 探测 pytest 工程并写入 verify.runner=pytest；case add 生成 pytest
 
 ### 步骤
 
-1. 运行 case add 不带 --criterion
-2. 查看生成用例与 help
+1. 运行 case add 不带 --criterion，再带可重复的 --criterion AC-1 --criterion AC-2。
+2. 查看生成用例与 help，并尝试任务#AC 与不存在的 AC。
 
 ### 输入
 
-- 模块、标题、预期、可选 --spec
+- 模块、标题、预期、可选 --spec 与需求文件中的 AC-n。
 
 ### 预期结果
 
-不传 --criterion 时可登记用例；生成条目关联 AC 为无；需求指向稳定 specs；help 不再要求来源 AC
+不传 --criterion 时明确失败；合法输入生成 `- 关联 AC：AC-1, AC-2`；需求指向稳定 specs；任务#AC 与不存在的 AC 被拒绝，失败不写用例文件。

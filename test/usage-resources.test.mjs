@@ -2,10 +2,10 @@ import assert from 'node:assert/strict';
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import test from 'node:test';
-import { equivalentManagedContent, initialize, inspectProject, matchesManagedDigest, parseMetadata, PR_TEMPLATE, RESOURCE_VERSION, sha256, SHARED_RESOURCES } from '../dist/core.js';
+import { equivalentManagedContent, inspectProject, matchesManagedDigest, parseMetadata, PR_TEMPLATE, RESOURCE_VERSION, sha256, SHARED_RESOURCES } from '../dist/core.js';
 import { applyUpgrade, planUpgrade } from '../dist/upgrade.js';
 import { spawnSync } from 'node:child_process';
-import { fixture, gitRepository, put, settleInitBaseline, snapshot } from './helpers.mjs';
+import { fixture, gitRepository, initializeWithTestEnvironment as initialize, put, settleInitBaseline, snapshot } from './helpers.mjs';
 
 const read = (root, name) => readFileSync(join(root, name), 'utf8');
 const added = ['.tiller/usage.md'];

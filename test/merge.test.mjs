@@ -68,14 +68,14 @@ async function initialize(t, platform = 'github') {
 }
 
 async function acceptTask(root, id) {
-  put(root, '.tiller/specs/modules/workflow/requirements.md', '# Workflow\n\n## Merge\n\nAccepted tasks can be merged.\n');
+  put(root, '.tiller/specs/modules/workflow/requirements.md', '# Workflow\n\n## Merge\n\nAccepted tasks can be merged.\n\n## 验收条件\n\n- AC-1: Merge behavior is observable.\n');
   put(root, '.tiller/specs/modules/workflow/design.md', '# Workflow design\n\nDelegate merge and cleanup.\n');
   put(root, 'src/merge-fixture.ts', 'export const mergeFixture = true;\n');
   success(cli(root, 'start', id, '--title', `Merge ${id}`, '--requirement', 'Merge an accepted task.',
     '--criterion', 'AC-1=Merge behavior is observable', '--size', 'small', '--target', '.'));
   success(confirmTask(root, id, 'requirements', '--by', 'Tiller Test'));
   const added = success(cli(root, 'case', 'add', id, '--module', 'workflow', '--kind', 'behavior',
-    '--title', 'Merge fixture', '--expected', 'The accepted task can be merged.'));
+    '--title', 'Merge fixture', '--expected', 'The accepted task can be merged.', '--criterion', 'AC-1'));
   const testPath = `test/${id}.test.mjs`;
   const testName = `${added.id} merge fixture`;
   put(root, testPath, `import test from 'node:test';\n\ntest('${testName}', () => {});\n`);
@@ -145,7 +145,7 @@ test('CASE-310 merge and close leave no untracked task seed and a clean primary 
   const initialized = await initialize(t, 'github');
   if (!initialized) return;
   const { root, environment, mock } = initialized;
-  put(root, '.tiller/specs/modules/workflow/requirements.md', '# Workflow\n\n## Merge invariant\n\nMerged history stays tracked.\n');
+  put(root, '.tiller/specs/modules/workflow/requirements.md', '# Workflow\n\n## Merge invariant\n\nMerged history stays tracked.\n\n## 验收条件\n\n- AC-1: Merged history stays tracked.\n');
   put(root, 'src/invariant.ts', 'export const invariant = true;\n');
   git(root, 'add', '-A');
   git(root, 'commit', '--quiet', '-m', 'test(workflow): 合入后不变式基线');
@@ -158,7 +158,7 @@ test('CASE-310 merge and close leave no untracked task seed and a clean primary 
     success(confirmTask(worktree, id, 'requirements', '--by', 'Tiller Test'));
     const added = success(cli(worktree, 'case', 'add', id, '--module', 'workflow', '--kind', 'behavior',
       '--title', '合入后不变式', '--expected', '主树无未跟踪任务树且可快进',
-      '--spec', '.tiller/specs/modules/workflow/requirements.md'));
+      '--spec', '.tiller/specs/modules/workflow/requirements.md', '--criterion', 'AC-1'));
     const testName = `${added.id} merge invariant`;
     put(worktree, `test/${id}.test.mjs`, `import test from 'node:test';\n\ntest('${testName}', () => {});\n`);
     git(worktree, 'add', '-A');

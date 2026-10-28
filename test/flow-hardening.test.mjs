@@ -132,7 +132,7 @@ test('CASE-175 confirmations expose uncommitted business changes but ignore till
   success(confirmTask(root, id, 'requirements'));
   git(root, 'checkout', '--quiet', '-b', `feat/${id}-confirm-dirty`);
 
-  put(root, '.tiller/specs/modules/workflow/requirements.md', '# Workflow\n\n## Baseline behavior\n\nMetadata-only edit.\n');
+  put(root, '.tiller/specs/modules/workflow/requirements.md', '# Workflow\n\n## Baseline behavior\n\nMetadata-only edit.\n\n## 验收条件\n\n- AC-1: Baseline behavior is retained.\n');
   const metadataOnly = cli(root, 'check', id);
   assert.ok(!metadataOnly.data.issues.some(issue => issue.includes('过程卫生')), metadataOnly.data.issues.join('\n'));
 
@@ -155,14 +155,14 @@ async function assertRunnerCase(t, buildFile, runner, marker) {
   assert.ok(initialized.firstCommit.paths.includes('AGENTS.md'));
   assert.ok(initialized.firstCommit.paths.includes('.github/pull_request_template.md'));
 
-  put(root, '.tiller/specs/modules/workflow/requirements.md', '# Workflow\n\n## Runner behavior\n\nUse the detected runner.\n');
+  put(root, '.tiller/specs/modules/workflow/requirements.md', '# Workflow\n\n## Runner behavior\n\nUse the detected runner.\n\n## 验收条件\n\n- AC-1: Skeleton matches runner.\n');
   put(root, 'src/app.mjs', 'export const app = true;\n');
   const id = '20261023-runner-case';
   success(cli(root, 'start', id, '--title', 'Runner case', '--requirement', 'Generate a matching test skeleton.',
     '--criterion', 'AC-1=Skeleton matches runner', '--size', 'small', '--target', 'src'));
   success(confirmTask(root, id, 'requirements'));
   const added = success(cli(root, 'case', 'add', id, '--module', 'workflow', '--kind', 'behavior', '--title', 'Runner skeleton',
-    '--expected', 'Skeleton uses the configured runner'));
+    '--expected', 'Skeleton uses the configured runner', '--criterion', 'AC-1'));
   assert.equal(added.runner, runner);
   assert.match(added.skeleton, new RegExp(marker.replace(/[.*+?^${}()|[\]\\]/gu, '\\$&'), 'u'));
   assert.equal(added.skeleton.includes('node:test'), runner === 'node-test');

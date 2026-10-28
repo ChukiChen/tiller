@@ -28,7 +28,8 @@ function checkoutTaskBranch(root, id) {
 }
 
 function moduleSpec(root, name, heading = '默认工作流') {
-  put(root, `.tiller/specs/modules/${name}/requirements.md`, `# ${heading}\n\n## 行为\n\n模块行为应可验证。\n`);
+  put(root, `.tiller/specs/modules/${name}/requirements.md`,
+    `# ${heading}\n\n## 行为\n\n模块行为应可验证。\n\n## 验收条件\n\n- AC-1: 模块行为应可验证。\n- AC-2: 场景行为应可验证。\n`);
   put(root, `.tiller/specs/modules/${name}/design.md`, `# ${heading}设计\n\n测试引用可定位到具体行为。\n`);
 }
 
@@ -114,7 +115,7 @@ test('CASE-052 planning blocks unfinished dependencies, reports uncovered requir
   assert.equal(missingItem.error.code, 'PLAN_REFERENCE_NOT_FOUND');
 });
 
-test('CASE-053 case add allocates unique ids for module cases and scenarios without task ACs', async t => {
+test('CASE-053 case add allocates unique ids and writes specs ACs for modules and scenarios', async t => {
   const root = await initialized(t);
   moduleSpec(root, 'alpha');
   moduleSpec(root, 'beta');
@@ -123,21 +124,21 @@ test('CASE-053 case add allocates unique ids for module cases and scenarios with
   success(confirmTask(root, taskId, 'requirements', '--quote', '测试确认该需求'));
   const first = success(cli(root, 'case', 'add', taskId, '--module', 'alpha', '--kind', 'behavior',
     '--title', '模块行为', '--expected', '模块行为通过测试',
-    '--spec', '.tiller/specs/modules/alpha/requirements.md'));
+    '--spec', '.tiller/specs/modules/alpha/requirements.md', '--criterion', 'AC-1'));
   assert.equal(first.id, 'CASE-001');
   assert.equal(first.path, '.tiller/cases/modules/alpha/behavior.md');
-  assert.deepEqual(first.criteria, []);
+  assert.deepEqual(first.criteria, ['AC-1']);
   assert.match(first.skeleton, /CASE-001 模块行为/u);
   const scenario = success(cli(root, 'case', 'add', taskId, '--scenario', 'alpha-to-beta', '--module', 'alpha', '--module', 'beta',
     '--title', '跨模块场景', '--expected', '跨模块场景通过测试',
-    '--spec', '.tiller/specs/modules/alpha/requirements.md'));
+    '--spec', '.tiller/specs/modules/alpha/requirements.md', '--criterion', 'AC-2'));
   assert.equal(scenario.id, 'CASE-002');
   assert.equal(scenario.path, '.tiller/cases/scenarios/alpha-to-beta.md');
   const stored = read(root, scenario.path);
   assert.match(stored, /- 模块：alpha, beta/u);
-  assert.match(stored, /- 关联 AC：无/u);
+  assert.match(stored, /- 关联 AC：AC-2/u);
   const unknown = failure(cli(root, 'case', 'add', taskId, '--module', 'missing', '--kind', 'security',
-    '--title', '不存在模块', '--expected', '模块不存在'));
+    '--title', '不存在模块', '--expected', '模块不存在', '--criterion', 'AC-1'));
   assert.equal(unknown.error.code, 'CASE_MODULE_NOT_FOUND');
   assert.match(unknown.error.message, /specs\/modules\/missing/u);
 });
@@ -149,8 +150,8 @@ test('CASE-054 CASE-264 check accepts verified coverage without a task AC back-r
     '--criterion', 'AC-1=验证命中正确用例', '--size', 'small', '--target', 'src', '--target', 'test', '--target', '.tiller/cases'));
   success(confirmTask(root, taskId, 'requirements', '--quote', '测试确认该需求'));
   const added = success(cli(root, 'case', 'add', taskId, '--module', 'alpha', '--kind', 'behavior',
-    '--title', '稳定需求覆盖', '--expected', '验证记录直接承载 AC 到测试与 CASE 的关联。'));
-  assert.deepEqual(added.criteria, []);
+    '--title', '稳定需求覆盖', '--expected', '验证记录直接承载 AC 到测试与 CASE 的关联。', '--criterion', 'AC-1'));
+  assert.deepEqual(added.criteria, ['AC-1']);
   put(root, 'src/alpha.mjs', 'export const alpha = true;\n');
   put(root, 'test/alpha.test.mjs', `import assert from 'node:assert/strict';\nimport test from 'node:test';\n\ntest('${added.id} alpha behaves', () => { assert.equal(true, true); });\n`);
   commitAll(root, 'test: alpha 行为夹具');
@@ -179,7 +180,7 @@ test('CASE-055 new project runs init, plan, start, confirm, case add, verify, ch
   success(confirmTask(root, taskId, 'requirements', '--quote', '测试确认该需求'));
   const added = success(cli(root, 'case', 'add', taskId, '--module', 'sample', '--kind', 'behavior',
     '--title', '接入链路行为', '--expected', '接入流程返回预期结果',
-    '--spec', '.tiller/specs/modules/sample/requirements.md'));
+    '--spec', '.tiller/specs/modules/sample/requirements.md', '--criterion', 'AC-1'));
   assert.equal(added.id, 'CASE-001');
   put(root, 'src/sample.mjs', 'export const sample = () => 42;\n');
   put(root, 'test/sample.test.mjs', `import assert from 'node:assert/strict';\nimport test from 'node:test';\nimport { sample } from '../src/sample.mjs';\n\ntest('${added.id} sample flow works', () => { assert.equal(sample(), 42); });\n`);
@@ -244,7 +245,7 @@ test('CASE-056 task stages derive from task facts and fall back on invalid confi
   assert.equal(stageTask(root, id), '设计已确认');
   const stageCase = success(cli(root, 'case', 'add', id, '--module', 'workflow', '--kind', 'behavior', '--title', '阶段推进',
     '--expected', '阶段随任务事实推进',
-    '--spec', '.tiller/specs/modules/workflow/requirements.md#2-开始与接续'));
+    '--spec', '.tiller/specs/modules/workflow/requirements.md#2-开始与接续', '--criterion', 'AC-1'));
   put(root, 'test/lifecycle.test.mjs', `import assert from 'node:assert/strict';\nimport test from 'node:test';\n\ntest('${stageCase.id} lifecycle stage behavior', () => assert.equal(1, 1));\n`);
   commitAll(root, 'test: 生命周期阶段夹具');
   success(cli(root, 'verify', id, '--criterion', 'AC-1', '--test', `test/lifecycle.test.mjs::${stageCase.id} lifecycle stage behavior`));
@@ -266,7 +267,7 @@ test('CASE-056 task stages derive from task facts and fall back on invalid confi
   success(confirmTask(root, staleId, 'requirements', '--quote', '确认过期验证需求'));
   const staleCase = success(cli(root, 'case', 'add', staleId, '--module', 'workflow', '--kind', 'behavior', '--title', '验证过期回退',
     '--expected', '代码变化后显示验证过期',
-    '--spec', '.tiller/specs/modules/workflow/requirements.md#flow-09-依据验证结果判断交付'));
+    '--spec', '.tiller/specs/modules/workflow/requirements.md#flow-09-依据验证结果判断交付', '--criterion', 'AC-1'));
   put(root, 'test/stale.test.mjs', `import assert from 'node:assert/strict';\nimport test from 'node:test';\n\ntest('${staleCase.id} stale verification behavior', () => assert.equal(1, 1));\n`);
   success(cli(root, 'verify', staleId, '--criterion', 'AC-1', '--test', `test/stale.test.mjs::${staleCase.id} stale verification behavior`));
   assert.equal(stageTask(root, staleId), '已验证');
@@ -288,7 +289,7 @@ test('CASE-057 CASE-308 accepted close cleans local state without materializing;
   success(confirmTask(root, id, 'requirements', '--quote', '确认关闭需求'));
   const closeCase = success(cli(root, 'case', 'add', id, '--module', 'workflow', '--kind', 'behavior', '--title', '关闭与重开',
     '--expected', '关闭后阻止变更并可重开',
-    '--spec', '.tiller/specs/modules/workflow/requirements.md#flow-15-在关键节点取得人工确认'));
+    '--spec', '.tiller/specs/modules/workflow/requirements.md#flow-15-在关键节点取得人工确认', '--criterion', 'AC-1'));
   put(root, 'test/close.test.mjs', `import assert from 'node:assert/strict';
 import test from 'node:test';
 

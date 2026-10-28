@@ -61,11 +61,11 @@ function acceptTask(primaryOrWorktree, id) {
     ? primaryOrWorktree.slice(0, primaryOrWorktree.indexOf(`${sep}.tiller${sep}local${sep}`))
     : primaryOrWorktree;
   const worktree = join(primary, worktreePath(id));
-  put(worktree, '.tiller/specs/modules/workflow/requirements.md', '# Workflow\n\n## Worktrees\n\nTask worktrees follow the lifecycle.\n');
+  put(worktree, '.tiller/specs/modules/workflow/requirements.md', '# Workflow\n\n## Worktrees\n\nTask worktrees follow the lifecycle.\n\n## 验收条件\n\n- AC-1: Task worktrees follow the lifecycle.\n');
   put(worktree, '.tiller/specs/modules/workflow/design.md', '# Workflow design\n\nUse task-scoped worktrees and logs.\n');
   put(worktree, 'src/worktree-fixture.ts', 'export const worktreeFixture = true;\n');
   const added = success(cli(worktree, 'case', 'add', id, '--module', 'workflow', '--kind', 'behavior',
-    '--title', `${id} worktree cleanup`, '--expected', 'The task can be accepted and closed.'));
+    '--title', `${id} worktree cleanup`, '--expected', 'The task can be accepted and closed.', '--criterion', 'AC-1'));
   const testFile = `test/${id}.test.mjs`;
   put(worktree, testFile, [
     "import test from 'node:test';",

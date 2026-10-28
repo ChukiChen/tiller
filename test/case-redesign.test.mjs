@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { existsSync, readFileSync, readdirSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import test from 'node:test';
@@ -23,7 +23,7 @@ async function project(t) {
   const root = fixture(t);
   success(cli(root, 'init'));
   put(root, '.tiller/specs/modules/workflow/requirements.md',
-    '# Workflow\n\n## Case design\n\nCases describe tests before implementation.\n');
+    '# Workflow\n\n## Case design\n\nCases describe tests before implementation.\n\n## 验收条件\n\n- AC-1: Case design can be registered before tests.\n');
   put(root, '.tiller/specs/modules/workflow/design.md',
     '# Workflow design\n\nTests reference stable case ids.\n');
   put(root, 'src/value.txt', 'one\n');
@@ -47,7 +47,8 @@ function addCase(root, id, extra = {}) {
   const args = ['case', 'add', id, '--module', extra.module ?? 'workflow', '--kind', extra.kind ?? 'behavior',
     '--title', extra.title ?? '用例设计可先于测试登记',
     '--precondition', '任务与模块规范存在。', '--step', '登记用例，然后由测试名称引用编号。',
-    '--input', '正常输入与必要边界。', '--expected', '用例可被引用它的具名测试定位。'];
+    '--input', '正常输入与必要边界。', '--expected', '用例可被引用它的具名测试定位。',
+    '--criterion', extra.criterion ?? 'AC-1'];
   if (extra.scenario) args.push('--scenario', extra.scenario);
   return success(cli(root, ...args));
 }
@@ -99,7 +100,7 @@ test('CASE-098 case add registers a complete test design before any test exists'
   const path = '.tiller/cases/modules/workflow/behavior.md';
   const content = read(root, path);
   for (const expected of ['### 前置条件', '### 步骤', '### 输入', '### 预期结果', '- 类型：behavior',
-    '- 优先级：medium', '- 关联 AC：无']) assert.ok(content.includes(expected), expected);
+    '- 优先级：medium', '- 关联 AC：AC-1']) assert.ok(content.includes(expected), expected);
   assert.doesNotMatch(content, /test_ref|文件::测试名/u);
   assert.deepEqual(readdirSync(join(root, 'test')), ['.gitkeep']);
 
@@ -108,25 +109,33 @@ test('CASE-098 case add registers a complete test design before any test exists'
   assert.equal(second.id, 'CASE-002');
 });
 
-test('CASE-263 case add needs no criterion, writes no task AC and rejects the old option', async t => {
+test('CASE-263 CASE-341 case add requires specs AC and rejects task#AC', async t => {
   const root = await project(t);
   start(root, taskId);
   const added = addCase(root, taskId, { title: '稳定需求用例' });
-  assert.deepEqual(added.criteria, []);
+  assert.deepEqual(added.criteria, ['AC-1']);
   const content = read(root, added.path);
-  assert.match(content, /- 关联 AC：无/u);
+  assert.match(content, /- 关联 AC：AC-1/u);
   assert.match(content, /- 需求：`\.tiller\/specs\/modules\/workflow\/requirements\.md`/u);
   assert.doesNotMatch(content, new RegExp(`${taskId}#AC-`, 'u'));
 
   const help = success(cli(root, '--help')).help;
-  assert.doesNotMatch(help, /case add[^\n]*--criterion/u);
+  assert.match(help, /case add[^\n]*--criterion/u);
+  const missing = failure(cli(root, 'case', 'add', taskId, '--module', 'workflow', '--kind', 'behavior',
+    '--title', '缺少 criterion 应拒绝', '--expected', '缺少 specs AC。'));
+  assert.equal(missing.error.code, 'INVALID_ARGUMENT');
   const rejected = failure(cli(root, 'case', 'add', taskId, '--module', 'workflow', '--kind', 'behavior',
-    '--title', '旧 criterion 应拒绝', '--expected', '拒绝旧参数。', '--criterion', 'AC-1'));
-  assert.equal(rejected.error.code, 'INVALID_ARGUMENT');
+    '--title', '任务作用域应拒绝', '--expected', '拒绝任务#AC。', '--criterion', `${taskId}#AC-1`));
+  assert.equal(rejected.error.code, 'CASE_CRITERION_INVALID');
+  assert.doesNotMatch(read(root, added.path), /任务作用域应拒绝/u);
+
+  const unknown = failure(cli(root, 'case', 'add', taskId, '--module', 'workflow', '--kind', 'behavior',
+    '--title', '不存在的 AC', '--expected', '拒绝不存在的 specs AC。', '--criterion', 'AC-9'));
+  assert.equal(unknown.error.code, 'CASE_CRITERION_NOT_FOUND');
 
   put(root, 'docs/requirement.md', '# 不稳定需求\n');
   const unstable = failure(cli(root, 'case', 'add', taskId, '--module', 'workflow', '--kind', 'behavior',
-    '--title', '需求路径必须稳定', '--expected', '拒绝非 specs 路径。', '--spec', 'docs/requirement.md'));
+    '--title', '需求路径必须稳定', '--expected', '拒绝非 specs 路径。', '--spec', 'docs/requirement.md', '--criterion', 'AC-1'));
   assert.equal(unstable.error.code, 'INVALID_CASE_INPUT');
 });
 
@@ -134,13 +143,13 @@ test('CASE-258 case add writes no source field and rejects the removed --source 
   const root = await project(t);
   start(root, taskId);
   const added = success(cli(root, 'case', 'add', taskId, '--module', 'workflow', '--kind', 'behavior',
-    '--title', '无源码字段的用例', '--expected', '用例设计只关联测试与 CASE 编号。'));
+    '--title', '无源码字段的用例', '--expected', '用例设计只关联测试与 CASE 编号。', '--criterion', 'AC-1'));
   const content = read(root, added.path);
   assert.doesNotMatch(content, /^- 源码：|--source/mu);
   assert.match(content, new RegExp(`^## ${added.id} `, 'mu'));
 
   const rejected = failure(cli(root, 'case', 'add', taskId, '--module', 'workflow', '--kind', 'behavior',
-    '--title', '旧参数应失败', '--expected', '旧参数被拒绝。', '--source', 'src/value.txt'));
+    '--title', '旧参数应失败', '--expected', '旧参数被拒绝。', '--criterion', 'AC-1', '--source', 'src/value.txt'));
   assert.match(rejected.error.message, /Unknown option '--source'|--source.*不适用|--source.*未知/u);
   assert.doesNotMatch(read(root, added.path), /旧参数应失败/u);
 });
@@ -165,7 +174,7 @@ test('CASE-259 historical cases parse without a source field and ignore residual
   assert.equal(Object.hasOwn(parsed.cases[0], 'source'), false);
 });
 
-test('CASE-266 historical task AC and empty criteria stay readable without hard blocking', async t => {
+test('CASE-266 CASE-342 historical task AC and empty criteria stay readable without hard blocking', async t => {
   const root = fixture(t);
   const relative = '.tiller/cases/modules/workflow/behavior.md';
   const empty = parseCaseMarkdown(caseMarkdown('CASE-992', '空关联 AC 可读').replace('- 关联 AC：无\n', ''), relative, 'behavior', 'workflow');
@@ -181,6 +190,41 @@ test('CASE-266 historical task AC and empty criteria stay readable without hard 
   assert.ok(library.warnings.some(value => value.includes('历史用例') && value.includes('任务') && value.includes('AC')));
   assert.ok(library.warnings.some(value => value.includes('关联 AC 为无')));
   assert.equal(success(cli(root, '--version')).version, '0.5.0');
+});
+
+test('CASE-344 CRLF workspace and LF commit share tree digest without hiding byte changes', async t => {
+  const root = await project(t);
+  git(root, 'config', 'core.autocrlf', 'true');
+  baseline(root);
+  const id = '20261028-crlf-digest';
+  start(root, id);
+  success(confirmTask(root, id, 'requirements', '--quote', '确认换行归一验证'));
+  const added = addCase(root, id, { title: 'CRLF tree digest', expected: '换行不使验证过期，字节变化仍会过期。' });
+  put(root, 'test/crlf.test.mjs', `import assert from 'node:assert/strict';
+import test from 'node:test';
+
+test('${added.id} CRLF workspace matches LF blob', () => assert.equal(1, 1));
+`);
+  put(root, 'src/data.bin', Buffer.from([0, 1, 2]));
+  commitFixtures(root, 'test: 提交 CRLF 摘要夹具');
+  success(cli(root, 'verify', id, '--criterion', 'AC-1', '--case', added.id));
+
+  writeFileSync(join(root, 'src/value.txt'), 'one\r\n');
+  git(root, 'diff', '--quiet', '--', 'src/value.txt');
+  const current = success(cli(root, 'check', id));
+  assert.ok(!current.issues.some(issue => issue.includes('验证已过期')), current.issues.join('\n'));
+
+  put(root, 'src/data.bin', Buffer.from([0, 1, 3]));
+  const changed = failure(cli(root, 'check', id));
+  assert.ok(changed.issues.some(issue => issue.includes('验证已过期')), changed.issues.join('\n'));
+
+  put(root, 'src/data.bin', Buffer.from([0, 1, 2]));
+  success(cli(root, 'check', id));
+  commitFixtures(root, 'test: 提交 CRLF 工作区夹具');
+  success(cli(root, 'accept', id, '--by', 'Tiller Test'));
+  const accepted = success(cli(root, 'check', id));
+  assert.ok(!accepted.issues.some(issue => issue.includes('验证已过期')), accepted.issues.join('\n'));
+  assert.equal(success(cli(root, 'resume', id)).stage, '已验收');
 });
 
 test('CASE-099 test scan derives case to test links without stored test refs', async t => {
@@ -288,7 +332,7 @@ ${sourceTest('staged coverage without a case id', 'undefined')}
 test('CASE-103 CASE-156 repository history and docs use the new case model', async () => {
   const library = await readCaseLibrary(repository);
   assert.deepEqual(library.issues, []);
-  assert.equal(library.cases.length, 311);
+  assert.equal(library.cases.length, 317);
   assert.ok(library.cases.every(item => item.preconditions.length && item.steps.length && item.inputs.length && item.expected));
   assert.ok(library.cases.every(item => item.tests.length > 0), 'every case should be referenced by a test');
   assert.ok(library.cases.every(item => item.tests.every(reference => reference.name?.includes(item.id))));

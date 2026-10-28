@@ -1410,3 +1410,28 @@ specs/workflow 等约定 scope 不产生模块缺失提示；不存在的真实�
 ### 预期结果
 
 规则只说明 expected tip、平台已合入 PR/MR、local marker 与 CLI effective，不出现写回 merged 指向 tracked 元信息的旧表达
+
+## CASE-343 受管文案同步 specs AC 语义且版本保持 0.5.0
+
+- 类型：interface
+- 优先级：high
+- 模块：workflow
+- 关联 AC：AC-1
+- 需求：`.tiller/specs/modules/workflow/requirements.md#验收条件`
+
+### 前置条件
+
+- 分发 resources 与工程自身 `.tiller` 受管资料可读取。
+
+### 步骤
+
+1. 检查 rules、usage、CASE 说明与相关 specs 对新建用例关联 AC 的表述。
+2. 检查 CLI、package 与 `project.json` 的资源版本。
+
+### 输入
+
+- 当前 0.5.0 工作树与分发资源。
+
+### 预期结果
+
+文档说明新建用例使用 specs 路径作用域的 `AC-n`，历史 `无`/`task#AC` 可读；不再要求新用例固定写「无」；CLI、包与资源版本保持 0.5.0。
