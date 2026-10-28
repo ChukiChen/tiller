@@ -96,7 +96,65 @@
 
 ## 验证
 
-尚无验证。
+### run-1
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-335 specs overflow blocks confirm, check and accept until the referenced specs are written back$' \u002d\u002dtest-reporter=./.tiller/local/verify-adbnG8/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-adbnG8/report.jsonl test/specs-overflow-gate.test.mjs","exitCode":0,"tree":"fa7b50f409bcdd67add104ea396656183a06095f601c8c26fec1d28928d2f25c","commit":"da6e41cfd38e569b8ace2289853f34960d28dd1a"} -->
+- 条件：AC-1
+- 测试：test/specs-overflow-gate.test.mjs::CASE-335 specs overflow blocks confirm, check and accept until the referenced specs are written back
+- 用例：CASE-335
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/20261028-specs-overflow-gate/logs/run-1.log
+- 提交：da6e41cfd38e
+- 时间：2026-10-28T16:04:19.164Z
+
+### run-2
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-336 spec gate uses referenced paths and AC-n and rejects missing specs, unmounted ACs and divergent text$' \u002d\u002dtest-reporter=./.tiller/local/verify-REIwkl/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-REIwkl/report.jsonl test/specs-overflow-gate.test.mjs","exitCode":0,"tree":"fa7b50f409bcdd67add104ea396656183a06095f601c8c26fec1d28928d2f25c","commit":"da6e41cfd38e569b8ace2289853f34960d28dd1a"} -->
+- 条件：AC-2
+- 测试：test/specs-overflow-gate.test.mjs::CASE-336 spec gate uses referenced paths and AC-n and rejects missing specs, unmounted ACs and divergent text
+- 用例：CASE-336
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/20261028-specs-overflow-gate/logs/run-2.log
+- 提交：da6e41cfd38e
+- 时间：2026-10-28T16:04:24.131Z
+
+### run-3
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-337 accepted tasks stay on their acceptance evidence when referenced specs change later$' \u002d\u002dtest-reporter=./.tiller/local/verify-9pcPjf/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-9pcPjf/report.jsonl test/specs-overflow-gate.test.mjs","exitCode":0,"tree":"fa7b50f409bcdd67add104ea396656183a06095f601c8c26fec1d28928d2f25c","commit":"da6e41cfd38e569b8ace2289853f34960d28dd1a"} -->
+- 条件：AC-3
+- 测试：test/specs-overflow-gate.test.mjs::CASE-337 accepted tasks stay on their acceptance evidence when referenced specs change later
+- 用例：CASE-337
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/20261028-specs-overflow-gate/logs/run-3.log
+- 提交：da6e41cfd38e
+- 时间：2026-10-28T16:04:25.441Z
+
+### run-4
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-338 managed docs and case add require a scanned adapter entry for cross-language CASE coverage$' \u002d\u002dtest-reporter=./.tiller/local/verify-1IOCqm/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-1IOCqm/report.jsonl test/specs-overflow-gate.test.mjs","exitCode":0,"tree":"fa7b50f409bcdd67add104ea396656183a06095f601c8c26fec1d28928d2f25c","commit":"da6e41cfd38e569b8ace2289853f34960d28dd1a"} -->
+- 条件：AC-4
+- 测试：test/specs-overflow-gate.test.mjs::CASE-338 managed docs and case add require a scanned adapter entry for cross-language CASE coverage
+- 用例：CASE-338
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/20261028-specs-overflow-gate/logs/run-4.log
+- 提交：da6e41cfd38e
+- 时间：2026-10-28T16:04:26.981Z
+
+### run-5
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-339 a node adapter can call junit-maven and remain the CASE-linked verification entry$' \u002d\u002dtest-reporter=./.tiller/local/verify-m5nAjI/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-m5nAjI/report.jsonl test/specs-overflow-gate.test.mjs","exitCode":0,"tree":"fa7b50f409bcdd67add104ea396656183a06095f601c8c26fec1d28928d2f25c","commit":"da6e41cfd38e569b8ace2289853f34960d28dd1a"} -->
+- 条件：AC-5
+- 测试：test/specs-overflow-gate.test.mjs::CASE-339 a node adapter can call junit-maven and remain the CASE-linked verification entry
+- 用例：CASE-339
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/20261028-specs-overflow-gate/logs/run-5.log
+- 提交：da6e41cfd38e
+- 时间：2026-10-28T16:04:27.848Z
 
 ## 自检
 

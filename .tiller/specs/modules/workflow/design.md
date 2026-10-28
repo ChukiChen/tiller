@@ -106,3 +106,9 @@
 `closeFlow` 与 `mergeFlow` 的自动 close 只清理任务 worktree、本机目录和任务分支，不向 primary 复制 `.tiller/task/<id>/`。合入后的共享记录由远端默认分支的已跟踪提交快进获得。回归测试同时验证 primary 无任务残留、`git status` 工作区干净，以及 `git merge --ff-only` 可完成；平台 API 合入与手动 close 两条收尾路径共用这一不变式。
 
 无 `--requirement-file` 时，`renderStructuredRequirement` 用短目标生成可确认骨架：使用场景记录目标，目标写明短目标，业务范围写本次做/不做/假设，关键行为逐条列出 AC，异常与边界写失败和未完成边界。`--requirement-file` 的结构化正文仍优先，不注入短目标骨架。主路径文档和 package smoke 直接调用 PATH、`npx` 或安装包的 tiller。`commitSubjectIssue` 对 `specs`、`workflow`、`standards`、`initialization`、`verification` 等约定 scope 跳过模块存在性提示，其它未知模块仍报错。
+
+## 15. 规格溢出门禁
+
+`flow.ts` 的 `referencedSpecPaths` 合并任务 `requirementFile` 与正文“需求来源”标注的 `.tiller/specs/*.md` 路径，避免把普通正文里顺带提到的路径误当验收来源；`specMountIssues` 读取这些文件，只解析行首 `- AC-n: …`，再按同一 `AC-n` 与规范化正文比对 `task.criteria`。缺失路径、未挂载 AC、正文差异和设计中不存在的 AC 引用都形成 `SPEC_OVERFLOW`。
+
+`confirmFlow` 在写入 requirements/design/acceptance 确认前运行该检查并直接失败；`evaluateFlow` 在未命中有效 acceptance 时把同一结果加入 check/accept 阻塞项，已验收任务按 acceptance 证据复核并跳过追溯失败。错误文案列出引用路径，要求先回写 specs（必要时 cases/rules）、提交后由确认人重新确认，不自动修改全局文件。判定保持机械边界：只认路径与 AC-n 正文，需要语义解释的新增约束仍由确认人复核。

@@ -165,19 +165,23 @@ async function assertRunnerCase(t, buildFile, runner, marker) {
     '--expected', 'Skeleton uses the configured runner'));
   assert.equal(added.runner, runner);
   assert.match(added.skeleton, new RegExp(marker.replace(/[.*+?^${}()|[\]\\]/gu, '\\$&'), 'u'));
-  assert.equal(added.skeleton.includes('node:test'), runner === 'node-test');
+  assert.equal(added.skeleton.includes('node:test'), true);
+  assert.match(added.skeleton, new RegExp(`CASE-\\d+ Runner skeleton`, 'u'));
+  if (runner === 'junit-maven') assert.match(added.skeleton, /spawnSync\('mvn'.*Class#method|spawnSync\('mvn'.*ExampleTest#method/u);
+  if (runner === 'junit-gradle') assert.match(added.skeleton, /spawnSync\('gradle'.*ExampleTest\.method/u);
+  if (runner === 'node-test') assert.match(added.skeleton, /assert\.ok\(true\)/u);
 }
 
 test('CASE-176 pom detects junit-maven for init and case skeletons', async t => {
-  await assertRunnerCase(t, 'pom.xml', 'junit-maven', 'org.junit.jupiter.api.Test');
+  await assertRunnerCase(t, 'pom.xml', 'junit-maven', 'junit-maven');
 });
 
 test('CASE-176 gradle detects junit-gradle for init and case skeletons', async t => {
-  await assertRunnerCase(t, 'build.gradle', 'junit-gradle', 'org.junit.jupiter.api.Test');
+  await assertRunnerCase(t, 'build.gradle', 'junit-gradle', 'junit-gradle');
 });
 
 test('CASE-176 gradle-kts detects junit-gradle for init and case skeletons', async t => {
-  await assertRunnerCase(t, 'build.gradle.kts', 'junit-gradle', 'org.junit.jupiter.api.Test');
+  await assertRunnerCase(t, 'build.gradle.kts', 'junit-gradle', 'junit-gradle');
 });
 
 test('CASE-176 node detects node-test for init and case skeletons', async t => {

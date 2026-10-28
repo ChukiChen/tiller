@@ -437,9 +437,23 @@ function requiredText(value: unknown, label: string, maximum: number): string {
 
 function caseSkeleton(runner: string, id: string, title: string, expected: string): string {
   if (runner === 'junit-maven' || runner === 'junit-gradle') {
-    const number = id.replace(/[^0-9]/gu, '');
-    const comment = (value: string): string => value.replaceAll('*/', '* /');
-    return `import org.junit.jupiter.api.Test;\nimport static org.junit.jupiter.api.Assertions.assertTrue;\n\nclass TillerCase${number}Test {\n  @Test\n  void case${number}() {\n    // ${id} ${comment(title)}\n    // TODO: ${comment(expected)}\n    assertTrue(true);\n  }\n}\n`;
+    const titleText = title.replaceAll("'", "\\'");
+    const command = runner === 'junit-maven'
+      ? "spawnSync('mvn', ['-q', '-Dtest=com.example.ExampleTest#method', 'test'], { stdio: 'inherit' })"
+      : "spawnSync('gradle', ['test', '--tests', 'com.example.ExampleTest.method'], { stdio: 'inherit' })";
+    return [
+      "import test from 'node:test';",
+      "import assert from 'node:assert/strict';",
+      "import { spawnSync } from 'node:child_process';",
+      '',
+      `test('${id} ${titleText}', () => {`,
+      `  // 可扫描入口挂 CASE；真实 runner：${runner}。`,
+      '  // TODO: 把占位类方法替换为真实测试选择器；完整映射由工程补齐。',
+      `  const result = ${command};`,
+      `  assert.equal(result.status, 0, '${runner} 失败');`,
+      '});',
+      '',
+    ].join('\n');
   }
   if (runner === 'pytest') {
     const number = id.replace(/[^0-9]/gu, '');
