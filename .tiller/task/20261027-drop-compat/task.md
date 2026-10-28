@@ -1,6 +1,6 @@
 # 去掉旧 launcher 与 runtime bind 兼容
 
-<!-- tiller-task:v1 {"version":1,"id":"20261027-drop-compat","type":"feature","size":"standard","created":"2026-10-27T15:54:33.337Z","base":"92c93b93e9def866bf3d2598934a898ba4ca9f01","scope":["resources","src/runtime.ts","src/cli.ts","src/project-metadata.ts","src/flow.ts","src/core.ts","scripts/package-smoke.mjs","test","AGENTS.md"],"format":"structured"} -->
+<!-- tiller-task:v1 {"version":1,"id":"20261027-drop-compat","type":"feature","size":"standard","created":"2026-10-27T15:54:33.337Z","base":"92c93b93e9def866bf3d2598934a898ba4ca9f01","scope":["resources","src/runtime.ts","src/cli.ts","src/project-metadata.ts","src/flow.ts","src/core.ts","src/plans.ts","src/pr.ts","src/project-root.ts","src/task-worktrees.ts","scripts/package-smoke.mjs","test",".tiller","AGENTS.md"],"format":"structured"} -->
 
 ## 需求
 
@@ -68,11 +68,11 @@
 
 | 部分 | 确认人 | 时间 | 短提交 | 原话 |
 | --- | --- | --- | --- | --- |
-| 需求 | boon yu | 2026-10-27T15:54:44.443Z | 92c93b93e9de | — |
 | 设计 | boon yu | 2026-10-27T15:54:44.579Z | f408a7caae0a | — |
+| 需求 | boon yu | 2026-10-28T00:17:40.854Z | d5c1c0c7ca4b | 既然不保留兼容旧逻辑，就代码与用例一起删掉。 |
 
-<!-- tiller-confirm:v1 {"gate":"requirements","object":"需求正文（目标、范围与验收条件）","subject":"7f2a753978a65fec32a7d4977da4952be74e45148f61cdaafc95e1366234c4fe","commit":"92c93b93e9def866bf3d2598934a898ba4ca9f01","by":"boon yu","quote":"","at":"2026-10-27T15:54:44.443Z"} -->
 <!-- tiller-confirm:v1 {"gate":"design","object":"设计正文","subject":"24108382fb5c9b404219258474d62785ab0681415e1777e41736e890349b8add","commit":"f408a7caae0a3811fad7b09c602956ed7bbbc365","by":"boon yu","quote":"","at":"2026-10-27T15:54:44.579Z"} -->
+<!-- tiller-confirm:v1 {"gate":"requirements","object":"需求正文（目标、范围与验收条件）","subject":"aca806aee96a811b73676f167ad9bb18661ddac06f073a8ba306990c0a8cab3a","commit":"d5c1c0c7ca4b2a31bc7330d58313822e8c664821","by":"boon yu","quote":"既然不保留兼容旧逻辑，就代码与用例一起删掉。","at":"2026-10-28T00:17:40.854Z"} -->
 
 ## 验证
 
@@ -80,4 +80,38 @@
 
 ## 自检
 
-交付前运行 check；验收后运行 accept。
+- [x] 需求确认有效
+- [ ] 设计确认有效
+- [ ] 验收条件均有当前通过且绑定全局用例的测试引用
+- [ ] 每条验收条件均映射到本次验证引用的全局用例
+- [ ] 验收条件与用例通过 verify 的 AC→测试→CASE 记录关联
+- [ ] 验证命令已执行且测试输出已核实
+- [x] 全局用例结构与引用有效
+- [ ] 改动未超出范围
+- [ ] 未弱化仍存在的测试
+- [x] 评审无未清除阻塞项
+- [x] 记录不含密钥或本机绝对路径
+
+阻塞项：
+- 过程卫生：设计确认提交 f408a7caae0a 后，工作区仍有未提交业务改动：src/flow.ts。请先提交或移出本任务。
+- AC-1 尚无验证。
+- AC-2 尚无验证。
+- 改动超出范围：.tiller/cases/modules/initialization/behavior.md、.tiller/cases/modules/initialization/interface.md、.tiller/cases/modules/initialization/performance.md、.tiller/cases/modules/initialization/security.md、.tiller/cases/modules/workflow/behavior.md、.tiller/cases/modules/workflow/interface.md、.tiller/context/project.md、.tiller/project.json、.tiller/rules/activities/delivery.md、.tiller/specs/decisions.md、.tiller/specs/design.md、.tiller/specs/modules/initialization/design.md、.tiller/specs/modules/initialization/requirements.md、.tiller/specs/modules/standards/design.md、.tiller/specs/modules/workflow/design.md、.tiller/specs/modules/workflow/hygiene-invariants.md、.tiller/specs/modules/workflow/no-close-materialize.md、.tiller/specs/modules/workflow/requirements.md、.tiller/specs/requirements.md、.tiller/usage.md、src/plans.ts、src/pr.ts、src/project-root.ts、src/task-worktrees.ts
+- 弱化测试断言：test/first-batch.test.mjs::${closeCase.id} close lifecycle behavior
+- 弱化测试断言：test/first-batch.test.mjs::CASE-308 abandon does not materialize an untracked task onto primary
+- 弱化测试断言：test/first-batch.test.mjs::CASE-058 abandoned tasks are terminal, reopenable, and not counted as active or accepted plan work
+- 弱化测试断言：test/rules.test.mjs::CASE-091 verification guidance requires execution, reporting reasons and failure-first evidence
+- 弱化测试断言：test/task-worktrees.test.mjs::CASE-196 CASE-209 CASE-287 project start creates a task-local worktree, sidecars and logs in one directory
+- 弱化测试断言：test/task-worktrees.test.mjs::CASE-197 CASE-210 CASE-287 workspace start keeps management and registered repositories under the task worktree root
+- 弱化测试断言：test/usage-resources.test.mjs::CASE-215 docs describe task-local layout and close cleanup lifecycle
+- 交付范围存在未提交改动：src/flow.ts
+
+提示：
+- 167 条历史用例仍以 <任务>#AC-n 记录关联 AC；这是可迁移的历史债，不阻断当前覆盖。
+- 129 条用例的关联 AC 为无；覆盖以需求字段和 verify 的 AC→测试→CASE 记录为准。
+- 本次改动涉及模块 initialization：建议回归该模块 53 条用例及经过它的场景 CASE-055, CASE-001。
+- 本次改动涉及模块 standards：建议回归该模块 37 条用例及经过它的场景 CASE-055。
+- 本次改动涉及模块 verification：建议回归该模块 45 条用例及经过它的场景 CASE-055, CASE-001。
+- 本次改动涉及模块 workflow：建议回归该模块 159 条用例及经过它的场景 CASE-055, CASE-001。
+- 删除 2 个测试文件（请确认对应功能已删除；详情见 Git diff）。
+- 修改的测试文件移除了 9 个测试用例（请确认对应功能已删除；详情见 Git diff）。
