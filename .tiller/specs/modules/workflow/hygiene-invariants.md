@@ -30,3 +30,27 @@ post-#45 狗粮主路径已通，但仍有入口与卫生摩擦：`--requirement
 - AC-3: 主路径文档与 dogfood/CASE 按 PATH 单一 tiller 使用；若测试涉及 CLI，通过 PATH/`npx`/打包入口调用
 - AC-4: check 对 `feat(specs):` / 工作流类 commit 不再误报模块缺失；真实缺失模块仍提示
 - AC-5: 0.5.0；全量测试与 package smoke 通过
+
+## 2026-10-28 整包收口不变式
+
+### 初始化证明可重建
+
+- 跟踪的 init 基线必须保留可解析到 squash 前 PR head 的引用；fresh clone 即使没有本机 merged 标记、init 分支已删除，也能用该 head 与平台已合入 PR/MR 证明基线。
+- `close <init-id>` 在证明失败时必须返回稳定错误并保留 init worktree、本机目录和分支；不得先清理再报告成功。
+- init 的第二个提交必须可区分或与基线收敛为单个提交；init PR/MR 标题包含 init id，避免重复初始化与历史同名记录混淆。
+
+### 放弃事件先持久化
+
+- `close --abandon` 接受已验收但未合入的任务；sequence 固定为：把放弃事件写入 primary 可读取任务记录 → 提交该记录 → 拆除 worktree、本机目录与分支。
+- 持久化或提交失败返回 `ABANDON_NOT_PERSISTABLE`，全部任务事实保持；成功后 primary 最新提交包含放弃状态，reopen 可继续读取。
+
+### PR 创建幂等
+
+- `pr` 创建前后都以 head branch 与 head SHA 查询开放 PR/MR；命中即复用编号、URL 与 base，不再次创建。
+- 创建请求已可能落库但响应丢失时，重试必须先查重，再决定返回已有记录或稳定失败。
+
+### 导入与提示保真
+
+- `--requirement-file` 保留 `## 关键行为` 下的嵌套标题与正文，任务记录层级不丢失。
+- 全局 specs 任务的 PR 标题优先使用 `specs` scope，不因正文路径引用误推模块。
+- check 对同一模块的覆盖缺失与回归建议合并去重，非阻断提示不重复刷屏。

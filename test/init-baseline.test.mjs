@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
-import { existsSync, mkdirSync, readFileSync, rmSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { spawn, spawnSync } from 'node:child_process';
 import test from 'node:test';
@@ -23,6 +24,25 @@ function okGit(root, ...args) {
   const result = git(root, ...args);
   assert.equal(result.status, 0, result.stderr);
   return result.stdout.trim();
+}
+
+async function okGitAsync(root, ...args) {
+  return await new Promise((resolve, reject) => {
+    const child = spawn('git', ['-c', 'user.name=Tiller Test', '-c', 'user.email=tiller@example.invalid', ...args], {
+      cwd: root, encoding: 'utf8', timeout: 60_000, windowsHide: true,
+    });
+    let stdout = '';
+    let stderr = '';
+    child.stdout.setEncoding('utf8');
+    child.stderr.setEncoding('utf8');
+    child.stdout.on('data', chunk => { stdout += chunk; });
+    child.stderr.on('data', chunk => { stderr += chunk; });
+    child.once('error', reject);
+    child.once('close', (status, signal) => {
+      if (signal || status !== 0) reject(new Error(stderr || `git exited with ${status ?? signal}`));
+      else resolve(stdout.trim());
+    });
+  });
 }
 
 function configure(root) {
@@ -58,6 +78,7 @@ async function initialize(t, options = {}) {
   const platform = options.platform ?? 'github';
   const root = fixture(t);
   configure(root);
+  if (options.mainBranch) okGit(root, 'branch', '-M', options.mainBranch);
   const mock = await startPlatformMock(t, {
     platform, mode: options.mode ?? 'success', remoteHead: okGit(root, 'rev-parse', 'HEAD'),
     git: options.gitPush !== false,
@@ -73,7 +94,7 @@ async function initialize(t, options = {}) {
   return { root, result, mock, environment };
 }
 
-test('CASE-228 init creates a committed initialization worktree and creates the titled PR through GitHub API', async t => {
+test('CASE-228 CASE-321 init creates a committed initialization worktree and a uniquely titled, traceable PR', async t => {
   const initialized = await initialize(t);
   if (!initialized) return;
   const { root, result, mock } = initialized;
@@ -87,22 +108,32 @@ test('CASE-228 init creates a committed initialization worktree and creates the 
   const worktree = join(root, baseline.worktree);
   assert.ok(existsSync(worktree));
   assert.equal(okGit(worktree, 'branch', '--show-current'), 'chore/tiller-init');
-  assert.equal(okGit(worktree, 'log', '-1', '--format=%s'), 'chore(tiller): 完成工程初始化');
+  assert.equal(okGit(worktree, 'log', '-1', '--format=%s'), 'chore(tiller): 记录初始化基线');
+  assert.equal(okGit(worktree, 'log', '-2', '--format=%s').split(/\r?\n/u).at(-1), 'chore(tiller): 完成工程初始化');
+  assert.notEqual(okGit(worktree, 'log', '-1', '--format=%s'), okGit(worktree, 'log', '-2', '--format=%s').split(/\r?\n/u).at(-1));
   assert.equal(okGit(worktree, 'status', '--porcelain'), '');
   assert.equal(okGit(worktree, 'merge-base', '--is-ancestor', baseline.commit, 'HEAD'), '');
+  assert.match(baseline.head, /^[a-f0-9]{40,64}$/u);
+  assert.equal(baseline.headRef, `refs/tags/tiller-init/${baseline.id}`);
+  assert.equal(okGit(worktree, 'rev-parse', '--verify', `${baseline.headRef}^{commit}`), baseline.head);
 
   assert.equal(existsSync(join(root, '.tiller/project.json')), false, 'primary must not seed project.json');
   const metadata = JSON.parse(read(worktree, '.tiller/project.json'));
   assert.deepEqual(metadata.initBaseline, {
-    id: baseline.id, branch: baseline.branch, commit: baseline.commit, status: 'pending',
+    id: baseline.id, branch: baseline.branch, commit: baseline.commit, headRef: baseline.headRef, status: 'pending',
   });
   const localBaseline = JSON.parse(read(root, `.tiller/local/${baseline.id}/baseline.json`));
   assert.equal(localBaseline.id, baseline.id);
   assert.equal(localBaseline.status, 'pending');
   assert.equal(localBaseline.commit, baseline.commit);
+  assert.equal(localBaseline.head, baseline.head);
+  assert.equal(localBaseline.headRef, baseline.headRef);
   const initRequests = mock.state.requests;
   assert.ok(!initRequests.some(item => item.path.includes('/git/')));
   assert.ok(initRequests.some(item => item.method === 'POST' && item.path.endsWith('/pulls')));
+  const created = initRequests.find(item => item.method === 'POST' && item.path.endsWith('/pulls'));
+  assert.equal(JSON.parse(created.body).title, `chore(tiller): 完成工程初始化 [${baseline.id}]`);
+  assert.equal(mock.state.refs.get(baseline.headRef), baseline.head);
   assert.ok(initRequests.filter(item => /\/git\/|pulls/u.test(item.path)).every(item => item.hasAuthorization));
   assert.deepEqual(data.warnings.filter(warning => warning.includes('回退')), []);
 
@@ -120,7 +151,7 @@ test('CASE-229 failed PR creation keeps the worktree and commit and returns API/
   assert.equal(baseline.prUrl, undefined);
   assert.ok(existsSync(worktree));
   assert.equal(okGit(worktree, 'branch', '--show-current'), 'chore/tiller-init');
-  assert.equal(okGit(worktree, 'log', '-1', '--format=%s'), 'chore(tiller): 完成工程初始化');
+  assert.equal(okGit(worktree, 'log', '-1', '--format=%s'), 'chore(tiller): 记录初始化基线');
   assert.ok(data.warnings.some(warning => warning.includes('初始化分支推送或 PR/MR 创建失败')), data.warnings.join('\n'));
   assert.doesNotMatch(`${data.warnings.join('\n')}\n${baseline.next.join('\n')}`, /mock-token/u);
   assert.ok(baseline.next.some(command => command.includes('GITHUB_TOKEN')));
@@ -240,6 +271,54 @@ test('CASE-288 ancestor proof records merged for doctor and close init-id', asyn
   assert.equal(JSON.parse(read(root, '.tiller/project.json')).initBaseline.status, 'pending');
 });
 
+test('CASE-320 fresh clone proves a squash-merged init from its tracked head ref after branch deletion', async t => {
+  const initialized = await initialize(t, { mainBranch: 'main' });
+  if (!initialized) return;
+  const { root, environment, result, mock } = initialized;
+  const baseline = success(result).initBaseline;
+  const worktree = join(root, baseline.worktree);
+  const local = join(root, `.tiller/local/${baseline.id}`);
+
+  const refused = failure(await cliAt(root, environment, 'close', baseline.id, '--reason', '尚未证明合入'));
+  assert.equal(refused.error.code, 'INIT_BASELINE_PENDING');
+  assert.ok(existsSync(worktree), 'failed proof keeps the init worktree');
+  assert.ok(existsSync(local), 'failed proof keeps the init local state');
+  assert.equal(git(root, 'show-ref', '--verify', '--quiet', `refs/heads/${baseline.branch}`).status, 0);
+
+  // Simulate the squash merge landing only the final tree on main; the init commits
+  // themselves are absent from main history. The tag keeps the original PR head.
+  okGit(root, 'checkout', baseline.head, '--', '.');
+  okGit(root, 'add', '-A');
+  okGit(root, 'commit', '--quiet', '-m', 'chore(tiller): squash 初始化基线');
+  await okGitAsync(root, 'push', 'origin', 'main');
+  await okGitAsync(root, 'push', 'origin', '--delete', baseline.branch);
+
+  const cloneParent = mkdtempSync(join(tmpdir(), 'tiller-fresh-clone-'));
+  t.after(() => rmSync(cloneParent, { recursive: true, force: true }));
+  await okGitAsync(cloneParent, 'clone', '--quiet', '--branch', 'main', `${mock.origin}/owner/repo.git`, 'repo');
+  const clone = join(cloneParent, 'repo');
+  configure(clone);
+  assert.equal(okGit(clone, 'rev-parse', '--verify', `${baseline.headRef}^{commit}`), baseline.head);
+  assert.equal(await okGitAsync(clone, 'ls-remote', '--heads', 'origin', baseline.branch), '');
+  assert.equal(existsSync(join(clone, '.tiller/local/init-baseline-merged.json')), false);
+  const tracked = JSON.parse(read(clone, '.tiller/project.json')).initBaseline;
+  assert.equal(tracked.headRef, baseline.headRef);
+  assert.equal(tracked.status, 'pending');
+
+  mock.setMergedHeads(baseline.branch, [baseline.head]);
+  const report = success(await cliAt(clone, environment, 'doctor'));
+  assert.equal(report.ready, true, report.issues.join('\n'));
+  assert.ok(report.checks.some(check => check.id === 'init-baseline' && check.status === 'pass'));
+
+  rmSync(join(clone, '.tiller/local/init-baseline-merged.json'), { force: true });
+  const id = '20261028-fresh-clone-start';
+  const started = success(await cliAt(clone, environment, 'start', id, '--title', 'Fresh clone start',
+    '--requirement', 'A squash-merged init can start from a clean clone.',
+    '--criterion', 'AC-1=Start is not blocked by a deleted init branch', '--size', 'small', '--target', '.'));
+  assert.ok(existsSync(join(clone, started.worktreeRoot)));
+  assert.ok(mock.state.requests.some(item => item.method === 'GET' && item.search.includes('state=all')));
+});
+
 test('CASE-289 CASE-305 init leaves no untracked managed residue', async t => {
   const root = fixture(t);
   configure(root);
@@ -333,6 +412,7 @@ test('CASE-230 close init-id only clears that initialization local and preserves
     '--requirement', 'Keep an unrelated task local.', '--criterion', 'AC-1=Local stays', '--size', 'small', '--target', '.'));
   const taskLocal = join(root, '.tiller/local', taskId, 'worktrees');
   assert.ok(existsSync(taskLocal));
+  okGit(root, 'merge', '--quiet', '--no-edit', baseline.branch);
 
   const closed = success(await cliAt(root, {}, 'close', baseline.id, '--reason', '初始化基线已合入'));
   assert.equal(closed.stage, '已关闭');

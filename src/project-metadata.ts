@@ -60,10 +60,19 @@ export function parseMetadata(text: string): ProjectMetadata {
         (baseline.status !== undefined && baseline.status !== 'pending' && baseline.status !== 'merged')) {
       throw new Error('初始化基线标记不完整或无效。');
     }
+    if (baseline.head !== undefined && (typeof baseline.head !== 'string' || !/^[a-f0-9]{40,64}$/u.test(baseline.head))) {
+      throw new Error('初始化基线 head 标记无效。');
+    }
+    if (baseline.headRef !== undefined && (typeof baseline.headRef !== 'string'
+      || baseline.headRef.length > 300 || !/^refs\/(?:tags|heads)\/[A-Za-z0-9._/-]+$/u.test(baseline.headRef))) {
+      throw new Error('初始化基线 head 引用无效。');
+    }
     data.initBaseline = {
       id: baseline.id,
       branch: baseline.branch,
       commit: baseline.commit,
+      ...(baseline.head === undefined ? {} : { head: baseline.head }),
+      ...(baseline.headRef === undefined ? {} : { headRef: baseline.headRef }),
       ...(baseline.status === undefined ? {} : { status: baseline.status }),
     } satisfies InitBaseline;
   }

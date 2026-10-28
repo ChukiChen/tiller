@@ -149,7 +149,12 @@ export function regressionWarnings(library: CaseLibrary, changed: string[]): str
       || requirements.some(reference => relative === reference || relative.startsWith(`${reference.replace(/\/+$/u, '')}/`)));
     if (!touched) continue;
     const scenarioIds = scenarios.map(item => item.id);
-    warnings.push(`本次改动涉及模块 ${summary.module}：建议回归该模块 ${summary.total} 条用例${scenarioIds.length ? `及经过它的场景 ${scenarioIds.join(', ')}` : '；暂无场景覆盖该模块'}。`);
+    const coverage = scenarioIds.length
+      ? `；建议同时回归经过它的场景 ${scenarioIds.join(', ')}`
+      : library.uncovered.includes(summary.module)
+        ? '；当前无场景覆盖，请按需补充端到端场景'
+        : '';
+    warnings.push(`本次改动涉及模块 ${summary.module}：建议回归该模块 ${summary.total} 条用例${coverage}。`);
   }
   return warnings;
 }

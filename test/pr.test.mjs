@@ -164,11 +164,68 @@ test('CASE-279 CASE-292 pr 经 API 创建真实 PR 并返回稳定字段', async
     assert.equal(missing.error.code, 'PR_TOKEN_MISSING');
     assert.match(missing.error.message, platform === 'github' ? /缺少 GitHub token/u : /缺少 GitLab token/u);
 
+    const postsBefore = mock.state.requests.filter(item => item.method === 'POST' && item.path.endsWith(createPath)).length;
+    const reused = success(await cliAt(root, environment, 'pr', id));
+    assert.equal(reused.number, created.number);
+    assert.equal(reused.url, created.url);
+    assert.match(reused.next, /已复用/u);
+    assert.ok(reused.warnings.some(warning => warning.includes('同一 head branch+SHA')), reused.warnings.join('\n'));
+    assert.equal(mock.state.requests.filter(item => item.method === 'POST' && item.path.endsWith(createPath)).length, postsBefore);
+
+    mock.state.openIntegrations.delete(branch);
     mock.setMode('pr-exists');
     const existing = failure(await cliAt(root, environment, 'pr', id));
     assert.equal(existing.error.code, 'PR_ALREADY_EXISTS');
     assert.match(existing.error.message, /已存在|already exists/u);
   }
+});
+
+test('CASE-323 pr reuses the same head branch and SHA after a lost create response', async t => {
+  for (const platform of ['github', 'gitlab']) {
+    const root = fixture(t);
+    success(cli(root, 'init', '--platform', platform));
+    setupRepository(root);
+    const id = `20261028-idempotent-${platform}-pr`;
+    const branch = prepareTaskBranch(root, id);
+    const remoteHead = git(root, 'rev-parse', 'HEAD').trim();
+    const mock = await startPlatformMock(t, { platform, mode: 'pr-created-lost', remoteHead });
+    git(root, 'remote', 'add', 'origin', `${mock.origin}${platform === 'github' ? '/owner/repo.git' : '/group/project.git'}`);
+    acceptTaskForPr(root, id);
+    const environment = platform === 'github'
+      ? { ...emptyTokens, GITHUB_TOKEN: 'mock-token' }
+      : { ...emptyTokens, GITLAB_TOKEN: 'mock-token' };
+    const createPath = platform === 'github' ? '/pulls' : '/merge_requests';
+
+    const recovered = success(await cliAt(root, environment, 'pr', id));
+    assert.match(recovered.next, /已复用/u);
+    assert.ok(recovered.warnings.some(warning => warning.includes('同一 head branch+SHA')), recovered.warnings.join('\n'));
+    assert.equal(mock.state.requests.filter(item => item.method === 'POST' && item.path.endsWith(createPath)).length, 1);
+    assert.equal(mock.state.openIntegrations.get(branch)?.length, 1);
+
+    mock.setMode('success');
+    const retried = success(await cliAt(root, environment, 'pr', id));
+    assert.equal(retried.number, recovered.number);
+    assert.equal(retried.url, recovered.url);
+    assert.equal(mock.state.requests.filter(item => item.method === 'POST' && item.path.endsWith(createPath)).length, 1);
+    assert.equal(mock.state.openIntegrations.get(branch)?.length, 1);
+  }
+});
+
+test('CASE-325 global specs tasks use the specs scope despite module paths in the requirement', async t => {
+  const root = fixture(t);
+  success(cli(root, 'init'));
+  setupRepository(root);
+  const id = '20261028-global-specs-scope';
+  success(cli(root, 'start', id, '--title', '全局规格收口', '--requirement',
+    '同步 `.tiller/specs/modules/workflow/requirements.md` 描述的全局规格。',
+    '--criterion', 'AC-1=全局规格标题使用 specs scope', '--size', 'small',
+    '--target', '.tiller/specs', '--target', '.tiller/cases', '--target', 'test'));
+  acceptTaskForPr(root, id);
+
+  const draft = success(cli(root, 'pr', id, '--draft-only'));
+  assert.equal(draft.module, 'specs');
+  assert.match(draft.title, new RegExp(`^feat\\(specs\\): .+ \\[${id}\\]$`, 'u'));
+  assert.ok(!draft.warnings.some(warning => warning.includes('多个模块')), draft.warnings.join('\n'));
 });
 
 test('CASE-298 GitHub pr prefers tokenized git push and keeps pull request creation on REST API', async t => {

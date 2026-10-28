@@ -57,7 +57,7 @@ async function cliAt(root, environment, ...args) {
 async function initialize(t, platform = 'github') {
   const root = fixture(t);
   configure(root);
-  const mock = await startPlatformMock(t, { platform, remoteHead: git(root, 'rev-parse', 'HEAD') });
+  const mock = await startPlatformMock(t, { platform, remoteHead: git(root, 'rev-parse', 'HEAD'), openDefault: true });
   git(root, 'remote', 'add', 'origin', `${mock.origin}${platform === 'github' ? '/owner/repo.git' : '/group/project.git'}`);
   const environment = platform === 'github'
     ? { GITHUB_TOKEN: 'mock-token', GH_TOKEN: '', GITLAB_TOKEN: '', GL_TOKEN: '' }
@@ -312,6 +312,7 @@ test('CASE-256 close init-id deletes the initialization branch locally and remot
   assert.equal(branchExists(root, baseline.branch), true);
   assert.equal(mock.state.refs.has(`refs/heads/${baseline.branch}`), true);
 
+  mock.setMergedHeads(baseline.branch, [baseline.head]);
   mock.resetRequests();
   const closed = success(await cliAt(root, environment, 'close', baseline.id, '--reason', '初始化基线已合入'));
   assert.equal(existsSync(join(root, '.tiller/local', baseline.id)), false);

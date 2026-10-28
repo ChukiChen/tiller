@@ -162,6 +162,21 @@ test('CASE-106 check warns when specs were not written back', async t => {
   assert.ok(!checked.issues.some(issue => issue.includes('回写')));
 });
 
+test('CASE-326 check merges uncovered-module and regression advice into one non-blocking warning', async t => {
+  const root = await project(t);
+  const id = '20261028-merged-module-warning';
+  await acceptedTask(root, id, { touchModuleTest: true });
+
+  const checked = success(cli(root, 'check', id));
+  assert.equal(checked.ready, true, checked.issues.join('\n'));
+  const moduleWarnings = checked.warnings.filter(warning => warning.includes('模块 workflow')
+    && (warning.includes('未被任何场景覆盖') || warning.includes('无场景覆盖') || warning.includes('暂无场景覆盖')));
+  assert.equal(moduleWarnings.length, 1, checked.warnings.join('\n'));
+  assert.match(moduleWarnings[0], /建议回归.*无场景覆盖/u);
+  assert.equal(checked.warnings.filter(warning => warning.includes('模块 workflow') && warning.includes('未被任何场景覆盖')).length, 0);
+  assert.equal(new Set(checked.warnings).size, checked.warnings.length);
+});
+
 test('CASE-206 accepted close preserves the shared self-check while check still reports hints', async t => {
   const root = await project(t);
   const id = '20261024-closed-self-check';
@@ -259,6 +274,51 @@ test('CASE-107 CASE-265 CASE-271 start requirement-file preserves structured mul
   const both = failure(cli(root, 'start', '20261022-both-requirement', '--title', 'Both', '--requirement', 'inline',
     '--requirement-file', requirementFile, '--criterion', 'AC-1=One source only', '--size', 'small', '--target', 'src'));
   assert.equal(both.error.code, 'INVALID_ARGUMENT');
+});
+
+test('CASE-324 requirement-file keeps nested key behavior headings under the task section', async t => {
+  const root = await project(t);
+  const requirementFile = '.tiller/specs/modules/workflow/nested-key-behavior.md';
+  put(root, requirementFile, `# 嵌套关键行为
+
+## 使用场景
+
+维护者需要保留稳定需求的行为层级。
+
+## 目标
+
+从需求文件建立任务时不折叠关键行为。
+
+## 业务范围
+
+- 做：保留 \`### 关键行为\` 下的子标题与正文。
+- 不做：把子标题提升成任务顶层章节。
+
+## 关键行为
+
+### 原子持久化
+
+先写入并提交放弃事件，再清理任务事实。
+
+#### 失败回滚
+
+无法持久化时保留全部任务事实。
+
+## 异常与边界
+
+解析失败时明确报错。
+
+## 验收条件
+
+- AC-1: 嵌套行为保持从属层级
+`);
+  const id = '20261028-nested-key-behavior';
+  success(cli(root, 'start', id, '--title', 'Nested key behavior', '--requirement-file', requirementFile,
+    '--size', 'small', '--target', 'src'));
+  const body = read(taskRecordRoot(root, id), taskPath(id));
+  assert.match(body, /### 关键行为\n\n#### 原子持久化\n\n先写入并提交放弃事件，再清理任务事实。\n\n##### 失败回滚\n\n无法持久化时保留全部任务事实。/u);
+  assert.doesNotMatch(body, /^### 原子持久化$/mu);
+  assert.doesNotMatch(body, /^#### 失败回滚$/mu);
 });
 
 test('CASE-274 requirement-file imports AC-n from canonical or legacy headings without a parallel list', async t => {
@@ -451,7 +511,7 @@ test('CASE-109 repository docs and suite include review release and pinned check
   assert.ok(suite.e2e.includes('review-release.test.mjs'));
   const library = await readCaseLibrary(repository);
   assert.deepEqual(library.issues, []);
-  assert.equal(library.cases.length, 296);
+  assert.equal(library.cases.length, 303);
   for (const id of ['CASE-104', 'CASE-105', 'CASE-106', 'CASE-107', 'CASE-108', 'CASE-109']) {
     assert.ok(library.cases.find(item => item.id === id)?.tests.length, id);
   }

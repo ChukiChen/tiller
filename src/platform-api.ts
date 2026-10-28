@@ -54,6 +54,14 @@ export interface MergedIntegration {
   command: string;
 }
 
+export interface OpenIntegration {
+  url: string;
+  number: number;
+  base: string;
+  head: string;
+  command: string;
+}
+
 export interface BranchDeleteResult {
   deleted: boolean;
   command: string;
@@ -291,6 +299,43 @@ export async function createMergeRequest(
   return { url: created.web_url, number: created.iid, iid: created.iid, base, command: `gitlab-api POST ${endpoint}` };
 }
 
+export async function findOpenIntegration(
+  repository: PlatformRepository,
+  token: PlatformToken,
+  branch: string,
+  tip: string,
+  fetchImpl: FetchLike = globalThis.fetch,
+): Promise<OpenIntegration | null> {
+  const expectedTip = commitTip(tip);
+  if (!expectedTip) fail('PLATFORM_INVALID', '开放 PR/MR 查询需要完整 head SHA。');
+  if (repository.platform === 'github') {
+    const endpoint = `${githubRepoPath(repository)}/pulls?state=open&head=${encodeURIComponent(`${repository.owner}:${branch}`)}`;
+    const pulls = await api<Array<{
+      number?: number; html_url?: string; title?: string; base?: { ref?: string };
+      head?: { ref?: string; sha?: string };
+    }>>(repository, token, fetchImpl, 'GET', endpoint);
+    const found = pulls?.find(item => typeof item.number === 'number'
+      && typeof item.html_url === 'string' && item.head?.ref === branch
+      && commitTip(item.head?.sha) === expectedTip);
+    return found ? {
+      url: found.html_url!, number: found.number!, head: expectedTip,
+      base: found.base?.ref ?? 'main', command: `github-api GET ${endpoint}`,
+    } : null;
+  }
+
+  const endpoint = `/projects/${gitlabProjectPath(repository)}/merge_requests?state=opened&source_branch=${encodeURIComponent(branch)}`;
+  const mergeRequests = await api<Array<{
+    iid?: number; web_url?: string; source_branch?: string; target_branch?: string;
+    sha?: string; diff_refs?: { head_sha?: string };
+  }>>(repository, token, fetchImpl, 'GET', endpoint);
+  const found = mergeRequests?.find(item => typeof item.iid === 'number' && typeof item.web_url === 'string'
+    && item.source_branch === branch && commitTip(item.sha ?? item.diff_refs?.head_sha) === expectedTip);
+  return found ? {
+    url: found.web_url!, number: found.iid!, head: expectedTip,
+    base: found.target_branch ?? 'main', command: `gitlab-api GET ${endpoint}`,
+  } : null;
+}
+
 export async function mergePullRequest(
   repository: PlatformRepository,
   token: PlatformToken,
@@ -517,6 +562,12 @@ async function pushGitHubApi(root: string, repository: PlatformRepository, token
 
 async function tokenizedPush(root: string, repository: PlatformRepository, token: PlatformToken, branch: string,
   warnings: string[]): Promise<PushResult> {
+  return tokenizedPushRef(root, repository, token,
+    `refs/heads/${branch}:refs/heads/${branch}`, warnings);
+}
+
+async function tokenizedPushRef(root: string, repository: PlatformRepository, token: PlatformToken,
+  ref: string, warnings: string[]): Promise<PushResult> {
   const username = repository.platform === 'github' ? 'x-access-token' : 'oauth2';
   const authorization = `Basic ${Buffer.from(`${username}:${token.value}`).toString('base64')}`;
   const environment: NodeJS.ProcessEnv = { ...process.env, LC_ALL: 'C', GIT_TERMINAL_PROMPT: '0' };
@@ -525,7 +576,6 @@ async function tokenizedPush(root: string, repository: PlatformRepository, token
   environment[`GIT_CONFIG_KEY_${count}`] = 'http.extraHeader';
   environment[`GIT_CONFIG_VALUE_${count}`] = `Authorization: ${authorization}`;
   const remote = `${repository.webBase}/${repository.projectPath}.git`;
-  const ref = `refs/heads/${branch}:refs/heads/${branch}`;
   try {
     await execFileAsync('git', ['push', '--porcelain', remote, ref], {
       cwd: root, encoding: 'utf8', maxBuffer: 16 * 1024 * 1024, env: environment,
@@ -536,6 +586,15 @@ async function tokenizedPush(root: string, repository: PlatformRepository, token
     fail('PLATFORM_PUSH_FAILED', `tokenized HTTPS git push 失败：${redact(detail, token.value)}`);
   }
   return { method: 'tokenized-git', command: `git push ${remote} ${ref}`, warnings };
+}
+
+export async function pushTag(
+  root: string,
+  repository: PlatformRepository,
+  token: PlatformToken,
+  tag: string,
+): Promise<PushResult> {
+  return tokenizedPushRef(root, repository, token, `${tag}:${tag}`, []);
 }
 
 export async function pushBranch(

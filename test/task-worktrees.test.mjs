@@ -383,29 +383,61 @@ test('CASE-318 close rejects historical same-branch merges until the current tip
   assert.equal(branchExists(root, branch), false);
 });
 
-test('CASE-317 abandon refuses to erase a worktree-only task and persists when primary has a record', async t => {
+test('CASE-317 abandon keeps every task fact when primary cannot persist the event', async t => {
   const root = project(t);
   const id = '20261027-abandon-durability';
   const started = startTask(root, id);
   const worktree = join(root, started.worktreeRoot);
   const branch = started.worktrees[0].branch;
 
+  put(root, '.git/index.lock', '');
   const refused = failure(cli(worktree, 'close', id, '--reason', '需求取消', '--abandon'));
   assert.equal(refused.error.code, 'ABANDON_NOT_PERSISTABLE');
   assert.doesNotMatch(refused.error.message, /tiller reopen/u);
   assert.ok(existsSync(worktree));
   assert.ok(existsSync(join(root, taskLocalPath(id))));
   assert.ok(branchExists(root, branch));
+  assert.equal(existsSync(join(root, `.tiller/task/${id}/task.md`)), false);
 
-  put(root, `.tiller/task/${id}/task.md`, readFileSync(join(taskRecordRoot(worktree, id), `.tiller/task/${id}/task.md`), 'utf8'));
-  commit(root, 'chore(workflow): 持久化待放弃任务记录');
+  rmSync(join(root, '.git/index.lock'), { force: true });
+  const before = git(root, 'rev-parse', 'HEAD');
   const abandoned = success(cli(worktree, 'close', id, '--reason', '需求取消', '--abandon'));
   assert.equal(abandoned.stage, '已放弃');
   assert.match(abandoned.next, /tiller reopen/u);
+  assert.notEqual(git(root, 'rev-parse', 'HEAD'), before);
+  assert.match(git(root, 'log', '-1', '--format=%s'), new RegExp(`放弃任务 ${id}`, 'u'));
+  assert.deepEqual(git(root, 'show', '--pretty=format:', '--name-only', 'HEAD').split(/\r?\n/u).filter(Boolean),
+    [`.tiller/task/${id}/task.md`]);
   assert.match(readFileSync(join(root, `.tiller/task/${id}/task.md`), 'utf8'), /^- 状态：已放弃$/mu);
   assert.equal(existsSync(worktree), false);
   const reopened = success(cli(root, 'reopen', id, '--reason', '重新评估'));
   assert.notEqual(reopened.stage, '已放弃');
+});
+
+test('CASE-322 accepted but unmerged task abandons by committing the event before cleanup', async t => {
+  const root = project(t);
+  const id = '20261028-accepted-abandon';
+  const started = startTask(root, id);
+  const worktree = join(root, started.worktreeRoot);
+  const branch = started.worktrees[0].branch;
+  acceptTask(root, id);
+  const before = git(root, 'rev-parse', 'HEAD');
+
+  const abandoned = success(cli(worktree, 'close', id, '--reason', 'PR 被拒，放弃交付', '--abandon'));
+  assert.equal(abandoned.stage, '已放弃');
+  assert.match(abandoned.persistedCommit, /^[a-f0-9]{40,64}$/u);
+  assert.equal(abandoned.persistedCommit, git(root, 'rev-parse', 'HEAD'));
+  assert.notEqual(abandoned.persistedCommit, before);
+  assert.deepEqual(git(root, 'show', '--pretty=format:', '--name-only', 'HEAD').split(/\r?\n/u).filter(Boolean),
+    [`.tiller/task/${id}/task.md`]);
+  assert.match(readFileSync(join(root, `.tiller/task/${id}/task.md`), 'utf8'), /^- 状态：已放弃$/mu);
+  assert.equal(existsSync(worktree), false);
+  assert.equal(existsSync(join(root, taskLocalPath(id))), false);
+  assert.equal(branchExists(root, branch), false);
+
+  const reopened = success(cli(root, 'reopen', id, '--reason', '重新评估被拒方案'));
+  assert.notEqual(reopened.stage, '已放弃');
+  assert.match(readFileSync(join(root, `.tiller/task/${id}/task.md`), 'utf8'), /^- 状态：/mu);
 });
 
 test('CASE-200 start failures leave no task record or partially created worktree', async t => {

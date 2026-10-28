@@ -739,3 +739,56 @@ start 放行，project.json 基线状态更新为 merged。
 
 primary 对受管文件（含 `.tiller/project.json`、AGENTS.md、usage 等）无未跟踪残留；全部 init 产物仅在 `.tiller/local/<YYYYMMDD-tiller-init>/worktrees` 的提交中；local `baseline.json` 记录 pending 基线。
 
+## CASE-320 fresh clone 在 init 已 squash 合入且分支删除后仍可证明基线
+
+- 类型：behavior
+- 优先级：high
+- 模块：initialization
+- 关联 AC：无
+- 需求：`.tiller/specs/modules/workflow/hygiene-invariants.md#2026-10-28-整包收口不变式`
+
+### 前置条件
+
+- init PR 已 squash 合入默认分支，远端与本地 `chore/tiller-init` 已删除。
+- fresh clone 没有 `.tiller/local/init-baseline-merged.json`，只能读取跟踪的 `project.json`、Git 元信息和只读平台证据。
+
+### 步骤
+
+1. 在 fresh clone 中运行 `tiller doctor` 和 `tiller start <id> ...`。
+2. 删除平台合入证据后再次运行 `tiller close <init-id> --reason "..."`。
+3. 检查 init worktree、本机目录和分支是否仍保留。
+
+### 输入
+
+- squash 后的默认分支、已删除的 init 分支、跟踪的 init 基线 head 引用与平台已合入 PR/MR。
+
+### 预期结果
+
+doctor/start 仅凭跟踪元信息与平台证据放行；证明失败时 close 返回稳定错误且不清理任何 init 事实，不把未证明写成已关闭。
+
+## CASE-321 init 基线与 PR head 可追踪且提交可区分
+
+- 类型：behavior
+- 优先级：high
+- 模块：initialization
+- 关联 AC：无
+- 需求：`.tiller/specs/modules/initialization/requirements.md#2-初始化`
+
+### 前置条件
+
+- 仓库有可提交 HEAD，可创建 init worktree，GitHub/GitLab mock 可创建 PR/MR。
+
+### 步骤
+
+1. 运行 `tiller init`。
+2. 检查跟踪的 `project.json`、返回的 initBaseline 与 worktree 提交历史。
+3. 在分支删除后解析跟踪元信息中的 head 引用。
+
+### 输入
+
+- 正常初始化的空仓库。
+
+### 预期结果
+
+跟踪元信息包含可解析到 squash 前 PR head 的稳定引用；第二个提交标题与基线提交不同或收敛为单个提交；init PR 标题包含 init id，能区分重复初始化。
+

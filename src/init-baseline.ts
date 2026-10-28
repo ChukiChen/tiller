@@ -4,7 +4,7 @@ import path from 'node:path';
 import { promisify } from 'node:util';
 import { assertSafePath } from './files.js';
 import {
-  createMergeRequest, createPullRequest, findMergedIntegration, platformToken, pushBranch,
+  createMergeRequest, createPullRequest, findMergedIntegration, findOpenIntegration, platformToken, pushBranch, pushTag,
   resolvePlatformRepository, tokenGuidance, type FetchLike, type PlatformRepository, type PlatformToken,
 } from './platform-api.js';
 import { META, parseMetadata } from './project-metadata.js';
@@ -14,7 +14,7 @@ const execFileAsync = promisify(execFile);
 const INIT_SUFFIX = 'tiller-init';
 const INIT_BRANCH = 'chore/tiller-init';
 const INIT_COMMIT_MESSAGE = 'chore(tiller): 完成工程初始化';
-const INIT_PR_TITLE = INIT_COMMIT_MESSAGE;
+const INIT_METADATA_COMMIT_MESSAGE = 'chore(tiller): 记录初始化基线';
 const INIT_PR_BODY = '初始化 tiller 工程结构。';
 const INIT_ID = /^[0-9]{8}-tiller-init$/u;
 const LOCAL_MERGED_RELATIVE = '.tiller/local/init-baseline-merged.json';
@@ -35,6 +35,7 @@ export interface InitBaselineResult {
   branch: string;
   commit: string;
   head: string;
+  headRef?: string;
   worktree: string;
   status: 'pending';
   prUrl?: string;
@@ -136,6 +137,14 @@ function pendingNext(id: string, repository?: PlatformRepository): string[] {
   ];
 }
 
+function initHeadRef(id: string): string {
+  return `refs/tags/tiller-init/${id}`;
+}
+
+function initPrTitle(id: string): string {
+  return `${INIT_COMMIT_MESSAGE} [${id}]`;
+}
+
 async function attemptRemote(id: string, worktree: string, platform: ProjectPlatform,
   warnings: string[]): Promise<RemoteAttempt> {
   let repository: PlatformRepository;
@@ -156,14 +165,38 @@ async function attemptRemote(id: string, worktree: string, platform: ProjectPlat
   try {
     const pushed = await pushBranch(worktree, repository, token, INIT_BRANCH);
     warnings.push(...pushed.warnings);
+    const head = await gitHead(worktree);
+    if (!head) fail('INIT_BASELINE_COMMIT_FAILED', '初始化 worktree 缺少可推送的 HEAD。');
+    try {
+      await pushTag(worktree, repository, token, initHeadRef(id));
+    } catch (error) {
+      warnings.push(`初始化 head 锚点推送失败，平台证明仍可按分支与标题重试：${(error as Error).message}`);
+    }
+    const existing = await findOpenIntegration(repository, token, INIT_BRANCH, head);
+    if (existing) {
+      return {
+        prUrl: existing.url,
+        next: [`人工合入 ${INIT_BRANCH} 后运行：tiller close ${id} --reason "初始化基线已合入"`],
+      };
+    }
     const created = repository.platform === 'github'
-      ? await createPullRequest(repository, token, { branch: INIT_BRANCH, title: INIT_PR_TITLE, body: INIT_PR_BODY })
-      : await createMergeRequest(repository, token, { branch: INIT_BRANCH, title: INIT_PR_TITLE, body: INIT_PR_BODY });
+      ? await createPullRequest(repository, token, { branch: INIT_BRANCH, title: initPrTitle(id), body: INIT_PR_BODY })
+      : await createMergeRequest(repository, token, { branch: INIT_BRANCH, title: initPrTitle(id), body: INIT_PR_BODY });
     return {
       prUrl: created.url,
       next: [`人工合入 ${INIT_BRANCH} 后运行：tiller close ${id} --reason "初始化基线已合入"`],
     };
   } catch (error) {
+    try {
+      const head = await gitHead(worktree);
+      const existing = head ? await findOpenIntegration(repository, token, INIT_BRANCH, head) : null;
+      if (existing) {
+        return {
+          prUrl: existing.url,
+          next: [`人工合入 ${INIT_BRANCH} 后运行：tiller close ${id} --reason "初始化基线已合入"`],
+        };
+      }
+    } catch { /* Preserve the original push/create failure when duplicate lookup also fails. */ }
     warnings.push(`初始化分支推送或 PR/MR 创建失败：${(error as Error).message}`);
     return { next: pendingNext(id, repository) };
   }
@@ -314,9 +347,16 @@ export async function proveInitBaselineMerged(rootInput: string, metadata: Proje
     }
   }
   let detail = '平台未找到该分支已合入的 PR/MR';
+  const candidates = new Set<string>();
+  if (baseline.head && /^[a-f0-9]{40,64}$/u.test(baseline.head)) candidates.add(baseline.head);
+  if (baseline.headRef) {
+    const resolved = await git(root, ['rev-parse', '--verify', `${baseline.headRef}^{commit}`]);
+    if (resolved.ok && /^[a-f0-9]{40,64}$/u.test(resolved.stdout.trim())) candidates.add(resolved.stdout.trim());
+  }
   const tip = await git(root, ['rev-parse', '--verify', `refs/heads/${baseline.branch}^{commit}`]);
-  if (!tip.ok) {
-    detail = `无法读取初始化基线分支 ${baseline.branch} 的当前 tip，不能证明合入`;
+  if (tip.ok && /^[a-f0-9]{40,64}$/u.test(tip.stdout.trim())) candidates.add(tip.stdout.trim());
+  if (!candidates.size) {
+    detail = `初始化基线分支 ${baseline.branch} 已删除，且跟踪元信息没有可解析的 head 或 headRef`;
     return { merged: false, detail, marked: false };
   }
   try {
@@ -326,8 +366,9 @@ export async function proveInitBaselineMerged(rootInput: string, metadata: Proje
     if (!token) {
       detail = `缺少 ${repository.platform === 'github' ? 'GITHUB_TOKEN/GH_TOKEN' : 'GITLAB_TOKEN/GL_TOKEN'}，无法确认平台合入状态`;
     } else {
-      const merged = await findMergedIntegration(repository, token, baseline.branch, tip.stdout.trim(), fetchImpl);
-      if (merged) {
+      for (const candidate of candidates) {
+        const merged = await findMergedIntegration(repository, token, baseline.branch, candidate, fetchImpl);
+        if (!merged) continue;
         await markInitBaselineMerged(root, baseline.id);
         return { merged: true, detail: `初始化基线 ${baseline.id} 已由平台确认合入。`, marked: true };
       }
@@ -384,11 +425,15 @@ export async function createInitBaseline(rootInput: string, metadata: ProjectMet
     delete (seedMetadata as { initBaseline?: InitBaseline }).initBaseline;
     await writeChanges(target, [{ path: META, before: null, after: `${JSON.stringify(seedMetadata, null, 2)}\n` }]);
     const commit = await createCommit(target, INIT_COMMIT_MESSAGE);
-    const baseline: InitBaseline = { id, branch: INIT_BRANCH, commit, status: 'pending' };
+    const headRef = initHeadRef(id);
+    const baseline: InitBaseline = { id, branch: INIT_BRANCH, commit, headRef, status: 'pending' };
     const nextMetadata: ProjectMetadata = { ...metadata, initBaseline: baseline };
     await writeChanges(target, [{ path: META, before: null, after: `${JSON.stringify(nextMetadata, null, 2)}\n` }]);
-    const worktreeHead = await createCommit(target, INIT_COMMIT_MESSAGE);
-    await writeLocalBaseline(root, baseline);
+    const worktreeHead = await createCommit(target, INIT_METADATA_COMMIT_MESSAGE);
+    const tagged = await git(target, ['tag', '-f', headRef, worktreeHead]);
+    if (!tagged.ok) fail('INIT_BASELINE_TAG_FAILED', `初始化 head 锚点创建失败：${commandError(tagged, 'git tag 失败')}`);
+    const finalBaseline: InitBaseline = { ...baseline, head: worktreeHead };
+    await writeLocalBaseline(root, finalBaseline);
     // Safety net: remove any accidental primary untracked managed copies (including META).
     const warnings = await cleanupPrimaryInitChanges(root, [
       ...changes,
@@ -400,7 +445,7 @@ export async function createInitBaseline(rootInput: string, metadata: ProjectMet
       : remote.next;
     return {
       baseline: {
-        id, branch: INIT_BRANCH, commit, head: worktreeHead, worktree, status: 'pending',
+        id, branch: INIT_BRANCH, commit, head: worktreeHead, headRef, worktree, status: 'pending',
         ...(remote.prUrl ? { prUrl: remote.prUrl } : {}), warnings, next,
       },
       metadata: nextMetadata,
