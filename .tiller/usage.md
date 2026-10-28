@@ -20,7 +20,7 @@ tiller close <id> --reason "已合入"
 tiller doctor
 ```
 
-`start` 生成需求，standard 另生成设计；worktree 在 `.tiller/local/<id>/worktrees/`，任务记录只写入该 worktree（primary 不留种子）。`--requirement` 仅短目标单行，并生成含使用场景、目标、业务范围、关键行为、异常与边界的可确认骨架；完整需求与 AC-n 用 `--requirement-file`（限 `.tiller/specs/`）且以文件为准。“验收条件”的 `- AC-n: …` 会自动导入；有 AC 可省略 `--criterion`，无 AC 仍须提供。验收条件按路径作用域用 AC-n，不写模块前缀/对照列表。`--quote` 可选，`--by` 默认取 `git config user.name`。首次 `init` → 初始化 PR/MR → 人工合入 → `start`；pending 基线须 API 证明合入，`--skip-init-gate` 例外。`specs` 经任务 worktree，随任务 PR/MR 合入；禁止默认分支直改/直推。
+`start` 生成需求，standard 另生成设计；worktree 在 `.tiller/local/<id>/worktrees/`，任务记录只写入该 worktree（primary 不留种子）。`--requirement` 仅短目标单行，并生成含使用场景、目标、业务范围、关键行为、异常与边界的可确认骨架；完整需求与 AC-n 用 `--requirement-file`（限 `.tiller/specs/`）且以文件为准。“验收条件”的 `- AC-n: …` 会自动导入；有 AC 可省略 `--criterion`，无 AC 仍须提供。验收条件按路径作用域用 AC-n，不写模块前缀/对照列表。`--quote` 可选，`--by` 默认取 `git config user.name`。首次 `init` → 初始化 PR/MR → 人工合入 → `start`；pending 基线须按本次 expected tip 与平台 merged PR/MR 精确证明，`--skip-init-gate` 例外。`specs` 经任务 worktree，随任务 PR/MR 合入；禁止默认分支直改/直推。
 
 `review` 阻塞 `check`/`accept`；`release` 与已验收任务钉在验收提交。未验收终止用 `close --abandon`；再交付用 `reopen`。
 
@@ -50,4 +50,4 @@ accept 须在 pr 前；`confirm`/`accept` 写入确认后自动提交本任务�
 
 ## 接入与升级
 
-`init [--platform github|gitlab|both]` 只在 init worktree 写入受管产物并推送 PR/MR，primary 不预建未跟踪 `.tiller/` 种子；失败保留本机 worktree。`initBaseline` 由祖先或平台 API 确认合入，merged 记在 `.tiller/local/`（不脏跟踪的 `project.json`）；`merge <init-id>` 标记并清理，网页合入可 `close <init-id>`。平台在初始化时选定，之后不能通过 CLI 切换；需手动修改 `.tiller/project.json` 并补齐对应模板。主路径直接使用 PATH 中的 `tiller`。`upgrade --adopt` 刷新未改项；兼容当前及上一资源契约。
+`init [--platform github|gitlab|both]` 只在 init worktree 写入受管产物并推送 PR/MR，primary 不预建未跟踪 `.tiller/` 种子；失败保留本机 worktree。本机 `.tiller/local/<init-id>/` 记录 expected tip 与 open PR/MR；`initBaseline` 由祖先或平台 API 按同 head 记录确认合入，effective 结论经 local marker 与 CLI 输出（不脏跟踪的 `project.json`）；`merge <init-id>` 写入同 head marker 并清理，网页合入可 `close <init-id>`。平台在初始化时选定，之后不能通过 CLI 切换；需手动修改 `.tiller/project.json` 并补齐对应模板。主路径直接使用 PATH 中的 `tiller`。`upgrade --adopt` 刷新未改项；兼容当前及上一资源契约。

@@ -4,7 +4,7 @@ import path from 'node:path';
 import { promisify } from 'node:util';
 import { assertSafePath } from './files.js';
 import {
-  createMergeRequest, createPullRequest, findMergedInitIntegration, findMergedIntegration, findOpenIntegration, platformToken, pushBranch,
+  createMergeRequest, createPullRequest, findMergedIntegration, findOpenIntegration, platformToken, pushBranch,
   resolvePlatformRepository, tokenGuidance, type FetchLike, type PlatformRepository, type PlatformToken,
 } from './platform-api.js';
 import { META, parseInitBaseline, parseMetadata } from './project-metadata.js';
@@ -26,6 +26,12 @@ interface LocalMergedMarker {
   at: string;
   commit?: string;
   branch?: string;
+  head?: string;
+}
+
+interface LocalInitBaseline extends InitBaseline {
+  prUrl?: string;
+  prNumber?: number;
 }
 
 interface CommandResult { ok: boolean; stdout: string; stderr: string; unavailable: boolean }
@@ -61,6 +67,12 @@ function commandError(result: CommandResult, fallback: string): string {
   return result.stderr.trim() || result.stdout.trim() || fallback;
 }
 
+function commitTip(value: unknown): string | null {
+  if (typeof value !== 'string') return null;
+  const normalized = value.trim().toLowerCase();
+  return /^(?:[a-f0-9]{40}|[a-f0-9]{64})$/u.test(normalized) ? normalized : null;
+}
+
 async function run(root: string, command: string, args: string[], env: NodeJS.ProcessEnv = process.env): Promise<CommandResult> {
   try {
     const result = await execFileAsync(command, args, {
@@ -85,7 +97,7 @@ async function git(root: string, args: string[]): Promise<CommandResult> {
 
 async function gitHead(root: string): Promise<string | null> {
   const result = await git(root, ['rev-parse', '--verify', 'HEAD^{commit}']);
-  return result.ok && /^[a-f0-9]{40,64}$/u.test(result.stdout.trim()) ? result.stdout.trim() : null;
+  return result.ok ? commitTip(result.stdout) : null;
 }
 
 async function gitTop(root: string): Promise<string | null> {
@@ -113,6 +125,7 @@ async function createCommit(root: string, message: string): Promise<string> {
 
 interface RemoteAttempt {
   prUrl?: string;
+  prNumber?: number;
   next: string[];
 }
 
@@ -164,7 +177,7 @@ async function attemptRemote(id: string, worktree: string, platform: ProjectPlat
     const existing = await findOpenIntegration(repository, token, INIT_BRANCH, head);
     if (existing) {
       return {
-        prUrl: existing.url,
+        prUrl: existing.url, prNumber: existing.number,
         next: [`人工合入 ${INIT_BRANCH} 后运行：tiller close ${id} --reason "初始化基线已合入"`],
       };
     }
@@ -172,7 +185,7 @@ async function attemptRemote(id: string, worktree: string, platform: ProjectPlat
       ? await createPullRequest(repository, token, { branch: INIT_BRANCH, title: initPrTitle(id), body: INIT_PR_BODY })
       : await createMergeRequest(repository, token, { branch: INIT_BRANCH, title: initPrTitle(id), body: INIT_PR_BODY });
     return {
-      prUrl: created.url,
+      prUrl: created.url, prNumber: created.number,
       next: [`人工合入 ${INIT_BRANCH} 后运行：tiller close ${id} --reason "初始化基线已合入"`],
     };
   } catch (error) {
@@ -181,7 +194,7 @@ async function attemptRemote(id: string, worktree: string, platform: ProjectPlat
       const existing = head ? await findOpenIntegration(repository, token, INIT_BRANCH, head) : null;
       if (existing) {
         return {
-          prUrl: existing.url,
+          prUrl: existing.url, prNumber: existing.number,
           next: [`人工合入 ${INIT_BRANCH} 后运行：tiller close ${id} --reason "初始化基线已合入"`],
         };
       }
@@ -209,7 +222,7 @@ async function writeChanges(worktree: string, changes: FileChange[]): Promise<vo
   }
 }
 
-async function writeLocalBaseline(root: string, baseline: InitBaseline): Promise<void> {
+async function writeLocalBaseline(root: string, baseline: LocalInitBaseline): Promise<void> {
   const dir = await assertSafePath(root, `.tiller/local/${baseline.id}`);
   await mkdir(dir, { recursive: true });
   await writeFile(path.join(dir, LOCAL_BASELINE_FILE), `${JSON.stringify(baseline, null, 2)}\n`, 'utf8');
@@ -221,6 +234,23 @@ async function readLocalMergedMarker(root: string): Promise<LocalMergedMarker | 
     const value = JSON.parse(text) as LocalMergedMarker;
     if (!value || typeof value !== 'object' || value.status !== 'merged' || typeof value.id !== 'string') return null;
     return value;
+  } catch {
+    return null;
+  }
+}
+
+async function readLocalInitProof(root: string, id: string): Promise<LocalInitBaseline | null> {
+  try {
+    const text = await readFile(await assertSafePath(root, `.tiller/local/${id}/${LOCAL_BASELINE_FILE}`), 'utf8');
+    const raw = JSON.parse(text) as Record<string, unknown>;
+    const baseline = parseInitBaseline(raw);
+    if (baseline.id !== id) return null;
+    return {
+      ...baseline,
+      ...(typeof raw.prUrl === 'string' && raw.prUrl.trim() ? { prUrl: raw.prUrl } : {}),
+      ...(typeof raw.prNumber === 'number' && Number.isInteger(raw.prNumber) && raw.prNumber > 0
+        ? { prNumber: raw.prNumber } : {}),
+    };
   } catch {
     return null;
   }
@@ -291,7 +321,12 @@ export function isInitBaselineId(id: string): boolean {
   return INIT_ID.test(id);
 }
 
-export async function markInitBaselineMerged(rootInput: string, id: string): Promise<InitBaseline> {
+async function localInitExpectation(root: string, baseline: InitBaseline): Promise<LocalInitBaseline | null> {
+  const local = await readLocalInitProof(root, baseline.id);
+  return local && local.commit === baseline.commit ? local : null;
+}
+
+export async function markInitBaselineMerged(rootInput: string, id: string, expectedHead?: string): Promise<InitBaseline> {
   const root = path.resolve(rootInput);
   let baseline: InitBaseline | undefined;
   try {
@@ -301,10 +336,15 @@ export async function markInitBaselineMerged(rootInput: string, id: string): Pro
     baseline = await readLocalInitBaseline(root) ?? undefined;
   }
   if (!baseline || baseline.id !== id) fail('INIT_BASELINE_NOT_FOUND', `工程元信息中没有初始化基线 ${id}。`);
+  const local = await localInitExpectation(root, baseline);
+  const head = expectedHead === undefined
+    ? commitTip(local?.head) ?? commitTip(baseline.head)
+    : commitTip(expectedHead);
   const marker: LocalMergedMarker = {
     id: baseline.id, status: 'merged', at: new Date().toISOString(),
     ...(baseline.commit ? { commit: baseline.commit } : {}),
     ...(baseline.branch ? { branch: baseline.branch } : {}),
+    ...(head ? { head } : {}),
   };
   const target = await assertSafePath(root, LOCAL_MERGED_RELATIVE);
   await mkdir(path.dirname(target), { recursive: true });
@@ -318,18 +358,34 @@ export async function proveInitBaselineMerged(rootInput: string, metadata: Proje
   if (!baseline) return { merged: true, detail: '无初始化基线记录。', marked: false };
   const root = path.resolve(rootInput);
   const head = await gitHead(root);
+  const localBaseline = await localInitExpectation(root, baseline);
+  const expectedHead = commitTip(localBaseline?.head) ?? commitTip(baseline.head);
   if (head && /^[a-f0-9]{7,64}$/u.test(baseline.commit)) {
     const ancestor = await git(root, ['merge-base', '--is-ancestor', baseline.commit, head]);
     if (ancestor.ok) {
-      await markInitBaselineMerged(root, baseline.id);
+      await markInitBaselineMerged(root, baseline.id, expectedHead ?? undefined);
       return { merged: true, detail: `初始化基线 ${baseline.id} 的提交已在当前历史中。`, marked: true };
     }
   }
-  const local = await readLocalMergedMarker(root);
-  if (local?.id === baseline.id && local.commit === baseline.commit) {
-    return { merged: true, detail: `初始化基线 ${baseline.id} 已合入。`, marked: false };
+  const localMarker = await readLocalMergedMarker(root);
+  const markerHead = commitTip(localMarker?.head);
+  if (localMarker?.id === baseline.id && localMarker.commit === baseline.commit
+    && (expectedHead === null || markerHead === expectedHead)) {
+    return {
+      merged: true,
+      detail: `初始化基线 ${baseline.id} 已由 local marker 确认合入${expectedHead ? `（head ${expectedHead}）` : ''}。`,
+      marked: false,
+    };
   }
-  let detail = '平台未找到该分支按初始化编号匹配的已合入 PR/MR';
+  if (!expectedHead) {
+    const open = localBaseline?.prUrl ? `；本机记录的 open PR/MR 为 ${localBaseline.prUrl}` : '';
+    return {
+      merged: false,
+      detail: `本机缺少本次初始化 expected head，不能以同分支历史 PR/MR 证明合入${open}`,
+      marked: false,
+    };
+  }
+  let detail = `平台未找到 head ${expectedHead} 的已合入 PR/MR`;
   try {
     const configured = metadata.platform ?? 'github';
     const repository = await resolvePlatformRepository(root, configured);
@@ -337,17 +393,14 @@ export async function proveInitBaselineMerged(rootInput: string, metadata: Proje
     if (!token) {
       detail = `缺少 ${repository.platform === 'github' ? 'GITHUB_TOKEN/GH_TOKEN' : 'GITLAB_TOKEN/GL_TOKEN'}，无法确认平台合入状态`;
     } else {
-      if (baseline.head && /^[a-f0-9]{40,64}$/u.test(baseline.head)) {
-        const merged = await findMergedIntegration(repository, token, baseline.branch, baseline.head, fetchImpl);
-        if (merged) {
-          await markInitBaselineMerged(root, baseline.id);
-          return { merged: true, detail: `初始化基线 ${baseline.id} 已由平台确认合入。`, marked: true };
-        }
-      }
-      const merged = await findMergedInitIntegration(repository, token, baseline.branch, baseline.id, fetchImpl);
+      const merged = await findMergedIntegration(repository, token, baseline.branch, expectedHead, fetchImpl);
       if (merged) {
-        await markInitBaselineMerged(root, baseline.id);
-        return { merged: true, detail: `初始化基线 ${baseline.id} 已由平台确认合入（tip ${merged.head}）。`, marked: true };
+        await markInitBaselineMerged(root, baseline.id, expectedHead);
+        return {
+          merged: true,
+          detail: `初始化基线 ${baseline.id} 已由平台确认合入（head ${expectedHead}，PR/MR #${merged.number}）。`,
+          marked: true,
+        };
       }
     }
   } catch (error) {
@@ -412,6 +465,7 @@ export async function createInitBaseline(rootInput: string, metadata: ProjectMet
   const target = await assertSafePath(root, worktree);
   const branch = await git(root, ['rev-parse', '--verify', `refs/heads/${INIT_BRANCH}`]);
   if (branch.ok) fail('INIT_BASELINE_BRANCH_EXISTS', `初始化分支 ${INIT_BRANCH} 已存在但 project.json 没有 initBaseline；请人工核对或清理后重试。`);
+  await rm(await assertSafePath(root, LOCAL_MERGED_RELATIVE), { force: true });
   await mkdir(path.dirname(target), { recursive: true });
 
   try {
@@ -428,7 +482,7 @@ export async function createInitBaseline(rootInput: string, metadata: ProjectMet
     const nextMetadata: ProjectMetadata = { ...metadata, initBaseline: baseline };
     await writeChanges(target, [{ path: META, before: null, after: `${JSON.stringify(nextMetadata, null, 2)}\n` }]);
     const worktreeHead = await createCommit(target, INIT_METADATA_COMMIT_MESSAGE);
-    const finalBaseline: InitBaseline = { ...baseline, head: worktreeHead };
+    const finalBaseline: LocalInitBaseline = { ...baseline, head: worktreeHead };
     await writeLocalBaseline(root, finalBaseline);
     // Safety net: remove any accidental primary untracked managed copies (including META).
     const warnings = await cleanupPrimaryInitChanges(root, [
@@ -436,6 +490,11 @@ export async function createInitBaseline(rootInput: string, metadata: ProjectMet
       { path: META, before: null, after: `${JSON.stringify(nextMetadata, null, 2)}\n` },
     ]);
     const remote = await attemptRemote(id, target, platform, warnings);
+    await writeLocalBaseline(root, {
+      ...finalBaseline,
+      ...(remote.prUrl ? { prUrl: remote.prUrl } : {}),
+      ...(remote.prNumber ? { prNumber: remote.prNumber } : {}),
+    });
     const next = remote.prUrl
       ? [`人工合入 ${INIT_BRANCH} 后运行：tiller close ${id} --reason "初始化基线已合入"`]
       : remote.next;

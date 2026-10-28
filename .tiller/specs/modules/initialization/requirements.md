@@ -18,10 +18,11 @@
 - 初始化提交在同一变更集中保留用例空目录；工程已有但为空的源码与测试目录补占位文件，不创建不存在的业务目录。同日再次初始化不得因残留旧标签产生冲突或改写旧标签。
 - PR/MR 创建失败仍保留本地 worktree 和提交，并返回可复制命令；初始提交或本地记录已存在时不重复制造冲突分支。
 - 初始化基线合入后或显式结束该初始化编号时，默认清理它的本机目录、本地分支和远端分支；保留分支需显式声明，删除失败不阻断收尾，也不影响其他任务的本机数据。
-- 本机基线快照保留 squash 前 PR head 的 tip SHA；tracked `project.json` 只保留 `id`、`branch`、`commit`。fresh clone 在 init 已合入且分支已删除时，由平台按分支与初始化编号返回已合入 PR/MR 的 tip SHA，不得依赖 Git tag、本机 merged 标记或已删除分支。
-- 初始化编号的 close 必须先证明合入；证明失败时返回稳定错误并保留 init 事实，不假报已关闭。
+- 本机基线快照保留本次 init 的 expected head（推送前的最终 tip）与 open PR/MR 标识；tracked `project.json` 只保留 `id`、`branch`、`commit`。平台回查只在 merged PR/MR 的 `head.sha` 与本机 expected head 精确一致时记为合入；同分支、同初始化编号但 head 不同必须保持 pending。
+- 没有本机 expected head 时不得用同分支标题或初始化编号兜底；祖先判定仍可独立证明合入。fresh clone 缺少 expected head 且不是祖先时必须保持 pending，并提示先恢复本次 init 的本机证明或使用显式旁路。
+- 初始化编号的 close 必须先证明合入；证明失败时返回稳定错误并保留 init 事实，不假报已关闭，也不删除 worktree、本地/远端分支或 open PR/MR。
 - tracked `project.json` 的 `initBaseline` 只记录证明所需的 `id`、`branch`、`commit`，不得写入 `status` 或 `headRef`；本机基线快照与 init 结果可保留 tip `head`。存量旧字段读取时忽略并剥离。
-- 初始化基线的当前结论只来自 local merged marker、祖先判定或平台已合入 PR/MR，并由 CLI 的 `initBaselineStatus` 等 effective 字段统一表达；`init`、`status`、`doctor` 等出口不得回显 tracked pending 快照或把旧字段当作当前结论。
+- 初始化基线的当前结论只来自与 expected head 绑定的 local merged marker、祖先判定或平台已合入 PR/MR，并由 CLI 的 `initBaselineStatus` 等 effective 字段统一表达；`init`、`status`、`doctor` 等出口不得回显 tracked pending 快照或把旧字段当作当前结论。
 - 初始化提交标题必须可区分，禁止两个完全同名提交；init PR/MR 标题包含初始化编号，避免重复初始化与历史同名记录混淆。
 
 ## 3. 受管资源

@@ -196,3 +196,27 @@ status 只通过 initBaselineStatus 暴露当前结论 merged；metadata.initBas
 ### 预期结果
 
 metadata.initBaseline 只含 id/branch/commit，不含 status/headRef；本机快照可含 tip head；当前结论只出现在 initBaselineStatus，init 与 status 同形，doctor 不依赖旧字段
+
+## CASE-333 本机记录 expected head 与 open PR 且重初始化清旧证明
+
+- 类型：interface
+- 优先级：medium
+- 模块：initialization
+- 关联 AC：无
+- 需求：`.tiller/specs/modules/initialization/requirements.md`
+
+### 前置条件
+
+- init 已创建 worktree 并尝试开 PR/MR；同日再次以相同 init-id 初始化
+
+### 步骤
+
+1. 检查 .tiller/local/<init-id>/baseline.json 与 init-baseline-merged.json，再执行同日 re-init
+
+### 输入
+
+- 首次 init 的 head/open PR 与旧 merged marker，随后产生新 head
+
+### 预期结果
+
+本机记录本次 expected head 与 open PR/MR；re-init 改写 expected head 并清除旧 merged marker，旧 marker 不能放行新 head

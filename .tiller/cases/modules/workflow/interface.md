@@ -1386,3 +1386,27 @@ specs/workflow 等约定 scope 不产生模块缺失提示；不存在的真实�
 ### 预期结果
 
 同一模块的覆盖缺失与回归建议合并为一条可定位提示；重复文案不重复出现，`ready` 判定不受影响。
+
+## CASE-334 受管 rules 说明 tip/平台 PR 与 local/CLI effective
+
+- 类型：interface
+- 优先级：medium
+- 模块：workflow
+- 关联 AC：无
+- 需求：`.tiller/specs/modules/workflow/requirements.md`
+
+### 前置条件
+
+- 已安装受管 core 与 delivery 规则
+
+### 步骤
+
+1. 扫描规则正文中的初始化合入证明措辞
+
+### 输入
+
+- resources 与项目内受管规则副本
+
+### 预期结果
+
+规则只说明 expected tip、平台已合入 PR/MR、local marker 与 CLI effective，不出现写回 merged 指向 tracked 元信息的旧表达

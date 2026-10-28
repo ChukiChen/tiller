@@ -739,7 +739,7 @@ start 放行，merged 只写入 .tiller/local/ marker；project.json 不增加 s
 
 primary 对受管文件（含 `.tiller/project.json`、AGENTS.md、usage 等）无未跟踪残留；全部 init 产物仅在 `.tiller/local/<YYYYMMDD-tiller-init>/worktrees` 的提交中；local `baseline.json` 记录 pending 基线。
 
-## CASE-320 fresh clone 在 init 已 squash 合入且分支删除后仍可证明基线
+## CASE-320 fresh clone 缺少 expected head 时不按标题证明 squash 基线
 
 - 类型：behavior
 - 优先级：high
@@ -750,23 +750,23 @@ primary 对受管文件（含 `.tiller/project.json`、AGENTS.md、usage 等）�
 ### 前置条件
 
 - init PR 已 squash 合入默认分支，远端与本地 `chore/tiller-init` 已删除。
-- fresh clone 没有 `.tiller/local/init-baseline-merged.json`，只能读取跟踪的 `project.json`、Git 元信息和只读平台证据。
+- fresh clone 没有 `.tiller/local/<init-id>/baseline.json` 或 merged marker，只能读取跟踪的 `project.json`、Git 元信息和只读平台证据。
 
 ### 步骤
 
-1. 在 fresh clone 中运行 `tiller doctor` 和 `tiller start <id> ...`。
-2. 删除平台合入证据后再次运行 `tiller close <init-id> --reason "..."`。
-3. 检查 init worktree、本机目录和分支是否仍保留。
+1. 在 fresh clone 中运行 `tiller doctor`、`tiller start <id> ...` 与 `tiller close <init-id> --reason "..."`。
+2. 检查同分支、同 init id 的历史 merged 记录没有放行。
+3. 恢复包含本次 expected head 的本机 baseline 后再次运行 doctor/start。
 
 ### 输入
 
-- squash 后的默认分支、已删除的 init 分支、跟踪的 init 基线 head 引用与平台已合入 PR/MR。
+- squash 后的默认分支、已删除的 init 分支、只含 id/branch/commit 的 tracked 元信息、同分支历史 merged PR/MR。
 
 ### 预期结果
 
-doctor/start 仅凭跟踪元信息与平台证据放行；证明失败时 close 返回稳定错误且不清理任何 init 事实，不把未证明写成已关闭。
+缺少 expected head 时 doctor 失败、start 返回 `INIT_BASELINE_PENDING`、close 返回稳定错误；不得按标题把历史 merged 记为当前合入。恢复 expected head 且平台 head 精确一致后才可放行。
 
-## CASE-321 init 基线与 PR head 可追踪且提交可区分
+## CASE-321 init 本机 expected head 与 open PR 可追踪且提交可区分
 
 - 类型：behavior
 - 优先级：high
@@ -781,8 +781,8 @@ doctor/start 仅凭跟踪元信息与平台证据放行；证明失败时 close 
 ### 步骤
 
 1. 运行 `tiller init`。
-2. 检查跟踪的 `project.json`、返回的 initBaseline 与 worktree 提交历史。
-3. 在分支删除后解析跟踪元信息中的 head 引用。
+2. 检查本机 `baseline.json`、跟踪的 `project.json`、返回的 initBaseline 与 worktree 提交历史。
+3. 在分支删除后核对本机 expected head。
 
 ### 输入
 
@@ -790,9 +790,9 @@ doctor/start 仅凭跟踪元信息与平台证据放行；证明失败时 close 
 
 ### 预期结果
 
-跟踪元信息包含可解析到 squash 前 PR head 的稳定引用；第二个提交标题与基线提交不同或收敛为单个提交；init PR 标题包含 init id，能区分重复初始化。
+本机 `baseline.json` 含 expected head 与 open PR/MR 标识；跟踪元信息只含 id/branch/commit，不含 status/headRef；第二个提交标题与基线提交不同或收敛为单个提交；init PR 标题包含 init id，能区分重复初始化。
 
-## CASE-329 init 不创建 tag 且合入证明只依赖 tip 与平台
+## CASE-329 init 不创建 tag 且合入证明只依赖 expected head 与平台
 
 - 类型：behavior
 - 优先级：high
@@ -807,17 +807,17 @@ doctor/start 仅凭跟踪元信息与平台证据放行；证明失败时 close 
 ### 步骤
 
 1. 运行 init 并检查本地与远端 refs
-2. 删除本地初始化分支与任何标签后，用 status、doctor、start、close 验证合入证明
+2. 删除本地初始化分支与任何标签后，用 status、doctor、start、close 验证 expected head 与平台 head 精确匹配
 
 ### 输入
 
-- 已创建但尚未合入的初始化基线，以及平台已合入记录
+- 已创建但尚未合入的初始化基线、本机 expected head，以及平台已合入记录
 
 ### 预期结果
 
-init 不创建或推送 tiller-init tag，跟踪元信息不含 headRef/status；分支删除后仍可按本地或平台返回的 tip SHA 与 PR/MR 证明合入，start/doctor/close 不解析标签或 headRef
+init 不创建或推送 tiller-init tag，跟踪元信息不含 headRef/status；分支删除后仍可按本机 expected head 与同 head 的 PR/MR 证明合入，同分支历史 head 不参与，start/doctor/close 不解析标签或 headRef
 
-## CASE-331 同日重初始化不受残留 tiller-init tag 影响
+## CASE-331 同日重初始化不受残留 tiller-init tag 或旧 merged marker 影响
 
 - 类型：behavior
 - 优先级：high
@@ -827,11 +827,11 @@ init 不创建或推送 tiller-init tag，跟踪元信息不含 headRef/status�
 
 ### 前置条件
 
-- 工程已存在同名初始化标签和同日初始化编号
+- 工程已存在同名初始化标签、同日初始化编号和旧 merged marker
 
 ### 步骤
 
-1. 清理本机初始化目录后再次运行 init
+1. 清理本机初始化基线目录但保留旧 merged marker 后再次运行 init
 
 ### 输入
 
@@ -839,4 +839,28 @@ init 不创建或推送 tiller-init tag，跟踪元信息不含 headRef/status�
 
 ### 预期结果
 
-init 成功完成且不再执行 tag 创建或推送，不出现 tag 重名/冲突错误，结果仍以 tip SHA 与平台 PR/MR 作为合入事实
+init 成功完成且不再执行 tag 创建或推送，不出现 tag 重名/冲突错误；新 expected head 写入本机，旧 merged marker 被清除或失效，不能放行新 head
+
+## CASE-332 同日重初始化不接受旧 merged PR 证明
+
+- 类型：behavior
+- 优先级：medium
+- 模块：initialization
+- 关联 AC：无
+- 需求：`.tiller/specs/modules/initialization/requirements.md`
+
+### 前置条件
+
+- 同日同分支已有历史 merged PR/MR，当前 init 新 head 尚无 merged 记录
+
+### 步骤
+
+1. 运行 status、doctor、start 与合入前 close <init-id>
+
+### 输入
+
+- 历史 merged head 与本次 expected head 不同
+
+### 预期结果
+
+所有出口保持 pending；close 返回稳定错误且保留 worktree、本地/远端分支和 open PR

@@ -274,7 +274,7 @@ test('CASE-288 ancestor proof records merged for doctor and close init-id', asyn
   assert.equal(JSON.parse(read(root, '.tiller/project.json')).initBaseline.status, undefined);
 });
 
-test('CASE-320 fresh clone proves a squash-merged init from its tracked tip SHA after branch deletion', async t => {
+test('CASE-320 fresh clone requires local expected head instead of title-only squash proof', async t => {
   const initialized = await initialize(t, { mainBranch: 'main' });
   if (!initialized) return;
   const { root, environment, result, mock } = initialized;
@@ -310,6 +310,20 @@ test('CASE-320 fresh clone proves a squash-merged init from its tracked tip SHA 
   assert.equal(tracked.status, undefined);
 
   mock.setMergedHeads(baseline.branch, [baseline.head]);
+  const refusedDoctor = failure(await cliAt(clone, environment, 'doctor'));
+  assert.match(refusedDoctor.issues.join('\n'), /expected head|缺少本次初始化/u);
+  const refusedStart = failure(await cliAt(clone, environment, 'start', '20261028-fresh-clone-blocked',
+    '--title', 'Fresh clone blocked', '--requirement', 'A fresh clone without local proof must stay pending.',
+    '--criterion', 'AC-1=Start stays blocked', '--size', 'small', '--target', '.'));
+  assert.equal(refusedStart.error.code, 'INIT_BASELINE_PENDING');
+  const refusedClose = failure(await cliAt(clone, environment, 'close', baseline.id, '--reason', '尚未证明合入'));
+  assert.equal(refusedClose.error.code, 'INIT_BASELINE_PENDING');
+  assert.equal(existsSync(join(clone, `.tiller/local/${baseline.id}`)), false);
+
+  put(clone, `.tiller/local/${baseline.id}/baseline.json`, `${JSON.stringify({
+    id: baseline.id, branch: baseline.branch, commit: baseline.commit, head: baseline.head,
+    prUrl: baseline.prUrl, prNumber: 1,
+  }, null, 2)}\n`);
   const report = success(await cliAt(clone, environment, 'doctor'));
   assert.equal(report.ready, true, report.issues.join('\n'));
   assert.ok(report.checks.some(check => check.id === 'init-baseline' && check.status === 'pass'));
@@ -317,8 +331,8 @@ test('CASE-320 fresh clone proves a squash-merged init from its tracked tip SHA 
   rmSync(join(clone, '.tiller/local/init-baseline-merged.json'), { force: true });
   const id = '20261028-fresh-clone-start';
   const started = success(await cliAt(clone, environment, 'start', id, '--title', 'Fresh clone start',
-    '--requirement', 'A squash-merged init can start from a clean clone.',
-    '--criterion', 'AC-1=Start is not blocked by a deleted init branch', '--size', 'small', '--target', '.'));
+    '--requirement', 'A squash-merged init can start after restoring the local expected head.',
+    '--criterion', 'AC-1=Start requires the recorded expected head', '--size', 'small', '--target', '.'));
   assert.ok(existsSync(join(clone, started.worktreeRoot)));
   assert.ok(mock.state.requests.some(item => item.method === 'GET' && item.search.includes('state=all')));
 });
@@ -413,12 +427,16 @@ test('CASE-330 init and status expose effective state while stripping legacy tra
   assert.equal(doctor.ready, true, doctor.issues.join('\n'));
 });
 
-test('CASE-331 same-day reinitialization leaves an existing tiller-init tag untouched', async t => {
+test('CASE-331 CASE-333 same-day reinitialization records the new expected head and discards old proof', async t => {
   const initialized = await initialize(t, { platform: 'github' });
   if (!initialized) return;
   const { root, environment, result, mock } = initialized;
   const first = success(result).initBaseline;
   const oldHead = first.head;
+  const firstLocal = JSON.parse(read(root, `.tiller/local/${first.id}/baseline.json`));
+  assert.equal(firstLocal.head, oldHead);
+  assert.equal(firstLocal.prUrl, first.prUrl);
+  assert.equal(firstLocal.prNumber, 1);
   okGit(root, 'tag', `tiller-init/${first.id}`, oldHead);
   okGit(root, 'worktree', 'remove', '--force', join(root, first.worktree));
   okGit(root, 'branch', '-D', first.branch);
@@ -426,7 +444,7 @@ test('CASE-331 same-day reinitialization leaves an existing tiller-init tag unto
   mock.state.refs.delete(`refs/heads/${first.branch}`);
   rmSync(join(root, '.tiller/local', first.id), { recursive: true, force: true });
   put(root, '.tiller/local/init-baseline-merged.json', `${JSON.stringify({
-    id: first.id, status: 'merged', at: '2026-10-28T00:00:00.000Z', commit: first.commit, branch: first.branch,
+    id: first.id, status: 'merged', at: '2026-10-28T00:00:00.000Z', commit: first.commit, branch: first.branch, head: oldHead,
   }, null, 2)}\n`);
   mock.resetRequests();
 
@@ -434,11 +452,65 @@ test('CASE-331 same-day reinitialization leaves an existing tiller-init tag unto
   assert.equal(second.initBaseline.id, first.id);
   assert.notEqual(second.initBaseline.head, oldHead);
   assert.equal(second.initBaselineStatus.status, 'pending', 'a marker for the previous same-day baseline is stale');
+  const secondLocal = JSON.parse(read(root, `.tiller/local/${second.initBaseline.id}/baseline.json`));
+  assert.equal(secondLocal.head, second.initBaseline.head);
+  assert.notEqual(secondLocal.head, oldHead);
+  assert.equal(secondLocal.prUrl, second.initBaseline.prUrl);
+  assert.equal(secondLocal.prNumber, 1);
+  assert.equal(existsSync(join(root, '.tiller/local/init-baseline-merged.json')), false,
+    're-init must discard the previous merged marker');
   assert.equal(okGit(root, 'rev-parse', `refs/tags/tiller-init/${first.id}`), oldHead);
   assert.deepEqual([...mock.state.refs.keys()].filter(ref => ref.startsWith('refs/tags/')), []);
   assert.doesNotMatch(JSON.stringify(second), /tag.*(?:冲突|failed)|matches more than one/iu);
   assert.deepEqual(Object.keys(JSON.parse(read(join(root, second.initBaseline.worktree), '.tiller/project.json')).initBaseline).sort(),
     ['branch', 'commit', 'id']);
+});
+
+test('CASE-332 historical merged PR with the same branch and init id cannot prove a new head before merge', async t => {
+  const initialized = await initialize(t, { platform: 'github' });
+  if (!initialized) return;
+  const { root, environment, result, mock } = initialized;
+  const first = success(result).initBaseline;
+  mock.setMergedHeads(first.branch, [first.head]);
+
+  okGit(root, 'worktree', 'remove', '--force', join(root, first.worktree));
+  okGit(root, 'branch', '-D', first.branch);
+  okGit(root, '--git-dir', mock.gitRepo, 'update-ref', '-d', `refs/heads/${first.branch}`);
+  mock.state.refs.delete(`refs/heads/${first.branch}`);
+  rmSync(join(root, '.tiller/local', first.id), { recursive: true, force: true });
+  mock.resetRequests();
+
+  const second = success(await cliAt(root, environment, 'init', '--platform', 'github'));
+  const baseline = second.initBaseline;
+  assert.equal(baseline.id, first.id);
+  assert.notEqual(baseline.head, first.head);
+  assert.equal(second.initBaselineStatus.status, 'pending', 'the historical merged head must not prove the new head');
+  assert.match(second.initBaselineStatus.detail, /平台未找到|expected head/u);
+  assert.equal(existsSync(join(root, '.tiller/local/init-baseline-merged.json')), false);
+  assert.ok(mock.state.requests.some(item => item.method === 'GET' && item.search.includes('state=all')),
+    'init must query merged PRs by the new expected head');
+
+  const status = failure(await cliAt(root, environment, 'status'));
+  assert.equal(status.initBaselineStatus.status, 'pending');
+  const doctor = failure(await cliAt(root, environment, 'doctor'));
+  assert.ok(doctor.checks.some(check => check.id === 'init-baseline' && check.status === 'fail'));
+  const common = ['--title', 'Blocked by stale init proof', '--requirement', 'A historical merged PR must not unlock a new init.',
+    '--criterion', 'AC-1=Start stays blocked', '--size', 'small', '--target', '.'];
+  const started = failure(await cliAt(root, environment, 'start', '20261028-stale-init-proof', ...common));
+  assert.equal(started.error.code, 'INIT_BASELINE_PENDING');
+
+  const closed = failure(await cliAt(root, environment, 'close', baseline.id, '--reason', '尚未合入'));
+  assert.equal(closed.error.code, 'INIT_BASELINE_PENDING');
+  assert.ok(existsSync(join(root, baseline.worktree)), 'failed close keeps the init worktree');
+  assert.ok(existsSync(join(root, `.tiller/local/${baseline.id}/baseline.json`)), 'failed close keeps local proof');
+  assert.equal(git(root, 'show-ref', '--verify', '--quiet', `refs/heads/${baseline.branch}`).status, 0,
+    'failed close keeps the local init branch');
+  assert.equal(mock.state.refs.has(`refs/heads/${baseline.branch}`), true,
+    'failed close keeps the remote init branch');
+  assert.ok((mock.state.openIntegrations.get(baseline.branch) ?? []).some(item => item.sha === baseline.head),
+    'failed close keeps the open init PR');
+  assert.equal(existsSync(join(root, '.tiller/local/init-baseline-merged.json')), false,
+    'a rejected close must not write a merged marker');
 });
 
 test('CASE-289 CASE-305 init leaves no untracked managed residue', async t => {
@@ -570,7 +642,8 @@ test('CASE-231 start blocks a pending initialization commit, supports skip and m
   const statusInit = success(await cliAt(statusRoot, { ...emptyTokens, GITHUB_TOKEN: 'mock-token' }, 'init'));
   const baselinePending = statusInit.initBaseline;
   put(statusRoot, '.tiller/local/init-baseline-merged.json', `${JSON.stringify({
-    id: baselinePending.id, status: 'merged', at: '2026-10-27T00:00:00.000Z', commit: baselinePending.commit, branch: baselinePending.branch,
+    id: baselinePending.id, status: 'merged', at: '2026-10-27T00:00:00.000Z', commit: baselinePending.commit,
+    branch: baselinePending.branch, head: baselinePending.head,
   }, null, 2)}\n`);
   success(await cliAt(statusRoot, {}, 'start', '20261026-init-status-merged', ...common));
   assert.equal(baselinePending.status, undefined);
