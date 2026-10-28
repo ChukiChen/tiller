@@ -73,9 +73,11 @@
 | --- | --- | --- | --- | --- |
 | 需求 | boon yu | 2026-10-28T06:38:59.648Z | 5c9189449417 | — |
 | 设计 | boon yu | 2026-10-28T06:38:59.767Z | b6353de349ae | — |
+| 交付验收 | boon yu | 2026-10-28T07:00:08.039Z | 463138bf3f8b | — |
 
 <!-- tiller-confirm:v1 {"gate":"requirements","object":"需求正文（目标、范围与验收条件）","subject":"d4358f97ffe31fb53cee3a27f2a1a9ebc786c9fce925d5a7f8ebc1fcd2f2b2db","commit":"5c9189449417082dc28b8732e880e43db72aa216","by":"boon yu","quote":"","at":"2026-10-28T06:38:59.648Z"} -->
 <!-- tiller-confirm:v1 {"gate":"design","object":"设计正文","subject":"840e60cb11623735f3557291f63980384da525fe3c4f1b82f90711e4008bcc9c","commit":"b6353de349ae98d1cfad2017072fa9725cc8541a","by":"boon yu","quote":"","at":"2026-10-28T06:38:59.767Z"} -->
+<!-- tiller-confirm:v1 {"gate":"acceptance","object":"当前交付（需求、设计、验证与提交）","subject":"b94aa8796e7d38a4fe9ad3575a3a4d9a4a3f1a17aa678f2425dd39a9c8af0fbc","commit":"463138bf3f8bb266b8b0e2b03df78f534181fd7a","by":"boon yu","quote":"","at":"2026-10-28T07:00:08.039Z"} -->
 
 ## 验证
 
@@ -106,7 +108,7 @@
 ## 自检
 
 - [x] 需求确认有效
-- [ ] 设计确认有效
+- [x] 设计确认有效
 - [x] 验收条件均有当前通过且绑定全局用例的测试引用
 - [x] 每条验收条件均映射到本次验证引用的全局用例
 - [x] 验收条件与用例通过 verify 的 AC→测试→CASE 记录关联
@@ -116,10 +118,6 @@
 - [x] 未弱化仍存在的测试
 - [x] 评审无未清除阻塞项
 - [x] 记录不含密钥或本机绝对路径
-
-阻塞项：
-- 过程卫生：设计确认提交 b6353de349ae 后，工作区仍有未提交业务改动：src/cli.ts、src/core.ts、src/task-worktrees.ts、src/types.ts、test/case-redesign.test.mjs、test/init-baseline.test.mjs、test/review-release.test.mjs、test/rules.test.mjs 等 9 项。请先提交或移出本任务。
-- 交付范围存在未提交改动：.tiller/cases/modules/initialization/interface.md、.tiller/cases/modules/workflow/behavior.md、.tiller/specs/modules/initialization/design.md、.tiller/specs/modules/initialization/requirements.md、.tiller/specs/modules/workflow/design.md、.tiller/specs/modules/workflow/requirements.md、src/cli.ts、src/core.ts、src/task-worktrees.ts、src/types.ts、test/case-redesign.test.mjs、test/init-baseline.test.mjs、test/review-release.test.mjs、test/rules.test.mjs、test/task-worktrees.test.mjs
 
 提示：
 - 167 条历史用例仍以 <任务>#AC-n 记录关联 AC；这是可迁移的历史债，不阻断当前覆盖。
