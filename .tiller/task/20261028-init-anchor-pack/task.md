@@ -89,7 +89,41 @@
 
 ## 验证
 
-尚无验证。
+### run-1
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-329 init uses tip SHA and platform proof without tags or headRef$' \u002d\u002dtest-reporter=./.tiller/local/verify-DpoJaE/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-DpoJaE/report.jsonl test/init-baseline.test.mjs","exitCode":0,"tree":"f5bc2931021a86b415c42ddcb1b66396f2f3782faeea44bd09f9da6cc3307b0f","commit":"41c3a630a9891c93d663a4550ff7327b69cd2586"} -->
+- 条件：AC-1
+- 测试：test/init-baseline.test.mjs::CASE-329 init uses tip SHA and platform proof without tags or headRef
+- 用例：CASE-329
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/20261028-init-anchor-pack/logs/run-1.log
+- 提交：41c3a630a989
+- 时间：2026-10-28T11:02:35.851Z
+
+### run-2
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-330 init and status expose effective state while stripping legacy tracked fields$' \u002d\u002dtest-reporter=./.tiller/local/verify-RtNcRu/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-RtNcRu/report.jsonl test/init-baseline.test.mjs","exitCode":0,"tree":"f5bc2931021a86b415c42ddcb1b66396f2f3782faeea44bd09f9da6cc3307b0f","commit":"41c3a630a9891c93d663a4550ff7327b69cd2586"} -->
+- 条件：AC-2
+- 测试：test/init-baseline.test.mjs::CASE-330 init and status expose effective state while stripping legacy tracked fields
+- 用例：CASE-330
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/20261028-init-anchor-pack/logs/run-2.log
+- 提交：41c3a630a989
+- 时间：2026-10-28T11:02:37.130Z
+
+### run-3
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-331 same-day reinitialization leaves an existing tiller-init tag untouched$' \u002d\u002dtest-reporter=./.tiller/local/verify-e8jPZD/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-e8jPZD/report.jsonl test/init-baseline.test.mjs","exitCode":0,"tree":"f5bc2931021a86b415c42ddcb1b66396f2f3782faeea44bd09f9da6cc3307b0f","commit":"41c3a630a9891c93d663a4550ff7327b69cd2586"} -->
+- 条件：AC-3
+- 测试：test/init-baseline.test.mjs::CASE-331 same-day reinitialization leaves an existing tiller-init tag untouched
+- 用例：CASE-331
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/20261028-init-anchor-pack/logs/run-3.log
+- 提交：41c3a630a989
+- 时间：2026-10-28T11:02:38.093Z
 
 ## 自检
 
