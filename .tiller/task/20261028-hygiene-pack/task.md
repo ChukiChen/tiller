@@ -117,14 +117,141 @@
 | --- | --- | --- | --- | --- |
 | 需求 | boon yu | 2026-10-28T02:13:26.600Z | 7e8361475568 | — |
 | 设计 | boon yu | 2026-10-28T02:13:26.733Z | ef315c9608f8 | — |
+| 交付验收 | boon yu | 2026-10-28T04:28:12.939Z | c1ce85c7e8df | — |
 
 <!-- tiller-confirm:v1 {"gate":"requirements","object":"需求正文（目标、范围与验收条件）","subject":"f764b7428f820b70677c56fe7969aa8e77e214b7fe1d750bf9dfc876fb74a25c","commit":"7e83614755682ebac68c76386ff69547e8c00068","by":"boon yu","quote":"","at":"2026-10-28T02:13:26.600Z"} -->
 <!-- tiller-confirm:v1 {"gate":"design","object":"设计正文","subject":"ada4c5e4c22e5a753bb6d77c9e102f64cf8ef9002ad3f4e672de8641b095fe29","commit":"ef315c9608f82bd844cc513c71195c909b7eac39","by":"boon yu","quote":"","at":"2026-10-28T02:13:26.733Z"} -->
+<!-- tiller-confirm:v1 {"gate":"acceptance","object":"当前交付（需求、设计、验证与提交）","subject":"3a7a19659bbdc7009bd8f871d9a27d766ff35b6c2802436d500fe1455e90bb62","commit":"c1ce85c7e8df6a91f61382b0c3690d23aa742ec5","by":"boon yu","quote":"","at":"2026-10-28T04:28:12.939Z"} -->
 
 ## 验证
 
-尚无验证。
+### run-1
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-320 fresh clone proves a squash-merged init from its tracked head ref after branch deletion$' \u002d\u002dtest-reporter=./.tiller/local/verify-Lv9SB3/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-Lv9SB3/report.jsonl test/init-baseline.test.mjs","exitCode":0,"tree":"731b5bc42ef3b1d593e4e3a3e9c7b0acb55579254ac77cf748c6c68965ad11ab","commit":"c1ce85c7e8df6a91f61382b0c3690d23aa742ec5"} -->
+- 条件：AC-1
+- 测试：test/init-baseline.test.mjs::CASE-320 fresh clone proves a squash-merged init from its tracked head ref after branch deletion
+- 用例：CASE-320
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/20261028-hygiene-pack/logs/run-1.log
+- 提交：c1ce85c7e8df
+- 时间：2026-10-28T04:27:51.082Z
+
+### run-2
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-228 CASE-321 init creates a committed initialization worktree and a uniquely titled, traceable PR$' \u002d\u002dtest-reporter=./.tiller/local/verify-4UBqgz/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-4UBqgz/report.jsonl test/init-baseline.test.mjs","exitCode":0,"tree":"731b5bc42ef3b1d593e4e3a3e9c7b0acb55579254ac77cf748c6c68965ad11ab","commit":"c1ce85c7e8df6a91f61382b0c3690d23aa742ec5"} -->
+- 条件：AC-1
+- 测试：test/init-baseline.test.mjs::CASE-228 CASE-321 init creates a committed initialization worktree and a uniquely titled, traceable PR
+- 用例：CASE-321
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/20261028-hygiene-pack/logs/run-2.log
+- 提交：c1ce85c7e8df
+- 时间：2026-10-28T04:27:52.563Z
+
+### run-3
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-317 abandon keeps every task fact when primary cannot persist the event$' \u002d\u002dtest-reporter=./.tiller/local/verify-wA4Odr/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-wA4Odr/report.jsonl test/task-worktrees.test.mjs","exitCode":0,"tree":"731b5bc42ef3b1d593e4e3a3e9c7b0acb55579254ac77cf748c6c68965ad11ab","commit":"c1ce85c7e8df6a91f61382b0c3690d23aa742ec5"} -->
+- 条件：AC-2
+- 测试：test/task-worktrees.test.mjs::CASE-317 abandon keeps every task fact when primary cannot persist the event
+- 用例：CASE-317
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/20261028-hygiene-pack/logs/run-3.log
+- 提交：c1ce85c7e8df
+- 时间：2026-10-28T04:27:53.517Z
+
+### run-4
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-322 abandon commits a tracked event before cleanup instead of leaving an untracked primary seed$' \u002d\u002dtest-reporter=./.tiller/local/verify-xWPXxE/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-xWPXxE/report.jsonl test/first-batch.test.mjs","exitCode":0,"tree":"731b5bc42ef3b1d593e4e3a3e9c7b0acb55579254ac77cf748c6c68965ad11ab","commit":"c1ce85c7e8df6a91f61382b0c3690d23aa742ec5"} -->
+- 条件：AC-2
+- 测试：test/first-batch.test.mjs::CASE-322 abandon commits a tracked event before cleanup instead of leaving an untracked primary seed
+- 用例：CASE-322
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/20261028-hygiene-pack/logs/run-4.log
+- 提交：c1ce85c7e8df
+- 时间：2026-10-28T04:27:54.679Z
+
+### run-5
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-322 accepted but unmerged task abandons by committing the event before cleanup$' \u002d\u002dtest-reporter=./.tiller/local/verify-KtXmQV/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-KtXmQV/report.jsonl test/task-worktrees.test.mjs","exitCode":0,"tree":"731b5bc42ef3b1d593e4e3a3e9c7b0acb55579254ac77cf748c6c68965ad11ab","commit":"c1ce85c7e8df6a91f61382b0c3690d23aa742ec5"} -->
+- 条件：AC-2
+- 测试：test/task-worktrees.test.mjs::CASE-322 accepted but unmerged task abandons by committing the event before cleanup
+- 用例：CASE-322
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/20261028-hygiene-pack/logs/run-5.log
+- 提交：c1ce85c7e8df
+- 时间：2026-10-28T04:27:54.679Z
+
+### run-6
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-323 pr reuses the same head branch and SHA after a lost create response$' \u002d\u002dtest-reporter=./.tiller/local/verify-H2WMAj/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-H2WMAj/report.jsonl test/pr.test.mjs","exitCode":0,"tree":"731b5bc42ef3b1d593e4e3a3e9c7b0acb55579254ac77cf748c6c68965ad11ab","commit":"c1ce85c7e8df6a91f61382b0c3690d23aa742ec5"} -->
+- 条件：AC-3
+- 测试：test/pr.test.mjs::CASE-323 pr reuses the same head branch and SHA after a lost create response
+- 用例：CASE-323
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/20261028-hygiene-pack/logs/run-6.log
+- 提交：c1ce85c7e8df
+- 时间：2026-10-28T04:27:57.463Z
+
+### run-7
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-324 requirement-file keeps nested key behavior headings under the task section$' \u002d\u002dtest-reporter=./.tiller/local/verify-LnfEcC/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-LnfEcC/report.jsonl test/review-release.test.mjs","exitCode":0,"tree":"731b5bc42ef3b1d593e4e3a3e9c7b0acb55579254ac77cf748c6c68965ad11ab","commit":"c1ce85c7e8df6a91f61382b0c3690d23aa742ec5"} -->
+- 条件：AC-4
+- 测试：test/review-release.test.mjs::CASE-324 requirement-file keeps nested key behavior headings under the task section
+- 用例：CASE-324
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/20261028-hygiene-pack/logs/run-7.log
+- 提交：c1ce85c7e8df
+- 时间：2026-10-28T04:28:01.431Z
+
+### run-8
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-325 global specs tasks use the specs scope despite module paths in the requirement$' \u002d\u002dtest-reporter=./.tiller/local/verify-nJgpXY/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-nJgpXY/report.jsonl test/pr.test.mjs","exitCode":0,"tree":"731b5bc42ef3b1d593e4e3a3e9c7b0acb55579254ac77cf748c6c68965ad11ab","commit":"c1ce85c7e8df6a91f61382b0c3690d23aa742ec5"} -->
+- 条件：AC-4
+- 测试：test/pr.test.mjs::CASE-325 global specs tasks use the specs scope despite module paths in the requirement
+- 用例：CASE-325
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/20261028-hygiene-pack/logs/run-8.log
+- 提交：c1ce85c7e8df
+- 时间：2026-10-28T04:28:02.234Z
+
+### run-9
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-326 check merges uncovered-module and regression advice into one non-blocking warning$' \u002d\u002dtest-reporter=./.tiller/local/verify-bMrWww/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-bMrWww/report.jsonl test/review-release.test.mjs","exitCode":0,"tree":"731b5bc42ef3b1d593e4e3a3e9c7b0acb55579254ac77cf748c6c68965ad11ab","commit":"c1ce85c7e8df6a91f61382b0c3690d23aa742ec5"} -->
+- 条件：AC-4
+- 测试：test/review-release.test.mjs::CASE-326 check merges uncovered-module and regression advice into one non-blocking warning
+- 用例：CASE-326
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/20261028-hygiene-pack/logs/run-9.log
+- 提交：c1ce85c7e8df
+- 时间：2026-10-28T04:28:04.144Z
 
 ## 自检
 
-交付前运行 check；验收后运行 accept。
+- [x] 需求确认有效
+- [x] 设计确认有效
+- [x] 验收条件均有当前通过且绑定全局用例的测试引用
+- [x] 每条验收条件均映射到本次验证引用的全局用例
+- [x] 验收条件与用例通过 verify 的 AC→测试→CASE 记录关联
+- [x] 验证命令已执行且测试输出已核实
+- [x] 全局用例结构与引用有效
+- [x] 改动未超出范围
+- [x] 未弱化仍存在的测试
+- [x] 评审无未清除阻塞项
+- [x] 记录不含密钥或本机绝对路径
+
+提示：
+- 167 条历史用例仍以 <任务>#AC-n 记录关联 AC；这是可迁移的历史债，不阻断当前覆盖。
+- 136 条用例的关联 AC 为无；覆盖以需求字段和 verify 的 AC→测试→CASE 记录为准。
+- 本次改动涉及模块 initialization：建议回归该模块 55 条用例及经过它的场景 CASE-055, CASE-001。
+- 本次改动涉及模块 standards：建议回归该模块 37 条用例及经过它的场景 CASE-055。
+- 本次改动涉及模块 verification：建议回归该模块 45 条用例及经过它的场景 CASE-055, CASE-001。
+- 本次改动涉及模块 workflow：建议回归该模块 164 条用例及经过它的场景 CASE-055, CASE-001。
+- 修改的测试文件移除了 3 个测试用例（请确认对应功能已删除；详情见 Git diff）。
