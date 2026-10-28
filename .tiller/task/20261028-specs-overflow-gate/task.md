@@ -89,8 +89,10 @@
 | 部分 | 确认人 | 时间 | 短提交 | 原话 |
 | --- | --- | --- | --- | --- |
 | 需求 | ChukiChen | 2026-10-28T14:45:45.504Z | 7c2816e4b164 | 溢出回写+跨语言CASE适配器标准 |
+| 设计 | ChukiChen | 2026-10-28T14:45:48.427Z | 87a65400d12e | 门禁对照specs；适配器为标准路径 |
 
 <!-- tiller-confirm:v1 {"gate":"requirements","object":"需求正文（目标、范围与验收条件）","subject":"c068e956e5c31239a71642687b2b8a3d792e3fe014e2d15b3eb0d10fc28a0f4e","commit":"7c2816e4b164366564f2c7a98d5a0d43f3d816d7","by":"ChukiChen","quote":"溢出回写+跨语言CASE适配器标准","at":"2026-10-28T14:45:45.504Z"} -->
+<!-- tiller-confirm:v1 {"gate":"design","object":"设计正文","subject":"0cfc0c309b3307ae90792d666c4e70664b7d9c3daa090df107cde75556a2ec26","commit":"87a65400d12e82bf86dfd1fc162e2814c819945c","by":"ChukiChen","quote":"门禁对照specs；适配器为标准路径","at":"2026-10-28T14:45:48.427Z"} -->
 
 ## 验证
 
