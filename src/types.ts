@@ -29,6 +29,8 @@ export interface InitBaseline {
   id: string;
   branch: string;
   commit: string;
+  head?: string;
+  headRef?: string;
   status?: 'pending' | 'merged';
 }
 

@@ -43,12 +43,14 @@ export async function startPlatformMock(t, options = {}) {
   const state = {
     platform,
     mode: options.mode ?? 'success',
+    openDefault: options.openDefault === true,
     requests: [],
     errors: [],
     remoteCommits: new Set(options.remoteHead ? [options.remoteHead] : []),
     refs: new Map(),
     mergedBranches: new Set(options.mergedBranches ?? []),
     mergedHeads: new Map(),
+    openIntegrations: new Map(),
     branchDeletes: [],
   };
 
@@ -124,7 +126,15 @@ export async function startPlatformMock(t, options = {}) {
           if (state.mode === 'pr-failure') {
             return json(response, 500, { message: `PR create rejected ${request.headers.authorization ?? ''}` });
           }
-          return json(response, 201, { number: 1, html_url: 'https://example.invalid/tiller/pr/1' });
+          const value = JSON.parse(body.toString('utf8'));
+          const branch = value.head;
+          const sha = state.refs.get(`refs/heads/${branch}`);
+          const pull = { number: 1, url: 'https://example.invalid/tiller/pr/1', base: 'main', sha };
+          state.openIntegrations.set(branch, [...(state.openIntegrations.get(branch) ?? []), pull]);
+          if (state.mode === 'pr-created-lost') {
+            return json(response, 500, { message: 'PR create response lost after the pull request was stored' });
+          }
+          return json(response, 201, { number: pull.number, html_url: pull.url });
         }
         if (request.method === 'GET' && rest === 'pulls') {
           if (state.mode === 'query-failure' && url.searchParams.get('state') === 'all') {
@@ -141,7 +151,19 @@ export async function startPlatformMock(t, options = {}) {
               head: { ref: branch, ...(sha ? { sha } : {}) },
             })));
           }
-          return json(response, 200, [{ number: 1 }]);
+          const head = url.searchParams.get('head') ?? '';
+          const branch = head.includes(':') ? head.slice(head.indexOf(':') + 1) : head;
+          const pulls = (state.openIntegrations.get(branch) ?? [])
+            .filter(item => item.sha)
+            .map(item => ({
+              number: item.number, html_url: item.url, base: { ref: item.base },
+              head: { ref: branch, sha: item.sha },
+            }));
+          if (!pulls.length && state.openDefault) {
+            const sha = state.refs.get(`refs/heads/${branch}`) ?? '0'.repeat(40);
+            pulls.push({ number: 1, html_url: 'https://example.invalid/tiller/pr/1', base: { ref: 'main' }, head: { ref: branch, sha } });
+          }
+          return json(response, 200, pulls);
         }
         if (request.method === 'PUT' && rest === 'pulls/1/merge') {
           if (state.mode === 'failure') {
@@ -228,7 +250,15 @@ export async function startPlatformMock(t, options = {}) {
           if (state.mode === 'pr-failure') {
             return json(response, 500, { message: `MR create rejected ${request.headers['private-token'] ?? ''}` });
           }
-          return json(response, 201, { iid: 7, web_url: 'https://example.invalid/tiller/mr/7' });
+          const value = JSON.parse(body.toString('utf8'));
+          const branch = value.source_branch;
+          const sha = state.refs.get(`refs/heads/${branch}`);
+          const mergeRequest = { number: 7, url: 'https://example.invalid/tiller/mr/7', base: 'main', sha };
+          state.openIntegrations.set(branch, [...(state.openIntegrations.get(branch) ?? []), mergeRequest]);
+          if (state.mode === 'pr-created-lost') {
+            return json(response, 500, { message: 'MR create response lost after the merge request was stored' });
+          }
+          return json(response, 201, { iid: mergeRequest.number, web_url: mergeRequest.url });
         }
         if (request.method === 'GET' && rest === 'merge_requests') {
           if (state.mode === 'query-failure' && url.searchParams.get('state') === 'all') {
@@ -244,7 +274,21 @@ export async function startPlatformMock(t, options = {}) {
               ...(sha ? { sha } : {}),
             })));
           }
-          return json(response, 200, [{ iid: 7 }]);
+          const branch = url.searchParams.get('source_branch') ?? '';
+          const mergeRequests = (state.openIntegrations.get(branch) ?? [])
+            .filter(item => item.sha)
+            .map(item => ({
+              iid: item.number, web_url: item.url, source_branch: branch, target_branch: item.base,
+              sha: item.sha, diff_refs: { head_sha: item.sha },
+            }));
+          if (!mergeRequests.length && state.openDefault) {
+            const sha = state.refs.get(`refs/heads/${branch}`) ?? '0'.repeat(40);
+            mergeRequests.push({
+              iid: 7, web_url: 'https://example.invalid/tiller/mr/7', source_branch: branch, target_branch: 'main',
+              sha, diff_refs: { head_sha: sha },
+            });
+          }
+          return json(response, 200, mergeRequests);
         }
         if (request.method === 'PUT' && rest === 'merge_requests/7/merge') {
           if (state.mode === 'failure') {

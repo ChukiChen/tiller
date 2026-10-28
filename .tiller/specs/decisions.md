@@ -245,3 +245,20 @@
 - `close`/`abandon` 只处理当前任务的 worktree、`.tiller/local/<id>/` 与分支。
 - 历史 task 正文继续可读；已退役的确认和验证旁路不参与解析或校验。
 
+## 2026-10-28 平台结果可重建与 init head 锚点
+
+- init 的跟踪元信息用稳定 tag ref 记录 squash 前 PR head。提交不可能包含自身 SHA，因此不在同一提交内伪造 head；tag ref 可在分支删除后解析到准确 head，并随远端保留。
+- init 第二个提交标题与基线提交不同，init PR 标题包含 init id；fresh clone 先解析跟踪 head ref，再以平台同分支、同 head 的已合入 PR/MR 证明基线。
+- `close <init-id>` 只有证明成功才清理；证明失败保留全部 init 事实。
+
+## 2026-10-28 accepted abandon 自动提交
+
+- 已验收但未合入的任务允许 `close --abandon`。放弃事件写入 primary 任务记录后，使用只包含该任务路径的提交持久化，再清理 worktree、本机目录与分支。
+- primary 无 Git 写入能力或当前分支就是将被删除的任务分支时返回 `ABANDON_NOT_PERSISTABLE`，不清理；不再要求用户手工复制和提交任务记录。
+
+## 2026-10-28 PR 创建幂等与导入呈现
+
+- `pr` 在创建前和创建失败后都按 head branch + head SHA 查询开放 PR/MR；命中即复用，查重失败时不盲目创建。
+- requirement-file 的顶层 `##` 是任务需求章节，深层标题随所属正文保留并降级到任务记录层级；全局 specs 任务标题使用 `specs` scope。
+- check 将同一模块的覆盖缺失与回归建议合并为一条非阻断提示，并统一去重。
+

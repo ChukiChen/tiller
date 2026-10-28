@@ -2373,7 +2373,7 @@ doctor 发现并检查 worktree 任务，报告未覆盖 AC，不因 primary 缺
 
 首次 close 以稳定错误拒绝破坏性清理；证明合入后才清理。清理后没有可读任务记录时不提示执行 `tiller reopen`。
 
-## CASE-317 abandon 无法持久化时拒绝清理
+## CASE-317 abandon 持久化失败时拒绝清理
 
 - 类型：behavior
 - 优先级：high
@@ -2383,22 +2383,22 @@ doctor 发现并检查 worktree 任务，报告未覆盖 AC，不因 primary 缺
 
 ### 前置条件
 
-- 未验收任务记录只在任务 worktree，primary 没有可持久化的同名记录。
+- 任务记录只在任务 worktree，primary 暂时无法提交任务记录（例如 Git index 锁被占用）。
 
 ### 步骤
 
 1. 运行 `tiller close <id> --reason "..." --abandon`。
 2. 检查 worktree、本机目录和任务分支仍在，且错误不承诺 reopen。
-3. 在 primary 保留可读取任务记录后再次 abandon。
-4. 检查放弃事件已写入 primary 任务记录，再运行 reopen。
+3. 解除写阻塞后再次 abandon。
+4. 检查放弃事件已自动写入并提交到 primary 任务记录，再运行 reopen。
 
 ### 输入
 
-- 仅存在于 worktree 的未验收任务；随后提供 primary 持久记录。
+- 仅存在于 worktree 的任务；随后恢复 primary 的 Git 写入能力。
 
 ### 预期结果
 
-无法持久化时拒绝清理；持久化后可放弃并清理，放弃状态仍可读取和 reopen。
+无法持久化时不清理；持久化成功后先写入并提交放弃事件，再清理 worktree 与分支，放弃状态仍可读取和 reopen。
 
 ## CASE-318 合入证明绑定当前分支 tip
 
@@ -2425,3 +2425,84 @@ doctor 发现并检查 worktree 任务，报告未覆盖 AC，不因 primary 缺
 ### 预期结果
 
 仅当前 tip 命中 merged PR/MR 时关闭成功；无命中时返回 CLOSE_MERGE_PROOF_MISSING 并保留 worktree、本机目录和分支
+
+## CASE-322 accepted 未合入任务可原子 abandon
+
+- 类型：behavior
+- 优先级：high
+- 模块：workflow
+- 关联 AC：无
+- 需求：`.tiller/specs/modules/workflow/hygiene-invariants.md#2026-10-28-整包收口不变式`
+
+### 前置条件
+
+- 任务已验收但 PR/MR 尚未合入，任务记录仍只在任务 worktree。
+- primary 当前检出可提交任务记录。
+
+### 步骤
+
+1. 运行 `tiller close <id> --reason "..." --abandon`。
+2. 检查 primary 任务记录与最新提交。
+3. 检查任务 worktree、本机目录和分支均已清理。
+4. 运行 `tiller reopen <id> --reason "..."`。
+
+### 输入
+
+- 已验收但未合入的任务与放弃原因。
+
+### 预期结果
+
+abandon 接受已验收任务；先自动写入并提交放弃事件，再清理任务事实；reopen 能读取已提交的放弃状态。
+
+## CASE-323 PR 创建按 head branch 与 SHA 幂等
+
+- 类型：behavior
+- 优先级：high
+- 模块：workflow
+- 关联 AC：无
+- 需求：`.tiller/specs/modules/workflow/hygiene-invariants.md#2026-10-28-整包收口不变式`
+
+### 前置条件
+
+- 同一任务分支已推送到平台，平台存在或刚创建同 head branch 与 head SHA 的开放 PR/MR。
+- 第一次创建可能已落库但响应丢失。
+
+### 步骤
+
+1. 在已有同 head 开放 PR/MR 时再次运行 `tiller pr <id>`。
+2. 模拟平台创建成功但响应丢失后重试 `tiller pr <id>`。
+3. 统计平台创建请求与返回编号。
+
+### 输入
+
+- 同一分支、同一提交 SHA 的开放 PR/MR 与丢失的创建响应。
+
+### 预期结果
+
+创建前与创建失败后都按 head branch+SHA 查重；命中时复用已有编号和 URL，不产生同树重复 PR/MR。
+
+## CASE-324 requirement-file 保留嵌套关键行为
+
+- 类型：behavior
+- 优先级：medium
+- 模块：workflow
+- 关联 AC：无
+- 需求：`.tiller/specs/modules/workflow/hygiene-invariants.md#2026-10-28-整包收口不变式`
+
+### 前置条件
+
+- 稳定需求文件在 `## 关键行为` 下使用多个 `###` 子标题描述行为。
+
+### 步骤
+
+1. 使用 `--requirement-file` 启动任务。
+2. 读取任务记录的 `### 关键行为`。
+3. 检查子标题是否仍在关键行为内并保持层级。
+
+### 输入
+
+- 含嵌套 `###` 关键行为的 specs 文件。
+
+### 预期结果
+
+任务记录保留完整子标题和正文，层级仍从属于 `### 关键行为`，不折叠进目标或丢成顶层摘要。

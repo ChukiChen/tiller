@@ -9,10 +9,10 @@ import { closeFlow, inspectFlow, readTask, taskStage } from './flow.js';
 import type { FlowTask } from './flow.js';
 import { isInitBaselineId, markInitBaselineMerged } from './init-baseline.js';
 import {
-  createMergeRequest, createPullRequest, mergeMergeRequest, mergePullRequest, platformToken, pushBranch,
+  createMergeRequest, createPullRequest, findOpenIntegration, mergeMergeRequest, mergePullRequest, platformToken, pushBranch,
   resolvePlatformRepository, tokenGuidance,
 } from './platform-api.js';
-import type { MergeRequestResult, PlatformRepository, PullRequestResult, PushResult } from './platform-api.js';
+import type { MergeRequestResult, OpenIntegration, PlatformRepository, PullRequestResult, PushResult } from './platform-api.js';
 import { resolveTaskCheckout } from './project-root.js';
 import { taskBranchName } from './task-worktrees.js';
 
@@ -102,13 +102,28 @@ function referencedModules(task: FlowTask, available: string[]): string[] {
   const add = (value: string): void => {
     if (available.includes(value) && !found.includes(value)) found.push(value);
   };
+  const globalSpecRoots = new Set([
+    '.tiller/specs', '.tiller/specs/requirements.md', '.tiller/specs/design.md', '.tiller/specs/decisions.md',
+  ]);
+  let globalSpecs = false;
   for (const scope of task.meta.scope) {
+    if (globalSpecRoots.has(scope.replace(/\/+$/u, ''))) globalSpecs = true;
     for (const match of scope.matchAll(/\.tiller\/(?:specs|cases)\/modules\/([a-z][a-z0-9_-]*)/gu)) add(match[1]!);
   }
+  // A task scoped to the stable specs root is a global specs change; body references to
+  // module documents do not turn the PR title into that module's implementation title.
+  if (globalSpecs) return ['specs'];
+  if (found.length) return found;
+  if (task.meta.requirementFile) {
+    const match = /^\.tiller\/specs\/modules\/([a-z][a-z0-9_-]*)\//u.exec(task.meta.requirementFile);
+    if (match) add(match[1]!);
+  }
+  if (found.length) return found;
   for (const line of task.requirement.split(/\r?\n/u)) {
     if (!/涉及模块/u.test(line)) continue;
     for (const match of line.matchAll(/[a-z][a-z0-9_-]*/gu)) add(match[0]);
   }
+  if (found.length) return found;
   const text = `${task.requirement}\n${task.design}`;
   for (const match of text.matchAll(/\.tiller\/(?:specs|cases)\/modules\/([a-z][a-z0-9_-]*)/gu)) add(match[1]!);
   return found;
@@ -320,21 +335,57 @@ export async function pullRequestFlow(
     fail('PR_PUSH_FAILED', `推送任务分支 ${draft.branch} 失败：${(error as Error).message}`);
   }
 
-  let created: PullRequestResult | MergeRequestResult;
-  try {
-    created = platform === 'github'
-      ? await createPullRequest(repository, token, { branch: draft.branch, title: draft.title, body: draft.body })
-      : await createMergeRequest(repository, token, { branch: draft.branch, title: draft.title, body: draft.body });
-  } catch (error) {
-    const item = error as { status?: number; message?: string };
+  const headResult = await git(root, ['rev-parse', '--verify', `refs/heads/${draft.branch}^{commit}`]);
+  const head = headResult.ok ? headResult.stdout.trim() : '';
+  if (!/^[a-f0-9]{40,64}$/u.test(head)) {
+    fail('PR_HEAD_UNKNOWN', `无法读取任务分支 ${draft.branch} 的 head SHA，不能安全创建 PR/MR。`);
+  }
+  const lookup = async (): Promise<OpenIntegration | null> =>
+    await findOpenIntegration(repository, token, draft.branch, head);
+  let existing: OpenIntegration | null;
+  try { existing = await lookup(); }
+  catch (error) {
     const label = platform === 'github' ? 'PR' : 'MR';
-    if (item.status === 422 || /already exists|已存在/iu.test(item.message ?? '')) {
-      fail('PR_ALREADY_EXISTS', `${label} 可能已存在：${item.message ?? '平台返回 422'}。请打开分支 ${draft.branch} 的 PR/MR 核对；合入使用 tiller merge ${id}。`);
+    fail('PR_LOOKUP_FAILED', `创建前无法查询 ${label} 是否已存在：${(error as Error).message}`);
+  }
+
+  const asResult = (item: OpenIntegration): PullRequestResult | MergeRequestResult => ({
+    url: item.url, number: item.number, base: item.base, command: item.command,
+    ...(platform === 'gitlab' ? { iid: item.number } : {}),
+  });
+  let reused = existing !== null;
+  let created: PullRequestResult | MergeRequestResult;
+  if (existing) {
+    created = asResult(existing);
+  } else {
+    try {
+      created = platform === 'github'
+        ? await createPullRequest(repository, token, { branch: draft.branch, title: draft.title, body: draft.body })
+        : await createMergeRequest(repository, token, { branch: draft.branch, title: draft.title, body: draft.body });
+    } catch (error) {
+      let recovered: OpenIntegration | null = null;
+      let recoveryError: Error | null = null;
+      try { recovered = await lookup(); }
+      catch (lookupError) { recoveryError = lookupError as Error; }
+      if (recovered) {
+        existing = recovered;
+        reused = true;
+        created = asResult(recovered);
+      } else {
+        const item = error as { status?: number; message?: string };
+        const label = platform === 'github' ? 'PR' : 'MR';
+        const recovery = recoveryError ? `；查重也失败：${recoveryError.message}` : '；未找到同 head 的开放记录';
+        if (item.status === 422 || /already exists|已存在/iu.test(item.message ?? '')) {
+          fail('PR_ALREADY_EXISTS', `${label} 已存在但无法按 head branch+SHA 复用：${item.message ?? '平台返回 422'}${recovery}。请打开分支 ${draft.branch} 的 PR/MR 核对；合入使用 tiller merge ${id}。`);
+        }
+        fail('PR_CREATE_FAILED', `${label} 创建失败：${item.message ?? String(error)}${recovery}`);
+      }
     }
-    fail('PR_CREATE_FAILED', `${label} 创建失败：${item.message ?? String(error)}`);
   }
 
   const label = platform === 'github' ? 'PR' : 'MR';
+  const warnings = [...draft.warnings, ...pushed.warnings,
+    ...(reused ? [`检测到同一 head branch+SHA 的开放 ${label} #${created.number}，已复用未重复创建。`] : [])];
   const markdown = `${draft.title}\n\n${label} #${created.number}：${created.url}\n分支：\`${draft.branch}\`\n\n${draft.body}\n`;
   return {
     ...draft,
@@ -343,10 +394,12 @@ export async function pullRequestFlow(
     number: created.number,
     base: created.base,
     pushed,
-    warnings: [...draft.warnings, ...pushed.warnings],
+    warnings,
     draftOnly: false,
     markdown,
-    next: `已创建 ${label} #${created.number}：${created.url}；审阅后用 tiller merge ${id} 合入。`,
+    next: reused
+      ? `已复用 ${label} #${created.number}：${created.url}；审阅后用 tiller merge ${id} 合入。`
+      : `已创建 ${label} #${created.number}：${created.url}；审阅后用 tiller merge ${id} 合入。`,
   };
 }
 

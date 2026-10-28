@@ -1335,3 +1335,54 @@ check 不出现“未检测到任务基线后 .tiller/specs/ 或 .tiller/context
 ### 预期结果
 
 specs/workflow 等约定 scope 不产生模块缺失提示；不存在的真实模块 id 仍提示模块不在 specs/modules
+
+## CASE-325 全局 specs 任务 PR 标题使用 specs scope
+
+- 类型：interface
+- 优先级：medium
+- 模块：workflow
+- 关联 AC：无
+- 需求：`.tiller/specs/modules/workflow/hygiene-invariants.md#2026-10-28-整包收口不变式`
+
+### 前置条件
+
+- 任务范围为 `.tiller/specs` 与 `.tiller/cases`，正文引用某个具体模块的 specs 路径。
+
+### 步骤
+
+1. 运行 `tiller pr <id> --draft-only`。
+2. 读取标题 scope 与 warnings。
+
+### 输入
+
+- 全局规格任务及其正文中的模块路径引用。
+
+### 预期结果
+
+标题使用 `feat(specs):`，不因正文提到模块名误推为模块 scope；实现任务仍可从 requirement-file 或显式模块范围推导模块。
+
+## CASE-326 check 非阻断模块提示合并去重
+
+- 类型：interface
+- 优先级：medium
+- 模块：workflow
+- 关联 AC：无
+- 需求：`.tiller/specs/modules/workflow/hygiene-invariants.md#2026-10-28-整包收口不变式`
+
+### 前置条件
+
+- 改动涉及一个没有场景覆盖、但已有 CASE 的模块。
+- 用例库同时产生“未覆盖”和“建议回归”提示。
+
+### 步骤
+
+1. 运行 `tiller check <id>`。
+2. 读取 warnings。
+
+### 输入
+
+- 有模块用例、无场景覆盖的模块改动。
+
+### 预期结果
+
+同一模块的覆盖缺失与回归建议合并为一条可定位提示；重复文案不重复出现，`ready` 判定不受影响。

@@ -630,29 +630,60 @@ interface ParsedRequirementFile {
   extras: string[];
   criteria: FlowCriterion[];
 }
+interface RequirementHeading {
+  index: number;
+  end: number;
+  depth: number;
+  rawTitle: string;
+  title: string;
+}
+function normalizedRequirementTitle(value: string): string {
+  return value.trim().replace(/^(?:\d+(?:\.\d+)*[.)、]?)\s*/u, '').trim();
+}
+function shiftRequirementHeadings(body: string, sectionDepth: number): string {
+  return body.replace(/^(#{1,6})(\s+)/gmu, (_match, hashes: string, space: string) => {
+    const depth = hashes.length;
+    const target = depth <= sectionDepth ? 3 : depth - sectionDepth + 3;
+    return `${'#'.repeat(Math.max(3, Math.min(6, target)))}${space}`;
+  });
+}
 function parseRequirementFile(content: string): ParsedRequirementFile {
   const normalized = content.replace(/^\uFEFF/u, '').replace(/\r\n?/gu, '\n');
-  const headings = [...normalized.matchAll(/^#{2,3}\s+(.+?)\s*$/gmu)];
+  const headings: RequirementHeading[] = [...normalized.matchAll(/^(#{1,6})\s+(.+?)\s*$/gmu)].map(match => ({
+    index: match.index ?? 0,
+    end: (match.index ?? 0) + match[0].length,
+    depth: match[1]!.length,
+    rawTitle: match[2]!.trim(),
+    title: normalizedRequirementTitle(match[2]!),
+  }));
   if (!headings.length) return { structured: false, preamble: normalized.trim(), sections: new Map(), extras: [], criteria: [] };
-  const rawPreamble = normalized.slice(0, headings[0]!.index ?? 0);
+  const known = (heading: RequirementHeading): boolean => heading.title === '验收条件'
+    || heading.title === HISTORICAL_ACCEPTANCE_HEADING
+    || REQUIREMENT_SECTIONS.includes((heading.title === HISTORICAL_SCENARIO_HEADING ? '使用场景' : heading.title) as RequirementSection);
+  const sectionDepth = headings.some(heading => heading.depth === 2 && known(heading))
+    ? 2
+    : headings.some(heading => heading.depth === 3 && known(heading)) ? 3 : 2;
+  const firstSection = headings.findIndex(heading => heading.depth === sectionDepth);
+  const rawPreamble = normalized.slice(0, firstSection < 0 ? 0 : headings[firstSection]!.index);
   const preamble = rawPreamble.replace(/^\s*#\s+.*(?:\n|$)/u, '').trim();
   const sections = new Map<RequirementSection, string>();
   const extras: string[] = [];
   const criteria: FlowCriterion[] = [];
   for (const [index, heading] of headings.entries()) {
-    const rawTitle = heading[1]!.trim();
-    const title = rawTitle.replace(/^(?:\d+(?:\.\d+)*[.)、]?)\s*/u, '').trim();
-    const sectionTitle = title === HISTORICAL_SCENARIO_HEADING ? '使用场景' : title;
-    const body = normalized.slice((heading.index ?? 0) + heading[0].length, headings[index + 1]?.index ?? normalized.length).trim();
-    if (title === '验收条件' || title === HISTORICAL_ACCEPTANCE_HEADING) {
+    if (heading.depth !== sectionDepth) continue;
+    const next = headings.slice(index + 1).find(item => item.depth <= sectionDepth);
+    const body = normalized.slice(heading.end, next?.index ?? normalized.length).trim();
+    const sectionTitle = heading.title === HISTORICAL_SCENARIO_HEADING ? '使用场景' : heading.title;
+    if (heading.title === '验收条件' || heading.title === HISTORICAL_ACCEPTANCE_HEADING) {
       criteria.push(...criteriaFromBody(body));
       continue;
     }
     if (REQUIREMENT_SECTIONS.includes(sectionTitle as RequirementSection)) {
       const key = sectionTitle as RequirementSection;
-      sections.set(key, [sections.get(key), body].filter(Boolean).join('\n\n'));
+      const shifted = shiftRequirementHeadings(body, sectionDepth);
+      sections.set(key, [sections.get(key), shifted].filter(Boolean).join('\n\n'));
     } else if (body) {
-      extras.push(`**${rawTitle}**\n\n${body}`);
+      extras.push(`**${heading.rawTitle}**\n\n${shiftRequirementHeadings(body, sectionDepth)}`);
     }
   }
   return { structured: true, preamble, sections, extras, criteria };
@@ -1791,7 +1822,14 @@ async function evaluateFlow(root: string, id: string, task: FlowTask, options: F
     }
     if (!inScope(relative, task.meta.scope)) changedOutsideScope.push(relative);
   }
-  warnings.push(...regressionWarnings(library, changed ?? []));
+  const regression = regressionWarnings(library, changed ?? []);
+  for (const module of library.uncovered) {
+    if (!regression.some(item => item.startsWith(`本次改动涉及模块 ${module}：`))) continue;
+    const generic = `模块 ${module} 未被任何场景覆盖；请按需补充端到端场景。`;
+    const index = warnings.indexOf(generic);
+    if (index >= 0) warnings.splice(index, 1);
+  }
+  warnings.push(...regression);
   warnings.push(...taskDesignThinWarnings(task));
   warnings.push(...businessScopeDeliveryPathWarnings(task));
   const decisionsWarning = await decisionsThinWarning(root);
@@ -1822,6 +1860,7 @@ async function evaluateFlow(root: string, id: string, task: FlowTask, options: F
   const tracking = release.items.find(item => item.id === 'managed-entry-tracking');
   if (tracking?.status === 'fail') warnings.push(`${tracking.detail}（release 将阻断）`);
   const uniqueIssues = [...new Set(issues)];
+  const uniqueWarnings = [...new Set(warnings)];
   const selfCheck = [
     `- ${uniqueIssues.includes('缺少需求确认。') || uniqueIssues.some(item => item.startsWith('需求确认后')) ? '[ ]' : '[x]'} 需求确认有效`,
     `- ${requiresDesign(task) && uniqueIssues.some(item => item.includes('设计')) ? '[ ]' : '[x]'} ${requiresDesign(task) ? '设计确认有效' : '该任务无需设计确认'}`,
@@ -1836,9 +1875,9 @@ async function evaluateFlow(root: string, id: string, task: FlowTask, options: F
     `- ${openBlockers.length ? '[ ]' : '[x]'} 评审无未清除阻塞项`,
     `- ${recordSafety(task.content).length ? '[ ]' : '[x]'} 记录不含密钥或本机绝对路径`,
     ...(uniqueIssues.length ? ['', '阻塞项：', ...uniqueIssues.map(item => `- ${item}`)] : []),
-    ...(warnings.length ? ['', '提示：', ...warnings.map(item => `- ${item}`)] : []),
+    ...(uniqueWarnings.length ? ['', '提示：', ...uniqueWarnings.map(item => `- ${item}`)] : []),
   ].join('\n');
-  return { id, ready: uniqueIssues.length === 0, issues: uniqueIssues, warnings, criteria, confirmations: confirmationStates,
+  return { id, ready: uniqueIssues.length === 0, issues: uniqueIssues, warnings: uniqueWarnings, criteria, confirmations: confirmationStates,
     acceptance: { confirmed: acceptanceConfirmed, ...(acceptance?.quote ? { quote: acceptance.quote } : {}),
       ...(acceptance?.by ? { by: acceptance.by } : {}), ...(acceptance ? { commit: acceptance.commit } : {}) },
     changedOutsideScope,
@@ -2271,6 +2310,50 @@ async function proveTaskMerged(root: string, taskRoot: string, id: string, metad
   return { merged: false, detail };
 }
 
+async function persistAbandonedTask(root: string, task: FlowTask, content: string): Promise<string> {
+  const id = task.meta.id;
+  const relative = taskPath(id);
+  const branch = await currentBranch(root);
+  if (!branch || branch === taskBranchName(task.meta)) {
+    fail('ABANDON_NOT_PERSISTABLE', `任务 ${id} 的放弃事件无法提交到会被保留的分支；请从 primary 的默认分支重试。本机任务事实未清理。`);
+  }
+  const previous = await readTextIfExists(root, relative);
+  let target: string;
+  try { target = await assertSafePath(root, relative); }
+  catch (error) {
+    fail('ABANDON_NOT_PERSISTABLE', `任务 ${id} 的放弃事件路径不可写：${(error as Error).message}。本机任务事实未清理。`);
+  }
+  try {
+    await mkdir(path.dirname(target), { recursive: true });
+    await writeFile(target, content, 'utf8');
+    if (previous === null) {
+      const intent = await git(root, ['add', '-N', '--', relative]);
+      if (!intent.ok) throw new Error(intent.stderr.trim() || 'git add -N 失败');
+    }
+    const [name, email] = await Promise.all([
+      git(root, ['config', 'user.name']),
+      git(root, ['config', 'user.email']),
+    ]);
+    const author = name.ok && name.stdout.trim() ? name.stdout.trim() : 'tiller';
+    const address = email.ok && email.stdout.trim() ? email.stdout.trim() : 'tiller@localhost';
+    const committed = await git(root, [
+      '-c', `user.name=${author}`, '-c', `user.email=${address}`,
+      'commit', '--quiet', '--only', '-m', `chore(workflow): 放弃任务 ${id} [${id}]`, '--', relative,
+    ]);
+    if (!committed.ok) throw new Error(committed.stderr.trim() || 'git commit 失败');
+    const commit = await head(root);
+    if (!commit) throw new Error('提交后无法读取 HEAD');
+    return commit;
+  } catch (error) {
+    await git(root, ['reset', '--quiet', 'HEAD', '--', relative]);
+    try {
+      if (previous === null) await rm(target, { force: true });
+      else await writeFile(target, previous, 'utf8');
+    } catch { /* Report the persistence failure below; do not proceed to cleanup. */ }
+    fail('ABANDON_NOT_PERSISTABLE', `任务 ${id} 的放弃事件无法写入并提交到 primary：${(error as Error).message}。本机任务事实未清理。`);
+  }
+}
+
 
 export async function closeFlow(rootInput: string, id: string, reasonInput: string, abandon = false,
   options: { keepBranch?: boolean; merged?: boolean } = {}) {
@@ -2280,8 +2363,12 @@ export async function closeFlow(rootInput: string, id: string, reasonInput: stri
     const metadata = await readProjectMetadata(taskRoot);
     if (isInitBaselineId(id)) {
       if (abandon) fail('INIT_BASELINE_CLOSE', '初始化基线不是任务，不能使用 --abandon；直接 close 只清理本机目录。');
-      if (metadata.initBaseline && metadata.initBaseline.status !== 'merged') {
-        await proveInitBaselineMerged(root, metadata);
+      if (!metadata.initBaseline || metadata.initBaseline.id !== id) {
+        fail('INIT_BASELINE_NOT_FOUND', `工程元信息中没有初始化基线 ${id}。`);
+      }
+      const proof = await proveInitBaselineMerged(root, metadata);
+      if (!proof.merged) {
+        fail('INIT_BASELINE_PENDING', `初始化基线 ${id} 尚未确认合入：${proof.detail}。本机初始化事实未清理。`);
       }
       const cleanup = await cleanupTaskWorktrees(root, id, metadata);
       const branchCleanup = metadata.initBaseline
@@ -2292,15 +2379,13 @@ export async function closeFlow(rootInput: string, id: string, reasonInput: stri
         at: new Date().toISOString(), worktrees: cleanup.removedWorktrees, missingWorktrees: cleanup.missingWorktrees,
         logsRemoved: cleanup.logsRemoved, ...(branchCleanup ? { branch: branchCleanup } : {}),
         ...(warnings.length ? { warnings } : {}),
-        next: '初始化基线本机目录已清理；共享 task 记录不受影响。' };
+        proof,
+        next: '初始化基线已证明合入，本机目录已清理；共享 task 记录不受影响。' };
     }
     const task = await readTask(taskRoot, id);
     const ended = terminalStage(task);
     if (ended) fail('TASK_ENDED', `任务当前阶段为${ended.stage}；如需继续，先执行 reopen。`);
     const current = await taskStageForTask(taskRoot, id, task);
-    if (current.stage === '已验收' && abandon) {
-      fail('ALREADY_ACCEPTED', '任务已验收；请使用 close 收尾，不要用 --abandon 把已验收任务标为放弃。');
-    }
     if (current.stage !== '已验收' && !abandon) {
       fail('NOT_ACCEPTED', `任务当前阶段为${current.stage}；只有已验收任务可以 close，未验收终止请使用 --abandon。`);
     }
@@ -2324,28 +2409,20 @@ export async function closeFlow(rootInput: string, id: string, reasonInput: stri
           ? `任务已交付；如需继续修改，执行 tiller reopen ${id} --reason "<原因>".`
           : '任务已交付并清理；当前检出没有可读取任务记录，不能直接 reopen。' };
     }
-    const taskRecord = taskPath(id);
-    if (await readTextIfExists(root, taskRecord) === null) {
-      fail('ABANDON_NOT_PERSISTABLE', `任务 ${id} 的放弃事实无法在独占 worktree 清理后保留；请先在 primary 保留可读取的任务记录，再执行 --abandon。本机任务事实未清理。`);
-    }
     const closure: FlowClosure = {
       action: 'close', status: 'abandoned', reason,
       at: new Date().toISOString(),
     };
     const next = { ...task, closures: [...task.closures, closure] };
     const { content: _content, path: _path, ...body } = next;
-    await writeTask(taskRoot, id, task.content, renderTask(body, sectionBody(task.content, '自检')), body.meta.preExisting);
-    if (await readTextIfExists(root, taskRecord) === null) {
-      fail('ABANDON_NOT_PERSISTABLE', `任务 ${id} 的放弃事件未能写入 primary；本机任务事实未清理。`);
-    }
+    const persistedCommit = await persistAbandonedTask(root, task, renderTask(body, sectionBody(task.content, '自检')));
     const stage = terminalStage(next)!;
-    // Abandon writes on the task checkout only; no untracked primary copy.
     const cleanup = await cleanupTaskWorktrees(root, id, metadata);
     const branchCleanup = await cleanupTaskBranches(root, metadata, taskBranchName(task.meta), options);
     const warnings = [...cleanup.warnings, ...branchCleanup.warnings];
     return { id, stage: stage.stage, stageReason: stage.reason, reason, at: closure.at, path: task.path,
       worktrees: cleanup.removedWorktrees, missingWorktrees: cleanup.missingWorktrees, logsRemoved: cleanup.logsRemoved,
-      branch: branchCleanup, ...(warnings.length ? { warnings } : {}),
+      branch: branchCleanup, persistedCommit, ...(warnings.length ? { warnings } : {}),
       next: `如需继续修改，执行 tiller reopen ${id} --reason "<原因>".` };
   });
 }
