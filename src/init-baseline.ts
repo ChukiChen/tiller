@@ -4,8 +4,9 @@ import path from 'node:path';
 import { promisify } from 'node:util';
 import { assertSafePath } from './files.js';
 import {
-  createMergeRequest, createPullRequest, findMergedIntegration, findOpenIntegration, platformToken, pushBranch,
-  resolvePlatformRepository, tokenGuidance, type FetchLike, type PlatformRepository, type PlatformToken,
+  createMergeRequest, createPullRequest, findMergedIntegration, findMergedIntegrationByCommit, findOpenIntegration,
+  platformToken, pushBranch, resolvePlatformRepository, tokenGuidance, tokenizedGitEnvironment,
+  type FetchLike, type PlatformRepository, type PlatformToken,
 } from './platform-api.js';
 import { META, parseInitBaseline, parseMetadata } from './project-metadata.js';
 import type { FileChange, InitBaseline, InitBaselineStatus, ProjectMetadata, ProjectPlatform } from './types.js';
@@ -80,11 +81,13 @@ function commitTip(value: unknown): string | null {
   return /^(?:[a-f0-9]{40}|[a-f0-9]{64})$/u.test(normalized) ? normalized : null;
 }
 
-async function run(root: string, command: string, args: string[], env: NodeJS.ProcessEnv = process.env): Promise<CommandResult> {
+async function run(root: string, command: string, args: string[], env: NodeJS.ProcessEnv = process.env,
+  timeout?: number): Promise<CommandResult> {
   try {
     const result = await execFileAsync(command, args, {
       cwd: root, encoding: 'utf8', maxBuffer: 16 * 1024 * 1024,
       env: { ...env, LC_ALL: 'C', GIT_TERMINAL_PROMPT: '0' },
+      ...(timeout === undefined ? {} : { timeout, killSignal: 'SIGTERM' as const }),
     });
     return { ok: true, stdout: result.stdout, stderr: result.stderr, unavailable: false };
   } catch (error) {
@@ -96,6 +99,24 @@ async function run(root: string, command: string, args: string[], env: NodeJS.Pr
       unavailable: item.code === 'ENOENT',
     };
   }
+}
+
+function redactedFailure(value: string, token: PlatformToken): string {
+  const basic = Buffer.from(`${token.platform === 'github' ? 'x-access-token' : 'oauth2'}:${token.value}`).toString('base64');
+  return value.replaceAll(token.value, '[REDACTED]').replaceAll(basic, '[REDACTED]').replace(/Authorization:\s*\S+/giu, 'Authorization: [REDACTED]');
+}
+
+async function assertOriginReachable(root: string, repository: PlatformRepository, token: PlatformToken): Promise<void> {
+  const environment = tokenizedGitEnvironment(repository, token);
+  environment.GCM_INTERACTIVE = 'Never';
+  if (/^(?:ssh:|\S+@\S+?:)/u.test(repository.remoteUrl)) {
+    environment.GIT_SSH_COMMAND = `${environment.GIT_SSH_COMMAND ?? 'ssh'} -o BatchMode=yes -o ConnectTimeout=10`;
+  }
+  const checked = await run(root, 'git', ['ls-remote', '--heads', 'origin'], environment, 15_000);
+  if (checked.ok) return;
+  const detail = redactedFailure(commandError(checked, 'git ls-remote 未返回错误详情'), token).replace(/\s+/gu, ' ').slice(0, 600);
+  fail('INIT_PREFLIGHT_REMOTE_UNREACHABLE',
+    `初始化预检失败：origin ${repository.remoteUrl} 不可达或认证未通过。请检查网络和仓库地址，确认凭证有效后运行 git ls-remote --heads origin 自检；本次未创建目标目录、初始化 worktree、分支、提交或受管文件。${detail ? `\n${detail}` : ''}`);
 }
 
 async function git(root: string, args: string[]): Promise<CommandResult> {
@@ -387,11 +408,28 @@ export async function proveInitBaselineMerged(rootInput: string, metadata: Proje
   }
   if (!expectedHead) {
     const open = localBaseline?.prUrl ? `；本机记录的 open PR/MR 为 ${localBaseline.prUrl}` : '';
-    return {
-      merged: false,
-      detail: `本机缺少本次初始化 expected head，不能以同分支历史 PR/MR 证明合入${open}`,
-      marked: false,
-    };
+    let detail = `平台未找到唯一包含初始化提交 ${baseline.commit} 的已合入 PR/MR${open}`;
+    try {
+      const configured = metadata.platform ?? 'github';
+      const repository = await resolvePlatformRepository(root, configured);
+      const token = platformToken(repository.platform);
+      if (!token) {
+        detail = `缺少 ${repository.platform === 'github' ? 'GITHUB_TOKEN/GH_TOKEN' : 'GITLAB_TOKEN/GL_TOKEN'}，无法确认平台合入状态`;
+      } else {
+        const merged = await findMergedIntegrationByCommit(repository, token, baseline.branch, baseline.commit, fetchImpl);
+        if (merged) {
+          await markInitBaselineMerged(root, baseline.id, merged.head);
+          return {
+            merged: true,
+            detail: `初始化基线 ${baseline.id} 已由提交 ${baseline.commit} 唯一绑定的已合入 PR/MR #${merged.number} 确认（head ${merged.head}）。`,
+            marked: true,
+          };
+        }
+      }
+    } catch (error) {
+      detail = `平台合入状态查询失败：${(error as Error).message}`;
+    }
+    return { merged: false, detail, marked: false };
   }
   let detail = `平台未找到 head ${expectedHead} 的已合入 PR/MR`;
   try {
@@ -482,6 +520,7 @@ export async function assertInitEnvironment(rootInput: string, platform: Project
   }
   const token = platformToken(repository.platform);
   if (!token) fail('INIT_PREFLIGHT_TOKEN', `初始化预检失败：${tokenGuidance(repository.platform, repository.apiBase)}`);
+  await assertOriginReachable(root, repository, token);
   return { remoteRequired: true, repository, token };
 }
 

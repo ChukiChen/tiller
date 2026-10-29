@@ -398,3 +398,28 @@ check 给出 specs 回写告警，但不新增阻断。
 ### 预期结果
 
 文本 CRLF 与 LF 提交产生相同 tree 摘要，`verify`、`check` 与 acceptance 复查均不因换行误报过期；二进制内容变化仍使验证过期，且既有的验收提交复查继续可用。
+
+## CASE-349 Windows 调用真实 Java 与 pytest runner
+
+- 类型：behavior
+- 优先级：high
+- 模块：verification
+- 关联 AC：AC-3
+- 需求：`.tiller/specs/modules/workflow/windows-fresh-hygiene.md`
+
+### 前置条件
+
+- Windows 或可控平台探测；mvn.cmd、gradle.bat、pytest.exe 可执行并产出私有报告；辅助脚本可扫描
+
+### 步骤
+
+1. 运行 junit-maven、junit-gradle 与 pytest 验证，并生成 junit CASE 适配器骨架
+2. 检查 runner 构造、适配器平台分支及 helper/package smoke 的进程捕获
+
+### 输入
+
+- 通过、失败、跳过、工具缺失与含空格/元字符参数
+
+### 预期结果
+
+真实工具被调用且仅由私有报告核实；失败/缺失透传，适配器含 Windows 启动分支，辅助脚本不依赖 /bin/sh

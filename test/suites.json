@@ -32,6 +32,7 @@
     "review-release.test.mjs",
     "specs-overflow-gate.test.mjs",
     "merge.test.mjs",
-    "init-baseline.test.mjs"
+    "init-baseline.test.mjs",
+    "windows-fresh-hygiene.test.mjs"
   ]
 }

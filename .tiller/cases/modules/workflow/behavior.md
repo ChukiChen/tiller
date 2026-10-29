@@ -2530,3 +2530,28 @@ abandon 接受已验收任务；先自动写入并提交放弃事件，再清理
 ### 预期结果
 
 logsRemoved 为 true，不再因日志目录已随后续本机目录删除而误报 false
+
+## CASE-347 LF/CRLF 确认与 primary 收尾稳定
+
+- 类型：behavior
+- 优先级：high
+- 模块：workflow
+- 关联 AC：AC-1
+- 需求：`.tiller/specs/modules/workflow/windows-fresh-hygiene.md`
+
+### 前置条件
+
+- Windows 工程启用 core.autocrlf；同一任务正文存在 LF、CRLF 与孤立 CR 变体
+
+### 步骤
+
+1. 在 CRLF 任务上确认需求与设计，模拟合入后以 LF 检出 primary，再执行 close/resume
+2. 修改设计实质内容后重新核对确认
+
+### 输入
+
+- 换行不同但字符相同的任务正文；一份实质不同的设计正文
+
+### 预期结果
+
+换行变体得到同一设计/交付摘要且确认继续有效；实质内容变化使对应确认失效，close/resume 不因换行误报

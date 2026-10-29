@@ -453,12 +453,17 @@ function requiredText(value: unknown, label: string, maximum: number): string {
   return value.trim();
 }
 
-function caseSkeleton(runner: string, id: string, title: string, expected: string): string {
+export function caseSkeleton(runner: string, id: string, title: string, expected: string): string {
   if (runner === 'junit-maven' || runner === 'junit-gradle') {
     const titleText = title.replaceAll("'", "\\'");
-    const command = runner === 'junit-maven'
-      ? "spawnSync('mvn', ['-q', '-Dtest=com.example.ExampleTest#method', 'test'], { stdio: 'inherit' })"
-      : "spawnSync('gradle', ['test', '--tests', 'com.example.ExampleTest.method'], { stdio: 'inherit' })";
+    const executable = runner === 'junit-maven' ? 'mvn.cmd' : 'gradle.bat';
+    const posixExecutable = runner === 'junit-maven' ? 'mvn' : 'gradle';
+    const args = runner === 'junit-maven'
+      ? "['-q', '-Dtest=com.example.ExampleTest#method', 'test']"
+      : "['test', '--tests', 'com.example.ExampleTest.method']";
+    const windowsCommand = `"${executable} ${runner === 'junit-maven'
+      ? '-q -Dtest=com.example.ExampleTest#method test'
+      : 'test --tests com.example.ExampleTest.method'}"`;
     return [
       "import test from 'node:test';",
       "import assert from 'node:assert/strict';",
@@ -467,7 +472,9 @@ function caseSkeleton(runner: string, id: string, title: string, expected: strin
       `test('${id} ${titleText}', () => {`,
       `  // 可扫描入口挂 CASE；真实 runner：${runner}。`,
       '  // TODO: 把占位类方法替换为真实测试选择器；完整映射由工程补齐。',
-      `  const result = ${command};`,
+      `  const result = process.platform === 'win32'`,
+      `    ? spawnSync(process.env.ComSpec || 'cmd.exe', ['/d', '/s', '/c', ${JSON.stringify(windowsCommand)}], { stdio: 'inherit', windowsVerbatimArguments: true })`,
+      `    : spawnSync('${posixExecutable}', ${args}, { stdio: 'inherit' });`,
       `  assert.equal(result.status, 0, '${runner} 失败');`,
       '});',
       '',

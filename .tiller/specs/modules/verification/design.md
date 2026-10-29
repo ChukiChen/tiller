@@ -56,7 +56,7 @@
 
 ## 6. Java 运行器
 
-`junit-maven` 与 `junit-gradle` 都由 tiller 拉起子进程，不嵌入 JVM。测试引用仍是 `路径::名称`。名称用 `com.example.BillingTest#addsInvoice` 或整个类名；没有 `#` 且不含点时，仅当路径位于 `src/test/java/` 下才从路径得到类名并把名称当作方法。扩展名本身不参与选择运行器。
+`junit-maven` 与 `junit-gradle` 都由 tiller 拉起子进程，不嵌入 JVM。测试引用仍是 `路径::名称`。名称用 `com.example.BillingTest#addsInvoice` 或整个类名；没有 `#` 且不含点时，仅当路径位于 `src/test/java/` 下才从路径得到类名并把名称当作方法。扩展名本身不参与选择运行器。命令执行经统一平台适配器：Windows 对 `.cmd`/`.bat` 使用系统命令解释器并集中引用参数，Maven/Gradle 分别解析为 `mvn.cmd`/`gradle.bat`，pytest 解析为 `pytest.exe`；POSIX 直接执行逻辑命令。工具缺失、启动失败和报告不可核实均失败，不因平台分支改变核实规则。
 
 Maven 在业务仓库根执行 `mvn -Dsurefire.reportsDirectory=<相对私有目录> -Dtest=<类[#方法]> test`。Gradle 在同一目录执行 `gradle -Dtiller.junit.reports=<相对私有目录> --init-script <相对私有目录>/junit-gradle.init.gradle test --tests <类[.方法]>`，初始化脚本把 JUnit XML 写到该私有目录。多模块工程若按各自模块目录解析相对报告路径，应把实际出测试结果的模块登记为仓库根，或继续使用 `--reported`。
 
@@ -70,6 +70,6 @@ Maven 在业务仓库根执行 `mvn -Dsurefire.reportsDirectory=<相对私有目
 
 ## 6. 跨语言 CASE 适配器
 
-不直接扫描的语言用可扫描入口桥接。`case add` 在 `junit-maven`/`junit-gradle` 下输出 Node 适配器骨架：测试名包含 `CASE-NNN`，体内用 `spawnSync` 调真实 runner，并留下 `Class#method`/`Class.method` 选择器 TODO。完整映射与工程配置由使用者补齐，tiller 不按扩展名猜语言，也不实现 Java AST 扫描。
+不直接扫描的语言用可扫描入口桥接。`case add` 在 `junit-maven`/`junit-gradle` 下输出 Node 适配器骨架：测试名包含 `CASE-NNN`，体内按平台调用真实 runner，并留下 `Class#method`/`Class.method` 选择器 TODO。Windows 分支必须指向 `mvn.cmd`/`gradle.bat` 或系统命令解释器，不能只生成裸 `spawnSync('mvn'|'gradle', ...)`。完整映射与工程配置由使用者补齐，tiller 不按扩展名猜语言，也不实现 Java AST 扫描。辅助脚本捕获输出使用 Node 的文件描述符或内存能力，不写死 `/bin/sh`。
 
 适配器入口仓库配置 `node-test`（或其它可扫描运行器），真实 Java 仓库配置 `junit-maven`/`junit-gradle`。`verify --case CASE-NNN` 仍按测试名扫描找到适配器，tiller 以适配器测试的真实退出码和私有报告核实；Maven/Gradle 失败、缺失或适配器没有 CASE 名都不能被记为通过。

@@ -283,3 +283,11 @@
 - 判定保持机械边界：只认路径与 AC-n 正文，不做语义猜测，也不自动改写全局文件；引用文件缺失、AC 不存在和无法挂载的验收点都失败，不静默降级。已验收任务继续按 acceptance 证据复核，不追溯改写旧确认。
 - 跨语言 CASE 采用「可扫描入口挂 CASE + 内部转调真实 runner」标准：Node 适配器测试名含 `CASE-NNN`，体内调用 Maven/Gradle；适配器入口配置 `node-test`，真实 Java 仓库配置 junit 运行器，不按扩展名猜语言。`case add` 对 junit 运行器输出带选择器 TODO 的 Node 骨架。
 - 代价是混合语言工程需要明确仓库/运行器边界，且适配器多一层进程；收益是无需本包实现 Java AST 扫描，多语言仍复用现有 verify 的 CASE 反查与证据链。版本保持 0.5.0。
+
+## 2026-10-29 Windows 与 fresh clone 卫生
+
+- 设计确认与交付确认对正文只做 CRLF/孤立 CR 到 LF 的归一，再做既有首尾空白处理；不改变其他字符，因此换行风格等价而实质修改仍使确认失效。
+- fresh clone 没有本机 expected head 时，允许以 `branch` 查询 merged PR/MR，并以提交列表唯一包含 tracked `initBaseline.commit` 的记录重建证明；发现后把该记录的 head 写入本机 marker。零个或多个候选、提交列表不可读、无 token 或 API 失败仍 pending，禁止只按 branch/id/title 放行。本决定取代 2026-10-28「fresh clone 没有 expected head 必须恢复本机证明」的限制，但不改变 tracked 元信息只含 `id/branch/commit`、不写 `headRef/status` 的决定。
+- Windows 的 runner 与 CASE 适配器按平台解析 `mvn.cmd`、`gradle.bat`、`pytest.exe` 或系统命令解释器入口；POSIX 路径保持原命令。辅助脚本和 package smoke 不用 `/bin/sh`，真实退出码与私有报告仍是唯一核实依据。
+- 有 Git HEAD 的 `init` / `init --apply` 在写盘前增加 origin 活性检查：只读、有限超时、禁交互，HTTPS 使用不落日志的 token 认证，SSH 使用批处理与连接超时。不可达或认证失败返回稳定预检错误，不产生本次初始化产物。
+- 代价是 fresh clone 首次 `status/start` 可能需要平台查询，Windows 命令引用需要专门测试；收益是证明可由不可变提交事实重建，且不依赖本机状态或 POSIX shell。版本保持 0.5.0。

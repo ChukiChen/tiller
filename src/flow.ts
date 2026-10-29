@@ -29,7 +29,9 @@ import {
   cleanupTaskWorktrees, createTaskWorktrees, managementWorktreePath, rollbackTaskWorktrees,
   syncTaskRecordsToWorktrees, taskBranchName, taskLocalRoot, taskWorktreePaths, writeTaskWorktreeState,
 } from './task-worktrees.js';
-import { namePattern, resolveVerifyTarget, runnerFor, type TestEvidence, type TestReference } from './test-output.js';
+import {
+  namePattern, platformProcessInvocation, resolveVerifyTarget, runnerFor, type TestEvidence, type TestReference,
+} from './test-output.js';
 import type { ProjectMetadata } from './types.js';
 
 const execFileAsync = promisify(execFile);
@@ -950,8 +952,11 @@ function requirementsSubject(task: Pick<FlowTask, 'meta' | 'requirement' | 'crit
     requirement: normalizeLine(task.requirement), criteria: task.criteria.map(item => [item.id, normalizeLine(item.text)]),
   }));
 }
+function confirmationBody(value: string): string {
+  return value.replace(/\r\n?/gu, '\n').trim();
+}
 function designSubject(task: Pick<FlowTask, 'meta' | 'requirement' | 'criteria' | 'design'>): string {
-  return sha(JSON.stringify({ requirements: requirementsSubject(task), design: task.design.trim() }));
+  return sha(JSON.stringify({ requirements: requirementsSubject(task), design: confirmationBody(task.design) }));
 }
 function latestVerification(task: Pick<FlowTask, 'verifications'>, criterion: string): FlowVerification | undefined {
   return [...task.verifications].reverse().find(item => item.criterion === criterion && !item.expectFail);
@@ -2089,10 +2094,14 @@ function displayCommand(executable: string, args: string[]): string {
 async function runProcess(cwd: string, executable: string, args: string[], label: string, log: string[], verbose: boolean): Promise<ProcessRun> {
   const environment: NodeJS.ProcessEnv = { ...process.env, LC_ALL: 'C', FORCE_COLOR: '0' };
   delete environment.NODE_TEST_CONTEXT;
+  const invocation = platformProcessInvocation(executable, args);
   log.push(`\n[tiller] command: ${label}\n[tiller] started: ${new Date().toISOString()}\n`);
   return await new Promise<ProcessRun>((resolve, reject) => {
     let timedOut = false;
-    const child = spawn(executable, args, { cwd, stdio: ['inherit', 'pipe', 'pipe'], env: environment });
+    const child = spawn(invocation.executable, invocation.args, {
+      cwd, stdio: ['inherit', 'pipe', 'pipe'], env: environment, windowsHide: true,
+      ...(invocation.windowsVerbatimArguments ? { windowsVerbatimArguments: true } : {}),
+    });
     const forward = (chunk: Buffer): void => {
       const value = chunk.toString('utf8');
       log.push(value);

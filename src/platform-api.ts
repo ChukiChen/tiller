@@ -54,6 +54,10 @@ export interface MergedIntegration {
   command: string;
 }
 
+export interface MergedIntegrationByCommit extends MergedIntegration {
+  head: string;
+}
+
 export interface OpenIntegration {
   url: string;
   number: number;
@@ -457,13 +461,71 @@ export async function findMergedIntegration(
   return merged ? { number: merged.iid!, command: `gitlab-api GET ${endpoint}` } : null;
 }
 
+function integrationCommitList(value: unknown, platform: PlatformName, number: number): string[] {
+  if (!Array.isArray(value)) {
+    fail('PLATFORM_API_INVALID', `${platformLabel(platform)} PR/MR #${number} 的提交列表不可读。`);
+  }
+  return value.map(item => {
+    const sha = commitTip(item && typeof item === 'object' ? (item as { sha?: unknown }).sha : null);
+    if (!sha) fail('PLATFORM_API_INVALID', `${platformLabel(platform)} PR/MR #${number} 的提交列表不可读。`);
+    return sha;
+  });
+}
+
+/** Find exactly one merged integration whose commit list contains the immutable baseline commit. */
+export async function findMergedIntegrationByCommit(
+  repository: PlatformRepository,
+  token: PlatformToken,
+  branch: string,
+  baselineCommit: string,
+  fetchImpl: FetchLike = globalThis.fetch,
+): Promise<MergedIntegrationByCommit | null> {
+  const expectedCommit = commitTip(baselineCommit);
+  if (!expectedCommit) fail('PLATFORM_INVALID', '初始化 baseline commit 格式无效。');
+  const matches: MergedIntegrationByCommit[] = [];
+  if (repository.platform === 'github') {
+    const endpoint = `${githubRepoPath(repository)}/pulls?state=all&head=${encodeURIComponent(`${repository.owner}:${branch}`)}`;
+    const pulls = await api<Array<{
+      number?: number; state?: string; merged?: boolean; merged_at?: string | null; head?: { sha?: string };
+    }>>(repository, token, fetchImpl, 'GET', endpoint);
+    if (!Array.isArray(pulls)) fail('PLATFORM_API_INVALID', 'GitHub merged PR 列表不可读。');
+    for (const pull of pulls) {
+      if (typeof pull.number !== 'number'
+        || !(pull.merged === true || (pull.state === 'closed' && Boolean(pull.merged_at)))) continue;
+      const commitsEndpoint = `${githubRepoPath(repository)}/pulls/${pull.number}/commits?per_page=100`;
+      const commits = await api<unknown>(repository, token, fetchImpl, 'GET', commitsEndpoint);
+      if (!integrationCommitList(commits, 'github', pull.number).includes(expectedCommit)) continue;
+      const head = commitTip(pull.head?.sha);
+      if (!head) fail('PLATFORM_API_INVALID', `GitHub PR #${pull.number} 的 head 不可读。`);
+      matches.push({ number: pull.number, head, command: `github-api GET ${commitsEndpoint}` });
+    }
+  } else {
+    const endpoint = `/projects/${gitlabProjectPath(repository)}/merge_requests?state=all&source_branch=${encodeURIComponent(branch)}`;
+    const mergeRequests = await api<Array<{
+      iid?: number; state?: string; merged_at?: string | null; sha?: string; diff_refs?: { head_sha?: string };
+    }>>(repository, token, fetchImpl, 'GET', endpoint);
+    if (!Array.isArray(mergeRequests)) fail('PLATFORM_API_INVALID', 'GitLab merged MR 列表不可读。');
+    for (const mergeRequest of mergeRequests) {
+      if (typeof mergeRequest.iid !== 'number'
+        || !(mergeRequest.state === 'merged' || Boolean(mergeRequest.merged_at))) continue;
+      const commitsEndpoint = `/projects/${gitlabProjectPath(repository)}/merge_requests/${mergeRequest.iid}/commits?per_page=100`;
+      const commits = await api<unknown>(repository, token, fetchImpl, 'GET', commitsEndpoint);
+      if (!integrationCommitList(commits, 'gitlab', mergeRequest.iid).includes(expectedCommit)) continue;
+      const head = commitTip(mergeRequest.sha ?? mergeRequest.diff_refs?.head_sha);
+      if (!head) fail('PLATFORM_API_INVALID', `GitLab MR !${mergeRequest.iid} 的 head 不可读。`);
+      matches.push({ number: mergeRequest.iid, head, command: `gitlab-api GET ${commitsEndpoint}` });
+    }
+  }
+  return matches.length === 1 ? matches[0]! : null;
+}
+
 function commitTip(value: unknown): string | null {
   if (typeof value !== 'string') return null;
   const normalized = value.trim().toLowerCase();
   return /^(?:[a-f0-9]{40}|[a-f0-9]{64})$/u.test(normalized) ? normalized : null;
 }
 
-function tokenizedGitEnvironment(repository: PlatformRepository, token: PlatformToken): NodeJS.ProcessEnv {
+export function tokenizedGitEnvironment(repository: PlatformRepository, token: PlatformToken): NodeJS.ProcessEnv {
   const username = repository.platform === 'github' ? 'x-access-token' : 'oauth2';
   const authorization = `Basic ${Buffer.from(`${username}:${token.value}`).toString('base64')}`;
   const environment: NodeJS.ProcessEnv = { ...process.env, LC_ALL: 'C', GIT_TERMINAL_PROMPT: '0' };

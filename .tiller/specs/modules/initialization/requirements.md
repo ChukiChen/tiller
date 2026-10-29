@@ -19,10 +19,11 @@
 - PR/MR 创建失败仍保留本地 worktree 和提交，并返回可复制命令；初始提交或本地记录已存在时不重复制造冲突分支。
 - 初始化基线合入后或显式结束该初始化编号时，默认清理它的本机目录、本地分支和远端分支；保留分支需显式声明，删除失败不阻断收尾，也不影响其他任务的本机数据。
 - 本机基线快照保留本次 init 的 expected head（推送前的最终 tip）与 open PR/MR 标识；tracked `project.json` 只保留 `id`、`branch`、`commit`。平台回查只在 merged PR/MR 的 `head.sha` 与本机 expected head 精确一致时记为合入；同分支、同初始化编号但 head 不同必须保持 pending。
-- 没有本机 expected head 时不得用同分支标题或初始化编号兜底；祖先判定仍可独立证明合入。fresh clone 缺少 expected head 且不是祖先时必须保持 pending，并提示先恢复本次 init 的本机证明或使用显式旁路。
+- 没有本机 expected head 时不得只按同分支标题或初始化编号兜底；祖先判定仍可独立证明合入。平台可按 `branch` 查询已合入 PR/MR，再读取候选提交列表，只把唯一包含 tracked `commit` 的记录作为本次基线证明；候选为零或多个时保持 pending。
+- fresh clone 缺少 expected head 且不是祖先时，可由唯一绑定 `commit` 的 merged PR/MR 重建证明并以其 `head.sha` 写本机 marker；无 token、API 失败、提交列表不完整或候选不唯一时保持 pending，并提示恢复证明或使用显式旁路。
 - 初始化编号的 close 必须先证明合入；证明失败时返回稳定错误并保留 init 事实，不假报已关闭，也不删除 worktree、本地/远端分支或 open PR/MR。
 - tracked `project.json` 的 `initBaseline` 只记录证明所需的 `id`、`branch`、`commit`，不得写入 `status` 或 `headRef`；本机基线快照与 init 结果可保留 tip `head`。存量旧字段读取时忽略并剥离。
-- 初始化基线的当前结论只来自与 expected head 绑定的 local merged marker、祖先判定或平台已合入 PR/MR，并由 CLI 的 `initBaselineStatus` 等 effective 字段统一表达；`init`、`status`、`doctor` 等出口不得回显 tracked pending 快照或把旧字段当作当前结论。
+- 初始化基线的当前结论只来自与 expected head 绑定的 local merged marker、祖先判定，或“branch + tracked commit 唯一绑定”的平台已合入 PR/MR，并由 CLI 的 `initBaselineStatus` 等 effective 字段统一表达；`init`、`status`、`doctor` 等出口不得回显 tracked pending 快照或把旧字段当作当前结论。
 - 初始化提交标题必须可区分，禁止两个完全同名提交；init PR/MR 标题包含初始化编号，避免重复初始化与历史同名记录混淆。
 
 ## 3. 受管资源
@@ -54,3 +55,4 @@
 - AC-2: 用户显式选择自动合入时，初始化在成功开出 PR/MR 后经平台 REST API squash 合入、证明并 close 清理，再快进 primary 默认分支；任一步失败停在该步并提示续跑，不报告成功
 - AC-3: 用户未选择自动合入时仍只创建 PR/MR 并保持 pending，等待人工合入
 - AC-4: 初始化（含显式自动交付）在创建目标目录、初始化 worktree、分支或提交前确认本机 Git 可执行；不可用时非零退出并给出安装指引，磁盘无本次 init 产物
+- AC-5: 有 Git HEAD 的 init 在写盘前对 origin 执行有超时、禁交互的活性检查；不可达或认证失败时非零退出且不产生本次 init 产物
