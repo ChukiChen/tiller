@@ -941,3 +941,53 @@ init 成功完成且不再执行 tag 创建或推送，不出现 tag 重名/冲�
 ### 预期结果
 
 init 与 init --apply 均非零退出并给出 Git 安装指引；未创建目标目录、init 目录、worktree、分支或提交
+
+## CASE-348 fresh clone 由提交唯一绑定初始化合入
+
+- 类型：behavior
+- 优先级：high
+- 模块：initialization
+- 关联 AC：AC-2
+- 需求：`.tiller/specs/modules/workflow/windows-fresh-hygiene.md`
+
+### 前置条件
+
+- fresh clone 无 local marker；project.json 的 initBaseline 仅含 id/branch/commit；平台存在同分支多个 merged PR/MR
+
+### 步骤
+
+1. 让平台候选提交列表中仅一个包含 baseline.commit，依次运行 status 与 start
+2. 分别构造零候选、多个候选、无 token、API 失败与提交列表不可读
+
+### 输入
+
+- 唯一绑定与不唯一绑定的平台 mock 证据
+
+### 预期结果
+
+唯一绑定可重建 merged 证明并允许 start，status 与 start 一致；零/多候选、无 token、API 失败或列表不可读均保持 pending，不按标题或分支猜测
+
+## CASE-350 不可达 origin 在初始化写盘前失败
+
+- 类型：behavior
+- 优先级：high
+- 模块：initialization
+- 关联 AC：AC-4
+- 需求：`.tiller/specs/modules/workflow/windows-fresh-hygiene.md`
+
+### 前置条件
+
+- 已有 Git HEAD 的工程配置 example.invalid 或关闭端口 origin，并设置平台 token
+
+### 步骤
+
+1. 分别运行 init 与 init --apply，比较命令前后的目录、分支、提交和 primary 受管文件快照
+2. 核对错误码、超时与 token 脱敏
+
+### 输入
+
+- 不可解析主机、连接拒绝、认证失败与超时
+
+### 预期结果
+
+预检以稳定错误非零退出，不创建目标目录或本机 init 目录、不建分支/提交、不写 primary 受管文件；init --apply 不进入合入流程且日志无 token
