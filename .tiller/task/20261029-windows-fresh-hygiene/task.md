@@ -89,9 +89,11 @@
 | --- | --- | --- | --- | --- |
 | 需求 | ChukiChen | 2026-10-29T03:37:29.588Z | 883b12291038 | — |
 | 设计 | ChukiChen | 2026-10-29T03:37:32.630Z | 45801a46d00a | — |
+| 交付验收 | ChukiChen | 2026-10-29T03:41:18.094Z | 190d61a66ced | — |
 
 <!-- tiller-confirm:v1 {"gate":"requirements","object":"需求正文（目标、范围与验收条件）","subject":"c0a2047e1f59e649873840325457339ba5490e1dc8d576ae7f474eff79833631","commit":"883b12291038961f96ee887e6f181a73c872e431","by":"ChukiChen","quote":"","at":"2026-10-29T03:37:29.588Z"} -->
 <!-- tiller-confirm:v1 {"gate":"design","object":"设计正文","subject":"d42d57154cb98c7ecc15b7c30bebb1b01a4fe4f07b5297efabad7cf3efe00b69","commit":"45801a46d00ae9ae5ca3ff156f8fe2271a350b7b","by":"ChukiChen","quote":"","at":"2026-10-29T03:37:32.630Z"} -->
+<!-- tiller-confirm:v1 {"gate":"acceptance","object":"当前交付（需求、设计、验证与提交）","subject":"e49811e41e16f799b31aa42b5bacca16ec5e2ea098efb7bed95456f1ccb5ca1d","commit":"190d61a66cede5d589229935ea89b59503b31b6a","by":"ChukiChen","quote":"","at":"2026-10-29T03:41:18.094Z"} -->
 
 ## 验证
 
