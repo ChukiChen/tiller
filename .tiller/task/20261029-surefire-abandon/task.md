@@ -1,6 +1,6 @@
 # 修复 Surefire 默认报告与 abandon 清理
 
-<!-- tiller-task:v1 {"version":1,"id":"20261029-surefire-abandon","type":"improvement","size":"standard","created":"2026-10-29T08:05:02.791Z","base":"aa1c4f3c087460c89954071e564e26b308806400","scope":["src","test",".tiller/specs",".tiller/cases",".tiller/context",".tiller/usage.md","resources"],"format":"structured","summary":"junit-maven 读取默认 Surefire 报告；abandon 只清理本机","requirementFile":".tiller/specs/modules/workflow/surefire-abandon.md"} -->
+<!-- tiller-task:v1 {"version":1,"id":"20261029-surefire-abandon","type":"improvement","size":"standard","created":"2026-10-29T08:05:02.791Z","base":"aa1c4f3c087460c89954071e564e26b308806400","scope":["AGENTS.md","src","test",".tiller/specs",".tiller/cases",".tiller/context",".tiller/usage.md",".tiller/rules","resources"],"format":"structured","summary":"junit-maven 读取默认 Surefire 报告；abandon 只清理本机","requirementFile":".tiller/specs/modules/workflow/surefire-abandon.md"} -->
 
 ## 需求
 
@@ -66,11 +66,11 @@
 
 | 部分 | 确认人 | 时间 | 短提交 | 原话 |
 | --- | --- | --- | --- | --- |
-| 需求 | ChukiChen | 2026-10-29T08:08:07.170Z | aa1c4f3c0874 | — |
 | 设计 | ChukiChen | 2026-10-29T08:08:10.472Z | 17f4b6805d51 | — |
+| 需求 | ChukiChen | 2026-10-29T08:24:09.165Z | 83d30aedf6ed | — |
 
-<!-- tiller-confirm:v1 {"gate":"requirements","object":"需求正文（目标、范围与验收条件）","subject":"df9ede22d3d187f5cd1752c48cbf40daa6b3fb95af9f492c5118b4d1d095da44","commit":"aa1c4f3c087460c89954071e564e26b308806400","by":"ChukiChen","quote":"","at":"2026-10-29T08:08:07.170Z"} -->
 <!-- tiller-confirm:v1 {"gate":"design","object":"设计正文","subject":"b40185019acfbee43bb340500b51b3b36a5ebb7d11a35be9dce4f2dc149966a7","commit":"17f4b6805d517e7f8f412f23de2e56d7a975ee05","by":"ChukiChen","quote":"","at":"2026-10-29T08:08:10.472Z"} -->
+<!-- tiller-confirm:v1 {"gate":"requirements","object":"需求正文（目标、范围与验收条件）","subject":"2870dc14be66ee51e9ecc8de713a28af5c3ab75815a449b8d55827a68bb3072c","commit":"83d30aedf6ed1b6daec17d5ba7ea2cec96043547","by":"ChukiChen","quote":"","at":"2026-10-29T08:24:09.165Z"} -->
 
 ## 验证
 
