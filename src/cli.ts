@@ -36,7 +36,7 @@ const HELP = `tiller ${CLI_VERSION} — 默认工作流
   tiller start <YYYYMMDD-task-id> --title <标题> (--requirement <需求正文> | --requirement-file <.tiller/specs/...>) [--criterion "AC-1=<验收条件>" ...] [--type feature] [--size small|standard] [--target <相对路径> ...] [--summary <中文摘要>] [--slug <英文描述>] [--plan <YYYYMMDD-plan-id> --item <条目>] [--skip-init-gate] [--path <root>]
   tiller resume [YYYYMMDD-task-id] [--path <root>]
   tiller confirm <YYYYMMDD-task-id> requirements|design|acceptance [--by <确认人>] [--quote "<可选原话>"] [--commit <oid>] [--path <root>]
-  tiller case add <YYYYMMDD-task-id> --module <模块> --kind behavior|interface|performance|security --title <标题> --expected "<预期结果>" --criterion AC-n [--criterion ...] [--precondition <条件> ...] [--step <步骤> ...] [--input <输入> ...] [--priority high|medium|low] [--spec <specs 引用> ...] [--path <root>]
+  tiller case add <YYYYMMDD-task-id> --module <模块> --kind behavior|interface|performance|security --title <标题> --expected "<预期结果>" --criterion AC-n [--criterion ...] [--precondition <条件> ...] [--step <步骤> ...] [--input <输入> ...] [--input-file <文件> ...] [--priority high|medium|low] [--spec <specs 引用> ...] [--path <root>]
   tiller case add <YYYYMMDD-task-id> --scenario <场景名> --module <模块> [--module ...] --title <标题> --expected "<预期结果>" --criterion AC-n [--criterion ...] [--spec <specs 引用> ...] [--path <root>]
   tiller verify <YYYYMMDD-task-id> --criterion AC-1 [--criterion ...] --test "<文件::测试名>" [--expect-fail] [--verbose] [--path <root>]
   tiller verify <YYYYMMDD-task-id> --criterion AC-1 [--criterion ...] --case CASE-NNN [--verbose] [--path <root>]
@@ -45,7 +45,7 @@ const HELP = `tiller ${CLI_VERSION} — 默认工作流
   tiller check <YYYYMMDD-task-id> [--allow-reported] [--path <root>]
   tiller review <YYYYMMDD-task-id> [--by <评审人>] [--finding <发现> ...] [--blocking <阻塞发现> ...] [--resolve REV-NNN ...] [--path <root>]
   tiller release <YYYYMMDD-task-id> [--path <root>]
-  tiller pr <YYYYMMDD-task-id> [--summary <中文摘要>] [--slug <英文描述>] [--draft-only] [--path <root>]
+  tiller pr <YYYYMMDD-task-id> [--summary <中文摘要>] [--slug <英文描述>] [--module <模块>] [--draft-only] [--path <root>]
   tiller merge <YYYYMMDD-task-id> [--keep-branch] [--path <root>]
   tiller accept <YYYYMMDD-task-id> [--by <确认人>] [--quote "<可选原话>"] [--commit <oid>] [--allow-reported] [--path <root>]
   tiller close <YYYYMMDD-task-id> --reason "<原因>" [--abandon] [--keep-branch] [--path <root>]
@@ -60,17 +60,18 @@ const HELP = `tiller ${CLI_VERSION} — 默认工作流
 - 默认人工节点只有需求、设计和交付验收；规划、合入、发布按需确认，没有阶段或审计命令。
 - 大功能可先写 .tiller/plans/<id>.md 并确认；start 挂到条目时默认继承粒度，依赖未验收会阻塞。
 - task.md 是唯一任务记录：start 生成结构化需求，并引用所实现的稳定 specs；--requirement 仅短目标单行，完整需求正文与 AC-n 只用 --requirement-file（必须位于 .tiller/specs/），文件“验收条件”中的 - AC-n: 正文会导入任务，因此可省略 --criterion；文件无 AC-n 时仍须提供。确认（含 accept）写入后自动提交本任务记录。任务只引用同一 specs 路径与 AC-n，不写模块前缀或“对照”平行列表；确认前校验正文，原话只作可选附注。任务引用 specs 后，新增或改写的验收点必须先回写全局 specs（必要时 cases/rules），否则 confirm/check/accept 以 SPEC_OVERFLOW 阻断并要求重新确认。verify 自主执行测试并从私有报告核实。
-- review 记录独立评审发现；未解决阻塞项会阻断 check/accept。release 只做发布门禁，不发布包。check 汇总发布清单；已验收任务按验收提交读取代码树与测试，之后代码漂移不误报过期。
-- start 只把任务记录写入任务 worktree，不在 primary 留种子；confirm/accept 写确认后自动提交本任务 .tiller/task/<id>/。
+- review 记录独立评审发现；未解决阻塞项会阻断 check/accept。release 只做发布门禁，不发布包。check 汇总发布清单；已验收任务按验收提交读取代码树与测试，之后代码漂移不误报过期。check 只读，不重写 task.md 或弄脏工作区。
+- start 只把任务记录写入任务 worktree，不在 primary 留种子；confirm/accept 写确认后自动提交本任务 .tiller/task/<id>/。init/start 在首次自动提交或建树前预检 Git user.name/user.email，缺失时给出全局设置命令。
 - 阶段由 task.md 事实推导；accept 须在 pr 前；pr 默认用 tokenized HTTPS git push 推送任务分支并经平台 API 创建真实 PR/MR，GitHub Git Data API 只在 git 推送失败时可选回退；返回 URL 与编号；--draft-only 仅输出五段草稿。重复 accept 按当前工作区重新核实，改代码后先重新 verify。审阅后用 merge 经 REST API squash 合入并自动 close；merge/close 默认删除本地与远端任务分支，close init-id 同样清理 chore/tiller-init；--keep-branch 保留，分支已不存在或 422 视为已清理，其它删除失败只记 warning。token 从 GITHUB_TOKEN/GH_TOKEN 或 GITLAB_TOKEN/GL_TOKEN 读取，不依赖平台 CLI；网页合入后仍需手动 close，且 close 先验证合入证明，证明不足不清理；未验收或已验收未合入任务终止用 --abandon，只清理本机，不写 primary 任务记录或提交，清理后无记录可读属预期。
 - start 对 pending 初始化基线先判祖先，再通过平台 API 查同分支已合入 PR/MR；确认后写入 .tiller/local/ merged 标记并放行（不改跟踪的 project.json），无 token、API 失败或无记录仍阻断，--skip-init-gate 例外。
+- close --abandon 在删除前检查调用方 cwd；位于任务 worktree 或 .tiller/local/<id>/ 内时明确拒绝并指引先 cd 到 primary。清理失败保留本机恢复记录，解除占用后可重试，不写 primary task.md 或 abandon 提交。
 - standard 须先设计确认再 verify；过早 verify 以 VERIFY_BEFORE_DESIGN 拒绝。历史错序段可用 verify --clear-premature 清除。
 - specs 变更只走 start → 任务 worktree 修改 → 随任务 PR/MR 合入；禁止在 main/master 默认分支直改或直推。默认分支上相对任务基线触及 .tiller/specs/ 时，check 按过程卫生阻断；任务分支与已验收历史快照不触发。
 - doctor [path] 扫描初始化基线、默认分支 specs 变更、残留任务分支，并从 active worktree 读取进行中任务检查 AC 缺口与数据模型；active 任务缺记录或检查失败按严重项处理，warning 不阻断。
 - check 对过薄文档给出可定位提示：空白或占位的 standard 设计、无有效条目的 .tiller/specs/decisions.md、空壳模块设计 design.md；需求“业务范围·做”中的交付路径给 warning；规格/背景未回写时列出路径与提纲。默认不单独阻断。verify 日志含显示命令、起止时间与退出码。当前分支未包含任务编号时 check 提示，分支名用“类型/任务编号[-描述]”。
 - 同一 AC 或 CASE 连续两次 verify 失败且无成功核实时，verify/check 要求停止自动重试并按 FLOW-05 报告证据与可选方案；成功核实清零。
-- case add 在测试之前登记测试设计（前置条件、步骤、输入、预期结果、类型、优先级、稳定 specs 需求），关联 AC 必须来自所挂需求 specs 的 AC-n，拒绝任务#AC；历史“无”与 task#AC 仍可读。不保存源码字段，自动分配 CASE 编号；测试名引用 CASE 编号形成反查。check 以 verify 的 AC→测试→CASE 记录核对当前验证，校验模块/场景结构并提示相关回归，同时检查范围、测试弱化、密钥和本机绝对路径。
-- pr 从 task.md 和 Git 提交生成五段 PR/MR 说明，默认用 tokenized HTTPS git push 推送分支并经平台 API 创建真实 PR/MR；--draft-only 才只输出草稿。提交用“类型(模块): 中文摘要”，分支用“类型/任务编号[-描述]”；check 只提示格式问题。
+- case add 在测试之前登记测试设计（前置条件、步骤、输入、预期结果、类型、优先级、稳定 specs 需求），关联 AC 必须来自所挂需求 specs 的 AC-n，拒绝任务#AC；历史“无”与 task#AC 仍可读。--input-file 可重复读取 UTF-8 文本并保留字面双引号。不保存源码字段，自动分配 CASE 编号；测试名引用 CASE 编号形成反查。check 以 verify 的 AC→测试→CASE 记录核对当前验证，校验模块/场景结构并提示相关回归，同时检查范围、测试弱化、密钥和本机绝对路径。
+- pr 从 task.md 和 Git 提交生成五段 PR/MR 说明，默认用 tokenized HTTPS git push 推送分支并经平台 API 创建真实 PR/MR；--draft-only 才只输出草稿。提交用“类型(模块): 中文摘要”，分支用“类型/任务编号[-描述]”；specs/cases-only 范围默认模块 specs，--module 可显式覆盖。验证结果只列当前有效项，历史失败不混入；check 只提示格式问题。
 - 验证运行器支持 node-test、junit-maven、junit-gradle 与 pytest；pytest 从私有 JUnit XML 核实。case add 对 junit 运行器输出“可扫描 Node 入口挂 CASE + 内部转调真实 runner”的适配器骨架，入口配置 node-test、真实 Java 仓库配置 junit 运行器，不按扩展名猜语言。upgrade 刷新未修改的受管文件，--adopt 保留用户当前内容并更新摘要；版本号只在正式发布时修改。
 `;
 
@@ -116,7 +117,8 @@ export async function runCli(rawArgs = process.argv.slice(2)): Promise<void> {
         spec: { type: 'string', multiple: true }, module: { type: 'string', multiple: true },
         kind: { type: 'string' }, scenario: { type: 'string' },
         expected: { type: 'string' }, precondition: { type: 'string', multiple: true }, step: { type: 'string', multiple: true },
-        input: { type: 'string', multiple: true }, priority: { type: 'string' }, case: { type: 'string' },
+        input: { type: 'string', multiple: true }, 'input-file': { type: 'string', multiple: true },
+        priority: { type: 'string' }, case: { type: 'string' },
         finding: { type: 'string', multiple: true }, blocking: { type: 'string', multiple: true },
         resolve: { type: 'string', multiple: true }, apply: { type: 'string' }, 'init-apply': { type: 'boolean' }, abandon: { type: 'boolean' },
         'skip-init-gate': { type: 'boolean' }, 'keep-branch': { type: 'boolean' }, 'draft-only': { type: 'boolean' },
@@ -125,7 +127,7 @@ export async function runCli(rawArgs = process.argv.slice(2)): Promise<void> {
     });
     const seenOptions = new Set<string>();
     for (const token of tokens) {
-      if (token.kind !== 'option' || ['repo', 'target', 'criterion', 'item', 'spec', 'module', 'precondition', 'step', 'input', 'finding', 'blocking', 'resolve', 'adopt'].includes(token.name)) continue;
+      if (token.kind !== 'option' || ['repo', 'target', 'criterion', 'item', 'spec', 'module', 'precondition', 'step', 'input', 'input-file', 'finding', 'blocking', 'resolve', 'adopt'].includes(token.name)) continue;
       if (seenOptions.has(token.name)) usage(`选项 --${token.name} 不能重复。`);
       seenOptions.add(token.name);
     }
@@ -155,8 +157,8 @@ export async function runCli(rawArgs = process.argv.slice(2)): Promise<void> {
           : second === 'confirm' ? ['path', 'quote', 'by', 'commit']
             : second === 'status' ? ['path']
               : second === 'attach' ? ['path', 'plan', 'item'] : [])
-          : caseCommand ? second === 'add' ? ['path', 'module', 'kind', 'scenario', 'title', 'spec', 'criterion', 'expected', 'precondition', 'step', 'input', 'priority'] : []
-            : prCommand ? ['path', 'slug', 'summary', 'draft-only']
+          : caseCommand ? second === 'add' ? ['path', 'module', 'kind', 'scenario', 'title', 'spec', 'criterion', 'expected', 'precondition', 'step', 'input', 'input-file', 'priority'] : []
+            : prCommand ? ['path', 'slug', 'summary', 'module', 'draft-only']
               : doctorCommand ? ['path']
                 : command === 'init' ? ['mode', 'repo', 'platform', 'init-apply']
               : command === 'upgrade' ? ['plan', 'apply', 'adopt'] : [];
@@ -305,6 +307,7 @@ export async function runCli(rawArgs = process.argv.slice(2)): Promise<void> {
           task: third!, title: values.title,
           requirements: values.spec ?? [], criteria: values.criterion ?? [], modules: values.module,
           preconditions: values.precondition ?? [], steps: values.step ?? [], inputs: values.input ?? [],
+          ...(values['input-file'] === undefined ? {} : { inputFiles: values['input-file'] }),
           expected: values.expected,
           ...(values.priority === undefined ? {} : { priority: values.priority }),
           ...(values.module[0] === undefined ? {} : { module: values.module[0] }),
@@ -313,9 +316,11 @@ export async function runCli(rawArgs = process.argv.slice(2)): Promise<void> {
         });
       } else if (prCommand) {
         if (positionals.length !== 2) usage('pr 需要一个任务标识。');
+        if (values.module && values.module.length > 1) usage('pr 的 --module 只能提供一个显式模块名。');
         const created = await pullRequestFlow(resolve(values.path ?? process.cwd()), second!,
           { ...(values.slug === undefined ? {} : { slug: values.slug }),
             ...(values.summary === undefined ? {} : { summary: values.summary }),
+            ...(values.module?.[0] === undefined ? {} : { module: values.module[0] }),
             draftOnly: values['draft-only'] === true });
         result = created;
         markdownOutput = created.markdown;

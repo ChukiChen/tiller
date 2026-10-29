@@ -1,5 +1,5 @@
 import { execFile } from 'node:child_process';
-import { mkdir, readFile, readdir, realpath, rm, writeFile } from 'node:fs/promises';
+import { lstat, mkdir, readFile, readdir, realpath, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { promisify } from 'node:util';
 import { assertSafePath } from './files.js';
@@ -496,6 +496,29 @@ export async function assertInitGitAvailable(): Promise<void> {
     fail('INIT_PREFLIGHT_GIT',
       '初始化预检失败：PATH 中没有可执行的 git（git --version 未通过）。请安装 Git（见 https://git-scm.com/downloads），确认 git --version 可运行且 PATH 包含其安装目录后重试；本次未创建初始化目录、分支或提交。');
   }
+}
+
+/** Fail before the first task/init write when automatic commits have no usable Git identity. */
+export async function assertGitIdentity(rootInput: string): Promise<void> {
+  const root = path.resolve(rootInput);
+  const cwd = await lstat(root).then(stat => stat.isDirectory() ? root : process.cwd())
+    .catch(error => {
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') return process.cwd();
+      throw error;
+    });
+  const [name, email] = await Promise.all([
+    run(cwd, 'git', ['config', '--get', 'user.name']),
+    run(cwd, 'git', ['config', '--get', 'user.email']),
+  ]);
+  if (name.unavailable || email.unavailable) {
+    fail('GIT_UNAVAILABLE',
+      '无法执行 Git，不能检查或提交任务记录与初始化基线。请安装 Git，确认 git 可执行且 PATH 包含其安装目录后重试；本次尚未写入任务或初始化文件。');
+  }
+  const missing = [!name.ok || !name.stdout.trim() ? 'user.name' : null,
+    !email.ok || !email.stdout.trim() ? 'user.email' : null].filter((value): value is string => value !== null);
+  if (!missing.length) return;
+  fail('GIT_IDENTITY_MISSING',
+    `缺少 Git 身份 ${missing.join('、')}，无法自动提交任务记录或初始化基线。先运行 git config --global user.name "<姓名>" 与 git config --global user.email "<邮箱>"，再重试；本次尚未写入任务或初始化文件。`);
 }
 
 /** Validate the remote path before init acquires a lock or writes any artifact. */

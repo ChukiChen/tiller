@@ -547,17 +547,17 @@ test('CASE-076 branch slug precedence uses flag then task metadata then current 
   assert.equal(success(cli(branchWt, 'pr', branchTask, '--draft-only')).branch, `feat/${branchTask}-from-current`);
 });
 
-test('CASE-077 pr verification section lists every recorded run in order', async t => {
+test('CASE-077 pr verification section lists only the current recorded run', async t => {
   const root = fixture(t);
   success(cli(root, 'init'));
   setupRepository(root);
   const id = '20261022-all-verifications';
-  success(cli(root, 'start', id, '--title', '全部验证记录', '--requirement', '输出每条 AC 的全部验证。',
-    '--criterion', 'AC-1=保留每次验证', '--size', 'small', '--target', 'src', '--target', 'test',
+  success(cli(root, 'start', id, '--title', '全部验证记录', '--requirement', '输出每条 AC 的当前有效验证。',
+    '--criterion', 'AC-1=只保留当前验证', '--size', 'small', '--target', 'src', '--target', 'test',
     '--target', '.tiller/specs/modules/workflow', '--target', '.tiller/cases'));
   success(confirmTask(root, id, 'requirements', '--by', 'Tiller Test'));
   const added = success(cli(root, 'case', 'add', id, '--module', 'workflow', '--kind', 'behavior',
-    '--title', '全部验证记录', '--expected', '保留每次验证记录', '--criterion', 'AC-1'));
+    '--title', '全部验证记录', '--expected', '只保留当前验证记录', '--criterion', 'AC-1'));
   const firstRun = success(cli(root, 'verify', id, '--criterion', 'AC-1', '--test', 'test/workflow.test.mjs::CASE-001 workflow behavior'));
   const secondRun = success(cli(root, 'verify', id, '--criterion', 'AC-1', '--test', 'test/workflow.test.mjs::CASE-001 workflow behavior'));
   const first = firstRun.entries[0].command;
@@ -565,10 +565,9 @@ test('CASE-077 pr verification section lists every recorded run in order', async
 
   acceptTaskForPr(root, id);
   const draft = success(cli(root, 'pr', id, '--draft-only'));
-  assert.ok(draft.body.indexOf(`命令：\`${first}\``) >= 0, draft.body);
-  assert.ok(draft.body.indexOf(`命令：\`${second}\``) > draft.body.indexOf(`命令：\`${first}\``), draft.body);
+  assert.ok(!draft.body.includes(`命令：\`${first}\``), draft.body);
+  assert.ok(draft.body.includes(`命令：\`${second}\``), draft.body);
   assert.match(draft.body, new RegExp(`${added.id}`, 'u'));
-  assert.ok(draft.body.includes(`  - 测试：\`test/workflow.test.mjs::CASE-001 workflow behavior\`；命令：\`${first}\`；结果：passed；提交：\`${firstRun.entries[0].commit}\`；用例：${added.id}`), draft.body);
   assert.ok(draft.body.includes(`  - 测试：\`test/workflow.test.mjs::CASE-001 workflow behavior\`；命令：\`${second}\`；结果：passed；提交：\`${secondRun.entries[0].commit}\`；用例：${added.id}`), draft.body);
   assert.doesNotMatch(draft.body, /^\s*- \d+\./mu);
 });
@@ -659,6 +658,65 @@ test('CASE-083 pr verification section uses plain nested records without numbere
   assert.match(draft.body, /^- AC-1：每条记录单独一行（当前有效）$/mu);
   assert.ok(draft.body.includes(`  - 测试：\`test/workflow.test.mjs::CASE-001 workflow behavior\`；命令：\`${command}\`；结果：passed；提交：\`${verified.entries[0].commit}\`；用例：${added.id}`), draft.body);
   assert.doesNotMatch(draft.body, /^\s*- \d+\./mu);
+});
+
+test('CASE-359 verify numbers after the maximum run and PR marks only the current result', async t => {
+  const root = fixture(t);
+  success(cli(root, 'init'));
+  setupRepository(root);
+  const id = '20261029-verify-current-proof';
+  success(cli(root, 'start', id, '--title', '验证当前证据', '--requirement', '验证编号与 PR 当前有效分离。',
+    '--criterion', 'AC-1=只显示当前有效验证', '--size', 'small', '--target', 'src', '--target', 'test',
+    '--target', '.tiller/specs/modules/workflow', '--target', '.tiller/cases/modules/workflow'));
+  const checkout = taskCheckout(root, id);
+  success(confirmTask(checkout, id, 'requirements', '--by', 'Tiller Test'));
+  const added = success(cli(checkout, 'case', 'add', id, '--module', 'workflow', '--kind', 'behavior',
+    '--title', '当前验证', '--expected', '当前通过验证单独呈现', '--criterion', 'AC-1'));
+
+  const testPath = 'test/case-359-current.test.mjs';
+  const testName = `${added.id} historical failure`;
+  put(checkout, testPath, `import assert from 'node:assert/strict';\nimport test from 'node:test';\ntest('${testName}', () => assert.fail('old failure'));\n`);
+  const first = cli(checkout, 'verify', id, '--criterion', 'AC-1', '--test', `${testPath}::${testName}`);
+  assert.notEqual(first.status, 0);
+  assert.equal(first.data.entries[0].result, 'failed');
+
+  const record = `.tiller/task/${id}/task.md`;
+  put(checkout, record, read(checkout, record).replace(/^### run-1$/mu, '### run-5'));
+  put(checkout, testPath, `import assert from 'node:assert/strict';\nimport test from 'node:test';\ntest('${testName}', () => assert.equal(1, 1));\n`);
+  const second = cli(checkout, 'verify', id, '--criterion', 'AC-1', '--test', `${testPath}::${testName}`);
+  assert.equal(second.status, 0, second.stderr || JSON.stringify(second.data));
+  const current = read(checkout, record);
+  assert.match(current, /^### run-5$/mu);
+  assert.match(current, /^### run-6$/mu);
+
+  commitAll(checkout, 'test(workflow): 当前验证夹具');
+  acceptTaskForPr(checkout, id);
+  const draft = success(cli(checkout, 'pr', id, '--draft-only'));
+  assert.match(draft.body, /^- AC-1：只显示当前有效验证（当前有效）$/mu);
+  assert.match(draft.body, /结果：passed/u);
+  assert.doesNotMatch(draft.body, /结果：failed|old failure/u);
+});
+
+test('CASE-360 specs-only scope prefers specs and allows an explicit module override', async t => {
+  const root = fixture(t);
+  success(cli(root, 'init'));
+  setupRepository(root);
+  put(root, '.tiller/specs/modules/greeting/requirements.md', '# Greeting\n\n## 验收条件\n\n- AC-1: Greeting docs stay current.\n');
+  git(root, 'add', '.');
+  git(root, 'commit', '--quiet', '-m', 'docs(greeting): 规格基线');
+
+  const id = '20261029-specs-module-title';
+  success(cli(root, 'start', id, '--title', 'greeting 规格同步', '--requirement', '涉及模块 greeting 的规格同步。',
+    '--criterion', 'AC-1=规格同步可交付', '--size', 'small', '--target', 'test',
+    '--target', '.tiller/specs/modules', '--target', '.tiller/cases/modules'));
+  acceptTaskForPr(root, id);
+
+  const draft = success(cli(taskCheckout(root, id), 'pr', id, '--draft-only'));
+  assert.equal(draft.module, 'specs');
+  assert.match(draft.title, /^feat\(specs\):/u);
+  const explicit = success(cli(taskCheckout(root, id), 'pr', id, '--draft-only', '--module', 'workflow'));
+  assert.equal(explicit.module, 'workflow');
+  assert.match(explicit.title, /^feat\(workflow\):/u);
 });
 
 test('CASE-071 init installs a managed pull request template and preserves an existing one', async t => {

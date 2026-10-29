@@ -121,28 +121,6 @@ function taskRecord(root, id) {
   return join(root, '.tiller/local', id, 'worktrees/.tiller/task', id, 'task.md');
 }
 
-function commandTokens(value) {
-  const tokens = [];
-  let index = 0;
-  while (index < value.length) {
-    while (value[index] === ' ') index++;
-    if (index >= value.length) break;
-    let token = '';
-    if (value[index] === '"') {
-      index++;
-      while (index < value.length && value[index] !== '"') {
-        token += value[index++];
-      }
-      if (value[index] !== '"') throw new Error(`unterminated quoted token: ${value}`);
-      index++;
-    } else {
-      while (index < value.length && value[index] !== ' ') token += value[index++];
-    }
-    tokens.push(token);
-  }
-  return tokens;
-}
-
 test('CASE-347 LF, CRLF and isolated CR design bodies keep confirmation subjects stable', async t => {
   const root = fixture(t);
   put(root, '.tiller/project.json', `${JSON.stringify(projectMetadata(), null, 2)}\n`);
@@ -399,10 +377,10 @@ test('CASE-349 Windows test invocation and adapter helpers avoid POSIX shell dep
 
   const tricky = output.platformProcessInvocation('mvn', ['space here', 'a&b', '$HOME', '"quoted"'], 'win32',
     'C:\\Windows\\System32\\cmd.exe');
-  assert.match(tricky.args[3], /space here/u);
-  assert.match(tricky.args[3], /a&b/u);
-  assert.match(tricky.args[3], /\$HOME/u);
-  assert.match(tricky.args[3], /\\"quoted\\"/u);
+  assert.ok(tricky.args[3].includes('^"space^ here^"'), tricky.args[3]);
+  assert.ok(tricky.args[3].includes('^"a^&b^"'), tricky.args[3]);
+  assert.ok(tricky.args[3].includes('^"$HOME^"'), tricky.args[3]);
+  assert.ok(tricky.args[3].includes('\\^"quoted\\^"'), tricky.args[3]);
   for (const unsupported of ['100%', 'a!b', 'a^b']) {
     assert.throws(() => output.platformProcessInvocation('mvn', [unsupported], 'win32',
       'C:\\Windows\\System32\\cmd.exe'), error => error.code === 'VERIFY_COMMAND_UNSUPPORTED', unsupported);
@@ -421,7 +399,7 @@ test('CASE-349 Windows test invocation and adapter helpers avoid POSIX shell dep
   }
 });
 
-test('CASE-352 Windows cmd invocation keeps one outer command layer and exact Maven argv', async t => {
+test('CASE-352 CASE-357 Windows cmd invocation keeps one outer command layer and exact Maven argv', async t => {
   const output = await distModule('test-output.js');
   const built = output.runnerFor('junit-maven').build(
     { path: 'src/test/java/com/example/BillingTest.java', name: 'com.example.BillingTest#addsInvoice' },
@@ -437,13 +415,16 @@ test('CASE-352 Windows cmd invocation keeps one outer command layer and exact Ma
   assert.equal(commandLine.startsWith('"'), true, commandLine);
   assert.equal(commandLine.endsWith('"'), true, commandLine);
   const stripped = commandLine.slice(1, -1);
-  assert.equal(stripped.startsWith('mvn.cmd '), true, commandLine);
-  assert.equal((stripped.match(/"/gu) ?? []).length, built.args.length * 2, commandLine);
-  assert.deepEqual(commandTokens(stripped), ['mvn.cmd', ...built.args]);
+  assert.equal(stripped, 'mvn.cmd ^"-Dtest=com.example.BillingTest#addsInvoice^" ^"test^"', commandLine);
   assert.deepEqual(built.args, [
     '-Dtest=com.example.BillingTest#addsInvoice',
     'test',
   ]);
+
+  const tricky = output.platformProcessInvocation('mvn', ['space here', 'a&b', '$HOME', '"quoted"'], 'win32',
+    'C:\\Windows\\System32\\cmd.exe');
+  assert.equal(tricky.args[3], `"mvn.cmd ^"space^ here^" ^"a^&b^" ^"$HOME^" ^"\\^"quoted\\^"^""`);
+  assert.doesNotMatch(tricky.args[3], /[^\\^]"\s*"|'b" "\$HOME""/u);
 
   for (const unsupported of ['100%', 'a!b', 'a^b', 'a\nb']) {
     assert.throws(() => output.platformProcessInvocation('mvn', [unsupported], 'win32',
@@ -461,20 +442,22 @@ test('CASE-352 Windows cmd invocation keeps one outer command layer and exact Ma
       'set "ARG1=%~1"',
       'set "ARG2=%~2"',
       'set "ARG3=%~3"',
+      'set "ARG4=%~4"',
       '> "%~dp0argv.txt" (',
       '  echo(!ARG1!',
       '  echo(!ARG2!',
       '  echo(!ARG3!',
+      '  echo(!ARG4!',
       ')',
       '',
     ].join('\r\n'));
-    const native = output.platformProcessInvocation(script, ['space here', 'a&b', '$HOME'], 'win32',
+    const native = output.platformProcessInvocation(script, ['space here', 'a&b', '$HOME', '"quoted"'], 'win32',
       process.env.ComSpec || 'cmd.exe');
     const run = spawnSync(native.executable, native.args, { cwd: root, encoding: 'utf8', timeout: 30_000, windowsHide: true });
     assert.ifError(run.error);
     assert.equal(run.status, 0, run.stderr || run.stdout);
     assert.deepEqual(readFileSync(join(directory, 'argv.txt'), 'utf8').trim().split(/\r?\n/u),
-      ['space here', 'a&b', '$HOME']);
+      ['space here', 'a&b', '$HOME', '"quoted"']);
   }
 });
 

@@ -342,7 +342,7 @@ test('CASE-322 abandon cleans the task checkout without writing primary', async 
   const before = spawnSync('git', ['rev-parse', 'HEAD'], { cwd: root, encoding: 'utf8', timeout: 20_000 });
   assert.equal(before.status, 0, before.stderr);
 
-  const abandoned = success(cli(worktree, 'close', id, '--reason', '需求取消', '--abandon'));
+  const abandoned = success(cli(root, 'close', id, '--reason', '需求取消', '--abandon'));
   assert.equal(abandoned.stage, '已放弃');
   const taskFile = `.tiller/task/${id}/task.md`;
   assert.equal(existsSync(worktree), false);

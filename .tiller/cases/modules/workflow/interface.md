@@ -1515,7 +1515,7 @@ check 继续按 acceptance 证据复核，不把后续 specs 变化报成追溯�
 - 优先级：high
 - 模块：workflow
 - 关联 AC：AC-2
-- 需求：`.tiller/specs/modules/workflow/windows-residual-hardening.md`
+- 需求：`.tiller/specs/modules/workflow/abandon-parent-cwd-pack.md`
 
 ### 前置条件
 
@@ -1533,3 +1533,75 @@ check 继续按 acceptance 证据复核，不把后续 specs 变化报成追溯�
 ### 预期结果
 
 Windows invocation 将 mvn.cmd 与各 argv 作为完整边界交给 cmd.exe，仅有一层命令解释器外层引用；Class#method 选择器和参数顺序不变，无法安全表达的参数在启动前稳定拒绝
+
+## CASE-357 Windows cmd 外层与参数边界
+
+- 类型：interface
+- 优先级：high
+- 模块：workflow
+- 关联 AC：AC-2
+- 需求：`.tiller/specs/modules/workflow/abandon-parent-cwd-pack.md`
+
+### 前置条件
+
+- Windows 语义下调用 .cmd/.bat
+
+### 步骤
+
+1. 构造含空格、&、$HOME、字面双引号的参数并检查命令串
+
+### 输入
+
+- mvn.cmd 与批处理 fixture
+
+### 预期结果
+
+可执行文件与每个参数边界精确，不出现未闭合引号和 b" "$HOME"" 残片；Linux argv 不变
+
+## CASE-360 specs-only 范围 PR 推 specs 模块
+
+- 类型：interface
+- 优先级：medium
+- 模块：workflow
+- 关联 AC：AC-6
+- 需求：`.tiller/specs/modules/workflow/abandon-parent-cwd-pack.md`
+
+### 前置条件
+
+- 任务范围仅含 .tiller/specs 和 .tiller/cases
+
+### 步骤
+
+1. 生成 PR 草稿并检查模块与标题
+
+### 输入
+
+- 正文提到 greeting 的规格任务
+
+### 预期结果
+
+模块与标题使用 specs，不误推 greeting
+
+## CASE-361 case add 从 input-file 读取字面双引号
+
+- 类型：interface
+- 优先级：medium
+- 模块：workflow
+- 关联 AC：AC-6
+- 需求：`.tiller/specs/modules/workflow/abandon-parent-cwd-pack.md`
+
+### 前置条件
+
+- 任务需求确认有效且模块存在
+
+### 步骤
+
+1. 用 --input-file 登记含双引号、空格和命令样式的文本
+
+### 输入
+
+- UTF-8 文件内容：say "hi" --flag
+
+### 预期结果
+
+生成 CASE 保留原始文本；错误不把后续参数当子命令

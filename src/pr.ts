@@ -31,6 +31,8 @@ export interface PullRequestDraft {
   warnings: string[];
 }
 
+interface PullRequestOptions { slug?: string; summary?: string; module?: string }
+
 export interface PullRequestCreated extends PullRequestDraft {
   platform: 'github' | 'gitlab';
   url: string;
@@ -97,6 +99,23 @@ async function specModules(root: string): Promise<string[]> {
   }
 }
 
+function specsOnlyScope(scope: string[]): boolean {
+  let specs = false;
+  for (const raw of scope) {
+    const value = raw.replace(/\/+$/u, '');
+    if (value === '.tiller/specs' || value.startsWith('.tiller/specs/')
+      || value === '.tiller/cases' || value.startsWith('.tiller/cases/')) {
+      specs = true;
+      continue;
+    }
+    if (value === 'test' || value.startsWith('test/') || value === 'tests' || value.startsWith('tests/')
+      || value === 'docs' || value.startsWith('docs/') || value === 'resources' || value.startsWith('resources/')
+      || value === 'scripts' || value.startsWith('scripts/')) continue;
+    return false;
+  }
+  return specs;
+}
+
 function referencedModules(task: FlowTask, available: string[]): string[] {
   const found: string[] = [];
   const add = (value: string): void => {
@@ -105,6 +124,7 @@ function referencedModules(task: FlowTask, available: string[]): string[] {
   const globalSpecRoots = new Set([
     '.tiller/specs', '.tiller/specs/requirements.md', '.tiller/specs/design.md', '.tiller/specs/decisions.md',
   ]);
+  if (specsOnlyScope(task.meta.scope)) return ['specs'];
   let globalSpecs = false;
   for (const scope of task.meta.scope) {
     if (globalSpecRoots.has(scope.replace(/\/+$/u, ''))) globalSpecs = true;
@@ -214,20 +234,17 @@ function bodyMarkdown(task: FlowTask, commits: TaskCommit[], covered: Map<string
   sections.set('变更内容', commits.length ? commits.map(commit => `- ${commit.subject}`) : ['- （待补充：任务基线后尚无提交）']);
   sections.set('验收条件', task.criteria.map(criterion => `- [${covered.get(criterion.id) ? 'x' : ' '}] ${criterion.id}: ${criterion.text}`));
   sections.set('验证结果', task.criteria.map(criterion => {
-    const state = covered.get(criterion.id) ? '当前有效' : '当前未覆盖或已过期';
-    const runs = task.verifications.filter(item => item.criterion === criterion.id);
-    const heading = `- ${criterion.id}：${oneLine(criterion.text)}（${runs.length ? state : '尚无验证记录'}）`;
-    if (!runs.length) return heading;
+    const current = covered.get(criterion.id) === true;
+    const run = current
+      ? [...task.verifications].reverse().find(item => item.criterion === criterion.id && !item.expectFail)
+      : undefined;
+    const heading = `- ${criterion.id}：${oneLine(criterion.text)}（${current ? '当前有效' : '当前未覆盖或已过期'}）`;
+    if (!run) return heading;
     return [
       heading,
-      ...runs.map(run => {
-        const cases = run.cases.length ? `；用例：${run.cases.join(', ')}` : '';
-        const evidence = run.source === 'reported'
-          ? `；未执行（外部报告）${run.reason ? `：${run.reason}` : ''}`
-          : run.evidence === 'verified' ? '' : '；未核实';
-        const expectation = run.expectFail ? `；预期：失败先行（基线 \`${run.baseline ?? '未记录'}\`）` : '';
-        return `  - 测试：\`${run.test}\`；命令：\`${run.command}\`；结果：${run.result}${expectation}${evidence}；提交：\`${run.commit}\`${cases}`;
-      }),
+      `  - 测试：\`${run.test}\`；命令：\`${run.command}\`；结果：${run.result}${run.source === 'reported'
+        ? `；未执行（外部报告）${run.reason ? `：${run.reason}` : ''}`
+        : run.evidence === 'verified' ? '' : '；未核实'}；提交：\`${run.commit}\`${run.cases.length ? `；用例：${run.cases.join(', ')}` : ''}`,
     ].join('\n');
   }));
   sections.set('影响与风险', [impactText(task)]);
@@ -237,14 +254,16 @@ function bodyMarkdown(task: FlowTask, commits: TaskCommit[], covered: Map<string
 export async function draftPullRequest(
   rootInput: string,
   id: string,
-  options: { slug?: string; summary?: string } = {},
+  options: PullRequestOptions = {},
 ): Promise<PullRequestDraft & { markdown: string }> {
   const { primary, taskRoot } = await resolveTaskCheckout(rootInput, id);
   const sourceRoot = taskRoot;
   const task = await readTask(taskRoot, id);
   const type = commitTypeForTaskType(task.meta.type);
   if (!type) throw Object.assign(new Error(`无法从任务类型 ${task.meta.type} 推导提交类型。`), { code: 'PR_TYPE_UNKNOWN' });
-  const checked = await inspectFlow(taskRoot, id);
+  // Acceptance may explicitly allow reported evidence; the PR must then show that
+  // accepted evidence with its "not executed" caveat instead of dropping it.
+  const checked = await inspectFlow(taskRoot, id, { allowReported: true });
   if (!checked.acceptance.confirmed) {
     throw Object.assign(new Error(`任务尚未通过交付验收；先运行 tiller accept ${id}，提交任务记录后再运行 pr。`), {
       code: 'PR_NOT_ACCEPTED',
@@ -274,8 +293,11 @@ export async function draftPullRequest(
     });
   }
   const available = await specModules(taskRoot);
-  const modules = new Set(referencedModules(task, available));
-  const resolvedModules = [...modules];
+  const explicitModule = options.module?.trim();
+  if (options.module !== undefined && (!explicitModule || !/^[a-z][a-z0-9_-]*$/u.test(explicitModule))) {
+    throw Object.assign(new Error('--module 必须是小写字母开头的模块名，只含小写字母、数字、下划线或连字符。'), { code: 'INVALID_MODULE' });
+  }
+  const resolvedModules = explicitModule ? [explicitModule] : referencedModules(task, available);
   const branchDescription = options.slug === undefined
     ? task.meta.slug ?? branchDescriptionForTask((await currentBranch(sourceRoot)) ?? '', task.meta.id)
     : normalizeBranchSlug(options.slug);
@@ -303,7 +325,7 @@ export async function draftPullRequest(
 export async function pullRequestFlow(
   rootInput: string,
   id: string,
-  options: { slug?: string; summary?: string; draftOnly?: boolean } = {},
+  options: PullRequestOptions & { draftOnly?: boolean } = {},
 ): Promise<PullRequestCreated | PullRequestPreview> {
   const { primary: root, taskRoot } = await resolveTaskCheckout(rootInput, id);
   const draft = await draftPullRequest(rootInput, id, options);

@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { existsSync, mkdirSync, readFileSync, renameSync, rmSync, statSync, symlinkSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, renameSync, rmSync, statSync, symlinkSync, writeFileSync } from 'node:fs';
 import { join, sep } from 'node:path';
 import { spawn, spawnSync } from 'node:child_process';
 import test from 'node:test';
@@ -190,7 +190,7 @@ test('CASE-198 CASE-211 close and abandon remove the whole task-local directory 
   put(root, `.tiller/task/${abandonedId}/task.md`, readFileSync(join(taskRecordRoot(root, abandonedId), `.tiller/task/${abandonedId}/task.md`), 'utf8'));
   commit(root, 'chore(workflow): 持久化收尾任务记录');
 
-  const closed = success(cli(root, 'close', acceptedId, '--reason', '交付完成'));
+  const closed = success(cli(join(root, worktreePath(acceptedId)), 'close', acceptedId, '--reason', '交付完成'));
   assert.deepEqual(closed.worktrees, [worktreePath(acceptedId)]);
   assert.equal(closed.logsRemoved, true);
   assert.equal(existsSync(join(root, taskLocalPath(acceptedId))), false);
@@ -402,7 +402,7 @@ test('CASE-318 close rejects historical same-branch merges until the current tip
   assert.equal(branchExists(root, branch), false);
 });
 
-test('CASE-317 accepted abandon from a worktree subdirectory cleans worktree, local task facts and branch', async t => {
+test('CASE-317 CASE-356 accepted abandon from a worktree subdirectory rejects before cleanup and succeeds after retry from primary', async t => {
   const root = project(t);
   const id = '20261027-abandon-durability';
   const started = startTask(root, id);
@@ -413,8 +413,19 @@ test('CASE-317 accepted abandon from a worktree subdirectory cleans worktree, lo
   mkdirSync(nested, { recursive: true });
   const before = git(root, 'rev-parse', 'HEAD');
 
-  put(root, '.git/index.lock', '');
-  const abandoned = success(cli(nested, 'close', id, '--reason', '需求取消', '--abandon'));
+  const blockedAtRoot = failure(cli(worktree, 'close', id, '--reason', '需求取消', '--abandon'));
+  assert.equal(blockedAtRoot.error.code, 'TASK_CLEANUP_FAILED');
+  assert.ok(blockedAtRoot.error.message.includes(worktree), blockedAtRoot.error.message);
+  assert.ok(existsSync(join(worktree, `.tiller/task/${id}/task.md`)));
+
+  const blocked = failure(cli(nested, 'close', id, '--reason', '需求取消', '--abandon'));
+  assert.equal(blocked.error.code, 'TASK_CLEANUP_FAILED');
+  assert.match(blocked.error.message, /cwd/u);
+  assert.ok(blocked.error.message.includes(nested), blocked.error.message);
+  assert.ok(existsSync(join(worktree, `.tiller/task/${id}/task.md`)));
+  assert.equal(branchExists(root, branch), true);
+
+  const abandoned = success(cli(root, 'close', id, '--reason', '需求取消', '--abandon'));
   assert.equal(abandoned.stage, '已放弃');
   assert.doesNotMatch(abandoned.next, /reopen/u);
   assert.equal(abandoned.persistedCommit, undefined);
@@ -426,18 +437,16 @@ test('CASE-317 accepted abandon from a worktree subdirectory cleans worktree, lo
   assert.equal(failure(cli(root, 'reopen', id, '--reason', '记录已清理')).error.code, 'TASK_NOT_FOUND');
 });
 
-test('CASE-322 accepted but unmerged task abandons by cleaning only local facts', async t => {
+test('CASE-322 accepted but unmerged task abandons from primary by cleaning only local facts', async t => {
   const root = project(t);
   const id = '20261028-accepted-abandon';
   const started = startTask(root, id);
   const worktree = join(root, started.worktreeRoot);
   const branch = started.worktrees[0].branch;
   acceptTask(root, id);
-  const nested = join(worktree, 'nested');
-  mkdirSync(nested, { recursive: true });
   const before = git(root, 'rev-parse', 'HEAD');
 
-  const abandoned = success(cli(nested, 'close', id, '--reason', 'PR 被拒，放弃交付', '--abandon'));
+  const abandoned = success(cli(root, 'close', id, '--reason', 'PR 被拒，放弃交付', '--abandon'));
   assert.equal(abandoned.stage, '已放弃');
   assert.equal(abandoned.persistedCommit, undefined);
   assert.equal(git(root, 'rev-parse', 'HEAD'), before);
@@ -450,24 +459,54 @@ test('CASE-322 accepted but unmerged task abandons by cleaning only local facts'
   assert.equal(failure(cli(root, 'reopen', id, '--reason', '重新评估被拒方案')).error.code, 'TASK_NOT_FOUND');
 });
 
-test('CASE-355 abandon 本机清理失败返回 TASK_CLEANUP_FAILED 且不假成功', async t => {
+test('CASE-355 CASE-356 abandon 清理中途失败保留恢复记录并可重试', async t => {
   const root = project(t);
   const id = '20261029-abandon-cleanup-failure';
   const started = startTask(root, id);
   const worktree = join(root, started.worktreeRoot);
   const branch = started.worktrees[0].branch;
-  const blockedTarget = join(root, 'blocked-task-logs');
-  mkdirSync(blockedTarget, { recursive: true });
-  const logs = join(root, taskLocalPath(id, 'logs'));
-  rmSync(logs, { recursive: true, force: true });
-  symlinkSync(blockedTarget, logs, process.platform === 'win32' ? 'junction' : 'dir');
+  acceptTask(root, id);
+  const lock = join(root, '.git/refs/heads', `${branch}.lock`);
+  mkdirSync(join(lock, '..'), { recursive: true });
+  writeFileSync(lock, 'locked\n');
 
-  const failed = failure(cli(worktree, 'close', id, '--reason', '本机清理失败不得假成功', '--abandon'));
+  const failed = failure(cli(root, 'close', id, '--reason', '本机清理失败不得假成功', '--abandon'));
   assert.equal(failed.error.code, 'TASK_CLEANUP_FAILED');
   assert.equal(failed.stage, undefined);
   assert.equal(existsSync(join(root, `.tiller/task/${id}/task.md`)), false);
+  assert.equal(existsSync(worktree), false);
+  assert.ok(existsSync(join(root, taskLocalPath(id, 'recovery'), `.tiller/task/${id}/task.md`)));
   assert.equal(branchExists(root, branch), true);
-  assert.equal(failure(cli(root, 'reopen', id, '--reason', '清理失败仍保留分支')).error.code, 'TASK_NOT_FOUND');
+
+  rmSync(lock, { force: true });
+  const retried = success(cli(root, 'close', id, '--reason', '解除占用后重试', '--abandon'));
+  assert.equal(retried.stage, '已放弃');
+  assert.equal(existsSync(worktree), false);
+  assert.equal(existsSync(join(root, taskLocalPath(id))), false);
+  assert.equal(branchExists(root, branch), false);
+  assert.equal(existsSync(join(root, `.tiller/task/${id}/task.md`)), false);
+});
+
+test('CASE-361 case add --input-file preserves literal double quotes without subcommand confusion', async t => {
+  const root = project(t);
+  const id = '20261029-case-input-file';
+  const started = startTask(root, id);
+  const worktree = join(root, started.worktreeRoot);
+  const spec = '.tiller/specs/modules/workflow/requirements.md';
+  put(worktree, spec, '# Workflow\n\n## 验收条件\n\n- AC-1: Input text is preserved.\n');
+  put(worktree, '.tiller/local/quoted-input.txt', 'say "hi" --flag with spaces\n');
+
+  const added = success(cli(worktree, 'case', 'add', id, '--module', 'workflow', '--kind', 'behavior',
+    '--title', 'Quoted input', '--expected', 'The quoted text is preserved.', '--criterion', 'AC-1',
+    '--spec', spec, '--input-file', '.tiller/local/quoted-input.txt'));
+  const caseFile = readFileSync(join(worktree, added.path), 'utf8');
+  assert.match(caseFile, /say "hi" --flag with spaces/u);
+
+  const missing = failure(cli(worktree, 'case', 'add', id, '--module', 'workflow', '--kind', 'behavior',
+    '--title', 'Missing input', '--expected', 'Missing input fails clearly.', '--criterion', 'AC-1',
+    '--spec', spec, '--input-file', '.tiller/local/missing-input.txt'));
+  assert.equal(missing.error.code, 'CASE_INPUT_FILE_NOT_FOUND');
+  assert.doesNotMatch(missing.error.message, /case 支持 add|子命令/u);
 });
 
 test('CASE-200 start failures leave no task record or partially created worktree', async t => {

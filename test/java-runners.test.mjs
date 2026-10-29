@@ -81,19 +81,20 @@ function installJavaTools(root) {
 }
 
 function windowsCommandTokens(value) {
+  const decoded = value.replace(/\^(.)/gu, '$1');
   const tokens = [];
   let index = 0;
-  while (index < value.length) {
-    while (value[index] === ' ') index++;
-    if (index >= value.length) break;
+  while (index < decoded.length) {
+    while (decoded[index] === ' ') index++;
+    if (index >= decoded.length) break;
     let token = '';
-    if (value[index] === '"') {
+    if (decoded[index] === '"') {
       index++;
-      while (index < value.length && value[index] !== '"') token += value[index++];
-      if (value[index] !== '"') throw new Error(`unterminated quoted token: ${value}`);
+      while (index < decoded.length && decoded[index] !== '"') token += decoded[index++];
+      if (decoded[index] !== '"') throw new Error(`unterminated quoted token: ${value}`);
       index++;
     } else {
-      while (index < value.length && value[index] !== ' ') token += value[index++];
+      while (index < decoded.length && decoded[index] !== ' ') token += decoded[index++];
     }
     tokens.push(token);
   }
@@ -109,7 +110,7 @@ function installWindowsCmdFixture(root) {
     "if (args[0] !== '/d' || args[1] !== '/s' || args[2] !== '/c' || typeof args[3] !== 'string') process.exit(2);",
     'const commandLine = args[3];',
     "if (!commandLine.startsWith('\"') || !commandLine.endsWith('\"')) process.exit(3);",
-    'const stripped = commandLine.slice(1, -1);',
+    'const stripped = commandLine.slice(1, -1).replace(/\\^(.)/g, \'$1\');',
     "if (stripped.startsWith('\"')) process.exit(1);",
     'const tokens = [];',
     'let index = 0;',

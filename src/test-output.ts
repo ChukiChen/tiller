@@ -122,9 +122,9 @@ function cmdArgument(value: string): string {
     code: 'VERIFY_COMMAND_UNSUPPORTED',
   });
   const escaped = value
-    .replaceAll('"', '\\"')
+    .replace(/(\\*)"/gu, '$1$1\\"')
     .replace(/(\\+)$/u, '$1$1');
-  return `"${escaped}"`;
+  return `"${escaped}"`.replace(/([()[\]%!^"`<>&|;, *?])/gu, '^$1');
 }
 
 function windowsExecutable(executable: string): string {

@@ -1,7 +1,7 @@
 import { lstat, readFile, readdir } from 'node:fs/promises';
 import type { Dirent } from 'node:fs';
 import path from 'node:path';
-import { applyChanges, readTextIfExists, validateRelativePath, withProjectLock } from './files.js';
+import { applyChanges, assertSafePath, readTextIfExists, validateRelativePath, withProjectLock } from './files.js';
 import { resolveTaskCheckout } from './project-root.js';
 import { readProjectMetadata } from './core.js';
 import { validateTaskId } from './task-id.js';
@@ -41,6 +41,7 @@ export interface AddCaseInput {
   preconditions: string[];
   steps: string[];
   inputs: string[];
+  inputFiles?: string[];
   expected: string;
   priority?: string;
   module?: string;
@@ -621,7 +622,24 @@ export async function addGlobalCase(rootInput: string, input: AddCaseInput) {
   }
   const preconditions = outputList(input.preconditions, ['对应模块与运行环境可用。']);
   const steps = outputList(input.steps, ['执行覆盖本用例的测试。', '核对实际结果与预期结果一致。']);
-  const inputs = outputList(input.inputs, ['按用例描述准备正常输入及必要的边界输入。']);
+  const fileInputs: string[] = [];
+  for (const relative of input.inputFiles ?? []) {
+    validateRelativePath(relative);
+    const target = await assertSafePath(root, relative);
+    const stat = await lstat(target).catch(error => {
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+        throw Object.assign(new Error(`用例输入文件不存在：${relative}`), { code: 'CASE_INPUT_FILE_NOT_FOUND' });
+      }
+      throw error;
+    });
+    if (!stat.isFile()) {
+      throw Object.assign(new Error(`用例输入文件必须是普通文件：${relative}`), { code: 'CASE_INPUT_FILE_NOT_FOUND' });
+    }
+    const content = (await readFile(target, 'utf8')).replace(/\r\n?/gu, '\n').trim();
+    if (!content) throw Object.assign(new Error(`用例输入文件为空：${relative}`), { code: 'INVALID_CASE_INPUT' });
+    fileInputs.push(content);
+  }
+  const inputs = outputList([...fileInputs, ...input.inputs], ['按用例描述准备正常输入及必要的边界输入。']);
   return withProjectLock(root, async () => {
     const metadata = await readProjectMetadata(root);
     const runner = metadata.verify?.runner ?? 'node-test';

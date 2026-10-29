@@ -375,7 +375,7 @@ abandon 不写共享 task.md、不产生放弃提交；规划不再把该任务�
 
 测试通过，并且设计确认要求方案与影响非空。
 
-## CASE-077 PR 验证结果按验收条件列出全部记录
+## CASE-077 PR 验证结果按验收条件只列当前有效记录
 
 - 类型：behavior
 - 优先级：medium
@@ -394,11 +394,11 @@ abandon 不写共享 task.md、不产生放弃提交；规划不再把该任务�
 
 ### 输入
 
-- 按“PR 验证结果按验收条件列出全部记录”的场景准备正常输入和必要的边界输入。
+- 按“PR 验证结果按验收条件只列当前有效记录”的场景准备正常输入和必要的边界输入。
 
 ### 预期结果
 
-测试通过，并且PR 验证结果按验收条件列出全部记录。
+测试通过，并且 PR 验证结果按验收条件只列当前有效记录，历史失败或旧命令不混入。
 
 ## CASE-081 PR 标题摘要按显式、元数据、提交、任务标题回退
 
@@ -2373,23 +2373,23 @@ doctor 发现并检查 worktree 任务，报告未覆盖 AC，不因 primary 缺
 
 首次 close 以稳定错误拒绝破坏性清理；证明合入后才清理。清理后没有可读任务记录时不提示执行 `tiller reopen`。
 
-## CASE-317 accepted abandon 从 worktree 子目录清理本机
+## CASE-317 accepted abandon 从 worktree 子目录先拒绝并可重试
 
 - 类型：behavior
 - 优先级：high
 - 模块：workflow
-- 关联 AC：AC-3
-- 需求：`.tiller/specs/modules/workflow/surefire-abandon.md`
+- 关联 AC：AC-1, AC-3
+- 需求：`.tiller/specs/modules/workflow/abandon-parent-cwd-pack.md`
 
 ### 前置条件
 
-- 任务已验收，任务记录只在任务 worktree；primary 的 Git index 被锁住，无法创建任何提交。
+- 任务已验收，任务记录只在任务 worktree；primary 不需要具备提交能力。
 - 命令 cwd 位于任务 worktree 的子目录。
 
 ### 步骤
 
-1. 从任务 worktree 子目录运行 `tiller close <id> --reason "..." --abandon`。
-2. 检查命令成功、HEAD 不变、worktree 与 `.tiller/local/<id>/` 已删除、本地任务分支已消失。
+1. 从任务 worktree 子目录运行 `tiller close <id> --reason "..." --abandon`，检查非零与先切出提示。
+2. 切到 primary 重试同一命令，检查成功、HEAD 不变、worktree 与 `.tiller/local/<id>/` 已删除、本地任务分支已消失。
 3. 检查 primary 没有新增任务记录或放弃提交，结果不提示 reopen。
 
 ### 输入
@@ -2426,23 +2426,23 @@ abandon 先切出占用中的 cwd，再清理 worktree、本机目录与分支�
 
 仅当前 tip 命中 merged PR/MR 时关闭成功；无命中时返回 CLOSE_MERGE_PROOF_MISSING 并保留 worktree、本机目录和分支
 
-## CASE-322 accepted 未合入任务 abandon 只清理本机
+## CASE-322 accepted 未合入任务从 primary abandon 只清理本机
 
 - 类型：behavior
 - 优先级：high
 - 模块：workflow
-- 关联 AC：AC-3
-- 需求：`.tiller/specs/modules/workflow/surefire-abandon.md`
+- 关联 AC：AC-1, AC-3
+- 需求：`.tiller/specs/modules/workflow/abandon-parent-cwd-pack.md`
 
 ### 前置条件
 
 - 任务已验收但 PR/MR 尚未合入，任务记录仍只在任务 worktree。
-- 命令 cwd 位于任务 worktree 的子目录。
+- 命令 cwd 位于 primary。
 - primary 不需要具备提交能力。
 
 ### 步骤
 
-1. 从任务 worktree 子目录运行 `tiller close <id> --reason "..." --abandon`。
+1. 从 primary 运行 `tiller close <id> --reason "..." --abandon`。
 2. 检查 primary 任务记录与最新提交未变化。
 3. 检查任务 worktree、`.tiller/local/<id>/` 和本地任务分支均已清理。
 4. 运行 `tiller reopen <id> --reason "..."`。
@@ -2609,27 +2609,101 @@ LF、CRLF、孤立 CR 三种任务字节变体得到相同验收点、阶段、�
 
 Windows 上 tiller verify 启动真实 mvn.cmd；通过时从默认 `target/surefire-reports` 核实唯一测试，失败退出码原样传播，报告缺失或测试失败时不得记为通过
 
-## CASE-355 abandon 本机清理失败返回 TASK_CLEANUP_FAILED 且不假成功
+## CASE-355 abandon 清理中途失败保留恢复记录并可重试
+
+- 类型：behavior
+- 优先级：high
+- 模块：workflow
+- 关联 AC：AC-1
+- 需求：`.tiller/specs/modules/workflow/abandon-parent-cwd-pack.md`
+
+### 前置条件
+
+- 从 primary 执行 close --abandon，worktree 已拆除而任务分支删除被锁定
+
+### 步骤
+
+1. 锁定任务分支的 ref 后执行 close --abandon
+2. 核对退出码、ok、错误码、恢复记录与分支残留
+3. 解除锁定后从 primary 重试并核对完整清理
+
+### 输入
+
+- accepted 任务、被锁定的任务分支 ref 与 primary cwd
+
+### 预期结果
+
+close --abandon 在清理开始后失败时非零退出、ok:false、错误码 TASK_CLEANUP_FAILED，结果不含已放弃阶段；恢复记录与分支保留，重试后完整清理
+
+## CASE-356 abandon 父 cwd 预检、恢复记录与重试
+
+- 类型：behavior
+- 优先级：high
+- 模块：workflow
+- 关联 AC：AC-1, AC-3
+- 需求：`.tiller/specs/modules/workflow/abandon-parent-cwd-pack.md`
+
+### 前置条件
+
+- 已建立并验收的 worktree 任务
+
+### 步骤
+
+1. 从 worktree nested 目录执行 close --abandon
+2. 解除占用后从 primary 重试
+
+### 输入
+
+- 父 shell cwd 位于待删任务目录，且清理中途存在分支失败
+
+### 预期结果
+
+首次非零且记录可读；primary 重试完整清理，不写 primary task.md 或产生 abandon 提交
+
+## CASE-358 check 只读不写 task.md
 
 - 类型：behavior
 - 优先级：high
 - 模块：workflow
 - 关联 AC：AC-4
-- 需求：`.tiller/specs/modules/workflow/surefire-abandon.md`
+- 需求：`.tiller/specs/modules/workflow/abandon-parent-cwd-pack.md`
 
 ### 前置条件
 
-- 任务 worktree 内执行 close --abandon，且待清理的本机路径无法安全删除
+- 任务记录已确认
 
 ### 步骤
 
-1. 构造无法安全删除的任务本机路径后执行 close --abandon
-2. 核对退出码、ok、错误码、stage 与残留路径和分支
+1. 记录 task.md 与工作区状态后执行 tiller check
 
 ### 输入
 
-- accepted 或未验收任务、worktree cwd 与受阻碍的本机任务目录
+- 会产生 selfCheck 输出的未验收任务
 
 ### 预期结果
 
-close --abandon 在 worktree 或本机任务目录清理失败时非零退出、ok:false、错误码 TASK_CLEANUP_FAILED，结果不含已放弃阶段；仍存在的目录和分支保留
+task.md 字节不变，工作区无新增脏改；结果只从输出返回
+
+## CASE-359 verify 最大编号与 PR 当前有效
+
+- 类型：behavior
+- 优先级：high
+- 模块：workflow
+- 关联 AC：AC-5
+- 需求：`.tiller/specs/modules/workflow/abandon-parent-cwd-pack.md`
+
+### 前置条件
+
+- task.md 已有非连续 run-N，且存在历史 failed 与当前 passed
+
+### 步骤
+
+1. 再次执行 verify 并生成 PR 草稿
+
+### 输入
+
+- run-5 历史记录与当前通过测试
+
+### 预期结果
+
+新记录从 run-6 递增；PR 只把当前通过标为当前有效，历史 failed 不混入
