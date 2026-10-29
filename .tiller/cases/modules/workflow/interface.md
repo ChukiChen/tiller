@@ -1508,3 +1508,28 @@ specs/workflow 等约定 scope 不产生模块缺失提示；不存在的真实�
 ### 预期结果
 
 check 继续按 acceptance 证据复核，不把后续 specs 变化报成追溯性规格溢出，也不改写旧确认；重新验收仍按当前树重查。
+
+## CASE-352 Windows .cmd 启动契约保留可执行文件与参数边界
+
+- 类型：interface
+- 优先级：high
+- 模块：workflow
+- 关联 AC：AC-2
+- 需求：`.tiller/specs/modules/workflow/windows-residual-hardening.md`
+
+### 前置条件
+
+- junit-maven runner 已构造包含私有报告目录和精确选择器的命令
+
+### 步骤
+
+1. 在不依赖 Windows 原生工具的环境断言 invocation 可执行文件、参数数组与外层引用契约
+2. 在 Windows 通过同一入口启动临时 .cmd fixture 并记录实际 argv
+
+### 输入
+
+- 含空格、&、$、报告目录和 Class#method 的参数，以及无法安全表达的控制字符参数
+
+### 预期结果
+
+Windows invocation 将 mvn.cmd 与各 argv 作为完整边界交给 cmd.exe，仅有一层命令解释器外层引用；Maven 报告目录和 Class#method 选择器顺序不变，无法安全表达的参数在启动前稳定拒绝

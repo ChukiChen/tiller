@@ -135,13 +135,17 @@ function windowsExecutable(executable: string): string {
   return replacement ? `${executable.slice(0, -name.length)}${replacement}` : executable;
 }
 
+function cmdExecutable(value: string): string {
+  return /^[A-Za-z0-9_./:\\-]+$/u.test(value) ? value : cmdArgument(value);
+}
+
 /** Resolve a logical test tool to the platform executable and command interpreter. */
 export function platformProcessInvocation(executable: string, args: string[], platform = process.platform,
   comSpec = process.env.ComSpec || 'cmd.exe'): ProcessInvocation {
   if (platform !== 'win32') return { executable, args };
   const resolved = windowsExecutable(executable);
   if (!/\.(?:cmd|bat)$/iu.test(resolved)) return { executable: resolved, args };
-  const commandLine = `"${[resolved, ...args].map(cmdArgument).join(' ')}"`;
+  const commandLine = `"${[cmdExecutable(resolved), ...args.map(cmdArgument)].join(' ')}"`;
   return { executable: comSpec, args: ['/d', '/s', '/c', commandLine], windowsVerbatimArguments: true };
 }
 

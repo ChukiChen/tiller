@@ -1,12 +1,13 @@
 import assert from 'node:assert/strict';
-import { chmodSync, existsSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { delimiter, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import test from 'node:test';
+import { spawnSync } from 'node:child_process';
 import { parseMetadata } from '../dist/core.js';
 import { readRepositoryRecords } from '../dist/repository-paths.js';
-import { normalizeVerifyConfig, resolveVerifyTarget, runnerFor } from '../dist/test-output.js';
+import { normalizeVerifyConfig, platformProcessInvocation, resolveVerifyTarget, runnerFor } from '../dist/test-output.js';
 import { applyUpgrade, planUpgrade } from '../dist/upgrade.js';
 import {  cli, failure, fixture, gitRepository, initializeSettled, put, success, taskRecordRoot, read } from './helpers.mjs';
 
@@ -40,8 +41,10 @@ function installJavaTools(root) {
     'const className = hash < 0 ? selected : selected.slice(0, hash);',
     "const method = hash < 0 ? 'wholeClass' : selected.slice(hash + 1);",
     'mkdirSync(directory, { recursive: true });',
+    "const body = process.env.FAKE_MAVEN_FAIL === '1' ? '<failure message=\"fixture failure\"/>' : '';",
     'writeFileSync(`${directory}/TEST-${className}.xml`,',
-    "  `<?xml version=\"1.0\"?><testsuite><testcase classname=\"${className}\" name=\"${method}\"/></testsuite>\\n`);",
+    "  `<?xml version=\"1.0\"?><testsuite><testcase classname=\"${className}\" name=\"${method}\">${body}</testcase></testsuite>\\n`);",
+    "process.exit(process.env.FAKE_MAVEN_FAIL === '1' ? 7 : 0);",
     '',
   ].join('\n');
   const gradle = [
@@ -63,12 +66,75 @@ function installJavaTools(root) {
     '',
   ].join('\n');
   put(root, 'fake-bin/mvn', mvn);
+  if (process.platform === 'win32') {
+    put(root, 'fake-bin/mvn.cmd', ['@echo off', 'node "%~dp0mvn" %*', ''].join('\r\n'));
+  } else {
+    symlinkSync('mvn', join(bin, 'mvn.cmd'));
+  }
   put(root, 'fake-bin/gradle', gradle);
   chmodSync(join(bin, 'mvn'), 0o755);
+  chmodSync(join(bin, 'mvn.cmd'), 0o755);
   chmodSync(join(bin, 'gradle'), 0o755);
   const previous = process.env.PATH;
   process.env.PATH = `${bin}${delimiter}${previous ?? ''}`;
   return () => { process.env.PATH = previous; };
+}
+
+function windowsCommandTokens(value) {
+  const tokens = [];
+  let index = 0;
+  while (index < value.length) {
+    while (value[index] === ' ') index++;
+    if (index >= value.length) break;
+    let token = '';
+    if (value[index] === '"') {
+      index++;
+      while (index < value.length && value[index] !== '"') token += value[index++];
+      if (value[index] !== '"') throw new Error(`unterminated quoted token: ${value}`);
+      index++;
+    } else {
+      while (index < value.length && value[index] !== ' ') token += value[index++];
+    }
+    tokens.push(token);
+  }
+  return tokens;
+}
+
+function installWindowsCmdFixture(root) {
+  if (process.platform === 'win32') return process.env.ComSpec || 'cmd.exe';
+  const script = [
+    '#!/usr/bin/env node',
+    "import { spawnSync } from 'node:child_process';",
+    'const args = process.argv.slice(2);',
+    "if (args[0] !== '/d' || args[1] !== '/s' || args[2] !== '/c' || typeof args[3] !== 'string') process.exit(2);",
+    'const commandLine = args[3];',
+    "if (!commandLine.startsWith('\"') || !commandLine.endsWith('\"')) process.exit(3);",
+    'const stripped = commandLine.slice(1, -1);',
+    "if (stripped.startsWith('\"')) process.exit(1);",
+    'const tokens = [];',
+    'let index = 0;',
+    'while (index < stripped.length) {',
+    "  while (stripped[index] === ' ') index++;",
+    '  if (index >= stripped.length) break;',
+    "  let token = '';",
+    "  if (stripped[index] === '\"') {",
+    '    index++;',
+    "    while (index < stripped.length && stripped[index] !== '\"') token += stripped[index++];",
+    "    if (stripped[index] !== '\"') process.exit(4);",
+    '    index++;',
+    '  } else {',
+    "    while (index < stripped.length && stripped[index] !== ' ') token += stripped[index++];",
+    '  }',
+    '  tokens.push(token);',
+    '}',
+    "const result = spawnSync(tokens[0], tokens.slice(1), { env: process.env, stdio: 'inherit', windowsHide: true });",
+    'process.exit(result.status === null ? 1 : result.status);',
+    '',
+  ].join('\n');
+  put(root, 'fake-bin/cmd.mjs', script);
+  chmodSync(join(root, 'fake-bin/cmd.mjs'), 0o755);
+  symlinkSync('cmd.mjs', join(root, 'fake-bin/cmd.exe'));
+  return join(root, 'fake-bin/cmd.exe');
 }
 
 function projectMetadata(overrides) {
@@ -108,6 +174,56 @@ test('CASE-169 junit-maven builds a precise selector and counts only the declare
   writeFileSync(join(directory, 'a.xml'), xml(testcase('addsInvoice')));
   const loaded = await maven.loadReport(join(directory, 'report.jsonl'), directory);
   assert.equal(maven.parse(loaded, methodRef, 'ignored').verified, true);
+});
+
+test('CASE-353 Windows junit-maven cmd fixture writes and verifies the private Surefire report', async t => {
+  const root = fixture(t);
+  const restore = installJavaTools(root);
+  try {
+    mkdirSync(join(root, 'src/test/java/com/example'), { recursive: true });
+    writeFileSync(join(root, javaFile), 'package com.example; class BillingTest {}\n');
+    put(root, '.tiller/project.json', `${JSON.stringify(projectMetadata({
+      mode: 'project', verify: { runner: 'junit-maven' },
+    }), null, 2)}\n`);
+    const comSpec = installWindowsCmdFixture(root);
+    const maven = runnerFor('junit-maven');
+    const report = '.tiller/local/verify-x/report.jsonl';
+    const built = maven.build(methodRef, { reporter: './reporter.mjs', report });
+    const invocation = platformProcessInvocation(built.executable, built.args, 'win32', comSpec);
+    assert.equal(invocation.windowsVerbatimArguments, true);
+    const stripped = invocation.args[3].slice(1, -1);
+    assert.equal(stripped.startsWith('mvn.cmd '), true, invocation.args[3]);
+    assert.deepEqual(windowsCommandTokens(stripped), ['mvn.cmd', ...built.args]);
+    assert.match(stripped, /-Dsurefire\.reportsDirectory=\.tiller\/local\/verify-x/u);
+    assert.match(stripped, /-Dtest=com\.example\.BillingTest#addsInvoice/u);
+
+    const passed = spawnSync(invocation.executable, invocation.args, {
+      cwd: root, env: process.env, encoding: 'utf8', timeout: 30_000, windowsHide: true,
+    });
+    assert.ifError(passed.error);
+    assert.equal(passed.status, 0, passed.stderr || passed.stdout);
+    const reportDirectory = join(root, '.tiller/local/verify-x');
+    const passedReport = await maven.loadReport(join(reportDirectory, 'report.jsonl'), reportDirectory);
+    const passedEvidence = maven.parse(passedReport, methodRef, join(root, javaFile));
+    assert.equal(passedEvidence.verified, true, passedEvidence.reason);
+    assert.equal(passedEvidence.outcome, 'passed');
+
+    const failed = spawnSync(invocation.executable, invocation.args, {
+      cwd: root, env: { ...process.env, FAKE_MAVEN_FAIL: '1' }, encoding: 'utf8', timeout: 30_000, windowsHide: true,
+    });
+    assert.ifError(failed.error);
+    assert.equal(failed.status, 7);
+    const failedReport = await maven.loadReport(join(reportDirectory, 'report.jsonl'), reportDirectory);
+    const failedEvidence = maven.parse(failedReport, methodRef, join(root, javaFile));
+    assert.equal(failedEvidence.verified, true, failedEvidence.reason);
+    assert.equal(failedEvidence.outcome, 'failed');
+
+    rmSync(reportDirectory, { recursive: true, force: true });
+    assert.equal(maven.parse(await maven.loadReport(join(reportDirectory, 'report.jsonl'), reportDirectory), methodRef,
+      join(root, javaFile)).verified, false);
+  } finally {
+    restore();
+  }
 });
 
 test('CASE-170 junit-gradle builds a precise selector and counts only the declared result', async () => {

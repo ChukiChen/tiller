@@ -121,6 +121,7 @@ function text(value: unknown, label: string, maximum = 10000): string {
 }
 function sha(value: string): string { return createHash('sha256').update(value, 'utf8').digest('hex'); }
 function normalizeLine(value: string): string { return value.replace(/\s+/gu, ' ').trim(); }
+function markdownLines(value: string): string[] { return value.split(/\r\n|\r|\n/u); }
 function safeInput(value: string, label: string): string {
   const safety = recordSafety(value);
   if (safety.length) fail('UNSAFE_RECORD', `${label}${safety.join('；')}`);
@@ -294,25 +295,25 @@ async function writePreExisting(root: string, id: string, values: Record<string,
   if (target.stat !== null && !target.stat.isFile()) throw new Error(`开工前改动旁路不是普通文件：${relative}`);
   await writeFile(target.target, after, 'utf8');
 }
+function sectionFromLines(content: string, title: string, level: 2 | 3): string {
+  const lines = markdownLines(content);
+  const heading = new RegExp(`^${'#'.repeat(level)} ${title.replace(/[.*+?^${}()|[\]\\]/gu, '\\$&')}\\s*$`, 'u');
+  const start = lines.findIndex(line => heading.test(line));
+  if (start < 0) return '';
+  const boundary = level === 2 ? /^##\s+/u : /^#{1,3}\s+/u;
+  const end = lines.findIndex((line, index) => index > start && boundary.test(line));
+  return lines.slice(start + 1, end < 0 ? lines.length : end).join('\n').trim();
+}
 function sectionBody(content: string, title: string): string {
-  const match = new RegExp(`^## ${title}\\s*$`, 'mu').exec(content);
-  if (!match) return '';
-  const start = match.index + match[0].length;
-  const rest = content.slice(start);
-  const next = /^##\s+/mu.exec(rest);
-  return rest.slice(0, next?.index ?? rest.length).trim();
+  return sectionFromLines(content, title, 2);
 }
 function subSectionBody(content: string, title: string): string {
-  const match = new RegExp(`^### ${title}\\s*$`, 'mu').exec(content);
-  if (!match) return '';
-  const rest = content.slice(match.index + match[0].length);
-  const next = /^#{1,3}\s+/mu.exec(rest);
-  return rest.slice(0, next?.index ?? rest.length).trim();
+  return sectionFromLines(content, title, 3);
 }
 const HISTORICAL_ACCEPTANCE_HEADING = ['验收条件', '（稳定）'].join('');
 function criteriaFromBody(body: string): FlowCriterion[] {
   const result: FlowCriterion[] = [];
-  for (const line of body.split(/\r?\n/u)) {
+  for (const line of markdownLines(body)) {
     const match = /^-\s+(AC-\d+)[:：]\s*(.+)$/u.exec(line.trim());
     if (match) result.push({ id: match[1]!, text: match[2]!.trim() });
   }
@@ -337,7 +338,7 @@ function referencedSpecPaths(task: Pick<FlowTask, 'meta' | 'requirement' | 'desi
     if (normalized.startsWith(STABLE_REQUIREMENT_PREFIX) && normalized.endsWith('.md')) paths.add(normalized);
   };
   if (task.meta.requirementFile) add(task.meta.requirementFile);
-  for (const line of `${task.requirement}\n${task.design}`.split(/\r?\n/u)) {
+  for (const line of markdownLines(`${task.requirement}\n${task.design}`)) {
     if (!SPEC_REFERENCE_LINE.test(line)) continue;
     for (const match of line.matchAll(SPEC_REFERENCE_PATTERN)) add(match[0]);
   }
@@ -346,7 +347,7 @@ function referencedSpecPaths(task: Pick<FlowTask, 'meta' | 'requirement' | 'desi
 
 function specCriteria(content: string): FlowCriterion[] {
   const result: FlowCriterion[] = [];
-  for (const line of content.split(/\r?\n/u)) {
+  for (const line of markdownLines(content)) {
     const match = /^[-*]\s+(AC-\d+)\s*[:：]\s*(.+)$/u.exec(line.trim());
     if (match) result.push({ id: match[1]!, text: match[2]!.trim() });
   }
@@ -427,7 +428,7 @@ function parseConfirmationSidecar(line: string): FlowConfirmation | null {
 }
 function parseConfirmations(content: string): FlowConfirmation[] {
   const body = sectionBody(content, '确认');
-  const markers = body.split(/\r?\n/u).map(line => line.trim()).filter(line => line.startsWith('<!-- tiller-confirm:v1 '));
+  const markers = markdownLines(body).map(line => line.trim()).filter(line => line.startsWith('<!-- tiller-confirm:v1 '));
   if (markers.length) {
     const parsed = markers.map(parseConfirmationSidecar);
     if (parsed.every((item): item is FlowConfirmation => item !== null)) return parsed;
@@ -461,7 +462,7 @@ function parseVerifications(content: string): FlowVerification[] {
   const chunks = body.split(/^###\s+/mu).slice(1);
   const result: FlowVerification[] = [];
   for (const chunk of chunks) {
-    const lines = chunk.split(/\r?\n/u);
+    const lines = markdownLines(chunk);
     const id = lines.shift()?.trim();
     if (!id) continue;
     const field = (name: string) => {
@@ -498,7 +499,7 @@ function parseClosures(content: string): FlowClosure[] {
   if (!body) return [];
   const result: FlowClosure[] = [];
   for (const chunk of body.split(/^###\s+/mu).slice(1)) {
-    const lines = chunk.split(/\r?\n/u);
+    const lines = markdownLines(chunk);
     const action = lines.shift()?.trim();
     if (action !== 'close' && action !== 'reopen') continue;
     const field = (name: string) => {
@@ -521,7 +522,7 @@ function parseReview(content: string): FlowReview | null {
   let at = '';
   const findings: FlowReviewFinding[] = [];
   for (const chunk of body.split(/^###\s+/mu).slice(1)) {
-    const lines = chunk.split(/\r?\n/u);
+    const lines = markdownLines(chunk);
     const heading = lines.shift()?.trim() ?? '';
     const field = (name: string): string => {
       const prefix = `- ${name}：`;
@@ -550,7 +551,7 @@ function parseReview(content: string): FlowReview | null {
 function parseTask(content: string, id: string, relative: string): FlowTask {
   const marker = new RegExp(`${MARKER_PREFIX.replace(/[.*+?^${}()|[\]\\]/gu, '\\$&')}(\\{.*\\})${MARKER_SUFFIX.replace(/[.*+?^${}()|[\]\\]/gu, '\\$&')}`, 'u').exec(content);
   if (!marker) fail('FLOW_TASK_NOT_FOUND', `任务 ${id} 不是当前轻量记录。`);
-  const title = /^#\s+(.+)$/mu.exec(content)?.[1]?.trim();
+  const title = markdownLines(content).map(line => /^#\s+(.+)$/u.exec(line)?.[1]?.trim()).find(Boolean);
   if (!title) fail('INVALID_FLOW_TASK', '任务记录缺少标题。');
   const requirement = sectionBody(content, '需求');
   if (!requirement) fail('INVALID_FLOW_TASK', '任务记录缺少“## 需求”正文。');
@@ -841,7 +842,7 @@ function emptyDesignTemplate(): string {
 }
 const PLACEHOLDER_LINE = /^(?:todo|tbd|tba|n\/a|na|待补充|待完善|待填写|待定|占位|暂无|无|\.{3}|…)$/iu;
 function markdownMeaningfulLines(value: string): string[] {
-  return value.split(/\r?\n/u).flatMap(raw => {
+  return markdownLines(value).flatMap(raw => {
     const line = raw.trim();
     if (!line || line.startsWith('#') || /^<!--.*-->$/u.test(line) || /^(?:---+|\*\*\*+|___+)$/u.test(line)) return [];
     const normalized = line
@@ -872,7 +873,7 @@ function businessScopeDeliveryPathWarnings(task: FlowTask): string[] {
   if (!body) return [];
   const paths = new Set<string>();
   let inDo = false;
-  for (const raw of body.split(/\r?\n/u)) {
+  for (const raw of markdownLines(body)) {
     const line = raw.trim();
     if (/^[-*+]\s*做\s*[:：]/u.test(line)) inDo = true;
     else if (/^[-*+]\s*(?:不做|假设与待确认)\s*[:：]/u.test(line)) { inDo = false; continue; }
@@ -1486,7 +1487,7 @@ async function treeDigestAtCommit(root: string, scope: string[], id: string, com
 
 function recordSafety(content: string): string[] {
   const issues: string[] = [];
-  const lines = content.split(/\r?\n/u);
+  const lines = markdownLines(content);
   const patterns: [RegExp, string][] = [
     [/-----BEGIN [A-Z ]*PRIVATE KEY-----/u, '包含私钥'],
     [/\b(?:gh[pousr]_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,}|sk-[A-Za-z0-9]{20,}|xox[baprs]-[A-Za-z0-9-]{10,}|AKIA[0-9A-Z]{16})\b/u, '包含疑似访问令牌'],
