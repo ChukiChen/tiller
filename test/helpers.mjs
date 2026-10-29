@@ -36,6 +36,12 @@ export function fixture(t) {
   const initialized = spawnSync('git', ['init', '--quiet'], { cwd: root, encoding: 'utf8', timeout: 20_000 });
   assert.ifError(initialized.error && initialized.error.code !== 'EPERM' ? initialized.error : null);
   assert.equal(initialized.status, 0, initialized.stderr);
+  const name = spawnSync('git', ['config', 'user.name', 'Tiller Test'], { cwd: root, encoding: 'utf8', timeout: 20_000 });
+  assert.ifError(name.error);
+  assert.equal(name.status, 0, name.stderr);
+  const email = spawnSync('git', ['config', 'user.email', 'tiller@example.invalid'], { cwd: root, encoding: 'utf8', timeout: 20_000 });
+  assert.ifError(email.error);
+  assert.equal(email.status, 0, email.stderr);
   const committed = spawnSync('git', [
     '-c', 'user.name=Tiller Test', '-c', 'user.email=tiller@example.invalid',
     'commit', '--quiet', '--allow-empty', '-m', 'baseline',
@@ -232,16 +238,12 @@ export function cli(root, ...args) {
     ? [args[0], '--skip-init-gate', ...args.slice(1)]
     : args;
   const id = args[0] === 'start' ? null : taskIdFromArgs(args);
-  let cwd = root;
-  if (id) {
-    const checkout = taskRecordRoot(root, id);
-    if (checkout !== root) {
-      // Tests still put/read on primary; mirror non-task fixture paths into the worktree
-      // before the command and mirror results back afterward (never .tiller/task).
-      syncFixturePaths(root, checkout);
-      cwd = checkout;
-    }
-  }
+  const primary = id ? fixturePrimary(root, id) : null;
+  const checkout = primary ? taskRecordRoot(primary, id) : null;
+  // Tests still put/read on primary; mirror non-task fixture paths into the worktree.
+  // Never replace the caller's cwd: nested-cwd regressions must exercise the real directory.
+  const mirrorFixtures = Boolean(id && primary && resolve(root) === resolve(primary) && checkout !== primary);
+  if (mirrorFixtures) syncFixturePaths(primary, checkout);
   let addedOrigin = false;
   if (args[0] === 'init') {
     const origin = spawnSync('git', ['remote', 'get-url', 'origin'], { cwd: root, encoding: 'utf8', timeout: 20_000 });
@@ -258,8 +260,8 @@ export function cli(root, ...args) {
   try {
     result = spawnCaptured(process.execPath, [cliPath, ...effectiveArgs, '--json'], {
       // Git-backed delivery commands spawn several processes; allow bounded headroom
-      // when the full suite runs concurrently on Windows.
-      cwd, encoding: 'utf8', timeout: 60_000,
+      // when the full suite runs concurrently on Windows or a loaded CI host.
+      cwd: root, encoding: 'utf8', timeout: 120_000,
       ...(addedOrigin ? { env: { GITHUB_TOKEN: 'test-token', GH_TOKEN: '', GITLAB_TOKEN: 'test-token', GL_TOKEN: '' } } : {}),
     });
   } finally {
@@ -270,9 +272,19 @@ export function cli(root, ...args) {
   let data;
   try { data = JSON.parse(result.stdout); }
   catch { assert.fail(`Expected JSON output: ${result.stdout}\n${result.stderr}`); }
-  if (id && cwd !== root) syncFixturePaths(cwd, root);
+  if (mirrorFixtures) syncFixturePaths(checkout, primary);
   if (result.status === 0 && args[0] === 'init' && data.initBaseline) settleInitBaseline(root, data);
   return { ...result, data };
+}
+
+function fixturePrimary(root, id) {
+  let current = resolve(root);
+  while (true) {
+    if (existsSync(join(current, '.tiller/local', id, 'worktrees'))) return current;
+    const parent = dirname(current);
+    if (parent === current) return null;
+    current = parent;
+  }
 }
 
 export function settleInitBaseline(root, result) {

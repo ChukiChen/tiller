@@ -220,3 +220,27 @@ metadata.initBaseline 只含 id/branch/commit，不含 status/headRef；本机�
 ### 预期结果
 
 本机记录本次 expected head 与 open PR/MR；re-init 改写 expected head 并清除旧 merged marker，旧 marker 不能放行新 head
+
+## CASE-362 init 与 start 预检 Git 身份
+
+- 类型：interface
+- 优先级：high
+- 模块：initialization
+- 关联 AC：AC-6
+- 需求：`.tiller/specs/modules/workflow/abandon-parent-cwd-pack.md`
+
+### 前置条件
+
+- 仓库未设置 user.name 或 user.email
+
+### 步骤
+
+1. 分别执行 init 与 start
+
+### 输入
+
+- 仅含空提交夹具、无本地和全局身份
+
+### 预期结果
+
+写盘或建树前返回 GIT_IDENTITY_MISSING，并提示设置 user.name 与 user.email

@@ -610,6 +610,22 @@ test('CASE-045 check rejects a recorded case whose referenced test no longer mat
   assert.ok(checked.issues.some(item => item.includes('与全局用例 CASE-003 的测试引用不一致')), checked.issues.join('\n'));
 });
 
+test('CASE-358 check is read-only for task.md and the working tree', async t => {
+  const root = await project(t);
+  const id = '20261029-check-readonly';
+  success(cli(root, 'start', id, '--title', 'Check read only', '--requirement', 'Check must not rewrite task records.',
+    '--criterion', 'AC-1=Check keeps task.md unchanged', '--size', 'small', '--target', '.'));
+  success(confirmTask(root, id, 'requirements'));
+
+  const file = join(taskRecordRoot(root, id), task(root, id));
+  const before = readFileSync(file, 'utf8');
+  const statusBefore = git(root, 'status', '--porcelain');
+  const checked = cli(root, 'check', id);
+  assert.equal(checked.data.id, id);
+  assert.equal(readFileSync(file, 'utf8'), before);
+  assert.equal(git(root, 'status', '--porcelain'), statusBefore);
+});
+
 test('CASE-046 global cases block legacy layout, unknown kinds, missing modules and broken references', async t => {
   const root = await project(t);
   put(root, 'test/missing-case.test.mjs', "import test from 'node:test';\ntest('CASE-999 missing case', () => {});\n");

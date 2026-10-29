@@ -18,7 +18,8 @@ import {
   managedFilesForPlatform, normalizePlatform, parseMetadata, templatePathsForPlatform,
 } from './project-metadata.js';
 import {
-  assertInitEnvironment, assertInitGitAvailable, createInitBaseline, readLocalInitBaseline, resolveInitBaselineStatus,
+  assertGitIdentity, assertInitEnvironment, assertInitGitAvailable, createInitBaseline, readLocalInitBaseline,
+  resolveInitBaselineStatus,
   type InitBaselineResult,
 } from './init-baseline.js';
 import { assertSharedWritePaths } from './shared-paths.js';
@@ -540,6 +541,7 @@ export async function initialize(options: InitializeOptions): Promise<Initialize
   const mode = options.mode ?? 'project';
   if (mode !== 'project' && mode !== 'workspace') throw new Error('初始化方式必须为 project 或 workspace。');
   await assertInitGitAvailable();
+  await assertGitIdentity(root);
   const rootExists = await lstat(root).then(stat => stat.isDirectory()).catch(error => {
     if ((error as NodeJS.ErrnoException).code === 'ENOENT') return false;
     throw error;

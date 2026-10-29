@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { spawn, spawnSync } from 'node:child_process';
@@ -199,6 +199,35 @@ test('CASE-345 init preflight rejects unavailable git before creating artifacts 
     assert.equal(okGit(root, 'rev-parse', 'HEAD'), head);
   }
   assert.equal(mock.state.requests.length, 0);
+});
+
+test('CASE-362 init and start reject missing Git identity before writes', async t => {
+  const empty = fixture(t);
+  const globalConfig = join(empty, 'empty-global-config');
+  writeFileSync(globalConfig, '');
+  const environment = { GIT_CONFIG_GLOBAL: globalConfig, GIT_CONFIG_NOSYSTEM: '1', ...emptyTokens };
+
+  const fresh = mkdtempSync(join(tmpdir(), 'tiller-identity-'));
+  t.after(() => rmSync(fresh, { recursive: true, force: true }));
+  const initialized = await cliAt(fresh, environment, 'init', '--platform', 'github');
+  const initFailure = failure(initialized);
+  assert.equal(initFailure.error.code, 'GIT_IDENTITY_MISSING');
+  assert.match(initFailure.error.message, /git config --global user\.name/u);
+  assert.match(initFailure.error.message, /git config --global user\.email/u);
+  assert.equal(existsSync(join(fresh, '.tiller/project.json')), false);
+
+  const project = fixture(t);
+  success(cli(project, 'init'));
+  assert.equal(git(project, 'config', '--unset-all', 'user.name').status, 0);
+  assert.equal(git(project, 'config', '--unset-all', 'user.email').status, 0);
+  const id = '20261029-identity-preflight';
+  const started = await cliAt(project, environment, 'start', id, '--title', 'Identity preflight',
+    '--requirement', 'Start fails before creating worktrees.', '--criterion', 'AC-1=Identity is required',
+    '--size', 'small', '--target', '.', '--skip-init-gate');
+  const startFailure = failure(started);
+  assert.equal(startFailure.error.code, 'GIT_IDENTITY_MISSING');
+  assert.equal(existsSync(join(project, `.tiller/local/${id}`)), false);
+  assert.equal(existsSync(join(project, `.tiller/task/${id}/task.md`)), false);
 });
 
 test('CASE-340 init --apply merges, cleans up and fast-forwards; rejected merge stays resumable', async t => {

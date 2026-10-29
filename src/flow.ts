@@ -19,15 +19,16 @@ import {
   applyChanges, assertSafePath, inspectSafePaths, readTextIfExists, validateRelativePath, withProjectLock,
   type ResolvedInputPath,
 } from './files.js';
-import { assertInitBaselineReady, isInitBaselineId, proveInitBaselineMerged } from './init-baseline.js';
+import { assertGitIdentity, assertInitBaselineReady, isInitBaselineId, proveInitBaselineMerged } from './init-baseline.js';
 import { planItemForAttachment, readPlanItem } from './plans.js';
 import { findMergedIntegration, platformToken, resolvePlatformRepository } from './platform-api.js';
 import { releaseChecklist, type ReleaseChecklist } from './release.js';
 import { taskIdWarnings, validateTaskId } from './task-id.js';
 import { resolveProjectRoot, resolveTaskCheckout } from './project-root.js';
 import {
-  cleanupTaskWorktrees, createTaskWorktrees, managementWorktreePath, rollbackTaskWorktrees,
-  syncTaskRecordsToWorktrees, taskBranchName, taskLocalRoot, taskWorktreePaths, writeTaskWorktreeState,
+  cleanupTaskWorktrees, createTaskWorktrees, finalizeTaskCleanup, managementWorktreePath, rollbackTaskWorktrees,
+  syncTaskRecordsToWorktrees, taskBranchName, taskLocalRoot, taskRecoveryRecordPath, taskWorktreePaths,
+  writeTaskWorktreeState,
 } from './task-worktrees.js';
 import {
   namePattern, platformProcessInvocation, resolveVerifyTarget, runnerFor, type TestEvidence, type TestReference,
@@ -567,7 +568,8 @@ export async function readTask(root: string, id: string): Promise<FlowTask> {
   const { primary, taskRoot } = await resolveTaskCheckout(root, id);
   await readProjectMetadata(taskRoot);
   const relative = taskPath(id);
-  const content = await readTextIfExists(taskRoot, relative);
+  const content = await readTextIfExists(taskRoot, relative)
+    ?? await readTextIfExists(primary, taskRecoveryRecordPath(id));
   if (content === null) fail('TASK_NOT_FOUND', `任务 ${id} 不存在；请先执行 start。`);
   const task = parseTask(content, id, relative);
   // Sidecars live under primary `.tiller/local/<id>/`, not inside the worktree checkout.
@@ -1031,6 +1033,7 @@ export async function startFlow(rootInput: string, idInput: string, input: FlowS
   const summary = input.summary === undefined ? undefined : safeInput(text(input.summary, '任务摘要', 200), '任务摘要');
   if ((input.plan === undefined) !== (input.item === undefined)) fail('INVALID_FLOW_INPUT', '--plan 和 --item 必须同时提供。');
   const relative = taskPath(idInput);
+  await assertGitIdentity(root);
   return withProjectLock(root, async () => {
     const metadata = await readProjectMetadata(root);
     if (input.skipInitGate) warnings.push('已通过 --skip-init-gate 跳过初始化基线门禁。');
@@ -2078,10 +2081,7 @@ export async function checkFlow(rootInput: string, id: string, options: FlowChec
   const root = (await resolveTaskCheckout(rootInput, id)).taskRoot;
   return withProjectLock(root, async () => {
     const task = await readTask(root, id);
-    const checked = await evaluateFlow(root, id, task, options);
-    const next = renderTask(task, checked.selfCheck);
-    if (next !== task.content) await writeTask(root, id, task.content, next, task.meta.preExisting);
-    return checked;
+    return evaluateFlow(root, id, task, options);
   });
 }
 
@@ -2135,6 +2135,15 @@ async function nextLogPath(root: string, id: string, previousRuns: number): Prom
     }
   } catch { /* The directory was just created; a missing directory means start at one. */ }
   return `${relativeDirectory}/run-${maximum + 1}.log`;
+}
+
+function nextRunNumber(task: Pick<FlowTask, 'verifications'>): number {
+  let maximum = 0;
+  for (const run of task.verifications) {
+    const match = /^run-(\d+)$/u.exec(run.id);
+    if (match) maximum = Math.max(maximum, Number(match[1]));
+  }
+  return maximum + 1;
 }
 
 function posixRelative(from: string, to: string): string {
@@ -2317,6 +2326,7 @@ export async function verifyFlow(rootInput: string, id: string, input: FlowVerif
     const commit = await currentCommit(root, undefined);
     const tree = await treeDigest(root, task.meta.scope, id);
     const at = new Date().toISOString();
+    const firstRunNumber = nextRunNumber(task);
     for (const [index, reference] of references.entries()) {
       const test = testLabel(reference);
       let command: string;
@@ -2327,7 +2337,7 @@ export async function verifyFlow(rootInput: string, id: string, input: FlowVerif
       let reason: string | undefined;
       let logPath: string | undefined;
       if (!input.reported) {
-        logPath = await nextLogPath(root, id, task.verifications.length + index);
+        logPath = await nextLogPath(root, id, firstRunNumber - 1 + index);
         const observation = expectFail
           ? await executeBaseline(root, task.meta.base, metadata!, reference, logPath, input.verbose === true)
           : await runAdapterTest(root, root, metadata!, reference, logPath, input.verbose === true);
@@ -2350,7 +2360,7 @@ export async function verifyFlow(rootInput: string, id: string, input: FlowVerif
       }
       const caseIds = input.case ? [selectedCase!.id] : casesForTest(library, test).map(item => item.id);
       entries.push({
-        id: `run-${task.verifications.length + index + 1}`,
+        id: `run-${firstRunNumber + index}`,
         criterion: criteria[0]!, test, cases: caseIds, command, result, exitCode, commit, at, tree, source, evidence,
         ...(reason ? { reason } : {}), ...(expectFail ? { expectFail: true, baseline: task.meta.base } : {}),
         ...(logPath ? { log: logPath } : {}),
@@ -2360,7 +2370,7 @@ export async function verifyFlow(rootInput: string, id: string, input: FlowVerif
     for (const [criterionIndex, criterion] of criteria.entries()) {
       for (const [entryIndex, entry] of entries.entries()) {
         nextEntries.push({ ...entry, criterion,
-          id: `run-${task.verifications.length + criterionIndex * entries.length + entryIndex + 1}` });
+          id: `run-${firstRunNumber + criterionIndex * entries.length + entryIndex}` });
       }
     }
     const next: FlowTask = { ...task, verifications: [...task.verifications, ...nextEntries] };
@@ -2524,13 +2534,14 @@ export async function closeFlow(rootInput: string, id: string, reasonInput: stri
       if (!proof.merged) {
         fail('INIT_BASELINE_PENDING', `初始化基线 ${id} 尚未确认合入：${proof.detail}。本机初始化事实未清理。`);
       }
-      const cleanup = await cleanupTaskWorktrees(root, id, metadata);
+      const cleanup = await cleanupTaskWorktrees(root, id, metadata, { taskRoot });
       const branchCleanup = metadata.initBaseline
         ? await cleanupTaskBranches(root, metadata, metadata.initBaseline.branch, options)
         : null;
       if (branchCleanup?.failures.length) {
         fail('TASK_CLEANUP_FAILED', `初始化基线本机分支清理失败：${branchCleanup.failures.join('；')}。`);
       }
+      await finalizeTaskCleanup(root, id);
       const warnings = [...cleanup.warnings, ...(branchCleanup?.warnings ?? [])];
       return { id, stage: '已关闭', stageReason: '初始化基线本机清理完成；共享记录未改写。', reason,
         at: new Date().toISOString(), worktrees: cleanup.removedWorktrees, missingWorktrees: cleanup.missingWorktrees,
@@ -2555,11 +2566,12 @@ export async function closeFlow(rootInput: string, id: string, reasonInput: stri
       }
       const at = new Date().toISOString();
       // Do not materialize `.tiller/task/<id>/` onto primary; merged history arrives via ff/pull.
-      const cleanup = await cleanupTaskWorktrees(root, id, metadata);
+      const cleanup = await cleanupTaskWorktrees(root, id, metadata, { taskRoot });
       const branchCleanup = await cleanupTaskBranches(root, metadata, taskBranchName(task.meta), options);
       if (branchCleanup.failures.length) {
         fail('TASK_CLEANUP_FAILED', `任务本机分支清理失败，未完成关闭：${branchCleanup.failures.join('；')}。`);
       }
+      await finalizeTaskCleanup(root, id);
       const warnings = [...cleanup.warnings, ...branchCleanup.warnings];
       const recordAvailable = await readTextIfExists(root, taskPath(id)) !== null;
       return { id, stage: current.stage, stageReason: '交付验收有效；本机清理完成。', reason, at, path: task.path,
@@ -2573,11 +2585,12 @@ export async function closeFlow(rootInput: string, id: string, reasonInput: stri
       action: 'close', status: 'abandoned', reason,
       at: new Date().toISOString(),
     };
-    const cleanup = await cleanupTaskWorktrees(root, id, metadata);
+    const cleanup = await cleanupTaskWorktrees(root, id, metadata, { abandon: true, taskRoot });
     const branchCleanup = await cleanupTaskBranches(root, metadata, taskBranchName(task.meta), options);
     if (branchCleanup.failures.length) {
       fail('TASK_CLEANUP_FAILED', `任务本机分支清理失败，未完成放弃：${branchCleanup.failures.join('；')}。`);
     }
+    await finalizeTaskCleanup(root, id);
     const warnings = [...cleanup.warnings, ...branchCleanup.warnings];
     return { id, stage: '已放弃', stageReason: '任务已放弃；本机任务事实已清理。', reason, at: closure.at, path: task.path,
       worktrees: cleanup.removedWorktrees, missingWorktrees: cleanup.missingWorktrees, logsRemoved: cleanup.logsRemoved,

@@ -48,6 +48,14 @@ export function taskLocalRoot(id: string): string {
   return relativePath(LOCAL_DIRECTORY, id);
 }
 
+export function taskRecoveryRoot(id: string): string {
+  return relativePath(taskLocalRoot(id), 'recovery');
+}
+
+export function taskRecoveryRecordPath(id: string): string {
+  return relativePath(taskRecoveryRoot(id), '.tiller/task', id, 'task.md');
+}
+
 function worktreeRoot(id: string): string {
   return relativePath(taskLocalRoot(id), 'worktrees');
 }
@@ -164,13 +172,27 @@ async function removeRelative(root: string, relative: string, recursive: boolean
   }
 }
 
-async function moveCwdOutsideTask(root: string, id: string, states: TaskWorktreeState[]): Promise<void> {
+async function resolvedPath(target: string): Promise<string> {
+  try { return await realpath(target); }
+  catch { return path.resolve(target); }
+}
+
+async function prepareCwdForCleanup(root: string, id: string, states: TaskWorktreeState[], abandon: boolean): Promise<void> {
   const cwd = path.resolve(process.cwd());
   const targets = [
     path.resolve(root, ...taskLocalRoot(id).split('/')),
     ...states.flatMap(state => state.worktrees.map(entry => path.resolve(root, ...entry.path.split('/')))),
   ];
-  if (!targets.some(target => isWithinPath(cwd, target))) return;
+  const resolvedCwd = await resolvedPath(cwd);
+  let matched: string | undefined;
+  for (const target of targets) {
+    if (isWithinPath(resolvedCwd, await resolvedPath(target))) { matched = target; break; }
+  }
+  if (matched === undefined) return;
+  if (abandon) {
+    fail('TASK_CLEANUP_FAILED',
+      `调用方 cwd \`${cwd}\` 位于待删任务目录 \`${matched}\` 内；先执行 cd "${path.resolve(root)}" 切到 primary/主仓，再重新运行 tiller close ${id} --abandon。任务记录已保留，可重试。`);
+  }
   const primary = path.resolve(root);
   if (targets.some(target => isWithinPath(primary, target))) {
     fail('TASK_CLEANUP_FAILED', `无法把 cwd 切出待删任务目录：primary 位于 \`${taskLocalRoot(id)}\` 内。`);
@@ -179,6 +201,37 @@ async function moveCwdOutsideTask(root: string, id: string, states: TaskWorktree
     process.chdir(primary);
   } catch (error) {
     fail('TASK_CLEANUP_FAILED', `无法把 cwd 切出待删任务目录：${(error as Error).message}。`);
+  }
+}
+
+async function preserveTaskRecovery(root: string, id: string, taskRoot: string | undefined,
+  states: TaskWorktreeState[]): Promise<void> {
+  const recordDirectory = relativePath('.tiller/task', id);
+  const recordFile = relativePath(recordDirectory, 'task.md');
+  const candidates = [
+    ...(taskRoot === undefined ? [] : [path.resolve(taskRoot)]),
+    path.resolve(root),
+    ...states.flatMap(state => state.worktrees.map(entry => path.resolve(root, ...entry.path.split('/')))),
+  ];
+  let source: string | null = null;
+  for (const candidate of [...new Set(candidates)]) {
+    if (await pathExists(path.resolve(candidate, ...recordFile.split('/')))) {
+      source = candidate;
+      break;
+    }
+  }
+  if (source === null) {
+    if (await pathExists(await assertSafePath(root, taskRecoveryRecordPath(id)))) return;
+    // Initialization baselines have no task record; their retry is identified by project metadata.
+    return;
+  }
+  const recoveryRoot = await assertSafePath(root, taskRecoveryRoot(id));
+  await mkdir(recoveryRoot, { recursive: true });
+  try {
+    await copyTaskDirectory(source, recoveryRoot, recordDirectory);
+  } catch (error) {
+    fail('TASK_CLEANUP_FAILED',
+      `任务记录恢复副本写入失败，未开始破坏性清理：\`${taskRecoveryRoot(id)}\`（${(error as Error).message}）。原任务记录仍在，可修复目录写入后重试。`);
   }
 }
 
@@ -403,13 +456,20 @@ function fallbackStateAt(metadata: ProjectMetadata, id: string, root: string): T
   ] };
 }
 
-export async function cleanupTaskWorktrees(rootInput: string, id: string, metadata: ProjectMetadata): Promise<TaskWorktreeCleanup> {
+export interface TaskWorktreeCleanupOptions {
+  abandon?: boolean;
+  taskRoot?: string;
+}
+
+export async function cleanupTaskWorktrees(rootInput: string, id: string, metadata: ProjectMetadata,
+  options: TaskWorktreeCleanupOptions = {}): Promise<TaskWorktreeCleanup> {
   const root = path.resolve(rootInput);
   const warnings: string[] = [];
   const loaded = await readState(root, id);
   if (loaded.warning) warnings.push(loaded.warning);
   const states = loaded.state ? [loaded.state] : [fallbackStateAt(metadata, id, worktreeRoot(id))];
-  await moveCwdOutsideTask(root, id, states);
+  await prepareCwdForCleanup(root, id, states, options.abandon === true);
+  await preserveTaskRecovery(root, id, options.taskRoot, states);
   const removedWorktrees: string[] = [];
   const missingWorktrees: string[] = [];
   const failures: string[] = [];
@@ -481,8 +541,16 @@ export async function cleanupTaskWorktrees(rootInput: string, id: string, metada
   if (logs.failure) failures.push(logs.failure);
   const containers = await removeRelative(root, worktreeRoot(id), true, '任务 worktree 容器', warnings);
   if (containers.failure) failures.push(containers.failure);
-  const local = await removeRelative(root, taskLocalRoot(id), true, '任务本机目录', warnings);
-  if (local.failure) failures.push(local.failure);
+  const sidecar = await removeRelative(root, sidecarPath(id), false, '任务 worktree 清单', warnings);
+  if (sidecar.failure) failures.push(sidecar.failure);
+  const preExisting = await removeRelative(root, relativePath(taskLocalRoot(id), 'pre-existing.json'),
+    false, '开工前改动旁路', warnings);
+  if (preExisting.failure) failures.push(preExisting.failure);
+  const recoveryExists = await pathExists(await assertSafePath(root, taskRecoveryRoot(id)));
+  if (!recoveryExists) {
+    try { await rmdir(await assertSafePath(root, taskLocalRoot(id))); }
+    catch { /* Unknown task-local content or a concurrent retry remains for finalize. */ }
+  }
   if (failures.length) {
     fail('TASK_CLEANUP_FAILED', `任务本机清理失败，未完成放弃：${failures.join('；')}。`);
   }
@@ -490,5 +558,11 @@ export async function cleanupTaskWorktrees(rootInput: string, id: string, metada
   for (const logPath of observedLogPaths) logsRemain = (await pathExists(logPath)) || logsRemain;
   const logsRemoved = logsExisted && !logsRemain;
   return { removedWorktrees, missingWorktrees, logsRemoved, warnings };
+}
+
+export async function finalizeTaskCleanup(rootInput: string, id: string): Promise<void> {
+  const root = path.resolve(rootInput);
+  const local = await removeRelative(root, taskLocalRoot(id), true, '任务本机目录');
+  if (local.failure) fail('TASK_CLEANUP_FAILED', `${local.failure}；恢复记录仍在，可修复后重试。`);
 }
 
