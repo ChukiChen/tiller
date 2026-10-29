@@ -1,6 +1,6 @@
 # 父 shell cwd 下的 abandon 可重试与流程卫生
 
-<!-- tiller-task:v1 {"version":1,"id":"20261029-fix-abandon-parent-cwd-pack","type":"bugfix","size":"standard","created":"2026-10-29T14:19:35.072Z","base":"5117725a085f79a425c23dc568c256b2ec337002","scope":["src","test",".tiller/specs/modules/workflow",".tiller/cases/modules/workflow",".tiller/cases/modules/verification",".tiller/cases/modules/initialization",".tiller/usage.md",".tiller/context"],"format":"structured","slug":"abandon-parent-cwd-pack","summary":"父 cwd abandon 预检与可重试，并修复 Windows/验证/输入卫生","requirementFile":".tiller/specs/modules/workflow/abandon-parent-cwd-pack.md"} -->
+<!-- tiller-task:v1 {"version":1,"id":"20261029-fix-abandon-parent-cwd-pack","type":"bugfix","size":"standard","created":"2026-10-29T14:19:35.072Z","base":"5117725a085f79a425c23dc568c256b2ec337002","scope":["src","test",".tiller/specs/modules/workflow",".tiller/cases/modules/workflow",".tiller/cases/modules/verification",".tiller/cases/modules/initialization",".tiller/usage.md","resources/usage.md",".tiller/context"],"format":"structured","slug":"abandon-parent-cwd-pack","summary":"父 cwd abandon 预检与可重试，并修复 Windows/验证/输入卫生","requirementFile":".tiller/specs/modules/workflow/abandon-parent-cwd-pack.md"} -->
 
 ## 需求
 
@@ -128,15 +128,161 @@
 
 | 部分 | 确认人 | 时间 | 短提交 | 原话 |
 | --- | --- | --- | --- | --- |
-| 需求 | ChukiChen | 2026-10-29T14:20:02.332Z | 5117725a085f | — |
 | 设计 | ChukiChen | 2026-10-29T14:20:02.485Z | 3c951e34bebb | — |
+| 需求 | ChukiChen | 2026-10-29T16:14:55.768Z | 116989034a42 | — |
 
-<!-- tiller-confirm:v1 {"gate":"requirements","object":"需求正文（目标、范围与验收条件）","subject":"ab20efcf1e2a1cc558d095714de1effe54427e5d997e42725f91a81ec3c71799","commit":"5117725a085f79a425c23dc568c256b2ec337002","by":"ChukiChen","quote":"","at":"2026-10-29T14:20:02.332Z"} -->
 <!-- tiller-confirm:v1 {"gate":"design","object":"设计正文","subject":"fb907caefff9484b44116ffba936bc5db7891ad6cd05f3ccd4c67c0f955c1137","commit":"3c951e34bebbc03e6c1158004c281981ecf85ff1","by":"ChukiChen","quote":"","at":"2026-10-29T14:20:02.485Z"} -->
+<!-- tiller-confirm:v1 {"gate":"requirements","object":"需求正文（目标、范围与验收条件）","subject":"86352ab6dfd975f529c6fe576b058bff0d37e5b2de8e658250b846ec466c9be8","commit":"116989034a4281c54bb340638e4dda0aaf3e9225","by":"ChukiChen","quote":"","at":"2026-10-29T16:14:55.768Z"} -->
 
 ## 验证
 
-尚无验证。
+### run-1
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-362 init and start reject missing Git identity before writes$' \u002d\u002dtest-reporter=./.tiller/local/verify-xZWtHv/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-xZWtHv/report.jsonl test/init-baseline.test.mjs","exitCode":0,"tree":"43f3032a49bc88eb7ddc31ff356329cf3c947f274c190e5c14d36e513ddfba90","commit":"a94ef2fd18cbeb4e5b7717397bb8757bfa53df58"} -->
+- 条件：AC-6
+- 测试：test/init-baseline.test.mjs::CASE-362 init and start reject missing Git identity before writes
+- 用例：无
+- 结果：passed
+- 来源：executed
+- 核实：未核实
+- 预期：失败先行
+- 基线提交：5117725a085f79a425c23dc568c256b2ec337002
+- 日志：.tiller/local/20261029-fix-abandon-parent-cwd-pack/logs/run-3.log
+- 提交：a94ef2fd18cb
+- 时间：2026-10-29T14:28:04.087Z
+
+### run-2
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-362 init and start reject missing Git identity before writes$' \u002d\u002dtest-reporter=./.tiller/local/verify-yjuqmo/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-yjuqmo/report.jsonl test/init-baseline.test.mjs","exitCode":1,"tree":"4641c421f6a6cd977e2fdc7d2558bdc5da842c6d8dca84d6fe71fb41ae674d41","commit":"a94ef2fd18cbeb4e5b7717397bb8757bfa53df58"} -->
+- 条件：AC-6
+- 测试：test/init-baseline.test.mjs::CASE-362 init and start reject missing Git identity before writes
+- 用例：CASE-362
+- 结果：failed
+- 来源：executed
+- 核实：已核实
+- 预期：失败先行
+- 基线提交：5117725a085f79a425c23dc568c256b2ec337002
+- 日志：.tiller/local/20261029-fix-abandon-parent-cwd-pack/logs/run-4.log
+- 提交：a94ef2fd18cb
+- 时间：2026-10-29T14:32:32.471Z
+
+### run-3
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-355 CASE-356 abandon 清理中途失败保留恢复记录并可重试$' \u002d\u002dtest-reporter=./.tiller/local/verify-EZe6tc/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-EZe6tc/report.jsonl test/task-worktrees.test.mjs","exitCode":0,"tree":"fab198e85bdc85bab4eb5da20a0e03dc91b70c06e256233a41517ad4e27c853c","commit":"116989034a4281c54bb340638e4dda0aaf3e9225"} -->
+- 条件：AC-1
+- 测试：test/task-worktrees.test.mjs::CASE-355 CASE-356 abandon 清理中途失败保留恢复记录并可重试
+- 用例：CASE-355, CASE-356
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/20261029-fix-abandon-parent-cwd-pack/logs/run-5.log
+- 提交：116989034a42
+- 时间：2026-10-29T16:14:16.612Z
+
+### run-4
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-317 CASE-356 accepted abandon from a worktree subdirectory rejects before cleanup and succeeds after retry from primary$' \u002d\u002dtest-reporter=./.tiller/local/verify-6mabiT/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-6mabiT/report.jsonl test/task-worktrees.test.mjs","exitCode":0,"tree":"fab198e85bdc85bab4eb5da20a0e03dc91b70c06e256233a41517ad4e27c853c","commit":"116989034a4281c54bb340638e4dda0aaf3e9225"} -->
+- 条件：AC-1
+- 测试：test/task-worktrees.test.mjs::CASE-317 CASE-356 accepted abandon from a worktree subdirectory rejects before cleanup and succeeds after retry from primary
+- 用例：CASE-317, CASE-356
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/20261029-fix-abandon-parent-cwd-pack/logs/run-6.log
+- 提交：116989034a42
+- 时间：2026-10-29T16:14:19.433Z
+
+### run-5
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-317 CASE-356 accepted abandon from a worktree subdirectory rejects before cleanup and succeeds after retry from primary$' \u002d\u002dtest-reporter=./.tiller/local/verify-6mabiT/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-6mabiT/report.jsonl test/task-worktrees.test.mjs","exitCode":0,"tree":"fab198e85bdc85bab4eb5da20a0e03dc91b70c06e256233a41517ad4e27c853c","commit":"116989034a4281c54bb340638e4dda0aaf3e9225"} -->
+- 条件：AC-3
+- 测试：test/task-worktrees.test.mjs::CASE-317 CASE-356 accepted abandon from a worktree subdirectory rejects before cleanup and succeeds after retry from primary
+- 用例：CASE-317, CASE-356
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/20261029-fix-abandon-parent-cwd-pack/logs/run-6.log
+- 提交：116989034a42
+- 时间：2026-10-29T16:14:19.433Z
+
+### run-6
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-322 accepted but unmerged task abandons from primary by cleaning only local facts$' \u002d\u002dtest-reporter=./.tiller/local/verify-usD9Hl/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-usD9Hl/report.jsonl test/task-worktrees.test.mjs","exitCode":0,"tree":"fab198e85bdc85bab4eb5da20a0e03dc91b70c06e256233a41517ad4e27c853c","commit":"116989034a4281c54bb340638e4dda0aaf3e9225"} -->
+- 条件：AC-3
+- 测试：test/task-worktrees.test.mjs::CASE-322 accepted but unmerged task abandons from primary by cleaning only local facts
+- 用例：CASE-322
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/20261029-fix-abandon-parent-cwd-pack/logs/run-7.log
+- 提交：116989034a42
+- 时间：2026-10-29T16:14:22.188Z
+
+### run-7
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-352 CASE-357 Windows cmd invocation keeps one outer command layer and exact Maven argv$' \u002d\u002dtest-reporter=./.tiller/local/verify-zNMl6u/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-zNMl6u/report.jsonl test/windows-fresh-hygiene.test.mjs","exitCode":0,"tree":"fab198e85bdc85bab4eb5da20a0e03dc91b70c06e256233a41517ad4e27c853c","commit":"116989034a4281c54bb340638e4dda0aaf3e9225"} -->
+- 条件：AC-2
+- 测试：test/windows-fresh-hygiene.test.mjs::CASE-352 CASE-357 Windows cmd invocation keeps one outer command layer and exact Maven argv
+- 用例：CASE-352, CASE-357
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/20261029-fix-abandon-parent-cwd-pack/logs/run-8.log
+- 提交：116989034a42
+- 时间：2026-10-29T16:14:24.671Z
+
+### run-8
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-358 check is read-only for task\\.md and the working tree$' \u002d\u002dtest-reporter=./.tiller/local/verify-0f9fY3/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-0f9fY3/report.jsonl test/flow-cli.test.mjs","exitCode":0,"tree":"fab198e85bdc85bab4eb5da20a0e03dc91b70c06e256233a41517ad4e27c853c","commit":"116989034a4281c54bb340638e4dda0aaf3e9225"} -->
+- 条件：AC-4
+- 测试：test/flow-cli.test.mjs::CASE-358 check is read-only for task.md and the working tree
+- 用例：CASE-358
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/20261029-fix-abandon-parent-cwd-pack/logs/run-9.log
+- 提交：116989034a42
+- 时间：2026-10-29T16:14:25.491Z
+
+### run-9
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-359 verify numbers after the maximum run and PR marks only the current result$' \u002d\u002dtest-reporter=./.tiller/local/verify-mwAe8S/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-mwAe8S/report.jsonl test/pr.test.mjs","exitCode":0,"tree":"fab198e85bdc85bab4eb5da20a0e03dc91b70c06e256233a41517ad4e27c853c","commit":"116989034a4281c54bb340638e4dda0aaf3e9225"} -->
+- 条件：AC-5
+- 测试：test/pr.test.mjs::CASE-359 verify numbers after the maximum run and PR marks only the current result
+- 用例：CASE-359
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/20261029-fix-abandon-parent-cwd-pack/logs/run-10.log
+- 提交：116989034a42
+- 时间：2026-10-29T16:14:27.152Z
+
+### run-10
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-360 specs-only scope prefers specs and allows an explicit module override$' \u002d\u002dtest-reporter=./.tiller/local/verify-ruMZdc/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-ruMZdc/report.jsonl test/pr.test.mjs","exitCode":0,"tree":"fab198e85bdc85bab4eb5da20a0e03dc91b70c06e256233a41517ad4e27c853c","commit":"116989034a4281c54bb340638e4dda0aaf3e9225"} -->
+- 条件：AC-6
+- 测试：test/pr.test.mjs::CASE-360 specs-only scope prefers specs and allows an explicit module override
+- 用例：CASE-360
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/20261029-fix-abandon-parent-cwd-pack/logs/run-11.log
+- 提交：116989034a42
+- 时间：2026-10-29T16:14:29.795Z
+
+### run-11
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-361 case add \u002d\u002dinput-file preserves literal double quotes without subcommand confusion$' \u002d\u002dtest-reporter=./.tiller/local/verify-P1mbOr/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-P1mbOr/report.jsonl test/task-worktrees.test.mjs","exitCode":0,"tree":"fab198e85bdc85bab4eb5da20a0e03dc91b70c06e256233a41517ad4e27c853c","commit":"116989034a4281c54bb340638e4dda0aaf3e9225"} -->
+- 条件：AC-6
+- 测试：test/task-worktrees.test.mjs::CASE-361 case add --input-file preserves literal double quotes without subcommand confusion
+- 用例：CASE-361
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/20261029-fix-abandon-parent-cwd-pack/logs/run-12.log
+- 提交：116989034a42
+- 时间：2026-10-29T16:14:32.460Z
+
+### run-12
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-362 init and start reject missing Git identity before writes$' \u002d\u002dtest-reporter=./.tiller/local/verify-ClSJmR/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-ClSJmR/report.jsonl test/init-baseline.test.mjs","exitCode":0,"tree":"fab198e85bdc85bab4eb5da20a0e03dc91b70c06e256233a41517ad4e27c853c","commit":"116989034a4281c54bb340638e4dda0aaf3e9225"} -->
+- 条件：AC-6
+- 测试：test/init-baseline.test.mjs::CASE-362 init and start reject missing Git identity before writes
+- 用例：CASE-362
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/20261029-fix-abandon-parent-cwd-pack/logs/run-13.log
+- 提交：116989034a42
+- 时间：2026-10-29T16:14:33.960Z
 
 ## 自检
 
