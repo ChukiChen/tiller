@@ -2555,3 +2555,55 @@ logsRemoved 为 true，不再因日志目录已随后续本机目录删除而误
 ### 预期结果
 
 换行变体得到同一设计/交付摘要且确认继续有效；实质内容变化使对应确认失效，close/resume 不因换行误报
+
+## CASE-351 孤立 CR 任务记录保持阶段、确认与验证事实
+
+- 类型：behavior
+- 优先级：high
+- 模块：workflow
+- 关联 AC：AC-1
+- 需求：`.tiller/specs/modules/workflow/windows-residual-hardening.md`
+
+### 前置条件
+
+- 存在已确认且已验证的合格任务记录
+
+### 步骤
+
+1. 分别把任务正文与 sidecar 的新行改为 LF、CRLF、孤立 CR
+2. 执行 resume 并读取阶段、验收点、确认与验证
+3. 修改一条实质正文或验证事实后重新核对
+
+### 输入
+
+- 仅换行不同的三份任务记录，以及一份实质内容不同的记录
+
+### 预期结果
+
+LF、CRLF、孤立 CR 三种任务字节变体得到相同验收点、阶段、确认和验证事实；resume 不回退为已开始且不改写正文；实质内容变化仍使对应确认或验收失效
+
+## CASE-353 Windows junit-maven 直接 verify 启动真实 Maven 并核实私有报告
+
+- 类型：behavior
+- 优先级：high
+- 模块：workflow
+- 关联 AC：AC-2
+- 需求：`.tiller/specs/modules/workflow/windows-residual-hardening.md`
+
+### 前置条件
+
+- Windows 环境可用 cmd.exe、Maven 与 JDK，Java fixture 可生成 Surefire 报告
+
+### 步骤
+
+1. 对通过的测试执行 tiller verify junit-maven
+2. 对失败测试执行 tiller verify junit-maven
+3. 移除或破坏私有报告后再次执行
+
+### 输入
+
+- 通过和失败的真实 Maven 测试选择器，以及缺失/损坏报告场景
+
+### 预期结果
+
+Windows 上 tiller verify 启动真实 mvn.cmd；通过时从私有 Surefire 报告核实唯一测试，失败退出码原样传播，报告缺失或测试失败时不得记为通过

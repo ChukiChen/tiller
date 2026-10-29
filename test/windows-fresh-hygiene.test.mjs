@@ -112,6 +112,37 @@ function replaceSection(content, title, body) {
   return [...lines.slice(0, start + 1), '', body, '', ...lines.slice(end)].join('\n');
 }
 
+function commitFixture(root, message) {
+  okGit(root, 'add', '.');
+  okGit(root, 'commit', '--quiet', '-m', message);
+}
+
+function taskRecord(root, id) {
+  return join(root, '.tiller/local', id, 'worktrees/.tiller/task', id, 'task.md');
+}
+
+function commandTokens(value) {
+  const tokens = [];
+  let index = 0;
+  while (index < value.length) {
+    while (value[index] === ' ') index++;
+    if (index >= value.length) break;
+    let token = '';
+    if (value[index] === '"') {
+      index++;
+      while (index < value.length && value[index] !== '"') {
+        token += value[index++];
+      }
+      if (value[index] !== '"') throw new Error(`unterminated quoted token: ${value}`);
+      index++;
+    } else {
+      while (index < value.length && value[index] !== ' ') token += value[index++];
+    }
+    tokens.push(token);
+  }
+  return tokens;
+}
+
 test('CASE-347 LF, CRLF and isolated CR design bodies keep confirmation subjects stable', async t => {
   const root = fixture(t);
   put(root, '.tiller/project.json', `${JSON.stringify(projectMetadata(), null, 2)}\n`);
@@ -159,6 +190,102 @@ test('CASE-347 LF, CRLF and isolated CR design bodies keep confirmation subjects
   const rechecked = invoke(root, ['check', id]);
   const changedGates = new Map(rechecked.data.confirmations.map(item => [item.gate, item]));
   assert.equal(changedGates.get('design').confirmed, false);
+});
+
+test('CASE-351 isolated CR keeps task criteria, confirmations, verification and acceptance', async t => {
+  const root = fixture(t);
+  put(root, '.tiller/project.json', `${JSON.stringify(projectMetadata({ verify: { runner: 'node-test' } }), null, 2)}\n`);
+  put(root, '.tiller/specs/modules/workflow/residual.md', '# Residual\n\n## 验收条件\n\n- AC-1: 生命周期在三种换行下等价\n');
+  put(root, '.tiller/cases/modules/workflow/behavior.md', `# workflow / behavior
+
+## CASE-351 lifecycle record
+
+- 类型：behavior
+- 优先级：high
+- 模块：workflow
+- 关联 AC：AC-1
+- 需求：\`.tiller/specs/modules/workflow/residual.md\`
+
+### 前置条件
+
+- 任务记录已确认并验收。
+
+### 步骤
+
+1. 运行 CASE-351 具名测试。
+
+### 输入
+
+- 正常输入。
+
+### 预期结果
+
+生命周期事实保持不变。
+`);
+  put(root, 'test/eol-proof.test.mjs', "import assert from 'node:assert/strict';\nimport test from 'node:test';\ntest('CASE-351 lifecycle proof', () => assert.equal(1, 1));\n");
+  commitFixture(root, 'test fixture');
+
+  const id = '20261029-isolated-cr-lifecycle';
+  const started = invoke(root, ['start', id, '--title', 'Isolated CR lifecycle', '--type', 'feature', '--size', 'standard',
+    '--requirement', 'Lifecycle body remains stable.', '--criterion', 'AC-1=Lifecycle survives all EOLs',
+    '--target', '.']);
+  assert.equal(started.status, 0, started.stdout || started.stderr);
+  let content = readFileSync(taskRecord(root, id), 'utf8');
+  content = replaceSection(content, '使用场景', 'A Windows record may use isolated carriage returns.');
+  content = replaceSection(content, '业务范围', ['- 做：保留任务事实。', '- 不做：改写用户正文。', '- 假设与待确认：无。'].join('\n'));
+  content = replaceSection(content, '关键行为', 'Lifecycle body remains stable.');
+  content = replaceSection(content, '异常与边界', 'Substantive changes still invalidate confirmation.');
+  content = replaceSection(content, '方案', 'Keep parsing in one logical-line helper.');
+  content = replaceSection(content, '失败处理', 'Damaged records still fail closed.');
+  content = replaceSection(content, '取舍', 'Read without normalizing or writing the record.');
+  content = replaceSection(content, '影响与风险', 'Only task line parsing changes.');
+  content = replaceSection(content, '验证入口', 'Run CASE-351 across LF, CRLF and isolated CR.');
+  writeFileSync(taskRecord(root, id), content);
+
+  assert.equal(invoke(root, ['confirm', id, 'requirements', '--by', 'ChukiChen']).status, 0);
+  assert.equal(invoke(root, ['confirm', id, 'design', '--by', 'ChukiChen']).status, 0);
+  const verified = invoke(root, ['verify', id, '--criterion', 'AC-1',
+    '--test', 'test/eol-proof.test.mjs::CASE-351 lifecycle proof']);
+  assert.equal(verified.status, 0, verified.stdout || verified.stderr);
+  assert.equal(verified.data.entries[0].evidence, 'verified');
+  assert.equal(invoke(root, ['accept', id, '--by', 'ChukiChen']).status, 0);
+
+  const canonical = readFileSync(taskRecord(root, id), 'utf8').replace(/\r\n|\r|\n/gu, '\n');
+  const flow = await distModule('flow.js');
+  for (const [label, eol] of [['LF', '\n'], ['CRLF', '\r\n'], ['isolated CR', '\r']]) {
+    const variant = canonical.replace(/\n/gu, eol);
+    writeFileSync(taskRecord(root, id), variant);
+    const before = readFileSync(taskRecord(root, id));
+    const resumed = invoke(root, ['resume', id]);
+    assert.equal(resumed.status, 0, `${label}: ${resumed.stdout || resumed.stderr}`);
+    assert.ok(before.equals(readFileSync(taskRecord(root, id))), `${label}: resume rewrote task.md`);
+    assert.equal(resumed.data.stage, '已验收', label);
+    assert.deepEqual(resumed.data.criteria.map(item => item.id), ['AC-1'], label);
+    assert.deepEqual(resumed.data.confirmations.map(item => item.gate), ['requirements', 'design', 'acceptance'], label);
+    assert.equal(resumed.data.verifications.length, 1, label);
+    assert.equal(resumed.data.verifications[0].cases[0], 'CASE-351', label);
+    const inspected = await flow.inspectFlow(root, id);
+    assert.deepEqual(inspected.confirmations.map(item => [item.gate, item.confirmed]),
+      [['requirements', true], ['design', true], ['acceptance', true]], label);
+    assert.equal(inspected.acceptance.confirmed, true, label);
+  }
+
+  const requirementChanged = canonical.replace('Lifecycle body remains stable.', 'Lifecycle body has changed.');
+  writeFileSync(taskRecord(root, id), requirementChanged);
+  const staleRequirements = await flow.inspectFlow(root, id);
+  assert.equal(staleRequirements.confirmations.find(item => item.gate === 'requirements').confirmed, false);
+  assert.equal(staleRequirements.acceptance.confirmed, false);
+
+  const designChanged = canonical.replace('Keep parsing in one logical-line helper.', 'Keep parsing in two helpers.');
+  writeFileSync(taskRecord(root, id), designChanged);
+  const staleDesign = await flow.inspectFlow(root, id);
+  assert.equal(staleDesign.confirmations.find(item => item.gate === 'design').confirmed, false);
+  assert.equal(staleDesign.acceptance.confirmed, false);
+
+  const verificationChanged = canonical.replace('- 结果：passed', '- 结果：failed');
+  writeFileSync(taskRecord(root, id), verificationChanged);
+  const staleVerification = await flow.inspectFlow(root, id);
+  assert.equal(staleVerification.acceptance.confirmed, false);
 });
 
 test('CASE-348 fresh clone uniquely binds initBaseline.commit through merged integration commits', async t => {
@@ -291,6 +418,64 @@ test('CASE-349 Windows test invocation and adapter helpers avoid POSIX shell dep
   for (const relative of ['test/helpers.mjs', 'scripts/package-smoke.mjs', '.tiller/run.cjs']) {
     const content = readFileSync(join(repository, relative), 'utf8');
     assert.doesNotMatch(content, /\/bin\/sh/u, relative);
+  }
+});
+
+test('CASE-352 Windows cmd invocation keeps one outer command layer and exact Maven argv', async t => {
+  const output = await distModule('test-output.js');
+  const built = output.runnerFor('junit-maven').build(
+    { path: 'src/test/java/com/example/BillingTest.java', name: 'com.example.BillingTest#addsInvoice' },
+    { reporter: './reporter.mjs', report: '.tiller/local/verify-x/report.jsonl' },
+  );
+  const invocation = output.platformProcessInvocation(built.executable, built.args, 'win32', 'C:\\Windows\\System32\\cmd.exe');
+  assert.equal(invocation.executable, 'C:\\Windows\\System32\\cmd.exe');
+  assert.deepEqual(invocation.args.slice(0, 3), ['/d', '/s', '/c']);
+  assert.equal(invocation.windowsVerbatimArguments, true);
+  assert.equal(invocation.args.length, 4);
+
+  const commandLine = invocation.args[3];
+  assert.equal(commandLine.startsWith('"'), true, commandLine);
+  assert.equal(commandLine.endsWith('"'), true, commandLine);
+  const stripped = commandLine.slice(1, -1);
+  assert.equal(stripped.startsWith('mvn.cmd '), true, commandLine);
+  assert.equal((stripped.match(/"/gu) ?? []).length, built.args.length * 2, commandLine);
+  assert.deepEqual(commandTokens(stripped), ['mvn.cmd', ...built.args]);
+  assert.deepEqual(built.args, [
+    '-Dsurefire.reportsDirectory=.tiller/local/verify-x',
+    '-Dtest=com.example.BillingTest#addsInvoice',
+    'test',
+  ]);
+
+  for (const unsupported of ['100%', 'a!b', 'a^b', 'a\nb']) {
+    assert.throws(() => output.platformProcessInvocation('mvn', [unsupported], 'win32',
+      'C:\\Windows\\System32\\cmd.exe'), error => error.code === 'VERIFY_COMMAND_UNSUPPORTED', unsupported);
+  }
+
+  if (process.platform === 'win32') {
+    const root = fixture(t);
+    const directory = join(root, 'space dir');
+    mkdirSync(directory, { recursive: true });
+    const script = join(directory, 'record.cmd');
+    writeFileSync(script, [
+      '@echo off',
+      'setlocal EnableDelayedExpansion',
+      'set "ARG1=%~1"',
+      'set "ARG2=%~2"',
+      'set "ARG3=%~3"',
+      '> "%~dp0argv.txt" (',
+      '  echo(!ARG1!',
+      '  echo(!ARG2!',
+      '  echo(!ARG3!',
+      ')',
+      '',
+    ].join('\r\n'));
+    const native = output.platformProcessInvocation(script, ['space here', 'a&b', '$HOME'], 'win32',
+      process.env.ComSpec || 'cmd.exe');
+    const run = spawnSync(native.executable, native.args, { cwd: root, encoding: 'utf8', timeout: 30_000, windowsHide: true });
+    assert.ifError(run.error);
+    assert.equal(run.status, 0, run.stderr || run.stdout);
+    assert.deepEqual(readFileSync(join(directory, 'argv.txt'), 'utf8').trim().split(/\r?\n/u),
+      ['space here', 'a&b', '$HOME']);
   }
 });
 
