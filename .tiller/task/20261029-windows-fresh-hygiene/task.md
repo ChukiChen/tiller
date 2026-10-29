@@ -88,8 +88,10 @@
 | 部分 | 确认人 | 时间 | 短提交 | 原话 |
 | --- | --- | --- | --- | --- |
 | 需求 | ChukiChen | 2026-10-29T01:06:02.032Z | 8eac81b800bb | — |
+| 设计 | ChukiChen | 2026-10-29T01:19:49.930Z | 3f2ee84f48c6 | — |
 
 <!-- tiller-confirm:v1 {"gate":"requirements","object":"需求正文（目标、范围与验收条件）","subject":"ed295599a7d7c95821628420f2f959c215b0130ef56b6f0f845c4f766f8fc472","commit":"8eac81b800bb72502b4bcd227d53c34f73db03e7","by":"ChukiChen","quote":"","at":"2026-10-29T01:06:02.032Z"} -->
+<!-- tiller-confirm:v1 {"gate":"design","object":"设计正文","subject":"c060475c40a661bbed21af9a0faa67286b82c442eed8697946154b27edda27d9","commit":"3f2ee84f48c69e32479273b05f13e31a5e89424f","by":"ChukiChen","quote":"","at":"2026-10-29T01:19:49.930Z"} -->
 
 ## 验证
 
@@ -97,7 +99,7 @@
 
 ## 自检
 
-- [ ] 需求确认有效
+- [x] 需求确认有效
 - [ ] 设计确认有效
 - [ ] 验收条件均有当前通过且绑定全局用例的测试引用
 - [ ] 每条验收条件均映射到本次验证引用的全局用例
@@ -111,18 +113,20 @@
 - [x] 记录不含密钥或本机绝对路径
 
 阻塞项：
-- 缺少需求确认。
 - 缺少设计确认。
 - AC-1 尚无验证。
 - AC-2 尚无验证。
 - AC-3 尚无验证。
 - AC-4 尚无验证。
 - bugfix 任务缺少失败先行验证：先在任务基线运行 verify --expect-fail --test "<文件::测试名>"。
-- 交付范围存在未提交改动：.tiller/specs/decisions.md、.tiller/specs/modules/initialization/design.md、.tiller/specs/modules/initialization/requirements.md、.tiller/specs/modules/verification/design.md、.tiller/specs/modules/verification/requirements.md、.tiller/specs/modules/workflow/design.md、.tiller/specs/modules/workflow/requirements.md、.tiller/specs/modules/workflow/windows-fresh-hygiene-design.md、.tiller/specs/modules/workflow/windows-fresh-hygiene.md
 
 提示：
 - 166 条历史用例仍以 <任务>#AC-n 记录关联 AC；这是可迁移的历史债，不阻断当前覆盖。
 - 143 条用例的关联 AC 为无；覆盖以需求字段和 verify 的 AC→测试→CASE 记录为准。
-- 本次改动涉及模块 initialization：建议回归该模块 64 条用例；建议同时回归经过它的场景 CASE-055, CASE-001。
-- 本次改动涉及模块 verification：建议回归该模块 50 条用例；建议同时回归经过它的场景 CASE-055, CASE-001。
-- 本次改动涉及模块 workflow：建议回归该模块 170 条用例；建议同时回归经过它的场景 CASE-055, CASE-001。
+- 用例 CASE-348 待实现：尚无测试名引用 CASE-348。
+- 用例 CASE-350 待实现：尚无测试名引用 CASE-350。
+- 用例 CASE-349 待实现：尚无测试名引用 CASE-349。
+- 用例 CASE-347 待实现：尚无测试名引用 CASE-347。
+- 本次改动涉及模块 initialization：建议回归该模块 66 条用例；建议同时回归经过它的场景 CASE-055, CASE-001。
+- 本次改动涉及模块 verification：建议回归该模块 51 条用例；建议同时回归经过它的场景 CASE-055, CASE-001。
+- 本次改动涉及模块 workflow：建议回归该模块 171 条用例；建议同时回归经过它的场景 CASE-055, CASE-001。
