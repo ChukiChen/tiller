@@ -81,9 +81,11 @@
 | --- | --- | --- | --- | --- |
 | 需求 | ChukiChen | 2026-10-29T06:33:34.452Z | 553322e6478d | — |
 | 设计 | ChukiChen | 2026-10-29T06:33:34.570Z | d0df5a93d618 | — |
+| 交付验收 | ChukiChen | 2026-10-29T06:43:40.787Z | b2ecf4ba48e3 | — |
 
 <!-- tiller-confirm:v1 {"gate":"requirements","object":"需求正文（目标、范围与验收条件）","subject":"73961fe966139f3a5e440643c8b305cf46d22e4ba3f324c608a8bc9a95437b72","commit":"553322e6478d2d1a4a72e4c16c52af9eecbe2ced","by":"ChukiChen","quote":"","at":"2026-10-29T06:33:34.452Z"} -->
 <!-- tiller-confirm:v1 {"gate":"design","object":"设计正文","subject":"72bb5b0bc94aa6400ea8adff635d47d0d45f7f16fbb5ac3ab988c6f67ae7c148","commit":"d0df5a93d6185e8b9d51281ccba1ca6d7f3f71d0","by":"ChukiChen","quote":"","at":"2026-10-29T06:33:34.570Z"} -->
+<!-- tiller-confirm:v1 {"gate":"acceptance","object":"当前交付（需求、设计、验证与提交）","subject":"afbccf767ac95d1b010682e97ba5adc2c9cbd75f9e48fe02011be002149bd6be","commit":"b2ecf4ba48e3902c1e3b9a293e9163b653a1ffee","by":"ChukiChen","quote":"","at":"2026-10-29T06:43:40.787Z"} -->
 
 ## 验证
 
@@ -175,4 +177,23 @@
 
 ## 自检
 
-交付前运行 check；验收后运行 accept。
+- [x] 需求确认有效
+- [x] 设计确认有效
+- [x] 验收条件均有当前通过且绑定全局用例的测试引用
+- [x] 每条验收条件均映射到本次验证引用的全局用例
+- [x] 验收条件与用例通过 verify 的 AC→测试→CASE 记录关联
+- [x] 验证命令已执行且测试输出已核实
+- [x] 缺陷修复包含基线失败与当前通过证据
+- [x] 全局用例结构与引用有效
+- [x] 改动未超出范围
+- [x] 未弱化仍存在的测试
+- [x] 评审无未清除阻塞项
+- [x] 记录不含密钥或本机绝对路径
+
+提示：
+- 166 条历史用例仍以 <任务>#AC-n 记录关联 AC；这是可迁移的历史债，不阻断当前覆盖。
+- 143 条用例的关联 AC 为无；覆盖以需求字段和 verify 的 AC→测试→CASE 记录为准。
+- 本次改动涉及模块 initialization：建议回归该模块 66 条用例；建议同时回归经过它的场景 CASE-055, CASE-001。
+- 本次改动涉及模块 standards：建议回归该模块 37 条用例；建议同时回归经过它的场景 CASE-055。
+- 本次改动涉及模块 verification：建议回归该模块 51 条用例；建议同时回归经过它的场景 CASE-055, CASE-001。
+- 本次改动涉及模块 workflow：建议回归该模块 174 条用例；建议同时回归经过它的场景 CASE-055, CASE-001。
