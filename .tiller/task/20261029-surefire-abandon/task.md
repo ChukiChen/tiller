@@ -66,11 +66,11 @@
 
 | 部分 | 确认人 | 时间 | 短提交 | 原话 |
 | --- | --- | --- | --- | --- |
-| 设计 | ChukiChen | 2026-10-29T08:08:10.472Z | 17f4b6805d51 | — |
 | 需求 | ChukiChen | 2026-10-29T08:24:09.165Z | 83d30aedf6ed | — |
+| 设计 | ChukiChen | 2026-10-29T08:24:09.446Z | 4570eb7884f6 | — |
 
-<!-- tiller-confirm:v1 {"gate":"design","object":"设计正文","subject":"b40185019acfbee43bb340500b51b3b36a5ebb7d11a35be9dce4f2dc149966a7","commit":"17f4b6805d517e7f8f412f23de2e56d7a975ee05","by":"ChukiChen","quote":"","at":"2026-10-29T08:08:10.472Z"} -->
 <!-- tiller-confirm:v1 {"gate":"requirements","object":"需求正文（目标、范围与验收条件）","subject":"2870dc14be66ee51e9ecc8de713a28af5c3ab75815a449b8d55827a68bb3072c","commit":"83d30aedf6ed1b6daec17d5ba7ea2cec96043547","by":"ChukiChen","quote":"","at":"2026-10-29T08:24:09.165Z"} -->
+<!-- tiller-confirm:v1 {"gate":"design","object":"设计正文","subject":"fdd1544f2efdeabbe6ce1e63d9924df12806a573571b1b7dce02e09be1637bef","commit":"4570eb7884f6b793095a7c74854b83f95c78f26f","by":"ChukiChen","quote":"","at":"2026-10-29T08:24:09.446Z"} -->
 
 ## 验证
 
