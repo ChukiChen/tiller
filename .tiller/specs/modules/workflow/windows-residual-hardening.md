@@ -9,14 +9,14 @@ Windows 编辑器、旧工具或跨平台同步可能在 `task.md` 中留下孤�
 ## 目标
 
 - 让同一任务记录在 LF、CRLF 与孤立 CR 下得到等价的解析、确认摘要和交付阶段，且不静默改写用户正文。
-- 让 Windows 上的 `tiller verify` 通过正确的命令解释器封装启动真实 `mvn.cmd`，把 Surefire 私有报告、测试选择器与退出码原样带入既有验证链路。
+- 让 Windows 上的 `tiller verify` 通过正确的命令解释器封装启动真实 `mvn.cmd`，把精确测试选择器、默认 Surefire 报告与退出码原样带入既有验证链路。
 - 用可重复的命令封装契约测试和 Windows 原生集成证据锁定上述行为。
 
 ## 业务范围
 
 - 做：统一任务正文、确认标记、验证/关闭/评审字段与相关记录安全扫描的行解析；保持现有确认摘要和验收判定语义；修正 Windows 命令脚本启动封装；补充对应的长期规格、CASE 与回归测试。
 - 不做：修复 `gradle.bat` 的 APP_HOME 或 NEW-03；自动安装 Maven、JDK 或 `cmd.exe`；改变确认字段、subject/hash 算法、验证私有报告格式或 AC/CASE 编号语义；在 `resume` 中自动归一并写回用户正文；恢复 POSIX shell 依赖。
-- 假设：孤立 CR 缺陷可由同一已确认/已验收任务的换行变体稳定复现；Windows 或等价 CI 环境可运行 `cmd.exe` 与 Maven 集成测试；真实 Maven 工程的 Surefire 报告与现有解析契约兼容。
+- 假设：孤立 CR 缺陷可由同一已确认/已验收任务的换行变体稳定复现；Windows 或等价 CI 环境可运行 `cmd.exe` 与 Maven 集成测试；真实 Maven 工程把本次 XML 写到默认 `target/surefire-reports` 并与现有解析契约兼容。
 
 ## 关键行为
 
@@ -31,7 +31,7 @@ Windows 编辑器、旧工具或跨平台同步可能在 `task.md` 中留下孤�
 
 - Windows 上 `junit-maven` 的逻辑入口继续映射为 `mvn.cmd`；实际启动使用 `ComSpec`/`cmd.exe`，POSIX 继续直接使用 `mvn`。
 - 命令解释器封装必须把可执行文件与每个参数作为完整 argv 边界传递，只生成命令解释器所需的唯一外层引用；不得对已引用参数再次包裹整条命令，也不得让 `&`、空格、括号等字符被解释为额外命令。
-- Surefire 私有报告目录、精确 `Class#method` 选择器、cwd、环境、超时、stdout/stderr 捕获和退出码继续沿用现有 runner 契约。Maven 非零退出码原样传播；报告缺失、损坏、匹配不唯一、失败或跳过仍不可核实。
+- 精确 `Class#method` 选择器、默认 `target/surefire-reports`、cwd、环境、超时、stdout/stderr 捕获和退出码继续沿用现有 runner 契约。Maven 非零退出码原样传播；报告缺失、损坏、匹配不唯一、失败或跳过仍不可核实。
 - 无法无损表示或明显危险的命令参数在启动前返回稳定的 `VERIFY_COMMAND_UNSUPPORTED`，错误包含可操作说明且不伪造 runner 结果；工具或命令解释器缺失必须有明确失败证据。
 - 本规格只把 Maven 直接验证列为验收对象。共享封装若同时服务 `gradle.bat`，实现不得主动破坏既有构造，但 Gradle 跑通不属于本规格 AC。
 
@@ -46,4 +46,4 @@ Windows 编辑器、旧工具或跨平台同步可能在 `task.md` 中留下孤�
 ## 验收条件
 
 - AC-1: task.md 正文与确认/验证 sidecar 的行解析统一识别 LF、CRLF 与孤立 CR；resume 保留验收点、阶段、确认与验证事实，需求/设计/交付 subject 在三种 EOL 间等价，实质内容变化仍使对应确认或验收失效，且不静默改写用户正文
-- AC-2: Windows 上 tiller verify 对 junit-maven 通过正确的命令解释器封装启动真实 mvn.cmd，传递 surefire 私有报告目录与精确测试选择器，正确传播退出码并核实报告；命令封装契约有可重复回归测试，且不以 gradle 跑通作为本任务验收
+- AC-2: Windows 上 tiller verify 对 junit-maven 通过正确的命令解释器封装启动真实 mvn.cmd，传递精确测试选择器并从默认 Surefire 报告核实结果，正确传播退出码；命令封装契约有可重复回归测试，且不以 gradle 跑通作为本任务验收

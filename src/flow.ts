@@ -2176,11 +2176,19 @@ async function runAdapterTest(
         await writeFile(path.join(reportDirectory, file.name), file.content, 'utf8');
       }
       command = target.cwd === '.' ? built.display : `${target.cwd}$ ${built.display}`;
+      for (const relative of built.freshDirectories ?? []) {
+        const output = path.resolve(cwd, relative);
+        const fromCwd = path.relative(cwd, output);
+        if (!fromCwd || fromCwd === '..' || fromCwd.startsWith(`..${path.sep}`) || path.isAbsolute(fromCwd)) {
+          fail('VERIFY_RUNNER_FAILED', `运行器输出目录越出仓库根：${relative}`);
+        }
+        await rm(output, { recursive: true, force: true });
+      }
       const processRun = await runProcess(cwd, built.executable, built.args, command, log, verbose);
       let reportText = '';
       try {
         reportText = runner.loadReport
-          ? await runner.loadReport(reportAbsolute, reportDirectory)
+          ? await runner.loadReport(reportAbsolute, reportDirectory, cwd)
           : await readFile(reportAbsolute, 'utf8');
       } catch { /* Missing reports are unverified, never passed. */ }
       evidence = runner.parse(reportText, target.reference, path.resolve(workspace, reference.path));
@@ -2501,51 +2509,6 @@ async function proveTaskMerged(root: string, taskRoot: string, id: string, metad
   return { merged: false, detail };
 }
 
-async function persistAbandonedTask(root: string, task: FlowTask, content: string): Promise<string> {
-  const id = task.meta.id;
-  const relative = taskPath(id);
-  const branch = await currentBranch(root);
-  if (!branch || branch === taskBranchName(task.meta)) {
-    fail('ABANDON_NOT_PERSISTABLE', `任务 ${id} 的放弃事件无法提交到会被保留的分支；请从 primary 的默认分支重试。本机任务事实未清理。`);
-  }
-  const previous = await readTextIfExists(root, relative);
-  let target: string;
-  try { target = await assertSafePath(root, relative); }
-  catch (error) {
-    fail('ABANDON_NOT_PERSISTABLE', `任务 ${id} 的放弃事件路径不可写：${(error as Error).message}。本机任务事实未清理。`);
-  }
-  try {
-    await mkdir(path.dirname(target), { recursive: true });
-    await writeFile(target, content, 'utf8');
-    if (previous === null) {
-      const intent = await git(root, ['add', '-N', '--', relative]);
-      if (!intent.ok) throw new Error(intent.stderr.trim() || 'git add -N 失败');
-    }
-    const [name, email] = await Promise.all([
-      git(root, ['config', 'user.name']),
-      git(root, ['config', 'user.email']),
-    ]);
-    const author = name.ok && name.stdout.trim() ? name.stdout.trim() : 'tiller';
-    const address = email.ok && email.stdout.trim() ? email.stdout.trim() : 'tiller@localhost';
-    const committed = await git(root, [
-      '-c', `user.name=${author}`, '-c', `user.email=${address}`,
-      'commit', '--quiet', '--only', '-m', `chore(workflow): 放弃任务 ${id} [${id}]`, '--', relative,
-    ]);
-    if (!committed.ok) throw new Error(committed.stderr.trim() || 'git commit 失败');
-    const commit = await head(root);
-    if (!commit) throw new Error('提交后无法读取 HEAD');
-    return commit;
-  } catch (error) {
-    await git(root, ['reset', '--quiet', 'HEAD', '--', relative]);
-    try {
-      if (previous === null) await rm(target, { force: true });
-      else await writeFile(target, previous, 'utf8');
-    } catch { /* Report the persistence failure below; do not proceed to cleanup. */ }
-    fail('ABANDON_NOT_PERSISTABLE', `任务 ${id} 的放弃事件无法写入并提交到 primary：${(error as Error).message}。本机任务事实未清理。`);
-  }
-}
-
-
 export async function closeFlow(rootInput: string, id: string, reasonInput: string, abandon = false,
   options: { keepBranch?: boolean; merged?: boolean } = {}) {
   const { primary: root, taskRoot } = await resolveTaskCheckout(rootInput, id);
@@ -2604,17 +2567,13 @@ export async function closeFlow(rootInput: string, id: string, reasonInput: stri
       action: 'close', status: 'abandoned', reason,
       at: new Date().toISOString(),
     };
-    const next = { ...task, closures: [...task.closures, closure] };
-    const { content: _content, path: _path, ...body } = next;
-    const persistedCommit = await persistAbandonedTask(root, task, renderTask(body, sectionBody(task.content, '自检')));
-    const stage = terminalStage(next)!;
     const cleanup = await cleanupTaskWorktrees(root, id, metadata);
     const branchCleanup = await cleanupTaskBranches(root, metadata, taskBranchName(task.meta), options);
     const warnings = [...cleanup.warnings, ...branchCleanup.warnings];
-    return { id, stage: stage.stage, stageReason: stage.reason, reason, at: closure.at, path: task.path,
+    return { id, stage: '已放弃', stageReason: '任务已放弃；本机任务事实已清理。', reason, at: closure.at, path: task.path,
       worktrees: cleanup.removedWorktrees, missingWorktrees: cleanup.missingWorktrees, logsRemoved: cleanup.logsRemoved,
-      branch: branchCleanup, persistedCommit, ...(warnings.length ? { warnings } : {}),
-      next: `如需继续修改，执行 tiller reopen ${id} --reason "<原因>".` };
+      branch: branchCleanup, ...(warnings.length ? { warnings } : {}),
+      next: '任务已放弃；本机 task/worktree/分支已清理，共享任务记录未改写。' };
   });
 }
 

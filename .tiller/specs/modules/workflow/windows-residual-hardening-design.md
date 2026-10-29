@@ -28,14 +28,14 @@
 测试分两层，分别登记为 `CASE-352`（平台无关契约与原生 argv fixture）和 `CASE-353`（真实 Maven 直接 verify）：
 
 - 平台无关契约测试直接断言 Windows invocation 的可执行文件、参数数组、外层引用数量和 Maven 参数顺序；测试不只检查“字符串包含 mvn.cmd”。
-- Windows 原生测试通过同一入口启动临时 `.cmd` fixture，由 fixture 记录实际 argv，覆盖带空格路径、`&`、`$`、报告目录与 `Class#method`；再在真实 Maven fixture 上运行 `tiller verify`，核对私有 Surefire 报告和通过/失败退出码。非 Windows CI 可执行契约层，Windows 验收必须补充原生层证据。
+- Windows 原生测试通过同一入口启动临时 `.cmd` fixture，由 fixture 记录实际 argv，覆盖带空格路径、`&`、`$` 与 `Class#method`；再在真实 Maven fixture 上运行 `tiller verify`，核对默认 `target/surefire-reports` 和通过/失败退出码。非 Windows CI 可执行契约层，Windows 验收必须补充原生层证据。
 
 ## 失败处理
 
 - 解析修复只扩大可识别的合法换行边界；缺少章节、无效 sidecar、无效提交或摘要变化仍按现有规则失败或回退阶段，不放宽记录完整性。
 - `resume` 读取失败保持原错误码和修复指引，不通过重写正文掩盖损坏记录。
 - Windows 参数校验失败在 spawn 前返回 `VERIFY_COMMAND_UNSUPPORTED`；`cmd.exe`、Maven 或 JDK 缺失、超时和非零退出均保留真实失败，不生成通过记录。
-- 私有 Surefire 报告缺失、损坏、匹配零个或多个、失败或跳过时继续判定不可核实；重试沿用 FLOW-05 的两次失败停止规则。
+- 默认 Surefire 报告缺失、损坏、匹配零个或多个、失败或跳过时继续判定不可核实；重试沿用 FLOW-05 的两次失败停止规则。
 - Gradle 的已知 NEW-03 失败保持记录为范围外；共享封装测试只防止明显回归，不以 Gradle 绿灯替代 Maven 验收。
 
 ## 取舍

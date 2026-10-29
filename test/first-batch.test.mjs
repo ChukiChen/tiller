@@ -330,7 +330,7 @@ test('${closeCase.id} close lifecycle behavior', () => assert.equal(1, 1));
   assert.equal(stageTask(root, id), '已验收');
 });
 
-test('CASE-322 abandon commits a tracked event before cleanup instead of leaving an untracked primary seed', async t => {
+test('CASE-322 abandon cleans the task checkout without writing primary', async t => {
   const root = await initialized(t);
   moduleSpec(root, 'workflow');
   const id = '20261027-abandon-no-materialize';
@@ -339,25 +339,22 @@ test('CASE-322 abandon commits a tracked event before cleanup instead of leaving
   const worktree = join(root, started.worktreeRoot);
   success(confirmTask(root, id, 'requirements'));
   assert.equal(existsSync(join(root, `.tiller/task/${id}/task.md`)), false);
+  const before = spawnSync('git', ['rev-parse', 'HEAD'], { cwd: root, encoding: 'utf8', timeout: 20_000 });
+  assert.equal(before.status, 0, before.stderr);
 
   const abandoned = success(cli(worktree, 'close', id, '--reason', '需求取消', '--abandon'));
   assert.equal(abandoned.stage, '已放弃');
   const taskFile = `.tiller/task/${id}/task.md`;
   assert.equal(existsSync(worktree), false);
-  assert.equal(existsSync(join(root, taskFile)), true);
-  assert.match(read(root, taskFile), /^- 状态：已放弃$/mu);
-  assert.match(abandoned.next, /reopen/u);
-  const status = spawnSync('git', ['status', '--porcelain', '--', taskFile], { cwd: root, encoding: 'utf8', timeout: 20_000 });
-  assert.equal(status.status, 0, status.stderr);
-  assert.equal(status.stdout, '');
-  const tracked = spawnSync('git', ['ls-files', '--error-unmatch', '--', taskFile], { cwd: root, encoding: 'utf8', timeout: 20_000 });
-  assert.equal(tracked.status, 0, tracked.stderr);
-  const committed = spawnSync('git', ['show', '--pretty=format:', '--name-only', 'HEAD'], { cwd: root, encoding: 'utf8', timeout: 20_000 });
-  assert.equal(committed.status, 0, committed.stderr);
-  assert.deepEqual(committed.stdout.split(/\r?\n/u).filter(Boolean), [taskFile]);
+  assert.equal(existsSync(join(root, taskFile)), false);
+  assert.doesNotMatch(abandoned.next, /reopen/u);
+  const after = spawnSync('git', ['rev-parse', 'HEAD'], { cwd: root, encoding: 'utf8', timeout: 20_000 });
+  assert.equal(after.status, 0, after.stderr);
+  assert.equal(after.stdout.trim(), before.stdout.trim());
+  assert.equal(existsSync(join(root, `.tiller/local/${id}`)), false);
 });
 
-test('CASE-058 abandoned tasks are terminal, reopenable, and not counted as active or accepted plan work', async t => {
+test('CASE-058 abandoned tasks leave no shared record or active plan work', async t => {
   const root = await initialized(t);
   moduleSpec(root, 'workflow');
   success(cli(root, 'plan', 'start', 'abandon-plan', '--title', '放弃统计', '--goal', '验证放弃任务不污染规划状态',
@@ -373,28 +370,24 @@ test('CASE-058 abandoned tasks are terminal, reopenable, and not counted as acti
   assert.equal(active.items[0].tasks[0].stage, '需求已确认');
   const refused = failure(cli(root, 'close', id, '--reason', '未验收不能收尾'));
   assert.equal(refused.error.code, 'NOT_ACCEPTED');
-  // Seed primary with the live task record so abandon refreshes an existing copy (no materialize).
-  const liveTask = read(taskRecordRoot(root, id), `.tiller/task/${id}/task.md`);
-  put(root, `.tiller/task/${id}/task.md`, liveTask);
-  commitAll(root, 'chore(workflow): 模拟已合入任务记录后放弃');
+  const before = spawnSync('git', ['rev-parse', 'HEAD'], { cwd: root, encoding: 'utf8', timeout: 20_000 });
+  assert.equal(before.status, 0, before.stderr);
   const abandoned = success(cli(root, 'close', id, '--reason', '需求取消', '--abandon'));
   assert.equal(abandoned.stage, '已放弃');
-  assert.match(abandoned.next, /reopen/u);
-  assert.match(read(root, `.tiller/task/${id}/task.md`), /^- 状态：已放弃$/mu);
+  assert.doesNotMatch(abandoned.next, /reopen/u);
+  assert.equal(existsSync(join(root, `.tiller/task/${id}/task.md`)), false);
+  const after = spawnSync('git', ['rev-parse', 'HEAD'], { cwd: root, encoding: 'utf8', timeout: 20_000 });
+  assert.equal(after.status, 0, after.stderr);
+  assert.equal(after.stdout.trim(), before.stdout.trim());
   const status = success(cli(root, 'plan', 'status', 'abandon-plan'));
-  assert.equal(status.items[0].status, '已放弃');
-  assert.equal(status.items[0].tasks[0].stage, '已放弃');
-  assert.equal(status.items[0].tasks[0].accepted, false);
-  assert.equal(success(cli(root, 'resume')).tasks.find(entry => entry.id === id).stage, '已放弃');
-  assert.equal(failure(cli(root, 'confirm', id, 'requirements', '--quote', '放弃后不能确认')).error.code, 'TASK_ABANDONED');
+  assert.equal(status.items[0].status, '未开始');
+  assert.deepEqual(status.items[0].tasks, []);
+  assert.equal(success(cli(root, 'resume')).tasks.find(entry => entry.id === id), undefined);
+  assert.equal(failure(cli(root, 'confirm', id, 'requirements', '--quote', '放弃后不能确认')).error.code, 'TASK_NOT_FOUND');
   assert.equal(failure(cli(root, 'verify', id, '--criterion', 'AC-1',
-    '--test', 'test/missing.test.mjs::missing')).error.code, 'TASK_ABANDONED');
-  assert.equal(failure(cli(root, 'accept', id, '--quote', '放弃后不能验收')).error.code, 'TASK_ABANDONED');
-  const reopened = success(cli(root, 'reopen', id, '--reason', '需求恢复'));
-  assert.equal(reopened.stage, '需求已确认');
-  const resumedPlan = success(cli(root, 'plan', 'status', 'abandon-plan'));
-  assert.equal(resumedPlan.items[0].status, '进行中');
-  assert.equal(resumedPlan.items[0].tasks[0].stage, '需求已确认');
+    '--test', 'test/missing.test.mjs::missing')).error.code, 'TASK_NOT_FOUND');
+  assert.equal(failure(cli(root, 'accept', id, '--quote', '放弃后不能验收')).error.code, 'TASK_NOT_FOUND');
+  assert.equal(failure(cli(root, 'reopen', id, '--reason', '需求恢复')).error.code, 'TASK_NOT_FOUND');
 });
 
 test('CASE-059 specs archive is removed and active guidance has no archival references', () => {

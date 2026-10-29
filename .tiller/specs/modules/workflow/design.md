@@ -41,7 +41,7 @@
 
 ## 5. 关闭与恢复
 
-`close --reason` 只接受当前阶段为已验收的任务；它按任务默认 worktree 清理流程删除本机检出与 `.tiller/local/<id>/`，再默认删除本地与远端任务分支；`--keep-branch` 保留分支，删除失败只记 warning。它不调用 `writeTask`，共享 `task.md` 内容、摘要和修改时间保持不变，返回阶段仍为已验收并标明本机清理完成。未验收任务必须显式 `close --reason ... --abandon`；放弃事件写入 `task.md` 的“关闭”区段，保存状态、原因和时间，放弃任务保持终态。`reopen --reason` 对已放弃或历史已关闭任务追加恢复事件，也允许从已验收任务显式重开；验收、确认和验证仍按原摘要判断，阶段从最后一次恢复之后的事实重新计算。终态任务上的 `confirm`、`verify`、`accept` 直接阻塞。
+`close --reason` 只接受当前阶段为已验收的任务；它按任务默认 worktree 清理流程删除本机检出与 `.tiller/local/<id>/`，再默认删除本地与远端任务分支；`--keep-branch` 保留分支，删除失败只记 warning。它不调用 `writeTask`，共享 `task.md` 内容、摘要和修改时间保持不变，返回阶段仍为已验收并标明本机清理完成。未验收或已验收未合入任务必须显式 `close --reason ... --abandon`；abandon 不写“关闭”区段或提交，只清理 worktree、任务目录与分支，清理后记录不存在属预期，不提示 reopen。`reopen --reason` 对仍可读取的已放弃或历史已关闭任务追加恢复事件，也允许从已验收任务显式重开；验收、确认和验证仍按原摘要判断，阶段从最后一次恢复之后的事实重新计算。终态任务上的 `confirm`、`verify`、`accept` 直接阻塞。
 
 ## 6. 交付草稿与真实 PR/MR
 
@@ -77,7 +77,7 @@
 
 建树前先校验任务容器、全部源仓和目标路径，任何一步失败都强制移除本次已建树，并清理本次产生的 worktree 容器、清单和开工前旁路；未知的本机文件保留，空任务目录一并移除，task.md 不落盘。成功后把相对路径与本机清单 `.tiller/local/<id>/worktrees.json` 写入；清单缺失或损坏时 close 按当前 project/workspace 约定布局回退。所有目标都经安全路径校验并限制在当前任务 worktree 容器内。
 
-已验收 close 不写共享关闭事实，也不把 `.tiller/task/<id>/` 复制到 primary；清理前先验证主检出跟踪记录与当前任务记录一致、任务分支已进入默认历史，或平台 API 确认同分支 PR/MR 已合入。证明不足时以 `CLOSE_MERGE_PROOF_MISSING` 拒绝拆树、删本地目录与分支。证明有效后按清单或当前约定布局执行 `git worktree remove --force` 与 prune。abandon 不要求合入证明，但必须先把关闭段写入 primary 已有任务记录；primary 没有清理后仍可读取记录时以 `ABANDON_NOT_PERSISTABLE` 拒绝，**不**新建未跟踪种子。路径已缺失记入 `missingWorktrees` 并继续。Git 移除失败时仅对该受管目录强制删除并返回 warning；随后删除整棵 `.tiller/local/<id>/`（含 logs 与旁路）。`closeFlow` 经 `resolveTaskCheckout` 从任务 worktree 取得主仓与任务读取根：任务记录和 abandon 写回使用当前任务检出，worktree 清理与 `cleanupTaskBranches` 继续使用主仓，在管理仓与各业务仓删除同名本地分支并优先通过平台 API 删除远端；远端 404/422/已不存在视为已清理且不产生 warning，无 token、平台解析失败、其它远端 API 失败或当前分支无法安全切换只汇总 warning，不回滚本机清理。`--keep-branch` 跳过整段分支删除。清理后只有 primary 仍可读取任务记录时，返回的 `next` 才提示 `reopen`。合入后的历史靠默认分支快进/pull 取得已跟踪记录。重复 close 对缺失 worktree、local 与分支保持幂等。清理失败不阻断本机清理结果或放弃记录，其他任务路径不动。所有本机路径保持工程相对形式，不写入共享 task.md。
+已验收 close 不写共享关闭事实，也不把 `.tiller/task/<id>/` 复制到 primary；清理前先验证主检出跟踪记录与当前任务记录一致、任务分支已进入默认历史，或平台 API 确认同分支 PR/MR 已合入。证明不足时以 `CLOSE_MERGE_PROOF_MISSING` 拒绝拆树、删本地目录与分支。证明有效后按清单或当前约定布局执行 `git worktree remove --force` 与 prune。abandon 不要求合入证明，也不写共享放弃事实或提交；它只清理 worktree、任务目录与分支，清理后没有可读取记录属预期，不提示 reopen。路径已缺失记入 `missingWorktrees` 并继续。Git 移除失败时仅对该受管目录强制删除并返回 warning；随后删除整棵 `.tiller/local/<id>/`（含 logs 与旁路）。`closeFlow` 经 `resolveTaskCheckout` 从任务 worktree 取得主仓与任务读取根：任务读取使用当前任务检出，worktree 清理与 `cleanupTaskBranches` 继续使用主仓，在管理仓与各业务仓删除同名本地分支并优先通过平台 API 删除远端；远端 404/422/已不存在视为已清理且不产生 warning，无 token、平台解析失败、其它远端 API 失败或当前分支无法安全切换只汇总 warning，不回滚本机清理。`--keep-branch` 跳过整段分支删除。正常 close 后只有 primary 仍可读取跟踪任务记录时，返回的 `next` 才提示 `reopen`。合入后的历史靠默认分支快进/pull 取得已跟踪记录。重复 close 对缺失 worktree、local 与分支保持幂等。清理失败不阻断本机清理结果，其他任务路径不动。所有本机路径保持工程相对形式，不写入共享 task.md。
 
 `cleanupTaskWorktrees` 在拆树前探测主检出 `.tiller/local/<id>/logs` 与每个现存任务检出内的同编号日志目录。拆除与整棵本机目录删除完成后，若探测到过日志且这些路径均已不存在，则 `logsRemoved=true`；没有探测到日志或仍有日志残留时保持 false。字段语义是“清理后日志已不存在”，不要求主检出日志目录被单独作为一步删除。
 

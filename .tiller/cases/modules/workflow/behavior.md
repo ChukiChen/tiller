@@ -200,13 +200,13 @@
 
 测试通过，并且已验收任务 close 只删除本机任务目录、不 materialize 未跟踪 task 到 primary；合入快进后的跟踪记录仍可 reopen 继续交付。
 
-## CASE-058 放弃任务不污染规划统计且可恢复
+## CASE-058 放弃任务清本机后不再出现在规划与恢复中
 
 - 类型：behavior
 - 优先级：medium
 - 模块：workflow
-- 关联 AC：20261022-round8#AC-4
-- 需求：`.tiller/specs/modules/workflow/requirements.md#3-规划拆分`, `.tiller/specs/modules/workflow/requirements.md#flow-26-关闭放弃与恢复`
+- 关联 AC：AC-2
+- 需求：`.tiller/specs/modules/workflow/surefire-abandon.md`
 
 ### 前置条件
 
@@ -214,16 +214,16 @@
 
 ### 步骤
 
-1. 执行测试文件 `test/first-batch.test.mjs` 中引用本用例的具名测试。
-2. 核对实际结果与预期结果一致，且没有失败、跳过或伪造记录。
+1. 在任务 worktree 中执行 `close --abandon`。
+2. 核对共享任务记录、最新提交、规划状态与 resume。
 
 ### 输入
 
-- 按“放弃任务不污染规划统计且可恢复”的场景准备正常输入和必要的边界输入。
+- 已确认但未验收的任务与本机 worktree。
 
 ### 预期结果
 
-测试通过，并且放弃任务不污染规划统计且可恢复。
+abandon 不写共享 task.md、不产生放弃提交；规划不再把该任务算作进行中或已验收，resume 不列出该任务，后续恢复命令因记录不存在失败。
 
 ## CASE-060 无原话确认自动记录确认人
 
@@ -2373,32 +2373,31 @@ doctor 发现并检查 worktree 任务，报告未覆盖 AC，不因 primary 缺
 
 首次 close 以稳定错误拒绝破坏性清理；证明合入后才清理。清理后没有可读任务记录时不提示执行 `tiller reopen`。
 
-## CASE-317 abandon 持久化失败时拒绝清理
+## CASE-317 abandon 不依赖 primary 可写且只清理本机
 
 - 类型：behavior
 - 优先级：high
 - 模块：workflow
-- 关联 AC：无
-- 需求：`.tiller/specs/modules/workflow/lifecycle-truth.md#3-abandon-先持久化再清理`
+- 关联 AC：AC-2
+- 需求：`.tiller/specs/modules/workflow/surefire-abandon.md`
 
 ### 前置条件
 
-- 任务记录只在任务 worktree，primary 暂时无法提交任务记录（例如 Git index 锁被占用）。
+- 任务记录只在任务 worktree，primary 的 Git index 被锁住，无法创建任何提交。
 
 ### 步骤
 
 1. 运行 `tiller close <id> --reason "..." --abandon`。
-2. 检查 worktree、本机目录和任务分支仍在，且错误不承诺 reopen。
-3. 解除写阻塞后再次 abandon。
-4. 检查放弃事件已自动写入并提交到 primary 任务记录，再运行 reopen。
+2. 检查命令成功、HEAD 不变、worktree/本机目录/分支已清理。
+3. 检查 primary 没有新增任务记录或放弃提交，结果不提示 reopen。
 
 ### 输入
 
-- 仅存在于 worktree 的任务；随后恢复 primary 的 Git 写入能力。
+- 仅存在于 worktree 的任务与 primary 的 Git index 锁。
 
 ### 预期结果
 
-无法持久化时不清理；持久化成功后先写入并提交放弃事件，再清理 worktree 与分支，放弃状态仍可读取和 reopen。
+abandon 不需要 primary 可写，不写共享记录也不提交；只清理 worktree、本机目录与分支，清理后无记录可读属预期。
 
 ## CASE-318 合入证明绑定当前分支 tip
 
@@ -2426,23 +2425,23 @@ doctor 发现并检查 worktree 任务，报告未覆盖 AC，不因 primary 缺
 
 仅当前 tip 命中 merged PR/MR 时关闭成功；无命中时返回 CLOSE_MERGE_PROOF_MISSING 并保留 worktree、本机目录和分支
 
-## CASE-322 accepted 未合入任务可原子 abandon
+## CASE-322 accepted 未合入任务 abandon 只清理本机
 
 - 类型：behavior
 - 优先级：high
 - 模块：workflow
-- 关联 AC：无
-- 需求：`.tiller/specs/modules/workflow/hygiene-invariants.md#2026-10-28-整包收口不变式`
+- 关联 AC：AC-2
+- 需求：`.tiller/specs/modules/workflow/surefire-abandon.md`
 
 ### 前置条件
 
 - 任务已验收但 PR/MR 尚未合入，任务记录仍只在任务 worktree。
-- primary 当前检出可提交任务记录。
+- primary 不需要具备提交能力。
 
 ### 步骤
 
 1. 运行 `tiller close <id> --reason "..." --abandon`。
-2. 检查 primary 任务记录与最新提交。
+2. 检查 primary 任务记录与最新提交未变化。
 3. 检查任务 worktree、本机目录和分支均已清理。
 4. 运行 `tiller reopen <id> --reason "..."`。
 
@@ -2452,7 +2451,7 @@ doctor 发现并检查 worktree 任务，报告未覆盖 AC，不因 primary 缺
 
 ### 预期结果
 
-abandon 接受已验收任务；先自动写入并提交放弃事件，再清理任务事实；reopen 能读取已提交的放弃状态。
+abandon 接受已验收但未合入任务；只清理本机任务事实，不写共享记录或提交；reopen 因记录不存在失败。
 
 ## CASE-323 PR 创建按 head branch 与 SHA 幂等
 
@@ -2582,13 +2581,13 @@ logsRemoved 为 true，不再因日志目录已随后续本机目录删除而误
 
 LF、CRLF、孤立 CR 三种任务字节变体得到相同验收点、阶段、确认和验证事实；resume 不回退为已开始且不改写正文；实质内容变化仍使对应确认或验收失效
 
-## CASE-353 Windows junit-maven 直接 verify 启动真实 Maven 并核实私有报告
+## CASE-353 Windows junit-maven 直接 verify 启动真实 Maven 并核实默认报告
 
 - 类型：behavior
 - 优先级：high
 - 模块：workflow
-- 关联 AC：AC-2
-- 需求：`.tiller/specs/modules/workflow/windows-residual-hardening.md`
+- 关联 AC：AC-1
+- 需求：`.tiller/specs/modules/workflow/surefire-abandon.md`
 
 ### 前置条件
 
@@ -2598,7 +2597,7 @@ LF、CRLF、孤立 CR 三种任务字节变体得到相同验收点、阶段、�
 
 1. 对通过的测试执行 tiller verify junit-maven
 2. 对失败测试执行 tiller verify junit-maven
-3. 移除或破坏私有报告后再次执行
+3. 移除或破坏默认报告后再次执行
 
 ### 输入
 
@@ -2606,4 +2605,4 @@ LF、CRLF、孤立 CR 三种任务字节变体得到相同验收点、阶段、�
 
 ### 预期结果
 
-Windows 上 tiller verify 启动真实 mvn.cmd；通过时从私有 Surefire 报告核实唯一测试，失败退出码原样传播，报告缺失或测试失败时不得记为通过
+Windows 上 tiller verify 启动真实 mvn.cmd；通过时从默认 `target/surefire-reports` 核实唯一测试，失败退出码原样传播，报告缺失或测试失败时不得记为通过

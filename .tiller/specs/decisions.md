@@ -259,7 +259,7 @@
 - `start`、`doctor`、`status` 与 `close <init-id>` 共用 `proveInitBaselineMerged`。`close` 在证明失败时于任何清理前返回非零，保留 worktree、本地/远端分支与 open PR/MR。
 - 不恢复 tag、`headRef`、tracked `status`，也不保留“同分支 + 标题”的兼容分支。fresh clone 没有 expected head 且不是祖先时明确 pending，需恢复本机证明或显式使用 `--skip-init-gate`。
 
-## 2026-10-28 accepted abandon 自动提交
+## 2026-10-28 accepted abandon 自动提交（已被 2026-10-29 取代）
 
 - 已验收但未合入的任务允许 `close --abandon`。放弃事件写入 primary 任务记录后，使用只包含该任务路径的提交持久化，再清理 worktree、本机目录与分支。
 - primary 无 Git 写入能力或当前分支就是将被删除的任务分支时返回 `ABANDON_NOT_PERSISTABLE`，不清理；不再要求用户手工复制和提交任务记录。
@@ -291,3 +291,9 @@
 - Windows 的 runner 与 CASE 适配器按平台解析 `mvn.cmd`、`gradle.bat`、`pytest.exe` 或系统命令解释器入口；POSIX 路径保持原命令。辅助脚本和 package smoke 不用 `/bin/sh`，真实退出码与私有报告仍是唯一核实依据。
 - 有 Git HEAD 的 `init` / `init --apply` 在写盘前增加 origin 活性检查：只读、有限超时、禁交互，HTTPS 使用不落日志的 token 认证，SSH 使用批处理与连接超时。不可达或认证失败返回稳定预检错误，不产生本次初始化产物。
 - 代价是 fresh clone 首次 `status/start` 可能需要平台查询，Windows 命令引用需要专门测试；收益是证明可由不可变提交事实重建，且不依赖本机状态或 POSIX shell。版本保持 0.5.0。
+
+## 2026-10-29 abandon 回到只清本机，Maven 读默认 Surefire
+
+- `close --abandon` 不再持久化放弃事件或自动提交；只清理 worktree、`.tiller/local/<id>/` 与任务分支。清理后共享记录不存在属预期，不提示 reopen。本决定取代 2026-10-27/2026-10-28 的 abandon 持久化路径。
+- `junit-maven` 执行前清空业务仓库根下的 `target/surefire-reports`，执行后只读取该默认目录 XML；不再依赖 Surefire 可能忽略的 `-Dsurefire.reportsDirectory`。
+- 正常 close 的合入证明与跟踪记录读取不变；Gradle 的 NEW-03 不在本决定范围。

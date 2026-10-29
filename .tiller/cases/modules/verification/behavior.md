@@ -423,3 +423,28 @@ check 给出 specs 回写告警，但不新增阻断。
 ### 预期结果
 
 真实工具被调用且仅由私有报告核实；失败/缺失透传，适配器含 Windows 启动分支，辅助脚本不依赖 /bin/sh
+
+## CASE-354 Maven 默认 Surefire 报告核实通过、失败与精确选择
+
+- 类型：behavior
+- 优先级：high
+- 模块：verification
+- 关联 AC：AC-1
+- 需求：`.tiller/specs/modules/workflow/surefire-abandon.md`
+
+### 前置条件
+
+- Maven fixture 使用 Surefire 默认 target/surefire-reports 布局，仓库配置 junit-maven
+
+### 步骤
+
+1. 执行通过测试、失败测试与 Class#method 精确选择
+2. 核对报告来源、选择器、证据与退出码
+
+### 输入
+
+- 两个 Maven 测试方法与只选择其中一个的调用
+
+### 预期结果
+
+通过与失败均从本次默认 Surefire XML 核实；精确选择器只承认 1 个声明测试，旧或缺失报告不能通过

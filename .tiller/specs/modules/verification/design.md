@@ -58,7 +58,7 @@
 
 `junit-maven` 与 `junit-gradle` 都由 tiller 拉起子进程，不嵌入 JVM。测试引用仍是 `路径::名称`。名称用 `com.example.BillingTest#addsInvoice` 或整个类名；没有 `#` 且不含点时，仅当路径位于 `src/test/java/` 下才从路径得到类名并把名称当作方法。扩展名本身不参与选择运行器。命令执行经统一平台适配器：Windows 对 `.cmd`/`.bat` 使用系统命令解释器并集中引用参数，Maven/Gradle 分别解析为 `mvn.cmd`/`gradle.bat`，pytest 解析为 `pytest.exe`；POSIX 直接执行逻辑命令。工具缺失、启动失败和报告不可核实均失败，不因平台分支改变核实规则。
 
-Maven 在业务仓库根执行 `mvn -Dsurefire.reportsDirectory=<相对私有目录> -Dtest=<类[#方法]> test`。Gradle 在同一目录执行 `gradle -Dtiller.junit.reports=<相对私有目录> --init-script <相对私有目录>/junit-gradle.init.gradle test --tests <类[.方法]>`，初始化脚本把 JUnit XML 写到该私有目录。多模块工程若按各自模块目录解析相对报告路径，应把实际出测试结果的模块登记为仓库根，或继续使用 `--reported`。
+Maven 在业务仓库根执行 `mvn -Dtest=<类[#方法]> test`，执行前清空该仓库默认 `target/surefire-reports`，执行后只读取该目录中的本次 XML；不把 Surefire 可能忽略的 `-Dsurefire.reportsDirectory` 当作唯一证据来源。Gradle 在同一目录执行 `gradle -Dtiller.junit.reports=<相对私有目录> --init-script <相对私有目录>/junit-gradle.init.gradle test --tests <类[.方法]>`，初始化脚本把 JUnit XML 写到该私有目录。多模块工程若按各自模块目录解析相对报告路径，应把实际出测试结果的模块登记为仓库根，或继续使用 `--reported`。
 
 报告只承认声明的类（以及声明的方法）。缺失、损坏、0 个或多个匹配、跳过、同类额外失败都不能核实为通过；其它类的用例不计入本次声明，和 node-test 忽略其它文件一样。真实命令不依赖本仓库安装 JDK：单模块 Maven 工程在仓库根执行上面的 `mvn -Dtest=... test`，Gradle 工程执行上面的 `gradle test --tests ...`。
 

@@ -28,6 +28,8 @@ export interface TestRunCommand {
   args: string[];
   display: string;
   files?: TestRunFile[];
+  /** Directories under cwd that must be removed before launch so default output cannot be stale. */
+  freshDirectories?: string[];
 }
 
 export interface ProcessInvocation {
@@ -40,8 +42,8 @@ export interface TestRunner {
   name: string;
   build(reference: TestReference, paths: TestRunPaths, pattern?: string): TestRunCommand;
   parse(report: string, reference: TestReference, expectedFile: string): TestEvidence;
-  /** Read the private report after the subprocess. The default is the report file itself. */
-  loadReport?(reportFile: string, reportDirectory: string): Promise<string>;
+  /** Read the report after the subprocess. The default is the report file itself. */
+  loadReport?(reportFile: string, reportDirectory: string, cwd: string): Promise<string>;
 }
 
 export interface VerifyTarget {
@@ -422,7 +424,7 @@ function parseJUnit(report: string, reference: TestReference): TestEvidence {
   return inspectJUnit(cases, selector);
 }
 
-async function loadJUnitReport(_reportFile: string, reportDirectory: string): Promise<string> {
+async function readJUnitDirectory(reportDirectory: string): Promise<string> {
   let names: string[];
   try { names = await readdir(reportDirectory); }
   catch { return ''; }
@@ -431,6 +433,14 @@ async function loadJUnitReport(_reportFile: string, reportDirectory: string): Pr
     parts.push(await readFile(path.join(reportDirectory, name), 'utf8'));
   }
   return parts.join('\n');
+}
+
+async function loadJUnitReport(_reportFile: string, reportDirectory: string): Promise<string> {
+  return readJUnitDirectory(reportDirectory);
+}
+
+async function loadMavenJUnitReport(_reportFile: string, _reportDirectory: string, cwd: string): Promise<string> {
+  return readJUnitDirectory(path.join(cwd, 'target/surefire-reports'));
 }
 
 function pythonModule(filePath: string): string | null {
@@ -511,19 +521,19 @@ const nodeTestRunner: TestRunner = {
   },
 };
 
-// Real Maven, cwd = business repo root (single module):
-// mvn -Dsurefire.reportsDirectory=<private dir> -Dtest=com.example.BillingTest#addsInvoice test
+// Real Maven, cwd = business repo root (single module). Surefire 3.2.5 may
+// ignore -Dsurefire.reportsDirectory, so verify uses its default output.
+// mvn -Dtest=com.example.BillingTest#addsInvoice test
 const junitMavenRunner: TestRunner = {
   name: 'junit-maven',
-  build(reference, paths) {
+  build(reference) {
     const selector = junitSelector(reference);
-    const directory = reportDirectory(paths.report);
     const test = selector.method ? `${selector.className}#${selector.method}` : selector.className;
-    const args = [`-Dsurefire.reportsDirectory=${directory}`, `-Dtest=${test}`, 'test'];
-    return { executable: 'mvn', args, display: commandDisplay('mvn', args) };
+    const args = [`-Dtest=${test}`, 'test'];
+    return { executable: 'mvn', args, display: commandDisplay('mvn', args), freshDirectories: ['target/surefire-reports'] };
   },
   parse: parseJUnit,
-  loadReport: loadJUnitReport,
+  loadReport: loadMavenJUnitReport,
 };
 
 // Real Gradle, cwd = business repo root:
