@@ -39,10 +39,10 @@ post-#45 狗粮主路径已通，但仍有入口与卫生摩擦：`--requirement
 - `close <init-id>` 在证明失败时必须返回稳定错误并保留 init worktree、本机目录和分支；不得先清理再报告成功。
 - init 的第二个提交必须可区分或与基线收敛为单个提交；init PR/MR 标题包含 init id，避免重复初始化与历史同名记录混淆。
 
-### 放弃事件先持久化
+### 放弃只清本机
 
-- `close --abandon` 接受已验收但未合入的任务；sequence 固定为：把放弃事件写入 primary 可读取任务记录 → 提交该记录 → 拆除 worktree、本机目录与分支。
-- 持久化或提交失败返回 `ABANDON_NOT_PERSISTABLE`，全部任务事实保持；成功后 primary 最新提交包含放弃状态，reopen 可继续读取。
+- `close --abandon` 接受已验收但未合入或未验收的任务；只拆除 worktree、删除 `.tiller/local/<id>/` 与清理分支。
+- 不向 primary 写 `task.md`/CASE，不产生放弃提交；清理后无记录可读属预期，不提示或承诺 reopen。
 
 ### PR 创建幂等
 

@@ -441,7 +441,6 @@ test('CASE-352 Windows cmd invocation keeps one outer command layer and exact Ma
   assert.equal((stripped.match(/"/gu) ?? []).length, built.args.length * 2, commandLine);
   assert.deepEqual(commandTokens(stripped), ['mvn.cmd', ...built.args]);
   assert.deepEqual(built.args, [
-    '-Dsurefire.reportsDirectory=.tiller/local/verify-x',
     '-Dtest=com.example.BillingTest#addsInvoice',
     'test',
   ]);

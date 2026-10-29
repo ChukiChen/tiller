@@ -402,38 +402,28 @@ test('CASE-318 close rejects historical same-branch merges until the current tip
   assert.equal(branchExists(root, branch), false);
 });
 
-test('CASE-317 abandon keeps every task fact when primary cannot persist the event', async t => {
+test('CASE-317 abandon ignores primary write blockers and only cleans local task facts', async t => {
   const root = project(t);
   const id = '20261027-abandon-durability';
   const started = startTask(root, id);
   const worktree = join(root, started.worktreeRoot);
   const branch = started.worktrees[0].branch;
+  const before = git(root, 'rev-parse', 'HEAD');
 
   put(root, '.git/index.lock', '');
-  const refused = failure(cli(worktree, 'close', id, '--reason', '需求取消', '--abandon'));
-  assert.equal(refused.error.code, 'ABANDON_NOT_PERSISTABLE');
-  assert.doesNotMatch(refused.error.message, /tiller reopen/u);
-  assert.ok(existsSync(worktree));
-  assert.ok(existsSync(join(root, taskLocalPath(id))));
-  assert.ok(branchExists(root, branch));
-  assert.equal(existsSync(join(root, `.tiller/task/${id}/task.md`)), false);
-
-  rmSync(join(root, '.git/index.lock'), { force: true });
-  const before = git(root, 'rev-parse', 'HEAD');
   const abandoned = success(cli(worktree, 'close', id, '--reason', '需求取消', '--abandon'));
   assert.equal(abandoned.stage, '已放弃');
-  assert.match(abandoned.next, /tiller reopen/u);
-  assert.notEqual(git(root, 'rev-parse', 'HEAD'), before);
-  assert.match(git(root, 'log', '-1', '--format=%s'), new RegExp(`放弃任务 ${id}`, 'u'));
-  assert.deepEqual(git(root, 'show', '--pretty=format:', '--name-only', 'HEAD').split(/\r?\n/u).filter(Boolean),
-    [`.tiller/task/${id}/task.md`]);
-  assert.match(readFileSync(join(root, `.tiller/task/${id}/task.md`), 'utf8'), /^- 状态：已放弃$/mu);
+  assert.doesNotMatch(abandoned.next, /reopen/u);
+  assert.equal(abandoned.persistedCommit, undefined);
+  assert.equal(git(root, 'rev-parse', 'HEAD'), before);
+  assert.equal(existsSync(join(root, `.tiller/task/${id}/task.md`)), false);
   assert.equal(existsSync(worktree), false);
-  const reopened = success(cli(root, 'reopen', id, '--reason', '重新评估'));
-  assert.notEqual(reopened.stage, '已放弃');
+  assert.equal(existsSync(join(root, taskLocalPath(id))), false);
+  assert.equal(branchExists(root, branch), false);
+  assert.equal(failure(cli(root, 'reopen', id, '--reason', '记录已清理')).error.code, 'TASK_NOT_FOUND');
 });
 
-test('CASE-322 accepted but unmerged task abandons by committing the event before cleanup', async t => {
+test('CASE-322 accepted but unmerged task abandons by cleaning only local facts', async t => {
   const root = project(t);
   const id = '20261028-accepted-abandon';
   const started = startTask(root, id);
@@ -444,19 +434,15 @@ test('CASE-322 accepted but unmerged task abandons by committing the event befor
 
   const abandoned = success(cli(worktree, 'close', id, '--reason', 'PR 被拒，放弃交付', '--abandon'));
   assert.equal(abandoned.stage, '已放弃');
-  assert.match(abandoned.persistedCommit, /^[a-f0-9]{40,64}$/u);
-  assert.equal(abandoned.persistedCommit, git(root, 'rev-parse', 'HEAD'));
-  assert.notEqual(abandoned.persistedCommit, before);
-  assert.deepEqual(git(root, 'show', '--pretty=format:', '--name-only', 'HEAD').split(/\r?\n/u).filter(Boolean),
-    [`.tiller/task/${id}/task.md`]);
-  assert.match(readFileSync(join(root, `.tiller/task/${id}/task.md`), 'utf8'), /^- 状态：已放弃$/mu);
+  assert.equal(abandoned.persistedCommit, undefined);
+  assert.equal(git(root, 'rev-parse', 'HEAD'), before);
+  assert.equal(existsSync(join(root, `.tiller/task/${id}/task.md`)), false);
+  assert.doesNotMatch(abandoned.next, /reopen/u);
   assert.equal(existsSync(worktree), false);
   assert.equal(existsSync(join(root, taskLocalPath(id))), false);
   assert.equal(branchExists(root, branch), false);
 
-  const reopened = success(cli(root, 'reopen', id, '--reason', '重新评估被拒方案'));
-  assert.notEqual(reopened.stage, '已放弃');
-  assert.match(readFileSync(join(root, `.tiller/task/${id}/task.md`), 'utf8'), /^- 状态：/mu);
+  assert.equal(failure(cli(root, 'reopen', id, '--reason', '重新评估被拒方案')).error.code, 'TASK_NOT_FOUND');
 });
 
 test('CASE-200 start failures leave no task record or partially created worktree', async t => {

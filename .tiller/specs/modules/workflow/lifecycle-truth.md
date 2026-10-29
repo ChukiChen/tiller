@@ -12,6 +12,6 @@
 
 已验收任务执行 `close` 前必须取得任务已合入的证明：主检出的跟踪记录与当前任务记录一致、任务分支已进入默认历史，或平台 API 确认同分支 PR/MR 已合入。证明不足时拒绝删除 worktree、本机目录和分支，并保留可恢复任务事实。清理后只有当前检出仍能读取任务记录时，结果才提示 `reopen`。
 
-## 3. abandon 先持久化再清理
+## 3. abandon 只清理本机
 
-未验收任务使用 `--abandon` 时，先把放弃状态写入主检出中已存在且清理后仍可读取的任务记录，再拆除任务 worktree 和本机目录。primary 没有可持久化记录时拒绝破坏性清理，不创建未跟踪任务种子，也不提示不可执行的 `reopen`。持久化成功后，放弃事实可继续用于 resume、plan status 和 reopen。
+未验收或已验收未合入任务使用 `--abandon` 时，只拆除任务 worktree、删除 `.tiller/local/<id>/` 并清理任务分支；不写 primary `task.md`/CASE，不创建放弃提交。清理后没有任务记录可读属预期，`resume` 不再列出该任务，`confirm`、`verify`、`accept` 与 `reopen` 按记录不存在失败。正常 `close` 的合入证明语义不变。

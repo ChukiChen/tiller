@@ -60,5 +60,5 @@ Windows 开发者以 `core.autocrlf=true` 检出工程，在确认需求或设�
 
 - AC-1: 设计确认与交付确认摘要对 LF/CRLF/孤立 CR 等价；Windows `core.autocrlf=true` 下需求确认、设计确认、合入后 primary close 与 resume 不因换行失效，实质正文变化仍使确认失效
 - AC-2: fresh clone 没有 local marker、`project.json` 的 `initBaseline` 仅含 `id/branch/commit` 时，`status` 能从唯一绑定 `baseline.commit` 的已合入 PR/MR 重建 merged 证明并允许 `start`；零个或多个候选、无 token 或 API 失败时 `status` 与 `start` 都保持 pending
-- AC-3: Windows 上 `tiller verify` 对 junit-maven、junit-gradle 与 pytest 调用真实工具并通过私有报告核实；junit CASE 适配器骨架包含 Windows 启动分支，辅助脚本不再依赖 `/bin/sh`
+- AC-3: Windows 上 `tiller verify` 对 junit-maven、junit-gradle 与 pytest 调用真实工具并核实各自默认或私有报告；junit CASE 适配器骨架包含 Windows 启动分支，辅助脚本不再依赖 `/bin/sh`
 - AC-4: 有 Git HEAD 的 `init` 与 `init --apply` 在 origin 不可达（含 `example.invalid`）时于写盘前失败，不创建目标目录、本机初始化目录、分支、提交或 primary 受管文件，也不留下半成品

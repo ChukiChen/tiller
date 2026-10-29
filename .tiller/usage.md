@@ -22,7 +22,7 @@ tiller doctor
 
 `start` 生成需求，standard 另生成设计；任务记录只写 `.tiller/local/<id>/worktrees/`，primary 无种子。`--requirement` 仅短目标单行，含场景、目标、范围、关键行为、异常与边界的骨架；完整需求与 AC-n 用 `--requirement-file`（限 `.tiller/specs/`）并以文件为准。“验收条件”的 `- AC-n: …` 自动导入；有 AC 可省略 `--criterion`，无 AC 仍须提供。验收条件按路径作用域用 AC-n，不写模块前缀/对照列表。引用 specs 后新增验收点须先回写，否则确认/检查/验收阻断。`--quote` 可选，`--by` 默认取 `git config user.name`。`init` → 初始化 PR/MR → 人工合入 → `start`；pending 基线须匹配 expected tip 与 merged PR/MR，`--skip-init-gate` 例外。`specs` 经任务 worktree，随任务 PR/MR 合入；禁止默认分支直改/直推。
 
-`review` 阻塞 `check`/`accept`；`release` 与已验收任务钉在验收提交。未验收终止用 `close --abandon`；再交付用 `reopen`。
+`review` 阻塞 `check`/`accept`；`release` 与已验收任务钉在验收提交。未合入任务终止用 `close --abandon`，只清本机、不留共享记录，再交付重新 `start`；历史记录仍可 `reopen`。
 
 `standard` 须先设计确认再 `verify`（过早 verify 以 `VERIFY_BEFORE_DESIGN` 拒绝）；历史错序段用 `verify --clear-premature` 清除。确认后有未提交业务改动时，`check` 仍阻断 `accept`。
 
@@ -36,7 +36,7 @@ accept 须在 pr 前；`confirm`/`accept` 写入确认后自动提交本任务�
 
 `verify` 只声明测试，由 tiller 构造并执行并读私有临时报告；stdout/stderr 不参与判定。报告缺失或损坏、匹配 0 个或多个测试、失败或跳过均不核实。standard 必须 `--target`，small 缺省 `.`。
 
-日志含命令、起止与退出码，写 `.tiller/local/<任务编号>/logs/run-<序号>.log`（`--verbose`）；`task.md` 留摘要，证据进旁路。`verify.prepare` 失败即止；`verify.runner` 支持 `node-test`/`junit-maven`/`junit-gradle`/`pytest`（pytest 用私有 JUnit XML）。`case add` 对 junit 运行器生成可扫描 Node 适配器骨架，内部转调真实 runner；入口配 node-test，Java 仓库配 junit 运行器。
+日志含命令、起止与退出码，写 `.tiller/local/<任务编号>/logs/run-<序号>.log`（`--verbose`）；`task.md` 留摘要，证据进旁路。`verify.prepare` 失败即止；`verify.runner` 支持 `node-test`/`junit-maven`/`junit-gradle`/`pytest`；Maven 读默认 Surefire 报告，Gradle/pytest 用私有报告。`case add` 对 junit 运行器生成可扫描 Node 适配器骨架，内部转调真实 runner；入口配 node-test，Java 仓库配 junit 运行器。
 
 同一 AC/CASE 连续两次失败且无成功核实，按 FLOW-05 停止并报告现象与方案。
 

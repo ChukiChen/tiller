@@ -1519,7 +1519,7 @@ check 继续按 acceptance 证据复核，不把后续 specs 变化报成追溯�
 
 ### 前置条件
 
-- junit-maven runner 已构造包含私有报告目录和精确选择器的命令
+- junit-maven runner 已构造包含精确选择器并由默认 Surefire 报告取证的命令
 
 ### 步骤
 
@@ -1532,4 +1532,4 @@ check 继续按 acceptance 证据复核，不把后续 specs 变化报成追溯�
 
 ### 预期结果
 
-Windows invocation 将 mvn.cmd 与各 argv 作为完整边界交给 cmd.exe，仅有一层命令解释器外层引用；Maven 报告目录和 Class#method 选择器顺序不变，无法安全表达的参数在启动前稳定拒绝
+Windows invocation 将 mvn.cmd 与各 argv 作为完整边界交给 cmd.exe，仅有一层命令解释器外层引用；Class#method 选择器和参数顺序不变，无法安全表达的参数在启动前稳定拒绝

@@ -34,12 +34,12 @@ function installJavaTools(root) {
     '#!/usr/bin/env node',
     "import { mkdirSync, writeFileSync } from 'node:fs';",
     'const args = process.argv.slice(2);',
-    "const directory = args.find(arg => arg.startsWith('-Dsurefire.reportsDirectory='))?.slice('-Dsurefire.reportsDirectory='.length);",
     "const selected = args.find(arg => arg.startsWith('-Dtest='))?.slice('-Dtest='.length);",
-    "if (!directory || !selected || !args.includes('test')) process.exit(2);",
+    "if (!selected || !args.includes('test')) process.exit(2);",
     "const hash = selected.indexOf('#');",
     'const className = hash < 0 ? selected : selected.slice(0, hash);',
     "const method = hash < 0 ? 'wholeClass' : selected.slice(hash + 1);",
+    "const directory = 'target/surefire-reports';",
     'mkdirSync(directory, { recursive: true });',
     "const body = process.env.FAKE_MAVEN_FAIL === '1' ? '<failure message=\"fixture failure\"/>' : '';",
     'writeFileSync(`${directory}/TEST-${className}.xml`,',
@@ -149,15 +149,15 @@ test('CASE-169 junit-maven builds a precise selector and counts only the declare
   const built = maven.build(methodRef, paths);
   assert.equal(built.executable, 'mvn');
   assert.deepEqual(built.args, [
-    '-Dsurefire.reportsDirectory=.tiller/local/verify-x',
     '-Dtest=com.example.BillingTest#addsInvoice',
     'test',
   ]);
-  assert.match(built.display, /mvn -Dsurefire\.reportsDirectory=\.tiller\/local\/verify-x '-Dtest=com\.example\.BillingTest#addsInvoice' test/u);
+  assert.deepEqual(built.freshDirectories, ['target/surefire-reports']);
+  assert.equal(built.display, "mvn '-Dtest=com.example.BillingTest#addsInvoice' test");
   const named = maven.build({ path: 'anywhere.txt', name: 'com.example.BillingTest#addsInvoice' }, paths);
-  assert.equal(named.args[1], '-Dtest=com.example.BillingTest#addsInvoice');
+  assert.equal(named.args[0], '-Dtest=com.example.BillingTest#addsInvoice');
   const whole = maven.build({ path: javaFile }, paths);
-  assert.equal(whole.args[1], '-Dtest=com.example.BillingTest');
+  assert.equal(whole.args[0], '-Dtest=com.example.BillingTest');
   assert.throws(() => maven.build({ path: 'BillingTest.java', name: 'addsInvoice' }, paths), error => error.code === 'VERIFY_SELECTOR_INVALID');
   const passing = xml(testcase('addsInvoice') + testcase('other', '<failure/>', 'com.example.Other'));
   assert.equal(maven.parse(passing, methodRef, 'ignored').verified, true);
@@ -169,14 +169,52 @@ test('CASE-169 junit-maven builds a precise selector and counts only the declare
   assert.equal(maven.parse('', methodRef, 'ignored').verified, false);
   assert.equal(maven.parse(xml(testcase('addsInvoice') + testcase('skips', '<skipped/>')), classRef, 'ignored').verified, false);
   assert.equal(maven.parse(xml(testcase('addsInvoice') + testcase('also')), classRef, 'ignored').outcome, 'passed');
-  const directory = mkdtempSync(join(tmpdir(), 'tiller-junit-'));
+  const root = mkdtempSync(join(tmpdir(), 'tiller-junit-'));
+  const directory = join(root, 'target/surefire-reports');
+  mkdirSync(directory, { recursive: true });
   writeFileSync(join(directory, 'b.xml'), xml(testcase('later')));
   writeFileSync(join(directory, 'a.xml'), xml(testcase('addsInvoice')));
-  const loaded = await maven.loadReport(join(directory, 'report.jsonl'), directory);
+  const loaded = await maven.loadReport(join(directory, 'report.jsonl'), directory, root);
   assert.equal(maven.parse(loaded, methodRef, 'ignored').verified, true);
 });
 
-test('CASE-353 Windows junit-maven cmd fixture writes and verifies the private Surefire report', async t => {
+test('CASE-354 Maven default Surefire reports verify pass, failure and exact selection', async t => {
+  const root = fixture(t);
+  const restore = installJavaTools(root);
+  try {
+    mkdirSync(join(root, 'src/test/java/com/example'), { recursive: true });
+    writeFileSync(join(root, javaFile), 'package com.example; class BillingTest { void addsInvoice() {} void refunds() {} }\n');
+    await initialize({ root });
+    const metadata = JSON.parse(read(root, '.tiller/project.json'));
+    metadata.verify = { runner: 'junit-maven' };
+    put(root, '.tiller/project.json', `${JSON.stringify(metadata, null, 2)}\n`);
+    const id = '20261029-surefire-default';
+    success(cli(root, 'start', id, '--title', 'Maven 默认报告', '--requirement', 'Verify Maven tests through default Surefire reports.',
+      '--criterion', 'AC-1=Default Surefire reports verify the selected test', '--size', 'small', '--target', '.'));
+    const test = `${javaFile}::com.example.BillingTest#addsInvoice`;
+    const passed = success(cli(root, 'verify', id, '--criterion', 'AC-1', '--test', test));
+    assert.equal(passed.entries[0].evidence, 'verified');
+    assert.equal(passed.entries[0].result, 'passed');
+    assert.doesNotMatch(passed.entries[0].command, /surefire\.reportsDirectory/u);
+    assert.match(passed.entries[0].command, /'-Dtest=com\.example\.BillingTest#addsInvoice' test$/u);
+
+    process.env.FAKE_MAVEN_FAIL = '1';
+    const failedRun = cli(root, 'verify', id, '--criterion', 'AC-1', '--test', test);
+    assert.notEqual(failedRun.status, 0);
+    assert.equal(failedRun.data.entries[0].evidence, 'verified');
+    assert.equal(failedRun.data.entries[0].result, 'failed');
+    const checkout = taskRecordRoot(root, id);
+    const report = readFileSync(join(checkout, 'target/surefire-reports/TEST-com.example.BillingTest.xml'), 'utf8');
+    assert.equal((report.match(/<testcase\b/gu) ?? []).length, 1);
+    assert.match(report, /name="addsInvoice"/u);
+    assert.doesNotMatch(report, /name="refunds"/u);
+  } finally {
+    delete process.env.FAKE_MAVEN_FAIL;
+    restore();
+  }
+});
+
+test('CASE-353 Windows junit-maven cmd fixture writes and verifies the default Surefire report', async t => {
   const root = fixture(t);
   const restore = installJavaTools(root);
   try {
@@ -194,7 +232,7 @@ test('CASE-353 Windows junit-maven cmd fixture writes and verifies the private S
     const stripped = invocation.args[3].slice(1, -1);
     assert.equal(stripped.startsWith('mvn.cmd '), true, invocation.args[3]);
     assert.deepEqual(windowsCommandTokens(stripped), ['mvn.cmd', ...built.args]);
-    assert.match(stripped, /-Dsurefire\.reportsDirectory=\.tiller\/local\/verify-x/u);
+    assert.doesNotMatch(stripped, /-Dsurefire\.reportsDirectory/u);
     assert.match(stripped, /-Dtest=com\.example\.BillingTest#addsInvoice/u);
 
     const passed = spawnSync(invocation.executable, invocation.args, {
@@ -202,24 +240,25 @@ test('CASE-353 Windows junit-maven cmd fixture writes and verifies the private S
     });
     assert.ifError(passed.error);
     assert.equal(passed.status, 0, passed.stderr || passed.stdout);
-    const reportDirectory = join(root, '.tiller/local/verify-x');
-    const passedReport = await maven.loadReport(join(reportDirectory, 'report.jsonl'), reportDirectory);
+    const reportDirectory = join(root, 'target/surefire-reports');
+    const passedReport = await maven.loadReport(join(reportDirectory, 'report.jsonl'), reportDirectory, root);
     const passedEvidence = maven.parse(passedReport, methodRef, join(root, javaFile));
     assert.equal(passedEvidence.verified, true, passedEvidence.reason);
     assert.equal(passedEvidence.outcome, 'passed');
 
+    rmSync(join(root, 'target'), { recursive: true, force: true });
     const failed = spawnSync(invocation.executable, invocation.args, {
       cwd: root, env: { ...process.env, FAKE_MAVEN_FAIL: '1' }, encoding: 'utf8', timeout: 30_000, windowsHide: true,
     });
     assert.ifError(failed.error);
     assert.equal(failed.status, 7);
-    const failedReport = await maven.loadReport(join(reportDirectory, 'report.jsonl'), reportDirectory);
+    const failedReport = await maven.loadReport(join(reportDirectory, 'report.jsonl'), reportDirectory, root);
     const failedEvidence = maven.parse(failedReport, methodRef, join(root, javaFile));
     assert.equal(failedEvidence.verified, true, failedEvidence.reason);
     assert.equal(failedEvidence.outcome, 'failed');
 
     rmSync(reportDirectory, { recursive: true, force: true });
-    assert.equal(maven.parse(await maven.loadReport(join(reportDirectory, 'report.jsonl'), reportDirectory), methodRef,
+    assert.equal(maven.parse(await maven.loadReport(join(reportDirectory, 'report.jsonl'), reportDirectory, root), methodRef,
       join(root, javaFile)).verified, false);
   } finally {
     restore();
@@ -331,7 +370,7 @@ test('CASE-168 workspace uses each repository runner and runs prepare in that re
     assert.equal(billing.entries[0].result, 'passed');
     assert.match(billing.entries[0].command, /^repositories\/billing\$ mvn /u);
     assert.match(billing.entries[0].command, /'-Dtest=com\.example\.BillingTest#addsInvoice'/u);
-    assert.match(billing.entries[0].command, /-Dsurefire\.reportsDirectory=\.\.\/\.\.\/\.tiller\/local\/verify-/u);
+    assert.doesNotMatch(billing.entries[0].command, /surefire\.reportsDirectory/u);
     assert.match(read(root, 'repositories/billing/prepare-cwd.txt'), /(?:^|\/)repositories\/billing$/u);
     assert.equal(read(existsSync(join(root, billing.log)) ? root : taskRecordRoot(root, id), billing.log).includes(root), false);
     assert.equal(read(taskRecordRoot(root, id), `.tiller/task/${id}/task.md`).includes(root), false);
@@ -413,7 +452,9 @@ test('CASE-173 decisions and usage name the Java runners and keep version 0.5.0'
   assert.match(decisions, /--reported/u);
   assert.match(design, /junit-maven/u);
   assert.match(design, /junit-gradle/u);
-  assert.match(design, /mvn -Dsurefire\.reportsDirectory/u);
+  assert.match(design, /mvn -Dtest=/u);
+  assert.match(design, /target\/surefire-reports/u);
+  assert.doesNotMatch(design, /mvn -Dsurefire\.reportsDirectory/u);
   assert.match(design, /gradle -Dtiller\.junit\.reports/u);
   for (const relative of ['resources/usage.md', '.tiller/usage.md']) {
     const usage = read(repository, relative);

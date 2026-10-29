@@ -24,7 +24,7 @@ close/merge 自动 close 与 abandon 只清理本机状态；共享任务记录�
 
 - 任务记录已在默认分支跟踪：close 不删除跟踪文件；快进/pull 后可读。
 - 从未合入仅存在于 worktree 的任务：close 后 primary 无该 task 树属预期；随后 reopen/resume 若找不到记录则按现有 `TASK_NOT_FOUND`（或等价）失败。
-- abandon 写入的关闭事实若仅在 worktree 且未合入，随 worktree 清理消失；不为此在 primary 造未跟踪副本。
+- abandon 不写关闭事实；任务记录随 worktree 清理消失属预期，不为此在 primary 造未跟踪副本或放弃提交。
 - `--keep-branch`：仍跳过分支删除。
 - init 基线 close：行为保持（本机清理、不改共享 task），本任务不扩展。
 

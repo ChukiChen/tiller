@@ -7,14 +7,14 @@ tiller 是一套开源的 AI 软件工程方法论与工具集，帮助开发者
 当前包与分发资源为 0.5.0，默认流程为 `start`、`resume`、`confirm`、`verify`、`check`、`accept`、`pr`、`merge`、`close` 和 `reopen`，评审、发布与过程卫生分别使用 `review`、`release`、`doctor`。小改动走“需求确认 → 实现 → 验证”，standard 代码任务增加设计确认；默认人工节点只有需求、设计和交付验收。
 
 - 单次任务记录在 `.tiller/task/<id>/task.md`，包含结构化需求、设计、确认、验证和自检。确认记录对象、确认人、时间、基线和摘要，原话可选。
-- 任务阶段由记录事实推导。已验收即交付完成；`accept` 在 `pr` 前并随任务记录提交。合入后的 `close` 先验证跟踪记录、默认历史或平台 API 的合入证明，再清理本机 worktree 与 `.tiller/local/<id>/`，不改共享 `task.md`。未验收终止用 `close --abandon`，须先把放弃事件持久化到 primary 已有记录；只有记录仍可读取时才提示 `reopen`。
+- 任务阶段由记录事实推导。已验收即交付完成；`accept` 在 `pr` 前并随任务记录提交。合入后的 `close` 先验证跟踪记录、默认历史或平台 API 的合入证明，再清理本机 worktree 与 `.tiller/local/<id>/`，不改共享 `task.md`。未验收或已验收未合入任务终止用 `close --abandon`，只清理本机、不写共享记录或提交；清理后无记录可读属预期，不提示 reopen。
 - merge/close 后 primary 不生成未跟踪 `.tiller/task/<id>/`，合入记录通过默认分支快进/pull 成为跟踪文件；`--requirement` 短目标会生成可确认的结构化需求骨架，`--requirement-file` 仍优先。
 - 安装后的主路径统一使用 PATH、`npx` 或打包入口中的同一个 `tiller`。提交 scope 的全局/工作流名称不再误报缺失模块。
-- `start` 在 `.tiller/local/<id>/worktrees/` 创建任务 worktree；workspace 另含 `management` 与各登记仓库路径。清单、开工前摘要和日志同为 `.tiller/local/<id>/` 的旁路。`close`/`--abandon` 强拆该任务 worktree，并清理整棵 `.tiller/local/<id>/`；已验收 close 只做本机清理，放弃仍写共享记录。
+- `start` 在 `.tiller/local/<id>/worktrees/` 创建任务 worktree；workspace 另含 `management` 与各登记仓库路径。清单、开工前摘要和日志同为 `.tiller/local/<id>/` 的旁路。`close`/`--abandon` 强拆该任务 worktree，并清理整棵 `.tiller/local/<id>/`；已验收 close 与 abandon 都只做本机清理，abandon 不写共享记录或提交。
 - 有 Git HEAD 的 `init` 另建 `.tiller/local/<YYYYMMDD-tiller-init>/worktrees` 的 `chore/tiller-init` 基线并尝试 PR/MR；未合入时 `start` 默认阻断，可用 `--skip-init-gate`。基线只由人工合入，之后 `close <init-id>` 只清该本机目录。
 - `.tiller/plans/` 保存大功能规划、任务条目和依赖；依赖未验收时阻塞开工。
 - `.tiller/cases/` 保存跨任务测试设计，按模块和场景组织。新用例先写清前置条件、步骤、输入、预期结果和稳定 specs 需求，用 `case add --criterion AC-n` 关联该需求文件的验收条件，再由测试名引用稳定编号；历史“无”与 `task#AC` 只读。
-- `verify` 自主执行声明的测试并从私有报告核实结论；工作区按测试所属仓库选择运行器，准备命令在该仓库根执行，不能唯一归属时拒绝。Java 可用 Maven 或 Gradle 运行器。无法本机执行时使用外部报告并写明理由，验收默认阻断，只有显式放行才可通过。缺陷修复保留基线失败先行和当前通过。
+- `verify` 自主执行声明的测试并核实报告；工作区按测试所属仓库选择运行器，准备命令在该仓库根执行，不能唯一归属时拒绝。Maven 从默认 `target/surefire-reports` 读取，Gradle 与 pytest 使用私有报告；无法本机执行时使用外部报告并写明理由，验收默认阻断，只有显式放行才可通过。缺陷修复保留基线失败先行和当前通过。
 - 任务引用稳定 specs 时，引用路径与普通 `AC-n` 是验收真相源；新增或改写验收点未回写 specs 会被 `confirm`/`check`/`accept` 阻断。跨语言用例用可扫描入口挂 CASE、内部转调真实 runner，入口按 `node-test`、真实 Java 仓库按 junit 运行器配置。
 - `check` 核对验收条件、用例、测试、当前验证、范围、测试弱化、记录安全和交付命名；评审阻塞未解决时阻断验收，规格或背景未回写只提示。
 - `review` 记录独立评审发现，`release` 只读检查验收提交、版本、分发资源和范围清洁度；`pr` 默认从本地任务与 Git 生成五段说明，经平台 API 推送并创建真实 PR/MR，`--draft-only` 才只输出离线草稿。
