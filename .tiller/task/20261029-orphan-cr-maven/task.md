@@ -47,6 +47,7 @@
 - 在 `src/flow.ts` 增加统一 Markdown 逻辑行切分并替换任务记录解析中的 `split(/\r?\n/u)`，保持现有归一、subject/hash 与写回算法不变。
 - 在 `src/test-output.ts` 修正 `.cmd/.bat` 的命令解释器封装：argv 引用与 `cmd.exe /d /s /c` 外层引用分层构造，继续经 `runProcess` 捕获退出码与输出。
 - 记录解析测试覆盖原文、CRLF、孤立 CR 的任务阶段与 sidecar；Windows 测试覆盖 invocation 契约、临时 `.cmd` argv 与真实 Maven 私有报告。
+- 测试设计登记为 `CASE-351`（三种 EOL 与 sidecar）、`CASE-352`（命令封装契约）和 `CASE-353`（真实 Maven 直接 verify）。
 - 设计详情见 `.tiller/specs/modules/workflow/windows-residual-hardening-design.md`。
 
 ### 失败处理
@@ -70,8 +71,8 @@
 
 ### 验证入口
 
-- 记录解析：Windows hygiene 回归中的三 EOL `resume`/subject 与 sidecar 用例。
-- Windows：invocation 契约、临时 `.cmd` argv fixture，以及真实 `tiller verify --criterion AC-2 --case <Maven CASE>`。
+- 记录解析：`CASE-351` 的三 EOL `resume`/subject 与 sidecar 用例。
+- Windows：`CASE-352` 的 invocation 契约、临时 `.cmd` argv fixture，以及 `CASE-353` 的真实 Maven 直接 verify。
 - 回归：`test/windows-fresh-hygiene.test.mjs`、`test/java-runners.test.mjs`、`test/flow-cli.test.mjs` 与 package smoke；Gradle 结果单独报告。
 
 ## 确认
@@ -79,8 +80,10 @@
 | 部分 | 确认人 | 时间 | 短提交 | 原话 |
 | --- | --- | --- | --- | --- |
 | 需求 | ChukiChen | 2026-10-29T05:08:16.142Z | 0b4d56ae1e63 | — |
+| 设计 | ChukiChen | 2026-10-29T05:08:41.398Z | 9f321ce78120 | — |
 
 <!-- tiller-confirm:v1 {"gate":"requirements","object":"需求正文（目标、范围与验收条件）","subject":"444facbb3e0a93e46241c49d6a4715f74e0dba305a79560556012ba422605820","commit":"0b4d56ae1e63edd8ed4407e93ba758c285857fc6","by":"ChukiChen","quote":"","at":"2026-10-29T05:08:16.142Z"} -->
+<!-- tiller-confirm:v1 {"gate":"design","object":"设计正文","subject":"b075945b42f61c6554154a363c31f0583cc3c564685a341fdf80e4739f35693d","commit":"9f321ce781202be3749d47eb9a529fdbae283928","by":"ChukiChen","quote":"","at":"2026-10-29T05:08:41.398Z"} -->
 
 ## 验证
 
