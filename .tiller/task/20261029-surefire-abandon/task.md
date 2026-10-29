@@ -67,8 +67,10 @@
 | 部分 | 确认人 | 时间 | 短提交 | 原话 |
 | --- | --- | --- | --- | --- |
 | 需求 | ChukiChen | 2026-10-29T08:08:07.170Z | aa1c4f3c0874 | — |
+| 设计 | ChukiChen | 2026-10-29T08:08:10.472Z | 17f4b6805d51 | — |
 
 <!-- tiller-confirm:v1 {"gate":"requirements","object":"需求正文（目标、范围与验收条件）","subject":"df9ede22d3d187f5cd1752c48cbf40daa6b3fb95af9f492c5118b4d1d095da44","commit":"aa1c4f3c087460c89954071e564e26b308806400","by":"ChukiChen","quote":"","at":"2026-10-29T08:08:07.170Z"} -->
+<!-- tiller-confirm:v1 {"gate":"design","object":"设计正文","subject":"b40185019acfbee43bb340500b51b3b36a5ebb7d11a35be9dce4f2dc149966a7","commit":"17f4b6805d517e7f8f412f23de2e56d7a975ee05","by":"ChukiChen","quote":"","at":"2026-10-29T08:08:10.472Z"} -->
 
 ## 验证
 
