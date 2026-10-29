@@ -1,6 +1,6 @@
 # Windows 与 fresh clone 初始化卫生
 
-<!-- tiller-task:v1 {"version":1,"id":"20261029-windows-fresh-hygiene","type":"bugfix","size":"standard","created":"2026-10-29T01:02:06.812Z","base":"458051eeaaf41ba14661771892242b1e56ad7a8c","scope":[".tiller/specs",".tiller/cases"],"format":"structured","slug":"windows-fresh-hygiene","summary":"Windows 与 fresh clone 初始化卫生"} -->
+<!-- tiller-task:v1 {"version":1,"id":"20261029-windows-fresh-hygiene","type":"bugfix","size":"standard","created":"2026-10-29T01:02:06.812Z","base":"458051eeaaf41ba14661771892242b1e56ad7a8c","scope":[".tiller/specs",".tiller/cases","src","test","scripts",".tiller/run.cjs"],"format":"structured","slug":"windows-fresh-hygiene","summary":"Windows 与 fresh clone 初始化卫生"} -->
 
 ## 需求
 
@@ -12,13 +12,13 @@
 
 ### 目标
 
-修复 D-01 换行导致的确认失效、D-02 fresh clone 初始化基线误判、D-03 Windows Java/Python 工具启动失败和 D-04 不可达 origin 预检缺口，形成下一轮可直接实现与验证的稳定契约。
+修复 D-01 换行导致的确认失效、D-02 fresh clone 初始化基线误判、D-03 Windows Java/Python 工具启动失败和 D-04 不可达 origin 预检缺口，完成稳定契约、实现、回归验证与真实 PR 交付。
 
 ### 业务范围
 
-- 做：需求与设计覆盖确认摘要、初始化合入证明、Windows runner/adapter、origin 活性预检和失败边界；回写现有 specs 与全局 CASE。
-- 不做：实现代码、开 PR、升版本、自动安装工具、增加 tracked `head` 字段或按标题猜测合入。
-- 假设与待确认：缺陷机制以 tip `458051e` 的源码事实为准；D-02 采用 commit 绑定而非回写 tracked head；实现授权留到下一轮。
+- 做：需求与设计覆盖确认摘要、初始化合入证明、Windows runner/adapter、origin 活性预检和失败边界；回写现有 specs 与全局 CASE；实现代码、测试与辅助脚本，并创建真实 PR。
+- 不做：合入 PR/MR、升版本、自动安装工具、增加 tracked `head` 字段或按标题猜测合入。
+- 假设：缺陷机制以 tip `458051e` 的源码事实为准；D-02 采用 commit 绑定而非回写 tracked head；实现与开 PR 已获授权，合入仍需单独授权。
 
 ### 关键行为
 
@@ -76,7 +76,7 @@
 
 ### 验证入口
 
-- 下一轮先补对应全局 CASE，并用测试名引用 CASE 编号。
+- 已补对应全局 CASE，并用测试名引用 CASE 编号；实现后运行全量回归与 `verify`。
 - 摘要：LF/CRLF/CR subject 等价与实质变化回归；`core.autocrlf` 下确认、合入模拟、primary close/resume 端到端。
 - fresh clone：平台 mock 注入同分支多个 merged 候选，仅一个提交列表含 `baseline.commit`；核对 status/start 一致，以及零/多候选、无 token、查询失败。
 - Windows：平台探测/Windows CI 断言 `mvn.cmd`、`gradle.bat`、`pytest.exe`、真实退出码和适配器骨架；扫描 helper 不含 `/bin/sh`。
@@ -87,15 +87,69 @@
 
 | 部分 | 确认人 | 时间 | 短提交 | 原话 |
 | --- | --- | --- | --- | --- |
-| 需求 | ChukiChen | 2026-10-29T01:06:02.032Z | 8eac81b800bb | — |
 | 设计 | ChukiChen | 2026-10-29T01:19:49.930Z | 3f2ee84f48c6 | — |
+| 需求 | ChukiChen | 2026-10-29T03:37:29.588Z | 883b12291038 | — |
 
-<!-- tiller-confirm:v1 {"gate":"requirements","object":"需求正文（目标、范围与验收条件）","subject":"ed295599a7d7c95821628420f2f959c215b0130ef56b6f0f845c4f766f8fc472","commit":"8eac81b800bb72502b4bcd227d53c34f73db03e7","by":"ChukiChen","quote":"","at":"2026-10-29T01:06:02.032Z"} -->
 <!-- tiller-confirm:v1 {"gate":"design","object":"设计正文","subject":"c060475c40a661bbed21af9a0faa67286b82c442eed8697946154b27edda27d9","commit":"3f2ee84f48c69e32479273b05f13e31a5e89424f","by":"ChukiChen","quote":"","at":"2026-10-29T01:19:49.930Z"} -->
+<!-- tiller-confirm:v1 {"gate":"requirements","object":"需求正文（目标、范围与验收条件）","subject":"c0a2047e1f59e649873840325457339ba5490e1dc8d576ae7f474eff79833631","commit":"883b12291038961f96ee887e6f181a73c872e431","by":"ChukiChen","quote":"","at":"2026-10-29T03:37:29.588Z"} -->
 
 ## 验证
 
-尚无验证。
+### run-1
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-347 LF, CRLF and isolated CR design bodies keep confirmation subjects stable$' \u002d\u002dtest-reporter=./.tiller/local/verify-OImWPl/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-OImWPl/report.jsonl test/windows-fresh-hygiene.test.mjs","exitCode":1,"tree":"91e10e99e617c31bd0e8aa867c5e39b259a272f643dc40d3effeed9b209ef413","commit":"883b12291038961f96ee887e6f181a73c872e431"} -->
+- 条件：AC-1
+- 测试：test/windows-fresh-hygiene.test.mjs::CASE-347 LF, CRLF and isolated CR design bodies keep confirmation subjects stable
+- 用例：CASE-347
+- 结果：failed
+- 来源：executed
+- 核实：已核实
+- 预期：失败先行
+- 基线提交：458051eeaaf41ba14661771892242b1e56ad7a8c
+- 日志：.tiller/local/20261029-windows-fresh-hygiene/logs/run-2.log
+- 提交：883b12291038
+- 时间：2026-10-29T02:23:03.170Z
+
+### run-2
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-348 fresh clone uniquely binds initBaseline\\.commit through merged integration commits$' \u002d\u002dtest-reporter=./.tiller/local/verify-mxo7rm/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-mxo7rm/report.jsonl test/windows-fresh-hygiene.test.mjs","exitCode":1,"tree":"91e10e99e617c31bd0e8aa867c5e39b259a272f643dc40d3effeed9b209ef413","commit":"883b12291038961f96ee887e6f181a73c872e431"} -->
+- 条件：AC-2
+- 测试：test/windows-fresh-hygiene.test.mjs::CASE-348 fresh clone uniquely binds initBaseline.commit through merged integration commits
+- 用例：CASE-348
+- 结果：failed
+- 来源：executed
+- 核实：已核实
+- 预期：失败先行
+- 基线提交：458051eeaaf41ba14661771892242b1e56ad7a8c
+- 日志：.tiller/local/20261029-windows-fresh-hygiene/logs/run-3.log
+- 提交：883b12291038
+- 时间：2026-10-29T02:23:07.708Z
+
+### run-3
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-349 Windows test invocation and adapter helpers avoid POSIX shell dependencies$' \u002d\u002dtest-reporter=./.tiller/local/verify-z1Kncd/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-z1Kncd/report.jsonl test/windows-fresh-hygiene.test.mjs","exitCode":1,"tree":"91e10e99e617c31bd0e8aa867c5e39b259a272f643dc40d3effeed9b209ef413","commit":"883b12291038961f96ee887e6f181a73c872e431"} -->
+- 条件：AC-3
+- 测试：test/windows-fresh-hygiene.test.mjs::CASE-349 Windows test invocation and adapter helpers avoid POSIX shell dependencies
+- 用例：CASE-349
+- 结果：failed
+- 来源：executed
+- 核实：已核实
+- 预期：失败先行
+- 基线提交：458051eeaaf41ba14661771892242b1e56ad7a8c
+- 日志：.tiller/local/20261029-windows-fresh-hygiene/logs/run-4.log
+- 提交：883b12291038
+- 时间：2026-10-29T02:23:12.890Z
+
+### run-4
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-350 unreachable origin fails init preflight before any initialization artifact$' \u002d\u002dtest-reporter=./.tiller/local/verify-1ji9PG/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-1ji9PG/report.jsonl test/windows-fresh-hygiene.test.mjs","exitCode":1,"tree":"91e10e99e617c31bd0e8aa867c5e39b259a272f643dc40d3effeed9b209ef413","commit":"883b12291038961f96ee887e6f181a73c872e431"} -->
+- 条件：AC-4
+- 测试：test/windows-fresh-hygiene.test.mjs::CASE-350 unreachable origin fails init preflight before any initialization artifact
+- 用例：CASE-350
+- 结果：failed
+- 来源：executed
+- 核实：已核实
+- 预期：失败先行
+- 基线提交：458051eeaaf41ba14661771892242b1e56ad7a8c
+- 日志：.tiller/local/20261029-windows-fresh-hygiene/logs/run-5.log
+- 提交：883b12291038
+- 时间：2026-10-29T02:23:13.672Z
 
 ## 自检
 
