@@ -130,9 +130,11 @@
 | --- | --- | --- | --- | --- |
 | 需求 | ChukiChen | 2026-10-29T16:14:55.768Z | 116989034a42 | — |
 | 设计 | ChukiChen | 2026-10-29T16:14:55.900Z | b37cd0ad3e95 | — |
+| 交付验收 | ChukiChen | 2026-10-29T16:15:42.853Z | e2c8130cac74 | — |
 
 <!-- tiller-confirm:v1 {"gate":"requirements","object":"需求正文（目标、范围与验收条件）","subject":"86352ab6dfd975f529c6fe576b058bff0d37e5b2de8e658250b846ec466c9be8","commit":"116989034a4281c54bb340638e4dda0aaf3e9225","by":"ChukiChen","quote":"","at":"2026-10-29T16:14:55.768Z"} -->
 <!-- tiller-confirm:v1 {"gate":"design","object":"设计正文","subject":"c2c661b04f4dfc4b918ff4a2fd162357bd08e9e94a2da90672b905b9b0c2a16d","commit":"b37cd0ad3e956adb9757a25e4c6ae2f140fa4615","by":"ChukiChen","quote":"","at":"2026-10-29T16:14:55.900Z"} -->
+<!-- tiller-confirm:v1 {"gate":"acceptance","object":"当前交付（需求、设计、验证与提交）","subject":"01d670151569dddcae217bfb79cc8b5dc4abd5fc06a31245de0b78814eeeb43e","commit":"e2c8130cac74dd9eb9922d9b3eae4e0c83a813ca","by":"ChukiChen","quote":"","at":"2026-10-29T16:15:42.853Z"} -->
 
 ## 验证
 
@@ -255,6 +257,20 @@
 - 日志：.tiller/local/20261029-fix-abandon-parent-cwd-pack/logs/run-22.log
 - 提交：00e3c9e481fe
 - 时间：2026-10-29T16:15:18.418Z
+
+### run-23
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-362 init and start reject missing Git identity before writes$' \u002d\u002dtest-reporter=./.tiller/local/verify-TE4u9P/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-TE4u9P/report.jsonl test/init-baseline.test.mjs","exitCode":1,"tree":"7406154d75fc59229bebe032ac5473f1c106d9dabf0c57ec260d98ffd9a691ca","commit":"e2c8130cac74dd9eb9922d9b3eae4e0c83a813ca"} -->
+- 条件：AC-6
+- 测试：test/init-baseline.test.mjs::CASE-362 init and start reject missing Git identity before writes
+- 用例：CASE-362
+- 结果：failed
+- 来源：executed
+- 核实：已核实
+- 预期：失败先行
+- 基线提交：5117725a085f79a425c23dc568c256b2ec337002
+- 日志：.tiller/local/20261029-fix-abandon-parent-cwd-pack/logs/run-23.log
+- 提交：e2c8130cac74
+- 时间：2026-10-29T16:15:35.643Z
 
 ## 自检
 
