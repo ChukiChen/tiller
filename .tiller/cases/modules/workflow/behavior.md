@@ -2373,31 +2373,32 @@ doctor 发现并检查 worktree 任务，报告未覆盖 AC，不因 primary 缺
 
 首次 close 以稳定错误拒绝破坏性清理；证明合入后才清理。清理后没有可读任务记录时不提示执行 `tiller reopen`。
 
-## CASE-317 abandon 不依赖 primary 可写且只清理本机
+## CASE-317 accepted abandon 从 worktree 子目录清理本机
 
 - 类型：behavior
 - 优先级：high
 - 模块：workflow
-- 关联 AC：AC-2
+- 关联 AC：AC-3
 - 需求：`.tiller/specs/modules/workflow/surefire-abandon.md`
 
 ### 前置条件
 
-- 任务记录只在任务 worktree，primary 的 Git index 被锁住，无法创建任何提交。
+- 任务已验收，任务记录只在任务 worktree；primary 的 Git index 被锁住，无法创建任何提交。
+- 命令 cwd 位于任务 worktree 的子目录。
 
 ### 步骤
 
-1. 运行 `tiller close <id> --reason "..." --abandon`。
-2. 检查命令成功、HEAD 不变、worktree/本机目录/分支已清理。
+1. 从任务 worktree 子目录运行 `tiller close <id> --reason "..." --abandon`。
+2. 检查命令成功、HEAD 不变、worktree 与 `.tiller/local/<id>/` 已删除、本地任务分支已消失。
 3. 检查 primary 没有新增任务记录或放弃提交，结果不提示 reopen。
 
 ### 输入
 
-- 仅存在于 worktree 的任务与 primary 的 Git index 锁。
+- 仅存在于 worktree 的已验收任务、worktree 子目录 cwd 与 primary 的 Git index 锁。
 
 ### 预期结果
 
-abandon 不需要 primary 可写，不写共享记录也不提交；只清理 worktree、本机目录与分支，清理后无记录可读属预期。
+abandon 先切出占用中的 cwd，再清理 worktree、本机目录与分支；不需要 primary 可写，不写共享记录也不提交，清理后无记录可读属预期。
 
 ## CASE-318 合入证明绑定当前分支 tip
 
@@ -2430,19 +2431,20 @@ abandon 不需要 primary 可写，不写共享记录也不提交；只清理 wo
 - 类型：behavior
 - 优先级：high
 - 模块：workflow
-- 关联 AC：AC-2
+- 关联 AC：AC-3
 - 需求：`.tiller/specs/modules/workflow/surefire-abandon.md`
 
 ### 前置条件
 
 - 任务已验收但 PR/MR 尚未合入，任务记录仍只在任务 worktree。
+- 命令 cwd 位于任务 worktree 的子目录。
 - primary 不需要具备提交能力。
 
 ### 步骤
 
-1. 运行 `tiller close <id> --reason "..." --abandon`。
+1. 从任务 worktree 子目录运行 `tiller close <id> --reason "..." --abandon`。
 2. 检查 primary 任务记录与最新提交未变化。
-3. 检查任务 worktree、本机目录和分支均已清理。
+3. 检查任务 worktree、`.tiller/local/<id>/` 和本地任务分支均已清理。
 4. 运行 `tiller reopen <id> --reason "..."`。
 
 ### 输入
@@ -2606,3 +2608,28 @@ LF、CRLF、孤立 CR 三种任务字节变体得到相同验收点、阶段、�
 ### 预期结果
 
 Windows 上 tiller verify 启动真实 mvn.cmd；通过时从默认 `target/surefire-reports` 核实唯一测试，失败退出码原样传播，报告缺失或测试失败时不得记为通过
+
+## CASE-355 abandon 本机清理失败返回 TASK_CLEANUP_FAILED 且不假成功
+
+- 类型：behavior
+- 优先级：high
+- 模块：workflow
+- 关联 AC：AC-4
+- 需求：`.tiller/specs/modules/workflow/surefire-abandon.md`
+
+### 前置条件
+
+- 任务 worktree 内执行 close --abandon，且待清理的本机路径无法安全删除
+
+### 步骤
+
+1. 构造无法安全删除的任务本机路径后执行 close --abandon
+2. 核对退出码、ok、错误码、stage 与残留路径和分支
+
+### 输入
+
+- accepted 或未验收任务、worktree cwd 与受阻碍的本机任务目录
+
+### 预期结果
+
+close --abandon 在 worktree 或本机任务目录清理失败时非零退出、ok:false、错误码 TASK_CLEANUP_FAILED，结果不含已放弃阶段；仍存在的目录和分支保留

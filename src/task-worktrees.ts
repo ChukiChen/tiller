@@ -64,6 +64,11 @@ function isWithin(relative: string, parent: string): boolean {
   return relative === parent || relative.startsWith(`${parent}/`);
 }
 
+function isWithinPath(target: string, parent: string): boolean {
+  const relative = path.relative(parent, target);
+  return relative === '' || (relative !== '..' && !relative.startsWith(`..${path.sep}`) && !path.isAbsolute(relative));
+}
+
 async function runGit(root: string, args: string[]): Promise<GitResult> {
   try {
     const result = await execFileAsync('git', args, {
@@ -139,20 +144,41 @@ async function removeGitWorktree(worktree: CreatedWorktree): Promise<boolean> {
   return removed.ok;
 }
 
+interface RemoveOutcome { removed: boolean; failure?: string }
+
 async function removeRelative(root: string, relative: string, recursive: boolean, label: string,
-  warnings?: string[]): Promise<boolean> {
+  warnings?: string[]): Promise<RemoveOutcome> {
   try {
     const target = await assertSafePath(root, relative);
     const stat = await lstat(target).catch(error => {
       if ((error as NodeJS.ErrnoException).code === 'ENOENT') return null;
       throw error;
     });
-    if (stat === null) return false;
-    await rm(target, { recursive, force: true });
-    return true;
+    if (stat === null) return { removed: false };
+    await rm(target, { recursive, force: true, maxRetries: 3, retryDelay: 100 });
+    return { removed: true };
   } catch (error) {
-    warnings?.push(`${label}清理失败：\`${relative}\`（${(error as Error).message}）。`);
-    return false;
+    const failure = `${label}清理失败：\`${relative}\`（${(error as Error).message}）`;
+    warnings?.push(`${failure}。`);
+    return { removed: false, failure };
+  }
+}
+
+async function moveCwdOutsideTask(root: string, id: string, states: TaskWorktreeState[]): Promise<void> {
+  const cwd = path.resolve(process.cwd());
+  const targets = [
+    path.resolve(root, ...taskLocalRoot(id).split('/')),
+    ...states.flatMap(state => state.worktrees.map(entry => path.resolve(root, ...entry.path.split('/')))),
+  ];
+  if (!targets.some(target => isWithinPath(cwd, target))) return;
+  const primary = path.resolve(root);
+  if (targets.some(target => isWithinPath(primary, target))) {
+    fail('TASK_CLEANUP_FAILED', `无法把 cwd 切出待删任务目录：primary 位于 \`${taskLocalRoot(id)}\` 内。`);
+  }
+  try {
+    process.chdir(primary);
+  } catch (error) {
+    fail('TASK_CLEANUP_FAILED', `无法把 cwd 切出待删任务目录：${(error as Error).message}。`);
   }
 }
 
@@ -383,8 +409,10 @@ export async function cleanupTaskWorktrees(rootInput: string, id: string, metada
   const loaded = await readState(root, id);
   if (loaded.warning) warnings.push(loaded.warning);
   const states = loaded.state ? [loaded.state] : [fallbackStateAt(metadata, id, worktreeRoot(id))];
+  await moveCwdOutsideTask(root, id, states);
   const removedWorktrees: string[] = [];
   const missingWorktrees: string[] = [];
+  const failures: string[] = [];
   const sources = new Set<string>();
   const seen = new Set<string>();
   const observedLogPaths = new Set<string>();
@@ -394,7 +422,7 @@ export async function cleanupTaskWorktrees(rootInput: string, id: string, metada
     observedLogPaths.add(localLogPath);
     logsExisted = await pathExists(localLogPath);
   } catch (error) {
-    warnings.push(`任务日志路径不安全，未探测：\`${logDirectory(id)}\`（${(error as Error).message}）。`);
+    failures.push(`任务日志路径不安全，未探测：\`${logDirectory(id)}\`（${(error as Error).message}）`);
   }
 
   for (const state of states) {
@@ -402,13 +430,13 @@ export async function cleanupTaskWorktrees(rootInput: string, id: string, metada
       if (seen.has(entry.path)) continue;
       seen.add(entry.path);
       if (!isWithin(entry.path, worktreeRoot(id))) {
-        warnings.push(`已跳过不在任务 worktree 目录内的路径：\`${entry.path}\`。`);
+        failures.push(`任务 worktree 路径不在约定目录内：\`${entry.path}\``);
         continue;
       }
       let target: string;
       try { target = await assertSafePath(root, entry.path); }
       catch (error) {
-        warnings.push(`任务 worktree 路径不安全，已跳过：\`${entry.path}\`（${(error as Error).message}）。`);
+        failures.push(`任务 worktree 路径不安全，未清理：\`${entry.path}\`（${(error as Error).message}）`);
         continue;
       }
       let stat: Awaited<ReturnType<typeof lstat>> | null;
@@ -418,7 +446,7 @@ export async function cleanupTaskWorktrees(rootInput: string, id: string, metada
           throw error;
         });
       } catch (error) {
-        warnings.push(`任务 worktree 状态不可读，已跳过：\`${entry.path}\`（${(error as Error).message}）。`);
+        failures.push(`任务 worktree 状态不可读，未清理：\`${entry.path}\`（${(error as Error).message}）`);
         continue;
       }
       if (stat === null) {
@@ -435,20 +463,29 @@ export async function cleanupTaskWorktrees(rootInput: string, id: string, metada
       if (removed) removedWorktrees.push(entry.path);
       else {
         try {
-          await rm(target, { recursive: true, force: true });
+          await rm(target, { recursive: true, force: true, maxRetries: 3, retryDelay: 100 });
           removedWorktrees.push(entry.path);
           warnings.push(`Git 未能移除任务 worktree，已强制删除目录：\`${entry.path}\`。`);
         } catch (error) {
-          warnings.push(`任务 worktree 拆除失败：\`${entry.path}\`（${(error as Error).message}）。`);
+          failures.push(`任务 worktree 拆除失败：\`${entry.path}\`（${(error as Error).message}）`);
         }
       }
     }
   }
 
-  for (const source of sources) await runGit(source, ['worktree', 'prune']);
-  await removeRelative(root, logDirectory(id), true, '任务日志', warnings);
-  await removeRelative(root, worktreeRoot(id), true, '任务 worktree 容器', warnings);
-  await removeRelative(root, taskLocalRoot(id), true, '任务本机目录', warnings);
+  for (const source of sources) {
+    const pruned = await runGit(source, ['worktree', 'prune']);
+    if (!pruned.ok) failures.push(`任务 worktree 元数据清理失败：\`${source}\`（${pruned.stderr.trim() || 'git worktree prune 未成功'}）`);
+  }
+  const logs = await removeRelative(root, logDirectory(id), true, '任务日志', warnings);
+  if (logs.failure) failures.push(logs.failure);
+  const containers = await removeRelative(root, worktreeRoot(id), true, '任务 worktree 容器', warnings);
+  if (containers.failure) failures.push(containers.failure);
+  const local = await removeRelative(root, taskLocalRoot(id), true, '任务本机目录', warnings);
+  if (local.failure) failures.push(local.failure);
+  if (failures.length) {
+    fail('TASK_CLEANUP_FAILED', `任务本机清理失败，未完成放弃：${failures.join('；')}。`);
+  }
   let logsRemain = false;
   for (const logPath of observedLogPaths) logsRemain = (await pathExists(logPath)) || logsRemain;
   const logsRemoved = logsExisted && !logsRemain;

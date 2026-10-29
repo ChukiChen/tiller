@@ -16,6 +16,7 @@ export interface BranchCleanupResult {
   localDeleted: string[];
   remoteDeleted: string[];
   warnings: string[];
+  failures: string[];
 }
 
 async function git(root: string, args: string[]): Promise<GitResult> {
@@ -64,12 +65,12 @@ async function deleteLocal(root: string, branch: string, label: string, result: 
   if (!(await branchExists(root, branch))) return;
   const current = await git(root, ['branch', '--show-current']);
   if (current.ok && current.stdout.trim() === branch && !(await switchAway(root, branch))) {
-    result.warnings.push(`${label}当前检出 ${branch}，且无法安全切换分支；已跳过本地分支删除。`);
+    result.failures.push(`${label}当前检出 ${branch}，且无法安全切换分支；本地分支未删除`);
     return;
   }
   const deleted = await git(root, ['branch', '-D', branch]);
   if (deleted.ok) result.localDeleted.push(`${label}:${branch}`);
-  else result.warnings.push(`${label}删除本地分支 ${branch} 失败：${deleted.stderr.trim() || 'git branch -D 未成功'}。`);
+  else result.failures.push(`${label}删除本地分支 ${branch} 失败：${deleted.stderr.trim() || 'git branch -D 未成功'}`);
 }
 
 async function deleteRemote(root: string, metadata: ProjectMetadata, branch: string, label: string,
@@ -101,7 +102,7 @@ export async function cleanupTaskBranches(rootInput: string, metadata: ProjectMe
   options: { keepBranch?: boolean } = {}): Promise<BranchCleanupResult> {
   const root = await resolveProjectRoot(rootInput);
   const result: BranchCleanupResult = {
-    branch, kept: options.keepBranch === true, localDeleted: [], remoteDeleted: [], warnings: [],
+    branch, kept: options.keepBranch === true, localDeleted: [], remoteDeleted: [], warnings: [], failures: [],
   };
   if (result.kept) return result;
   for (const source of sourcesFor(root, metadata)) {

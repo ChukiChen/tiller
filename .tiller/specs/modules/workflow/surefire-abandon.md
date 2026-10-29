@@ -4,17 +4,19 @@
 
 - Java 工程使用 Maven Surefire 3.2.5 等不会把 `-Dsurefire.reportsDirectory` 当作实际输出目录的版本时，`tiller verify` 仍应从 Maven 默认的 `target/surefire-reports` 取得本次测试 XML，而不是把未生效的命令行参数当作证据来源。
 - 开发者取消未验收或已验收但未合入的任务时，`close --abandon` 只负责拆除本机隔离环境；不应为了保留放弃状态而向 primary 写入任务记录或提交。
+- Windows 任务 worktree 内执行放弃时，当前 cwd 会占用待删目录；命令必须先切出，且目录删除失败不能继续报告“已放弃”。
 
 ## 目标
 
 - `junit-maven` 精确选择测试并从 Maven 默认 Surefire 报告目录核实通过、失败与唯一命中。
-- `close --abandon` 只清理本机 worktree、任务目录与分支，不写共享 `task.md`/CASE，也不产生放弃提交。
+- `close --abandon` 从 worktree 内执行时先切出 cwd，只清理本机 worktree、任务目录与分支，不写共享 `task.md`/CASE，也不产生放弃提交。
+- 本机清理失败时明确非零失败，不以 warning 掩盖仍存在的 worktree 或本机任务目录。
 - 已验收任务的正常 `close` 合入证明与本机清理语义保持不变。
 
 ## 业务范围
 
-- 做：修正 Maven 报告来源与陈旧报告隔离；收敛 abandon 路径；同步 specs、CASE、usage、context 与回归测试。
-- 不做：修复 NEW-03 的 Gradle 启动问题；改变正常 `close` 的合入证明；新增放弃记录落盘或跳过 `check` 的旁路。
+- 做：修正 Maven 报告来源与陈旧报告隔离；收敛 abandon 路径；处理 worktree cwd 与 Windows EBUSY；传播本机清理失败；同步 specs、CASE、usage、context 与回归测试。
+- 不做：修复 NEW-07 的 check 弄脏工作区、NEW-03 的 Gradle 启动问题或 CASE-322 编号重复；改变正常 `close` 的合入证明；新增放弃记录落盘或跳过 `check` 的旁路。
 - 假设与待确认：Maven 将本次 Surefire XML 写到仓库根下的 `target/surefire-reports`；多模块工程应把实际产出报告的模块登记为验证仓库根。
 
 ## 关键行为
@@ -32,14 +34,23 @@
 - 正在读取的 worktree 任务记录随本机目录一起消失属预期；之后 `resume` 不含该任务，`confirm`、`verify`、`accept` 与 `reopen` 因记录不存在而失败。
 - 已验收任务的正常 `close` 仍先验证合入证明，再只做本机清理；已合入并进入默认分支的跟踪记录保持可读。
 
+### SV-AB-3 worktree cwd 切出与清理失败传播
+
+- 删除任务 worktree 或 `.tiller/local/<id>/` 前，若当前 cwd 位于其中任一待删路径，先切换到 primary 工作区；切换失败即停止并报告清理错误。
+- 任务 worktree 的 Git 拆除和目录删除使用有界短重试；重试耗尽后仍失败时，不得继续返回“已放弃”成功。
+- 本机 worktree、任务目录或本地任务分支清理失败时返回稳定错误 `TASK_CLEANUP_FAILED`、非零退出与 `ok:false`，并列出失败路径；仍存在的目录和分支保留供人工恢复。
+- 幂等缺失、非致命的远端删除告警和成功清理后的日志摘要保持现有语义；远端无法确认时不得伪造已删除。
+
 ## 异常与边界
 
 - 默认 Surefire 报告目录缺失、损坏、零匹配或多匹配时不可核实；不能回退读取上一轮报告。
 - Maven 非零退出、准备失败或工具缺失都失败；不得因报告解析成功而掩盖命令失败。
-- abandon 的 worktree、目录或分支已缺失时按幂等清理处理；单个清理告警不虚构共享放弃状态，也不回写 primary。
+- abandon 的 worktree、目录或分支已缺失时按幂等清理处理；本机目录删除失败、路径不安全或本地分支删除失败必须作为失败传播，不得降级为成功 warning。
 - 记录已在默认分支跟踪时，正常 `close` 不删除该记录；没有合入证明时仍拒绝正常 `close`。
 
 ## 验收条件
 
 - AC-1: `junit-maven` 从 Maven 默认 `target/surefire-reports` 读取本次 XML，通过、失败与精确选择器只跑一个测试均由私有证据核实
 - AC-2: `close --abandon` 只清理本机 worktree、任务目录与分支，不写 primary `task.md`/CASE，也不产生放弃提交；正常 `close` 不变
+- AC-3: 在任务 worktree（含其子目录）执行 accepted close --abandon 时，删除前将 cwd 切出待删目录；成功后任务 worktree、.tiller/local/<id>/、存在的本地与远端任务分支均消失，仍不写 primary task.md/CASE 且不产生提交
+- AC-4: abandon 任一本地清理项失败（含 Windows EBUSY 有界短重试耗尽）时返回非零退出与 ok:false，错误码为 TASK_CLEANUP_FAILED，且不得返回已放弃成功结果

@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { existsSync, mkdirSync, readFileSync, renameSync, rmSync, statSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, renameSync, rmSync, statSync, symlinkSync } from 'node:fs';
 import { join, sep } from 'node:path';
 import { spawn, spawnSync } from 'node:child_process';
 import test from 'node:test';
@@ -402,16 +402,19 @@ test('CASE-318 close rejects historical same-branch merges until the current tip
   assert.equal(branchExists(root, branch), false);
 });
 
-test('CASE-317 abandon ignores primary write blockers and only cleans local task facts', async t => {
+test('CASE-317 accepted abandon from a worktree subdirectory cleans worktree, local task facts and branch', async t => {
   const root = project(t);
   const id = '20261027-abandon-durability';
   const started = startTask(root, id);
   const worktree = join(root, started.worktreeRoot);
   const branch = started.worktrees[0].branch;
+  acceptTask(root, id);
+  const nested = join(worktree, 'nested', 'working-directory');
+  mkdirSync(nested, { recursive: true });
   const before = git(root, 'rev-parse', 'HEAD');
 
   put(root, '.git/index.lock', '');
-  const abandoned = success(cli(worktree, 'close', id, '--reason', '需求取消', '--abandon'));
+  const abandoned = success(cli(nested, 'close', id, '--reason', '需求取消', '--abandon'));
   assert.equal(abandoned.stage, '已放弃');
   assert.doesNotMatch(abandoned.next, /reopen/u);
   assert.equal(abandoned.persistedCommit, undefined);
@@ -430,9 +433,11 @@ test('CASE-322 accepted but unmerged task abandons by cleaning only local facts'
   const worktree = join(root, started.worktreeRoot);
   const branch = started.worktrees[0].branch;
   acceptTask(root, id);
+  const nested = join(worktree, 'nested');
+  mkdirSync(nested, { recursive: true });
   const before = git(root, 'rev-parse', 'HEAD');
 
-  const abandoned = success(cli(worktree, 'close', id, '--reason', 'PR 被拒，放弃交付', '--abandon'));
+  const abandoned = success(cli(nested, 'close', id, '--reason', 'PR 被拒，放弃交付', '--abandon'));
   assert.equal(abandoned.stage, '已放弃');
   assert.equal(abandoned.persistedCommit, undefined);
   assert.equal(git(root, 'rev-parse', 'HEAD'), before);
@@ -443,6 +448,26 @@ test('CASE-322 accepted but unmerged task abandons by cleaning only local facts'
   assert.equal(branchExists(root, branch), false);
 
   assert.equal(failure(cli(root, 'reopen', id, '--reason', '重新评估被拒方案')).error.code, 'TASK_NOT_FOUND');
+});
+
+test('CASE-355 abandon 本机清理失败返回 TASK_CLEANUP_FAILED 且不假成功', async t => {
+  const root = project(t);
+  const id = '20261029-abandon-cleanup-failure';
+  const started = startTask(root, id);
+  const worktree = join(root, started.worktreeRoot);
+  const branch = started.worktrees[0].branch;
+  const blockedTarget = join(root, 'blocked-task-logs');
+  mkdirSync(blockedTarget, { recursive: true });
+  const logs = join(root, taskLocalPath(id, 'logs'));
+  rmSync(logs, { recursive: true, force: true });
+  symlinkSync(blockedTarget, logs, process.platform === 'win32' ? 'junction' : 'dir');
+
+  const failed = failure(cli(worktree, 'close', id, '--reason', '本机清理失败不得假成功', '--abandon'));
+  assert.equal(failed.error.code, 'TASK_CLEANUP_FAILED');
+  assert.equal(failed.stage, undefined);
+  assert.equal(existsSync(join(root, `.tiller/task/${id}/task.md`)), false);
+  assert.equal(branchExists(root, branch), true);
+  assert.equal(failure(cli(root, 'reopen', id, '--reason', '清理失败仍保留分支')).error.code, 'TASK_NOT_FOUND');
 });
 
 test('CASE-200 start failures leave no task record or partially created worktree', async t => {
