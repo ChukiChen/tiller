@@ -151,6 +151,54 @@
 - 提交：883b12291038
 - 时间：2026-10-29T02:23:13.672Z
 
+### run-5
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-347 LF, CRLF and isolated CR design bodies keep confirmation subjects stable$' \u002d\u002dtest-reporter=./.tiller/local/verify-SErIi1/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-SErIi1/report.jsonl test/windows-fresh-hygiene.test.mjs","exitCode":0,"tree":"d3b25e9118d58bc0d45d81cf20b634bf75d1703e2139eea0ae888c5e545c6af2","commit":"ff0453c39de73592206263110e23dbf460af2a9c"} -->
+- 条件：AC-1
+- 测试：test/windows-fresh-hygiene.test.mjs::CASE-347 LF, CRLF and isolated CR design bodies keep confirmation subjects stable
+- 用例：CASE-347
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/20261029-windows-fresh-hygiene/logs/run-6.log
+- 提交：ff0453c39de7
+- 时间：2026-10-29T03:39:57.447Z
+
+### run-6
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-348 fresh clone uniquely binds initBaseline\\.commit through merged integration commits$' \u002d\u002dtest-reporter=./.tiller/local/verify-kAesAv/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-kAesAv/report.jsonl test/windows-fresh-hygiene.test.mjs","exitCode":0,"tree":"d3b25e9118d58bc0d45d81cf20b634bf75d1703e2139eea0ae888c5e545c6af2","commit":"ff0453c39de73592206263110e23dbf460af2a9c"} -->
+- 条件：AC-2
+- 测试：test/windows-fresh-hygiene.test.mjs::CASE-348 fresh clone uniquely binds initBaseline.commit through merged integration commits
+- 用例：CASE-348
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/20261029-windows-fresh-hygiene/logs/run-7.log
+- 提交：ff0453c39de7
+- 时间：2026-10-29T03:40:01.905Z
+
+### run-7
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-349 Windows test invocation and adapter helpers avoid POSIX shell dependencies$' \u002d\u002dtest-reporter=./.tiller/local/verify-DqnXT8/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-DqnXT8/report.jsonl test/windows-fresh-hygiene.test.mjs","exitCode":0,"tree":"d3b25e9118d58bc0d45d81cf20b634bf75d1703e2139eea0ae888c5e545c6af2","commit":"ff0453c39de73592206263110e23dbf460af2a9c"} -->
+- 条件：AC-3
+- 测试：test/windows-fresh-hygiene.test.mjs::CASE-349 Windows test invocation and adapter helpers avoid POSIX shell dependencies
+- 用例：CASE-349
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/20261029-windows-fresh-hygiene/logs/run-8.log
+- 提交：ff0453c39de7
+- 时间：2026-10-29T03:40:08.291Z
+
+### run-8
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-350 unreachable origin fails init preflight before any initialization artifact$' \u002d\u002dtest-reporter=./.tiller/local/verify-s1lSRD/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-s1lSRD/report.jsonl test/windows-fresh-hygiene.test.mjs","exitCode":0,"tree":"d3b25e9118d58bc0d45d81cf20b634bf75d1703e2139eea0ae888c5e545c6af2","commit":"ff0453c39de73592206263110e23dbf460af2a9c"} -->
+- 条件：AC-4
+- 测试：test/windows-fresh-hygiene.test.mjs::CASE-350 unreachable origin fails init preflight before any initialization artifact
+- 用例：CASE-350
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/20261029-windows-fresh-hygiene/logs/run-9.log
+- 提交：ff0453c39de7
+- 时间：2026-10-29T03:40:11.329Z
+
 ## 自检
 
 - [x] 需求确认有效
