@@ -129,8 +129,10 @@
 | 部分 | 确认人 | 时间 | 短提交 | 原话 |
 | --- | --- | --- | --- | --- |
 | 需求 | ChukiChen | 2026-10-29T14:20:02.332Z | 5117725a085f | — |
+| 设计 | ChukiChen | 2026-10-29T14:20:02.485Z | 3c951e34bebb | — |
 
 <!-- tiller-confirm:v1 {"gate":"requirements","object":"需求正文（目标、范围与验收条件）","subject":"ab20efcf1e2a1cc558d095714de1effe54427e5d997e42725f91a81ec3c71799","commit":"5117725a085f79a425c23dc568c256b2ec337002","by":"ChukiChen","quote":"","at":"2026-10-29T14:20:02.332Z"} -->
+<!-- tiller-confirm:v1 {"gate":"design","object":"设计正文","subject":"fb907caefff9484b44116ffba936bc5db7891ad6cd05f3ccd4c67c0f955c1137","commit":"3c951e34bebbc03e6c1158004c281981ecf85ff1","by":"ChukiChen","quote":"","at":"2026-10-29T14:20:02.485Z"} -->
 
 ## 验证
 
