@@ -366,7 +366,7 @@ test('CASE-288 ancestor proof records merged for doctor and close init-id', asyn
   assert.equal(JSON.parse(read(root, '.tiller/project.json')).initBaseline.status, undefined);
 });
 
-test('CASE-320 fresh clone requires local expected head instead of title-only squash proof', async t => {
+test('CASE-320 fresh clone rejects merged PR without baseline commit binding', async t => {
   const initialized = await initialize(t, { mainBranch: 'main' });
   if (!initialized) return;
   const { root, environment, result, mock } = initialized;
@@ -381,7 +381,7 @@ test('CASE-320 fresh clone requires local expected head instead of title-only sq
   assert.equal(git(root, 'show-ref', '--verify', '--quiet', `refs/heads/${baseline.branch}`).status, 0);
 
   // Simulate the squash merge landing only the final tree on main; the init commits
-  // themselves are absent from main history. The tracked tip SHA keeps the PR head.
+  // themselves are absent from main history and the merged PR did not contain them.
   okGit(root, 'checkout', baseline.head, '--', '.');
   okGit(root, 'add', '-A');
   okGit(root, 'commit', '--quiet', '-m', 'chore(tiller): squash 初始化基线');
@@ -401,9 +401,9 @@ test('CASE-320 fresh clone requires local expected head instead of title-only sq
   assert.equal(tracked.headRef, undefined);
   assert.equal(tracked.status, undefined);
 
-  mock.setMergedHeads(baseline.branch, [baseline.head]);
+  mock.setMergedCommitLists(baseline.branch, [{ head: baseline.head, commits: ['f'.repeat(40)] }]);
   const refusedDoctor = failure(await cliAt(clone, environment, 'doctor'));
-  assert.match(refusedDoctor.issues.join('\n'), /expected head|缺少本次初始化/u);
+  assert.match(refusedDoctor.issues.join('\n'), /未找到唯一包含初始化提交/u);
   const refusedStart = failure(await cliAt(clone, environment, 'start', '20261028-fresh-clone-blocked',
     '--title', 'Fresh clone blocked', '--requirement', 'A fresh clone without local proof must stay pending.',
     '--criterion', 'AC-1=Start stays blocked', '--size', 'small', '--target', '.'));

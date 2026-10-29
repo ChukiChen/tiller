@@ -3,10 +3,33 @@ import { chmodSync, cpSync, existsSync, lstatSync, mkdtempSync, mkdirSync, readd
 import { tmpdir } from 'node:os';
 import { dirname, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { spawnSync } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import { initialize as initializeCore } from '../dist/core.js';
 
 export const cliPath = fileURLToPath(new URL('../dist/cli.js', import.meta.url));
+
+async function startReadOnlyGitOrigin() {
+  const child = spawn(process.execPath, [fileURLToPath(new URL('./git-origin-server.mjs', import.meta.url))], {
+    stdio: ['ignore', 'pipe', 'inherit'], windowsHide: true,
+  });
+  child.stdout.setEncoding('utf8');
+  const origin = await new Promise((resolve, reject) => {
+    let output = '';
+    child.stdout.on('data', chunk => {
+      output += chunk;
+      const line = output.split(/\r?\n/u)[0];
+      if (line && output.includes('\n')) resolve(JSON.parse(line).origin);
+    });
+    child.once('error', reject);
+    child.once('exit', code => reject(new Error(`test git origin exited: ${code ?? 'signal'}`)));
+  });
+  child.unref();
+  child.stdout.unref();
+  process.once('exit', () => child.kill('SIGTERM'));
+  return origin;
+}
+
+export const TEST_GIT_ORIGIN = await startReadOnlyGitOrigin();
 
 export function fixture(t) {
   const root = mkdtempSync(join(tmpdir(), 'tiller-cli-'));
@@ -125,30 +148,16 @@ export function repositoryFreeFixture(t) {
   return root;
 }
 
-// The managed runner may suppress a grandchild Node process's captured stdout.
-// Redirect through a shell to a file so tests still observe the real child output.
+// Capture directly so the fixture works on hosts without a POSIX shell.
 export function spawnCaptured(command, args, options = {}) {
-  const capture = mkdtempSync(join(tmpdir(), 'tiller-capture-'));
-  const stdoutPath = join(capture, 'stdout');
-  const stderrPath = join(capture, 'stderr');
-  const stdinPath = join(capture, 'stdin');
   const { env, input, ...rest } = options;
-  if (input !== undefined) writeFileSync(stdinPath, input);
-  const script = input === undefined
-    ? '"$@" > "$TILLER_STDOUT" 2> "$TILLER_STDERR"'
-    : '"$@" < "$TILLER_STDIN" > "$TILLER_STDOUT" 2> "$TILLER_STDERR"';
-  const result = spawnSync('/bin/sh', ['-c', script, 'tiller-capture', command, ...args], {
+  return spawnSync(command, args, {
     ...rest,
     encoding: 'utf8',
-    env: { ...process.env, ...env, TILLER_STDIN: stdinPath, TILLER_STDOUT: stdoutPath, TILLER_STDERR: stderrPath },
+    ...(input === undefined ? {} : { input }),
+    env: { ...process.env, ...env },
+    windowsHide: true,
   });
-  const read = pathname => {
-    try { return readFileSync(pathname, 'utf8'); }
-    catch { return ''; }
-  };
-  const output = { ...result, stdout: read(stdoutPath), stderr: read(stderrPath) };
-  rmSync(capture, { recursive: true, force: true });
-  return output;
 }
 
 
@@ -237,7 +246,7 @@ export function cli(root, ...args) {
   if (args[0] === 'init') {
     const origin = spawnSync('git', ['remote', 'get-url', 'origin'], { cwd: root, encoding: 'utf8', timeout: 20_000 });
     if (origin.status !== 0) {
-    const added = spawnSync('git', ['remote', 'add', 'origin', 'http://github@127.0.0.1:9/owner/repo.git'], {
+    const added = spawnSync('git', ['remote', 'add', 'origin', `${TEST_GIT_ORIGIN}/owner/repo.git`], {
         cwd: root, encoding: 'utf8', timeout: 20_000,
       });
       assert.ifError(added.error);
@@ -297,7 +306,7 @@ export async function initializeWithTestEnvironment(options) {
     if (repository.status === 0 && repository.stdout.trim() === 'true') {
       const origin = spawnSync('git', ['remote', 'get-url', 'origin'], { cwd: root, encoding: 'utf8', timeout: 20_000 });
       if (origin.status !== 0) {
-        const added = spawnSync('git', ['remote', 'add', 'origin', 'http://github@127.0.0.1:9/owner/repo.git'], {
+        const added = spawnSync('git', ['remote', 'add', 'origin', `${TEST_GIT_ORIGIN}/owner/repo.git`], {
           cwd: root, encoding: 'utf8', timeout: 20_000,
         });
         assert.ifError(added.error);

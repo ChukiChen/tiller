@@ -7,7 +7,7 @@ import { branchDescriptionForTask, branchNameIssue, normalizeBranchSlug, suggest
 import { prOutputFormat } from '../dist/cli.js';
 import { commitSubjectIssue } from '../dist/commit-conventions.js';
 import { GITLAB_TEMPLATE, initialize as initializeCore } from '../dist/core.js';
-import {  cliPath, cli, completeDesign, confirmTask, failure, fixture, initializeSettled, put, settleInitBaseline, spawnCaptured, success, taskRecordRoot, read } from './helpers.mjs';
+import { TEST_GIT_ORIGIN, cliPath, cli, completeDesign, confirmTask, failure, fixture, initializeSettled, put, settleInitBaseline, spawnCaptured, success, taskRecordRoot, read } from './helpers.mjs';
 import { startPlatformMock } from './platform-api-mock.mjs';
 
 const emptyTokens = { GITHUB_TOKEN: '', GH_TOKEN: '', GITLAB_TOKEN: '', GL_TOKEN: '' };
@@ -697,6 +697,7 @@ test('CASE-078 init platform selects github gitlab or both managed templates', a
   assert.equal(read(gitlab, GITLAB_TEMPLATE), readFileSync(new URL('../resources/merge_request_template.md', import.meta.url), 'utf8'));
 
   const both = fixture(t);
+  git(both, 'remote', 'add', 'origin', `${TEST_GIT_ORIGIN.replace(/^http:\/\//u, 'http://github@')}/owner/repo.git`);
   success(cli(both, 'init', '--platform', 'both'));
   const bothMetadata = JSON.parse(read(both, '.tiller/project.json'));
   assert.equal(bothMetadata.platform, 'both');

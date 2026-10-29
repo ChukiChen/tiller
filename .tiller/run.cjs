@@ -1,6 +1,5 @@
 'use strict';
 const fs = require('node:fs');
-const os = require('node:os');
 const path = require('node:path');
 const { spawnSync } = require('node:child_process');
 const { pathToFileURL } = require('node:url');
@@ -10,18 +9,7 @@ const CURRENT_CLI_VERSION = '0.5.0';
 
 const canonical = value => { const real = fs.realpathSync.native(value); return process.platform === 'win32' ? real.toLowerCase() : real; };
 function capture(command, args, options = {}) {
-  if (process.platform === 'win32') return spawnSync(command, args, { encoding: 'utf8', ...options });
-  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'tiller-capture-'));
-  const stdoutPath = path.join(directory, 'stdout');
-  const stderrPath = path.join(directory, 'stderr');
-  const result = spawnSync('/bin/sh', ['-c', '"$@" > "$TILLER_STDOUT" 2> "$TILLER_STDERR"', 'tiller-capture', command, ...args], {
-    ...options, stdio: 'inherit', env: { ...(options.env ?? process.env), TILLER_STDOUT: stdoutPath, TILLER_STDERR: stderrPath },
-  });
-  let stdout = ''; let stderr = '';
-  try { stdout = fs.readFileSync(stdoutPath, 'utf8'); } catch { /* A failed command may not write stdout. */ }
-  try { stderr = fs.readFileSync(stderrPath, 'utf8'); } catch { /* A failed command may not write stderr. */ }
-  fs.rmSync(directory, { recursive: true, force: true });
-  return { ...result, stdout, stderr };
+  return spawnSync(command, args, { encoding: 'utf8', ...options });
 }
 const RECOVERY = '请使用已知可用的 tiller CLI 执行 runtime bind --path <工程根目录>，或在工程根目录执行 npm install --prefix .tiller/local/cli /path/to/tiller-VERSION.tgz（使用已核对的本地安装包）；不会自动联网安装。';
 function ordinary(absolute, file) {

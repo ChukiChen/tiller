@@ -11,19 +11,13 @@ const project = process.cwd();
 const output = resolve('.tiller/local/package-validation');
 mkdirSync(output, { recursive: true });
 function run(command, args, cwd, status = 0) {
-  const capture = mkdtempSync(join(tmpdir(), 'tiller-pack-capture-'));
-  const stdout = join(capture, 'stdout');
-  const stderr = join(capture, 'stderr');
-  const result = spawnSync('/bin/sh', ['-c', '"$@" > "$TILLER_STDOUT" 2> "$TILLER_STDERR"', 'tiller-capture', command, ...args], {
+  const result = spawnSync(command, args, {
     cwd, encoding: 'utf8', timeout: 120_000, windowsHide: true,
-    env: { ...process.env, TILLER_STDOUT: stdout, TILLER_STDERR: stderr },
+    env: process.env,
   });
   assert.ifError(result.error && result.error.code !== 'EPERM' ? result.error : null);
-  const out = readFileSync(stdout, 'utf8');
-  const err = readFileSync(stderr, 'utf8');
-  rmSync(capture, { recursive: true, force: true });
-  assert.equal(result.status, status, err || out);
-  return out;
+  assert.equal(result.status, status, result.stderr || result.stdout);
+  return result.stdout;
 }
 function git(cwd, ...args) {
   const result = spawnSync('git', ['-c', 'user.name=Tiller Package', '-c', 'user.email=tiller@example.invalid', ...args], {

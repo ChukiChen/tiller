@@ -30,6 +30,12 @@ export interface TestRunCommand {
   files?: TestRunFile[];
 }
 
+export interface ProcessInvocation {
+  executable: string;
+  args: string[];
+  windowsVerbatimArguments?: true;
+}
+
 export interface TestRunner {
   name: string;
   build(reference: TestReference, paths: TestRunPaths, pattern?: string): TestRunCommand;
@@ -107,6 +113,36 @@ function quote(value: string): string {
 
 function commandDisplay(executable: string, args: string[]): string {
   return [executable, ...args.map(quote)].join(' ');
+}
+
+function cmdArgument(value: string): string {
+  if (/[\0\r\n%!^]/u.test(value)) throw Object.assign(new Error('Windows 测试命令参数不能包含 NUL、换行或 cmd 元字符（% ! ^）。'), {
+    code: 'VERIFY_COMMAND_UNSUPPORTED',
+  });
+  const escaped = value
+    .replaceAll('"', '\\"')
+    .replace(/(\\+)$/u, '$1$1');
+  return `"${escaped}"`;
+}
+
+function windowsExecutable(executable: string): string {
+  const mapping = new Map([
+    ['mvn', 'mvn.cmd'], ['gradle', 'gradle.bat'], ['pytest', 'pytest.exe'],
+    ['npm', 'npm.cmd'], ['npx', 'npx.cmd'],
+  ]);
+  const name = path.basename(executable).toLowerCase();
+  const replacement = mapping.get(name);
+  return replacement ? `${executable.slice(0, -name.length)}${replacement}` : executable;
+}
+
+/** Resolve a logical test tool to the platform executable and command interpreter. */
+export function platformProcessInvocation(executable: string, args: string[], platform = process.platform,
+  comSpec = process.env.ComSpec || 'cmd.exe'): ProcessInvocation {
+  if (platform !== 'win32') return { executable, args };
+  const resolved = windowsExecutable(executable);
+  if (!/\.(?:cmd|bat)$/iu.test(resolved)) return { executable: resolved, args };
+  const commandLine = `"${[resolved, ...args].map(cmdArgument).join(' ')}"`;
+  return { executable: comSpec, args: ['/d', '/s', '/c', commandLine], windowsVerbatimArguments: true };
 }
 
 function escapePattern(value: string): string {

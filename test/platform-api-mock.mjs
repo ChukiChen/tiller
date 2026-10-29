@@ -60,6 +60,7 @@ export async function startPlatformMock(t, options = {}) {
     refs: new Map(),
     mergedBranches: new Set(options.mergedBranches ?? []),
     mergedHeads: new Map(),
+    mergedCommitLists: new Map(),
     openIntegrations: new Map(),
     branchDeletes: [],
   };
@@ -76,8 +77,15 @@ export async function startPlatformMock(t, options = {}) {
       hasPrivateToken: Boolean(request.headers['private-token']),
     });
     try {
-      const gitService = options.git !== false
-        && /\.git\/(?:info\/refs|git-receive-pack|git-upload-pack)$/u.test(url.pathname);
+      const gitPath = /\.git\/(?:info\/refs|git-receive-pack|git-upload-pack)$/u.test(url.pathname);
+      const gitUpload = /\.git\/git-upload-pack$/u.test(url.pathname)
+        || (/\.git\/info\/refs$/u.test(url.pathname) && url.searchParams.get('service') === 'git-upload-pack');
+      if (gitPath && !gitUpload && options.git === false) {
+        response.writeHead(403);
+        response.end('read-only test origin');
+        return;
+      }
+      const gitService = gitPath && (options.git !== false || gitUpload);
       if (gitService) {
         const result = spawnSync('git', ['http-backend'], {
           input: body,
@@ -175,6 +183,18 @@ export async function startPlatformMock(t, options = {}) {
             pulls.push({ number: 1, html_url: 'https://example.invalid/tiller/pr/1', base: { ref: 'main' }, head: { ref: branch, sha } });
           }
           return json(response, 200, pulls);
+        }
+        if (request.method === 'GET' && /^pulls\/\d+\/commits$/u.test(rest)) {
+          if (state.mode === 'commit-list-failure') {
+            return json(response, 500, { message: 'commit list unavailable' });
+          }
+          if (state.mode === 'commit-list-invalid') return json(response, 200, { commits: [] });
+          const number = Number.parseInt(rest.split('/')[1], 10);
+          const branch = [...state.mergedBranches].find(name => state.mergedCommitLists.has(`${name}:${number}`));
+          const commits = branch ? state.mergedCommitLists.get(`${branch}:${number}`) : undefined;
+          return Array.isArray(commits)
+            ? json(response, 200, commits.map(sha => ({ sha })))
+            : json(response, 404, { message: 'Not Found' });
         }
         if (request.method === 'PUT' && /^pulls\/\d+\/merge$/u.test(rest)) {
           if (state.mode === 'failure') {
@@ -306,6 +326,18 @@ export async function startPlatformMock(t, options = {}) {
           }
           return json(response, 200, mergeRequests);
         }
+        if (request.method === 'GET' && /^merge_requests\/\d+\/commits$/u.test(rest)) {
+          if (state.mode === 'commit-list-failure') {
+            return json(response, 500, { message: 'commit list unavailable' });
+          }
+          if (state.mode === 'commit-list-invalid') return json(response, 200, { commits: [] });
+          const number = Number.parseInt(rest.split('/')[1], 10);
+          const branch = [...state.mergedBranches].find(name => state.mergedCommitLists.has(`${name}:${number}`));
+          const commits = branch ? state.mergedCommitLists.get(`${branch}:${number}`) : undefined;
+          return Array.isArray(commits)
+            ? json(response, 200, commits.map(sha => ({ sha })))
+            : json(response, 404, { message: 'Not Found' });
+        }
         if (request.method === 'PUT' && rest === 'merge_requests/7/merge') {
           if (state.mode === 'failure') {
             return json(response, 406, { message: `merge rejected ${request.headers['private-token'] ?? ''}` });
@@ -358,6 +390,11 @@ export async function startPlatformMock(t, options = {}) {
     setMergedHeads(branch, heads) {
       state.mergedBranches.add(branch);
       state.mergedHeads.set(branch, [...heads]);
+    },
+    setMergedCommitLists(branch, entries) {
+      state.mergedBranches.add(branch);
+      state.mergedHeads.set(branch, entries.map(item => item.head));
+      for (const [index, item] of entries.entries()) state.mergedCommitLists.set(`${branch}:${index + 1}`, [...item.commits]);
     },
     setMode(mode) { state.mode = mode; },
     resetRequests() { state.requests.length = 0; },
