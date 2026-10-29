@@ -95,62 +95,6 @@
 
 ## 验证
 
-### run-1
-<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-347 LF, CRLF and isolated CR design bodies keep confirmation subjects stable$' \u002d\u002dtest-reporter=./.tiller/local/verify-OImWPl/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-OImWPl/report.jsonl test/windows-fresh-hygiene.test.mjs","exitCode":1,"tree":"91e10e99e617c31bd0e8aa867c5e39b259a272f643dc40d3effeed9b209ef413","commit":"883b12291038961f96ee887e6f181a73c872e431"} -->
-- 条件：AC-1
-- 测试：test/windows-fresh-hygiene.test.mjs::CASE-347 LF, CRLF and isolated CR design bodies keep confirmation subjects stable
-- 用例：CASE-347
-- 结果：failed
-- 来源：executed
-- 核实：已核实
-- 预期：失败先行
-- 基线提交：458051eeaaf41ba14661771892242b1e56ad7a8c
-- 日志：.tiller/local/20261029-windows-fresh-hygiene/logs/run-2.log
-- 提交：883b12291038
-- 时间：2026-10-29T02:23:03.170Z
-
-### run-2
-<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-348 fresh clone uniquely binds initBaseline\\.commit through merged integration commits$' \u002d\u002dtest-reporter=./.tiller/local/verify-mxo7rm/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-mxo7rm/report.jsonl test/windows-fresh-hygiene.test.mjs","exitCode":1,"tree":"91e10e99e617c31bd0e8aa867c5e39b259a272f643dc40d3effeed9b209ef413","commit":"883b12291038961f96ee887e6f181a73c872e431"} -->
-- 条件：AC-2
-- 测试：test/windows-fresh-hygiene.test.mjs::CASE-348 fresh clone uniquely binds initBaseline.commit through merged integration commits
-- 用例：CASE-348
-- 结果：failed
-- 来源：executed
-- 核实：已核实
-- 预期：失败先行
-- 基线提交：458051eeaaf41ba14661771892242b1e56ad7a8c
-- 日志：.tiller/local/20261029-windows-fresh-hygiene/logs/run-3.log
-- 提交：883b12291038
-- 时间：2026-10-29T02:23:07.708Z
-
-### run-3
-<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-349 Windows test invocation and adapter helpers avoid POSIX shell dependencies$' \u002d\u002dtest-reporter=./.tiller/local/verify-z1Kncd/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-z1Kncd/report.jsonl test/windows-fresh-hygiene.test.mjs","exitCode":1,"tree":"91e10e99e617c31bd0e8aa867c5e39b259a272f643dc40d3effeed9b209ef413","commit":"883b12291038961f96ee887e6f181a73c872e431"} -->
-- 条件：AC-3
-- 测试：test/windows-fresh-hygiene.test.mjs::CASE-349 Windows test invocation and adapter helpers avoid POSIX shell dependencies
-- 用例：CASE-349
-- 结果：failed
-- 来源：executed
-- 核实：已核实
-- 预期：失败先行
-- 基线提交：458051eeaaf41ba14661771892242b1e56ad7a8c
-- 日志：.tiller/local/20261029-windows-fresh-hygiene/logs/run-4.log
-- 提交：883b12291038
-- 时间：2026-10-29T02:23:12.890Z
-
-### run-4
-<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-350 unreachable origin fails init preflight before any initialization artifact$' \u002d\u002dtest-reporter=./.tiller/local/verify-1ji9PG/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-1ji9PG/report.jsonl test/windows-fresh-hygiene.test.mjs","exitCode":1,"tree":"91e10e99e617c31bd0e8aa867c5e39b259a272f643dc40d3effeed9b209ef413","commit":"883b12291038961f96ee887e6f181a73c872e431"} -->
-- 条件：AC-4
-- 测试：test/windows-fresh-hygiene.test.mjs::CASE-350 unreachable origin fails init preflight before any initialization artifact
-- 用例：CASE-350
-- 结果：failed
-- 来源：executed
-- 核实：已核实
-- 预期：失败先行
-- 基线提交：458051eeaaf41ba14661771892242b1e56ad7a8c
-- 日志：.tiller/local/20261029-windows-fresh-hygiene/logs/run-5.log
-- 提交：883b12291038
-- 时间：2026-10-29T02:23:13.672Z
-
 ### run-5
 <!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-347 LF, CRLF and isolated CR design bodies keep confirmation subjects stable$' \u002d\u002dtest-reporter=./.tiller/local/verify-SErIi1/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-SErIi1/report.jsonl test/windows-fresh-hygiene.test.mjs","exitCode":0,"tree":"d3b25e9118d58bc0d45d81cf20b634bf75d1703e2139eea0ae888c5e545c6af2","commit":"ff0453c39de73592206263110e23dbf460af2a9c"} -->
 - 条件：AC-1
@@ -199,36 +143,62 @@
 - 提交：ff0453c39de7
 - 时间：2026-10-29T03:40:11.329Z
 
+### run-9
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-347 LF, CRLF and isolated CR design bodies keep confirmation subjects stable$' \u002d\u002dtest-reporter=./.tiller/local/verify-eK5edy/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-eK5edy/report.jsonl test/windows-fresh-hygiene.test.mjs","exitCode":1,"tree":"d3b25e9118d58bc0d45d81cf20b634bf75d1703e2139eea0ae888c5e545c6af2","commit":"b0ab1ba64794f6effa71c4085e040950eb184110"} -->
+- 条件：AC-1
+- 测试：test/windows-fresh-hygiene.test.mjs::CASE-347 LF, CRLF and isolated CR design bodies keep confirmation subjects stable
+- 用例：CASE-347
+- 结果：failed
+- 来源：executed
+- 核实：已核实
+- 预期：失败先行
+- 基线提交：458051eeaaf41ba14661771892242b1e56ad7a8c
+- 日志：.tiller/local/20261029-windows-fresh-hygiene/logs/run-10.log
+- 提交：b0ab1ba64794
+- 时间：2026-10-29T03:40:47.843Z
+
+### run-10
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-348 fresh clone uniquely binds initBaseline\\.commit through merged integration commits$' \u002d\u002dtest-reporter=./.tiller/local/verify-lEfwYB/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-lEfwYB/report.jsonl test/windows-fresh-hygiene.test.mjs","exitCode":1,"tree":"d3b25e9118d58bc0d45d81cf20b634bf75d1703e2139eea0ae888c5e545c6af2","commit":"b0ab1ba64794f6effa71c4085e040950eb184110"} -->
+- 条件：AC-2
+- 测试：test/windows-fresh-hygiene.test.mjs::CASE-348 fresh clone uniquely binds initBaseline.commit through merged integration commits
+- 用例：CASE-348
+- 结果：failed
+- 来源：executed
+- 核实：已核实
+- 预期：失败先行
+- 基线提交：458051eeaaf41ba14661771892242b1e56ad7a8c
+- 日志：.tiller/local/20261029-windows-fresh-hygiene/logs/run-11.log
+- 提交：b0ab1ba64794
+- 时间：2026-10-29T03:40:52.462Z
+
+### run-11
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-349 Windows test invocation and adapter helpers avoid POSIX shell dependencies$' \u002d\u002dtest-reporter=./.tiller/local/verify-LvHAaB/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-LvHAaB/report.jsonl test/windows-fresh-hygiene.test.mjs","exitCode":1,"tree":"d3b25e9118d58bc0d45d81cf20b634bf75d1703e2139eea0ae888c5e545c6af2","commit":"b0ab1ba64794f6effa71c4085e040950eb184110"} -->
+- 条件：AC-3
+- 测试：test/windows-fresh-hygiene.test.mjs::CASE-349 Windows test invocation and adapter helpers avoid POSIX shell dependencies
+- 用例：CASE-349
+- 结果：failed
+- 来源：executed
+- 核实：已核实
+- 预期：失败先行
+- 基线提交：458051eeaaf41ba14661771892242b1e56ad7a8c
+- 日志：.tiller/local/20261029-windows-fresh-hygiene/logs/run-12.log
+- 提交：b0ab1ba64794
+- 时间：2026-10-29T03:40:56.451Z
+
+### run-12
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-350 unreachable origin fails init preflight before any initialization artifact$' \u002d\u002dtest-reporter=./.tiller/local/verify-9ULuPV/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-9ULuPV/report.jsonl test/windows-fresh-hygiene.test.mjs","exitCode":1,"tree":"d3b25e9118d58bc0d45d81cf20b634bf75d1703e2139eea0ae888c5e545c6af2","commit":"b0ab1ba64794f6effa71c4085e040950eb184110"} -->
+- 条件：AC-4
+- 测试：test/windows-fresh-hygiene.test.mjs::CASE-350 unreachable origin fails init preflight before any initialization artifact
+- 用例：CASE-350
+- 结果：failed
+- 来源：executed
+- 核实：已核实
+- 预期：失败先行
+- 基线提交：458051eeaaf41ba14661771892242b1e56ad7a8c
+- 日志：.tiller/local/20261029-windows-fresh-hygiene/logs/run-13.log
+- 提交：b0ab1ba64794
+- 时间：2026-10-29T03:40:59.674Z
+
 ## 自检
 
-- [x] 需求确认有效
-- [ ] 设计确认有效
-- [ ] 验收条件均有当前通过且绑定全局用例的测试引用
-- [ ] 每条验收条件均映射到本次验证引用的全局用例
-- [ ] 验收条件与用例通过 verify 的 AC→测试→CASE 记录关联
-- [ ] 验证命令已执行且测试输出已核实
-- [ ] 缺陷修复包含基线失败与当前通过证据
-- [x] 全局用例结构与引用有效
-- [x] 改动未超出范围
-- [x] 未弱化仍存在的测试
-- [x] 评审无未清除阻塞项
-- [x] 记录不含密钥或本机绝对路径
-
-阻塞项：
-- 缺少设计确认。
-- AC-1 尚无验证。
-- AC-2 尚无验证。
-- AC-3 尚无验证。
-- AC-4 尚无验证。
-- bugfix 任务缺少失败先行验证：先在任务基线运行 verify --expect-fail --test "<文件::测试名>"。
-
-提示：
-- 166 条历史用例仍以 <任务>#AC-n 记录关联 AC；这是可迁移的历史债，不阻断当前覆盖。
-- 143 条用例的关联 AC 为无；覆盖以需求字段和 verify 的 AC→测试→CASE 记录为准。
-- 用例 CASE-348 待实现：尚无测试名引用 CASE-348。
-- 用例 CASE-350 待实现：尚无测试名引用 CASE-350。
-- 用例 CASE-349 待实现：尚无测试名引用 CASE-349。
-- 用例 CASE-347 待实现：尚无测试名引用 CASE-347。
-- 本次改动涉及模块 initialization：建议回归该模块 66 条用例；建议同时回归经过它的场景 CASE-055, CASE-001。
-- 本次改动涉及模块 verification：建议回归该模块 51 条用例；建议同时回归经过它的场景 CASE-055, CASE-001。
-- 本次改动涉及模块 workflow：建议回归该模块 171 条用例；建议同时回归经过它的场景 CASE-055, CASE-001。
+交付前运行 check；验收后运行 accept。
