@@ -10,7 +10,7 @@ tiller 是一套开源的 AI 软件工程方法论与工具集，帮助开发者
 - 任务阶段由记录事实推导。已验收即交付完成；`accept` 在 `pr` 前并随任务记录提交。合入后的 `close` 先验证跟踪记录、默认历史或平台 API 的合入证明，再清理本机 worktree 与 `.tiller/local/<id>/`，不改共享 `task.md`。未验收或已验收未合入任务终止用 `close --abandon`，只清理本机、不写共享记录或提交；清理后无记录可读属预期，不提示 reopen。
 - merge/close 后 primary 不生成未跟踪 `.tiller/task/<id>/`，合入记录通过默认分支快进/pull 成为跟踪文件；`--requirement` 短目标会生成可确认的结构化需求骨架，`--requirement-file` 仍优先。
 - 安装后的主路径统一使用 PATH、`npx` 或打包入口中的同一个 `tiller`。提交 scope 的全局/工作流名称不再误报缺失模块。
-- `start` 在 `.tiller/local/<id>/worktrees/` 创建任务 worktree；workspace 另含 `management` 与各登记仓库路径。清单、开工前摘要和日志同为 `.tiller/local/<id>/` 的旁路。`close`/`--abandon` 强拆该任务 worktree，并清理整棵 `.tiller/local/<id>/`；已验收 close 与 abandon 都只做本机清理，abandon 不写共享记录或提交。
+- `start` 在 `.tiller/local/<id>/worktrees/` 创建任务 worktree；workspace 另含 `management` 与各登记仓库路径。清单、开工前摘要和日志同为 `.tiller/local/<id>/` 的旁路。`close`/`--abandon` 强拆该任务 worktree，并清理整棵 `.tiller/local/<id>/`；cwd 位于待删 worktree 或任务目录时先切到 primary，本机删除或本地任务分支清理失败返回 `TASK_CLEANUP_FAILED`，不得假报完成。已验收 close 与 abandon 都只做本机清理，abandon 不写共享记录或提交。
 - 有 Git HEAD 的 `init` 另建 `.tiller/local/<YYYYMMDD-tiller-init>/worktrees` 的 `chore/tiller-init` 基线并尝试 PR/MR；未合入时 `start` 默认阻断，可用 `--skip-init-gate`。基线只由人工合入，之后 `close <init-id>` 只清该本机目录。
 - `.tiller/plans/` 保存大功能规划、任务条目和依赖；依赖未验收时阻塞开工。
 - `.tiller/cases/` 保存跨任务测试设计，按模块和场景组织。新用例先写清前置条件、步骤、输入、预期结果和稳定 specs 需求，用 `case add --criterion AC-n` 关联该需求文件的验收条件，再由测试名引用稳定编号；历史“无”与 `task#AC` 只读。

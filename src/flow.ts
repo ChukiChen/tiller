@@ -2528,6 +2528,9 @@ export async function closeFlow(rootInput: string, id: string, reasonInput: stri
       const branchCleanup = metadata.initBaseline
         ? await cleanupTaskBranches(root, metadata, metadata.initBaseline.branch, options)
         : null;
+      if (branchCleanup?.failures.length) {
+        fail('TASK_CLEANUP_FAILED', `初始化基线本机分支清理失败：${branchCleanup.failures.join('；')}。`);
+      }
       const warnings = [...cleanup.warnings, ...(branchCleanup?.warnings ?? [])];
       return { id, stage: '已关闭', stageReason: '初始化基线本机清理完成；共享记录未改写。', reason,
         at: new Date().toISOString(), worktrees: cleanup.removedWorktrees, missingWorktrees: cleanup.missingWorktrees,
@@ -2554,6 +2557,9 @@ export async function closeFlow(rootInput: string, id: string, reasonInput: stri
       // Do not materialize `.tiller/task/<id>/` onto primary; merged history arrives via ff/pull.
       const cleanup = await cleanupTaskWorktrees(root, id, metadata);
       const branchCleanup = await cleanupTaskBranches(root, metadata, taskBranchName(task.meta), options);
+      if (branchCleanup.failures.length) {
+        fail('TASK_CLEANUP_FAILED', `任务本机分支清理失败，未完成关闭：${branchCleanup.failures.join('；')}。`);
+      }
       const warnings = [...cleanup.warnings, ...branchCleanup.warnings];
       const recordAvailable = await readTextIfExists(root, taskPath(id)) !== null;
       return { id, stage: current.stage, stageReason: '交付验收有效；本机清理完成。', reason, at, path: task.path,
@@ -2569,6 +2575,9 @@ export async function closeFlow(rootInput: string, id: string, reasonInput: stri
     };
     const cleanup = await cleanupTaskWorktrees(root, id, metadata);
     const branchCleanup = await cleanupTaskBranches(root, metadata, taskBranchName(task.meta), options);
+    if (branchCleanup.failures.length) {
+      fail('TASK_CLEANUP_FAILED', `任务本机分支清理失败，未完成放弃：${branchCleanup.failures.join('；')}。`);
+    }
     const warnings = [...cleanup.warnings, ...branchCleanup.warnings];
     return { id, stage: '已放弃', stageReason: '任务已放弃；本机任务事实已清理。', reason, at: closure.at, path: task.path,
       worktrees: cleanup.removedWorktrees, missingWorktrees: cleanup.missingWorktrees, logsRemoved: cleanup.logsRemoved,
