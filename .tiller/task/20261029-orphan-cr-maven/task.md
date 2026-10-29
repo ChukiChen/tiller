@@ -87,48 +87,6 @@
 
 ## 验证
 
-### run-1
-<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-351 isolated CR keeps task criteria, confirmations, verification and acceptance$' \u002d\u002dtest-reporter=./.tiller/local/verify-S27EZN/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-S27EZN/report.jsonl test/windows-fresh-hygiene.test.mjs","exitCode":1,"tree":"4e6b5b473fcfb6a2a9511c790f522fc507937699aaad7fdb5d4c2bad9331f342","commit":"553322e6478d2d1a4a72e4c16c52af9eecbe2ced"} -->
-- 条件：AC-1
-- 测试：test/windows-fresh-hygiene.test.mjs::CASE-351 isolated CR keeps task criteria, confirmations, verification and acceptance
-- 用例：CASE-351
-- 结果：failed
-- 来源：executed
-- 核实：已核实
-- 预期：失败先行
-- 基线提交：0b4d56ae1e63edd8ed4407e93ba758c285857fc6
-- 日志：.tiller/local/20261029-orphan-cr-maven/logs/run-1.log
-- 提交：553322e6478d
-- 时间：2026-10-29T05:17:27.946Z
-
-### run-2
-<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-352 Windows cmd invocation keeps one outer command layer and exact Maven argv$' \u002d\u002dtest-reporter=./.tiller/local/verify-i2pLsv/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-i2pLsv/report.jsonl test/windows-fresh-hygiene.test.mjs","exitCode":1,"tree":"4e6b5b473fcfb6a2a9511c790f522fc507937699aaad7fdb5d4c2bad9331f342","commit":"553322e6478d2d1a4a72e4c16c52af9eecbe2ced"} -->
-- 条件：AC-2
-- 测试：test/windows-fresh-hygiene.test.mjs::CASE-352 Windows cmd invocation keeps one outer command layer and exact Maven argv
-- 用例：CASE-352
-- 结果：failed
-- 来源：executed
-- 核实：已核实
-- 预期：失败先行
-- 基线提交：0b4d56ae1e63edd8ed4407e93ba758c285857fc6
-- 日志：.tiller/local/20261029-orphan-cr-maven/logs/run-2.log
-- 提交：553322e6478d
-- 时间：2026-10-29T05:17:33.038Z
-
-### run-3
-<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-353 Windows junit-maven cmd fixture writes and verifies the private Surefire report$' \u002d\u002dtest-reporter=./.tiller/local/verify-kjTM2A/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-kjTM2A/report.jsonl test/java-runners.test.mjs","exitCode":1,"tree":"4e6b5b473fcfb6a2a9511c790f522fc507937699aaad7fdb5d4c2bad9331f342","commit":"553322e6478d2d1a4a72e4c16c52af9eecbe2ced"} -->
-- 条件：AC-2
-- 测试：test/java-runners.test.mjs::CASE-353 Windows junit-maven cmd fixture writes and verifies the private Surefire report
-- 用例：CASE-353
-- 结果：failed
-- 来源：executed
-- 核实：已核实
-- 预期：失败先行
-- 基线提交：0b4d56ae1e63edd8ed4407e93ba758c285857fc6
-- 日志：.tiller/local/20261029-orphan-cr-maven/logs/run-3.log
-- 提交：553322e6478d
-- 时间：2026-10-29T05:17:36.465Z
-
 ### run-4
 <!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-351 isolated CR keeps task criteria, confirmations, verification and acceptance$' \u002d\u002dtest-reporter=./.tiller/local/verify-9aokBb/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-9aokBb/report.jsonl test/windows-fresh-hygiene.test.mjs","exitCode":0,"tree":"53893ba33d4cd79dbef2bad9e7ade0a4128b4945cff1b17fdeda3bd34da09303","commit":"1fcd5d9f69a4e98dfdbe35f62586fb7d8deecf94"} -->
 - 条件：AC-1
@@ -201,39 +159,20 @@
 - 提交：1fcd5d9f69a4
 - 时间：2026-10-29T06:42:53.944Z
 
+### run-10
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-351 isolated CR keeps task criteria, confirmations, verification and acceptance$' \u002d\u002dtest-reporter=./.tiller/local/verify-CR3XRV/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-CR3XRV/report.jsonl test/windows-fresh-hygiene.test.mjs","exitCode":1,"tree":"ed097bc482a852b70d4057257e1745a73bf62ca2d3e4d3d428f9aae9e1ec8066","commit":"650402a1cd499e0f3c20bc59199e3a7604c48062"} -->
+- 条件：AC-1
+- 测试：test/windows-fresh-hygiene.test.mjs::CASE-351 isolated CR keeps task criteria, confirmations, verification and acceptance
+- 用例：CASE-351
+- 结果：failed
+- 来源：executed
+- 核实：已核实
+- 预期：失败先行
+- 基线提交：0b4d56ae1e63edd8ed4407e93ba758c285857fc6
+- 日志：.tiller/local/20261029-orphan-cr-maven/logs/run-10.log
+- 提交：650402a1cd49
+- 时间：2026-10-29T06:43:28.763Z
+
 ## 自检
 
-- [x] 需求确认有效
-- [ ] 设计确认有效
-- [ ] 验收条件均有当前通过且绑定全局用例的测试引用
-- [ ] 每条验收条件均映射到本次验证引用的全局用例
-- [ ] 验收条件与用例通过 verify 的 AC→测试→CASE 记录关联
-- [ ] 验证命令已执行且测试输出已核实
-- [ ] 缺陷修复包含基线失败与当前通过证据
-- [x] 全局用例结构与引用有效
-- [ ] 改动未超出范围
-- [x] 未弱化仍存在的测试
-- [x] 评审无未清除阻塞项
-- [x] 记录不含密钥或本机绝对路径
-
-阻塞项：
-- 过程卫生：设计确认提交 9f321ce78120 后，工作区仍有未提交业务改动：src/flow.ts、src/test-output.ts、test/java-runners.test.mjs、test/windows-fresh-hygiene.test.mjs。请先提交或移出本任务。
-- AC-1 的用例 CASE-351 尚无当前通过且已核实的测试。
-- AC-1 的用例 CASE-353 尚无当前通过且已核实的测试。
-- AC-1 的用例 CASE-352 尚无当前通过且已核实的测试。
-- AC-1 尚无验证。
-- AC-2 的用例 CASE-351 尚无当前通过且已核实的测试。
-- AC-2 的用例 CASE-353 尚无当前通过且已核实的测试。
-- AC-2 的用例 CASE-352 尚无当前通过且已核实的测试。
-- AC-2 尚无验证。
-- bugfix 任务的失败先行测试 test/windows-fresh-hygiene.test.mjs::CASE-351 isolated CR keeps task criteria, confirmations, verification and acceptance 在当前代码缺少已核实的通过记录。
-- 改动超出范围：test/case-redesign.test.mjs、test/review-release.test.mjs、test/rules.test.mjs
-- 交付范围存在未提交改动：.tiller/cases/modules/workflow/behavior.md、.tiller/cases/modules/workflow/interface.md、.tiller/specs/modules/workflow/windows-residual-hardening-design.md、.tiller/specs/modules/workflow/windows-residual-hardening.md、src/flow.ts、src/test-output.ts、test/java-runners.test.mjs、test/windows-fresh-hygiene.test.mjs
-
-提示：
-- 166 条历史用例仍以 <任务>#AC-n 记录关联 AC；这是可迁移的历史债，不阻断当前覆盖。
-- 143 条用例的关联 AC 为无；覆盖以需求字段和 verify 的 AC→测试→CASE 记录为准。
-- 本次改动涉及模块 initialization：建议回归该模块 66 条用例；建议同时回归经过它的场景 CASE-055, CASE-001。
-- 本次改动涉及模块 standards：建议回归该模块 37 条用例；建议同时回归经过它的场景 CASE-055。
-- 本次改动涉及模块 verification：建议回归该模块 51 条用例；建议同时回归经过它的场景 CASE-055, CASE-001。
-- 本次改动涉及模块 workflow：建议回归该模块 174 条用例；建议同时回归经过它的场景 CASE-055, CASE-001。
+交付前运行 check；验收后运行 accept。
