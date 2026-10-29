@@ -74,54 +74,30 @@
 
 ## 验证
 
-### run-1
-<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-354 Maven default Surefire reports verify pass, failure and exact selection$' \u002d\u002dtest-reporter=./.tiller/local/verify-gJDuVt/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-gJDuVt/report.jsonl test/java-runners.test.mjs","exitCode":0,"tree":"4408f9a9f00392ad3020805859086dd89a1ae4fd25707ea7b7964a3bde181e52","commit":"356a82e28e19f02c4d88d8132aa85f080701379e"} -->
+### run-3
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-354 Maven default Surefire reports verify pass, failure and exact selection$' \u002d\u002dtest-reporter=./.tiller/local/verify-FRw6tT/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-FRw6tT/report.jsonl test/java-runners.test.mjs","exitCode":0,"tree":"38371ec2cc4d8f142bfac4b4f267e3454f66e10b39855e74a8c69c07106ee329","commit":"0217d7738d624c7edfc4fabb6a2590c63133bf1b"} -->
 - 条件：AC-1
 - 测试：test/java-runners.test.mjs::CASE-354 Maven default Surefire reports verify pass, failure and exact selection
 - 用例：CASE-354
 - 结果：passed
 - 来源：executed
 - 核实：已核实
-- 日志：.tiller/local/20261029-surefire-abandon/logs/run-1.log
-- 提交：356a82e28e19
-- 时间：2026-10-29T09:02:19.969Z
+- 日志：.tiller/local/20261029-surefire-abandon/logs/run-3.log
+- 提交：0217d7738d62
+- 时间：2026-10-29T09:03:03.360Z
 
-### run-2
-<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-317 abandon ignores primary write blockers and only cleans local task facts$' \u002d\u002dtest-reporter=./.tiller/local/verify-97mjvg/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-97mjvg/report.jsonl test/task-worktrees.test.mjs","exitCode":0,"tree":"4408f9a9f00392ad3020805859086dd89a1ae4fd25707ea7b7964a3bde181e52","commit":"356a82e28e19f02c4d88d8132aa85f080701379e"} -->
+### run-4
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-317 abandon ignores primary write blockers and only cleans local task facts$' \u002d\u002dtest-reporter=./.tiller/local/verify-aFY1WS/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-aFY1WS/report.jsonl test/task-worktrees.test.mjs","exitCode":0,"tree":"38371ec2cc4d8f142bfac4b4f267e3454f66e10b39855e74a8c69c07106ee329","commit":"0217d7738d624c7edfc4fabb6a2590c63133bf1b"} -->
 - 条件：AC-2
 - 测试：test/task-worktrees.test.mjs::CASE-317 abandon ignores primary write blockers and only cleans local task facts
 - 用例：CASE-317
 - 结果：passed
 - 来源：executed
 - 核实：已核实
-- 日志：.tiller/local/20261029-surefire-abandon/logs/run-2.log
-- 提交：356a82e28e19
-- 时间：2026-10-29T09:02:28.569Z
+- 日志：.tiller/local/20261029-surefire-abandon/logs/run-4.log
+- 提交：0217d7738d62
+- 时间：2026-10-29T09:03:12.191Z
 
 ## 自检
 
-- [x] 需求确认有效
-- [ ] 设计确认有效
-- [ ] 验收条件均有当前通过且绑定全局用例的测试引用
-- [ ] 每条验收条件均映射到本次验证引用的全局用例
-- [ ] 验收条件与用例通过 verify 的 AC→测试→CASE 记录关联
-- [ ] 验证命令已执行且测试输出已核实
-- [x] 全局用例结构与引用有效
-- [x] 改动未超出范围
-- [x] 未弱化仍存在的测试
-- [x] 评审无未清除阻塞项
-- [x] 记录不含密钥或本机绝对路径
-
-阻塞项：
-- 设计确认后需求或设计已变化，需要重新确认。
-- AC-1 的验证已过期：记录时的代码树与当前工作树不同（范围内代码已变化）。
-- AC-2 的验证已过期：记录时的代码树与当前工作树不同（范围内代码已变化）。
-
-提示：
-- 165 条历史用例仍以 <任务>#AC-n 记录关联 AC；这是可迁移的历史债，不阻断当前覆盖。
-- 141 条用例的关联 AC 为无；覆盖以需求字段和 verify 的 AC→测试→CASE 记录为准。
-- 本次改动涉及模块 initialization：建议回归该模块 66 条用例；建议同时回归经过它的场景 CASE-055, CASE-001。
-- 本次改动涉及模块 standards：建议回归该模块 37 条用例；建议同时回归经过它的场景 CASE-055。
-- 本次改动涉及模块 verification：建议回归该模块 52 条用例；建议同时回归经过它的场景 CASE-055, CASE-001。
-- 本次改动涉及模块 workflow：建议回归该模块 174 条用例；建议同时回归经过它的场景 CASE-055, CASE-001。
-- 修改的测试文件移除了 5 个测试用例（请确认对应功能已删除；详情见 Git diff）。
+交付前运行 check；验收后运行 accept。
