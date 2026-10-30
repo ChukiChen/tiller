@@ -53,13 +53,128 @@
 | 部分 | 确认人 | 时间 | 短提交 | 原话 |
 | --- | --- | --- | --- | --- |
 | 需求 | ChukiChen | 2026-10-30T15:42:21.200Z | eab0dfa10058 | 选 MIT；改完自动合并，不必再问。 |
+| 交付验收 | ChukiChen | 2026-10-30T15:43:32.479Z | dd681b574d31 | 改完自动合并，不必再问。 |
 
 <!-- tiller-confirm:v1 {"gate":"requirements","object":"需求正文（目标、范围与验收条件）","subject":"5a2c1b0a97740a84dbec2066bd7c660050f3241fb221858615c9f5554269386f","commit":"eab0dfa10058bd13041e82d2c37d01cccf236108","by":"ChukiChen","quote":"选 MIT；改完自动合并，不必再问。","at":"2026-10-30T15:42:21.200Z"} -->
+<!-- tiller-confirm:v1 {"gate":"acceptance","object":"当前交付（需求、设计、验证与提交）","subject":"39ff72a3a8b2f39db3eb6c7b7810b0b1f3f355978cdc37da54c361b22605a68f","commit":"dd681b574d315ab7101b80532677ce92def3a250","by":"ChukiChen","quote":"改完自动合并，不必再问。","at":"2026-10-30T15:43:32.479Z"} -->
 
 ## 验证
 
-尚无验证。
+### run-1
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-314 0\\.5\\.0 发布契约、许可证与完整质量门禁保持覆盖$' \u002d\u002dtest-reporter=./.tiller/local/verify-I21VgN/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-I21VgN/report.jsonl test/rules.test.mjs","exitCode":0,"tree":"6762ac0da226ae93158993b257b4e3b856e5029ed4202168a4dea71d1a1ebca6","commit":"d3faf2bddd7972cfb5ba833e0ff1b3ff220c53a8"} -->
+- 条件：AC-1
+- 测试：test/rules.test.mjs::CASE-314 0.5.0 发布契约、许可证与完整质量门禁保持覆盖
+- 用例：CASE-314
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/20261030-mit-license/logs/run-2.log
+- 提交：d3faf2bddd79
+- 时间：2026-10-30T15:42:50.684Z
+
+### run-2
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-314 0\\.5\\.0 发布契约、许可证与完整质量门禁保持覆盖$' \u002d\u002dtest-reporter=./.tiller/local/verify-I21VgN/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-I21VgN/report.jsonl test/rules.test.mjs","exitCode":0,"tree":"6762ac0da226ae93158993b257b4e3b856e5029ed4202168a4dea71d1a1ebca6","commit":"d3faf2bddd7972cfb5ba833e0ff1b3ff220c53a8"} -->
+- 条件：AC-2
+- 测试：test/rules.test.mjs::CASE-314 0.5.0 发布契约、许可证与完整质量门禁保持覆盖
+- 用例：CASE-314
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/20261030-mit-license/logs/run-2.log
+- 提交：d3faf2bddd79
+- 时间：2026-10-30T15:42:50.684Z
+
+### run-3
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-314 0\\.5\\.0 发布契约、许可证与完整质量门禁保持覆盖$' \u002d\u002dtest-reporter=./.tiller/local/verify-I21VgN/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-I21VgN/report.jsonl test/rules.test.mjs","exitCode":0,"tree":"6762ac0da226ae93158993b257b4e3b856e5029ed4202168a4dea71d1a1ebca6","commit":"d3faf2bddd7972cfb5ba833e0ff1b3ff220c53a8"} -->
+- 条件：AC-3
+- 测试：test/rules.test.mjs::CASE-314 0.5.0 发布契约、许可证与完整质量门禁保持覆盖
+- 用例：CASE-314
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/20261030-mit-license/logs/run-2.log
+- 提交：d3faf2bddd79
+- 时间：2026-10-30T15:42:50.684Z
+
+### run-4
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-314 0\\.5\\.0 发布契约、许可证与完整质量门禁保持覆盖$' \u002d\u002dtest-reporter=./.tiller/local/verify-I21VgN/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-I21VgN/report.jsonl test/rules.test.mjs","exitCode":0,"tree":"6762ac0da226ae93158993b257b4e3b856e5029ed4202168a4dea71d1a1ebca6","commit":"d3faf2bddd7972cfb5ba833e0ff1b3ff220c53a8"} -->
+- 条件：AC-4
+- 测试：test/rules.test.mjs::CASE-314 0.5.0 发布契约、许可证与完整质量门禁保持覆盖
+- 用例：CASE-314
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/20261030-mit-license/logs/run-2.log
+- 提交：d3faf2bddd79
+- 时间：2026-10-30T15:42:50.684Z
+
+### run-5
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-314 0\\.5\\.0 发布契约与完整质量门禁保持覆盖$' \u002d\u002dtest-reporter=./.tiller/local/verify-hqjfdk/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-hqjfdk/report.jsonl test/rules.test.mjs","exitCode":0,"tree":"467181293986203883fe38bc3060176945c91c0c5b5cfb49136d7aaf7c712aa4","commit":"d3faf2bddd7972cfb5ba833e0ff1b3ff220c53a8"} -->
+- 条件：AC-1
+- 测试：test/rules.test.mjs::CASE-314 0.5.0 发布契约与完整质量门禁保持覆盖
+- 用例：CASE-314
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/20261030-mit-license/logs/run-5.log
+- 提交：d3faf2bddd79
+- 时间：2026-10-30T15:43:08.533Z
+
+### run-6
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-314 0\\.5\\.0 发布契约与完整质量门禁保持覆盖$' \u002d\u002dtest-reporter=./.tiller/local/verify-hqjfdk/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-hqjfdk/report.jsonl test/rules.test.mjs","exitCode":0,"tree":"467181293986203883fe38bc3060176945c91c0c5b5cfb49136d7aaf7c712aa4","commit":"d3faf2bddd7972cfb5ba833e0ff1b3ff220c53a8"} -->
+- 条件：AC-2
+- 测试：test/rules.test.mjs::CASE-314 0.5.0 发布契约与完整质量门禁保持覆盖
+- 用例：CASE-314
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/20261030-mit-license/logs/run-5.log
+- 提交：d3faf2bddd79
+- 时间：2026-10-30T15:43:08.533Z
+
+### run-7
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-314 0\\.5\\.0 发布契约与完整质量门禁保持覆盖$' \u002d\u002dtest-reporter=./.tiller/local/verify-hqjfdk/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-hqjfdk/report.jsonl test/rules.test.mjs","exitCode":0,"tree":"467181293986203883fe38bc3060176945c91c0c5b5cfb49136d7aaf7c712aa4","commit":"d3faf2bddd7972cfb5ba833e0ff1b3ff220c53a8"} -->
+- 条件：AC-3
+- 测试：test/rules.test.mjs::CASE-314 0.5.0 发布契约与完整质量门禁保持覆盖
+- 用例：CASE-314
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/20261030-mit-license/logs/run-5.log
+- 提交：d3faf2bddd79
+- 时间：2026-10-30T15:43:08.533Z
+
+### run-8
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-314 0\\.5\\.0 发布契约与完整质量门禁保持覆盖$' \u002d\u002dtest-reporter=./.tiller/local/verify-hqjfdk/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-hqjfdk/report.jsonl test/rules.test.mjs","exitCode":0,"tree":"467181293986203883fe38bc3060176945c91c0c5b5cfb49136d7aaf7c712aa4","commit":"d3faf2bddd7972cfb5ba833e0ff1b3ff220c53a8"} -->
+- 条件：AC-4
+- 测试：test/rules.test.mjs::CASE-314 0.5.0 发布契约与完整质量门禁保持覆盖
+- 用例：CASE-314
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/20261030-mit-license/logs/run-5.log
+- 提交：d3faf2bddd79
+- 时间：2026-10-30T15:43:08.533Z
 
 ## 自检
 
-交付前运行 check；验收后运行 accept。
+- [x] 需求确认有效
+- [x] 该任务无需设计确认
+- [x] 验收条件均有当前通过且绑定全局用例的测试引用
+- [x] 每条验收条件均映射到本次验证引用的全局用例
+- [x] 验收条件与用例通过 verify 的 AC→测试→CASE 记录关联
+- [x] 验证命令已执行且测试输出已核实
+- [x] 全局用例结构与引用有效
+- [x] 改动未超出范围
+- [x] 未弱化仍存在的测试
+- [x] 评审无未清除阻塞项
+- [x] 记录不含密钥或本机绝对路径
+
+提示：
+- 165 条历史用例仍以 <任务>#AC-n 记录关联 AC；这是可迁移的历史债，不阻断当前覆盖。
+- 141 条用例的关联 AC 为无；覆盖以需求字段和 verify 的 AC→测试→CASE 记录为准。
+- 本次改动涉及模块 initialization：建议回归该模块 67 条用例；建议同时回归经过它的场景 CASE-055, CASE-001。
+- 本次改动涉及模块 standards：建议回归该模块 37 条用例；建议同时回归经过它的场景 CASE-055。
+- 本次改动涉及模块 verification：建议回归该模块 52 条用例；建议同时回归经过它的场景 CASE-055, CASE-001。
+- 本次改动涉及模块 workflow：建议回归该模块 181 条用例；建议同时回归经过它的场景 CASE-055, CASE-001。
+- 未检测到任务基线后的 `.tiller/specs/` 或 `.tiller/context/` 回写；如本次形成长期结论，建议回写：`.tiller/specs/modules/initialization/requirements.md`（“## <能力>” + 稳定行为/边界）；`.tiller/specs/modules/initialization/design.md`（“## <方案>” + 取舍与影响）；`.tiller/specs/modules/standards/requirements.md`（“## <能力>” + 稳定行为/边界）；`.tiller/specs/modules/standards/design.md`（“## <方案>” + 取舍与影响）。纯过程性变更可忽略。
