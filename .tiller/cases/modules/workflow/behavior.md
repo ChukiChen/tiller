@@ -2308,15 +2308,15 @@ merge/close 后 primary 不出现 tiller materialize/种子产生的未跟踪 .t
 
 ### 步骤
 
-1. 检查版本契约、全量测试入口和安装包冒烟入口。
+1. 检查版本契约、MIT 许可证、全量测试入口和安装包冒烟入口。
 
 ### 输入
 
-- package.json、src/cli.ts、test/suites.json 与 scripts/package-smoke.mjs。
+- package.json、LICENSE、README.md、src/cli.ts、test/suites.json 与 scripts/package-smoke.mjs。
 
 ### 预期结果
 
-版本保持 0.5.0，全量测试与安装包冒烟入口均存在且指向当前发布包
+版本保持 0.5.0；LICENSE 为标准 MIT 且版权为 2026 ChukiChen；package.json 声明 MIT；README 链接 LICENSE；全量测试与安装包冒烟入口均存在且指向当前发布包
 
 ## CASE-315 doctor 从 active worktree 读取进行中任务
 

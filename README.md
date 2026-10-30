@@ -31,3 +31,5 @@ tiller 需要 PATH 中可执行的 Git。初始化使用 tokenized HTTPS git 推
 用 Codex 等 AI 编程工具打开工程，说明你想实现的功能。AI 会按工程内的 tiller 约定执行 `start` →（standard 任务先完成设计确认）→ 实现 → `verify` → `pr` → `merge`/`close`，并写清需求、验收条件和可追溯的验证结果。
 
 你主要负责在关键节点确认：需求范围、standard 任务的设计，以及最终交付验收。技术实现、测试与合入操作由 AI 推进。
+
+License: [MIT](LICENSE)
