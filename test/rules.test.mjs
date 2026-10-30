@@ -266,6 +266,8 @@ test('CASE-109 README is a user-facing quick start without internal flow detail'
   assert.match(readme, /^### 安装$/mu);
   assert.match(readme, /^### 初始化工程$/mu);
   assert.match(readme, /^### 用 AI 开发一个功能$/mu);
+  assert.match(readme, /snapshot \/ 预发布包，不是正式 release/u);
+  assert.match(readme, /releases\/download\/v0\.5\.0-snapshot\.1\/tiller-0\.5\.0\.tgz/u);
   assert.match(readme, /`merge`\/`close`/u);
   assert.doesNotMatch(readme, /小改动：|标准或大功能：|默认人工节点|task\.md|close --abandon|reopen --reason|私有报告|--reported|失败先行|advanced/u);
 });
@@ -702,6 +704,8 @@ test('CASE-166 local stale branches are removed while main remains', () => {
 
 test('CASE-167 README keeps the user quick start and removes maintainer detail', () => {
   const readme = readFileSync(join(repository, 'README.md'), 'utf8');
+  assert.match(readme, /snapshot \/ 预发布包，不是正式 release/u);
+  assert.match(readme, /releases\/download\/v0\.5\.0-snapshot\.1\/tiller-0\.5\.0\.tgz/u);
   assert.match(readme, /npm install -g \.\/tiller-0\.5\.0\.tgz/u);
   assert.match(readme, /chore\(tiller\): 完成工程初始化/u);
   assert.match(readme, /合入[^\n]*git pull/u);
