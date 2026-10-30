@@ -6,11 +6,15 @@ tiller 是一套面向 AI 协作开发的标准工作流与 CLI。它帮助你�
 
 ### 安装
 
-需要 Node.js 22 或以上：
+需要 Node.js 22 或以上。这是 0.5.0 的 snapshot / 预发布包，不是正式 release。
+
+[下载 `tiller-0.5.0.tgz`](https://github.com/ChukiChen/tiller/releases/download/v0.5.0-snapshot.1/tiller-0.5.0.tgz)，或直接安装：
 
 ```bash
-npm install -g ./tiller-0.5.0.tgz
+npm install -g https://github.com/ChukiChen/tiller/releases/download/v0.5.0-snapshot.1/tiller-0.5.0.tgz
 ```
+
+也可先下载到当前目录再运行 `npm install -g ./tiller-0.5.0.tgz`。
 
 ### 初始化工程
 

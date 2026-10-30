@@ -497,6 +497,8 @@ test('CASE-109 repository docs and suite include review release and pinned check
   }
   const readme = read(repository, 'README.md');
   assert.match(readme, /快速开始/u, 'README.md');
+  assert.match(readme, /snapshot \/ 预发布包，不是正式 release/u, 'README.md');
+  assert.match(readme, /releases\/download\/v0\.5\.0-snapshot\.1\/tiller-0\.5\.0\.tgz/u, 'README.md');
   assert.match(readme, /`merge`\/`close`/u, 'README.md');
   assert.match(readme, /chore\(tiller\): 完成工程初始化/u, 'README.md');
   assert.match(readme, /npm install -g \.\/tiller-0\.5\.0\.tgz/u, 'README.md');

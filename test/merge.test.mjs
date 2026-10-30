@@ -87,9 +87,12 @@ async function acceptTask(root, id) {
 
 test('CASE-234 README 面向最终用户的介绍与快速开始', () => {
   const readme = read(repository, 'README.md');
+  const asset = 'https://github.com/ChukiChen/tiller/releases/download/v0.5.0-snapshot.1/tiller-0.5.0.tgz';
   assert.match(readme, /^# tiller\n/u);
   assert.deepEqual([...readme.matchAll(/^## (.+)$/gmu)].map(match => match[1]), ['快速开始']);
   assert.deepEqual([...readme.matchAll(/^### (.+)$/gmu)].map(match => match[1]), ['安装', '初始化工程', '用 AI 开发一个功能']);
+  assert.ok(readme.includes(`[下载 \`tiller-0.5.0.tgz\`](${asset})`));
+  assert.match(readme, /snapshot \/ 预发布包，不是正式 release/u);
   assert.match(readme, /npm install -g \.\/tiller-0\.5\.0\.tgz/u);
   assert.match(readme, /chore\(tiller\): 完成工程初始化/u);
   assert.match(readme, /合入[^\n]*git pull/u);
@@ -99,7 +102,7 @@ test('CASE-234 README 面向最终用户的介绍与快速开始', () => {
   assert.match(readme, /合入与本机清理由 AI 按 tiller 约定完成/u);
   assert.match(readme, /合入操作由 AI 推进/u);
   assert.deepEqual([...readme.matchAll(/```[^\n]*\n([\s\S]*?)```/gu)].map(match => match[1].trim()),
-    ['npm install -g ./tiller-0.5.0.tgz', 'tiller init .']);
+    [`npm install -g ${asset}`, 'tiller init .']);
   assert.doesNotMatch(readme, /尚未发布到 npm|维护者|决策记录/u);
 });
 
@@ -110,6 +113,7 @@ test('CASE-242 README 以 AI 执行为主并使用 REST API 与 token', () => {
   assert.match(readme, /合入与本机清理由 AI 按 tiller 约定完成/u);
   assert.match(readme, /REST API/u);
   assert.match(readme, /GITHUB_TOKEN|GITLAB_TOKEN/u);
+  assert.match(readme, /先下载[^\n]*npm install -g \.\/tiller-0\.5\.0\.tgz/u);
   assert.doesNotMatch(readme, /\bgh\b|\bglab\b/u);
   assert.doesNotMatch(readme, /```[^\n]*\n[^`]*(?:tiller\s+)?(?:pr|merge|close)\b/u);
   assert.doesNotMatch(readme, /squash|平台 CLI|底层工具名/u);
