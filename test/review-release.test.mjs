@@ -497,11 +497,13 @@ test('CASE-109 repository docs and suite include review release and pinned check
   }
   const readme = read(repository, 'README.md');
   assert.match(readme, /快速开始/u, 'README.md');
-  assert.match(readme, /snapshot \/ 预发布包，不是正式 release/u, 'README.md');
-  assert.match(readme, /releases\/download\/v0\.5\.0-snapshot\.1\/tiller-0\.5\.0\.tgz/u, 'README.md');
+  assert.match(readme, /^需要 Node\.js 22 或以上。$/mu, 'README.md');
+  assert.doesNotMatch(readme, /不是正式 release|非正式|snapshot\s*\/\s*预发布包/u, 'README.md');
+  assert.match(readme, /releases\/download\/v0\.5\.0-snapshot\.1\/tiller-0\.5\.0-snapshot\.1\.tgz/u, 'README.md');
+  assert.doesNotMatch(readme, /tiller-0\.5\.0\.tgz/u, 'README.md');
   assert.match(readme, /`merge`\/`close`/u, 'README.md');
   assert.match(readme, /chore\(tiller\): 完成工程初始化/u, 'README.md');
-  assert.match(readme, /npm install -g \.\/tiller-0\.5\.0\.tgz/u, 'README.md');
+  assert.match(readme, /npm install -g \.\/tiller-0\.5\.0-snapshot\.1\.tgz/u, 'README.md');
   const decisions = read(repository, '.tiller/specs/decisions.md');
   assert.match(decisions, /评审/u);
   assert.match(decisions, /验收提交/u);
