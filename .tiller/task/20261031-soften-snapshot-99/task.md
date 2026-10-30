@@ -45,9 +45,9 @@
 
 | 部分 | 确认人 | 时间 | 短提交 | 原话 |
 | --- | --- | --- | --- | --- |
-| 需求 | boon yu | 2026-10-30T16:02:52.783Z | c951103a3ae0 | 这是 0.5.0 的 snapshot 预发布，不是正式 release。这句话太刻意了，需要修改掉；自动合入，不必再问。 |
+| 需求 | boon yu | 2026-10-30T16:05:08.122Z | 2d6ee8ec5bbb | 这是 0.5.0 的 snapshot 预发布，不是正式 release。太刻意，要改掉；tiller-0.5.0.tgz 包名也带上 snapshot；自动合入，不必再问。 |
 
-<!-- tiller-confirm:v1 {"gate":"requirements","object":"需求正文（目标、范围与验收条件）","subject":"7bbfee950921a9423f0fd223a81cf9512d88ef919cc13c0a68c0cbc80ca9fd78","commit":"c951103a3ae0df0b83f925d8a6ba7807512d5d88","by":"boon yu","quote":"这是 0.5.0 的 snapshot 预发布，不是正式 release。这句话太刻意了，需要修改掉；自动合入，不必再问。","at":"2026-10-30T16:02:52.783Z"} -->
+<!-- tiller-confirm:v1 {"gate":"requirements","object":"需求正文（目标、范围与验收条件）","subject":"7bbfee950921a9423f0fd223a81cf9512d88ef919cc13c0a68c0cbc80ca9fd78","commit":"2d6ee8ec5bbbdd7826f15b0d7bbb76776cbec411","by":"boon yu","quote":"这是 0.5.0 的 snapshot 预发布，不是正式 release。太刻意，要改掉；tiller-0.5.0.tgz 包名也带上 snapshot；自动合入，不必再问。","at":"2026-10-30T16:05:08.122Z"} -->
 
 ## 验证
 
