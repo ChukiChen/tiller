@@ -625,6 +625,14 @@ test('CASE-162 repository keeps the 0.5.0 release contract and five full verific
 test('CASE-314 0.5.0 发布契约与完整质量门禁保持覆盖', () => {
   const packageJson = JSON.parse(readFileSync(join(repository, 'package.json'), 'utf8'));
   assert.equal(packageJson.version, '0.5.0');
+  assert.equal(packageJson.license, 'MIT');
+  const license = readFileSync(join(repository, 'LICENSE'), 'utf8');
+  assert.match(license, /^MIT License\n\nCopyright \(c\) 2026 ChukiChen\n\n/u);
+  assert.match(license, /Permission is hereby granted, free of charge/u);
+  assert.match(license, /The above copyright notice and this permission notice shall be included/u);
+  assert.match(license, /THE SOFTWARE IS PROVIDED "AS IS"/u);
+  assert.match(license, /AUTHORS OR COPYRIGHT HOLDERS BE LIABLE/u);
+  assert.match(readFileSync(join(repository, 'README.md'), 'utf8'), /^License: \[MIT\]\(LICENSE\)$/mu);
   assert.equal(packageJson.scripts.test, 'node scripts/test-suites.mjs all');
   assert.equal(packageJson.scripts['test:package'], 'node scripts/package-smoke.mjs');
   const cliSource = readFileSync(join(repository, 'src/cli.ts'), 'utf8');
