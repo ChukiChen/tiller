@@ -48,8 +48,10 @@
 | 部分 | 确认人 | 时间 | 短提交 | 原话 |
 | --- | --- | --- | --- | --- |
 | 需求 | boon yu | 2026-10-30T16:05:22.492Z | 825b371367e3 | 这是 0.5.0 的 snapshot 预发布，不是正式 release。太刻意，要改掉；tiller-0.5.0.tgz 包名也带上 snapshot；自动合入，不必再问。 |
+| 交付验收 | boon yu | 2026-10-30T16:07:29.335Z | bdb75ec01dbd | 自动合入，不必再问。 |
 
 <!-- tiller-confirm:v1 {"gate":"requirements","object":"需求正文（目标、范围与验收条件）","subject":"b7376fe875e7ffefc4c22dc6d9a79a853bce6f5e9bf35886fd501fc93a1dd515","commit":"825b371367e36299be987df74c421d8ea50349fa","by":"boon yu","quote":"这是 0.5.0 的 snapshot 预发布，不是正式 release。太刻意，要改掉；tiller-0.5.0.tgz 包名也带上 snapshot；自动合入，不必再问。","at":"2026-10-30T16:05:22.492Z"} -->
+<!-- tiller-confirm:v1 {"gate":"acceptance","object":"当前交付（需求、设计、验证与提交）","subject":"d79c903d2b66c77071f31e97804b12a9d675fe62e60b720561b0c6fb688ecd54","commit":"bdb75ec01dbd9d38b287ac2b79e3752d6c5445ff","by":"boon yu","quote":"自动合入，不必再问。","at":"2026-10-30T16:07:29.335Z"} -->
 
 ## 验证
 
@@ -163,4 +165,23 @@
 
 ## 自检
 
-交付前运行 check；验收后运行 accept。
+- [x] 需求确认有效
+- [x] 该任务无需设计确认
+- [x] 验收条件均有当前通过且绑定全局用例的测试引用
+- [x] 每条验收条件均映射到本次验证引用的全局用例
+- [x] 验收条件与用例通过 verify 的 AC→测试→CASE 记录关联
+- [x] 验证命令已执行且测试输出已核实
+- [x] 全局用例结构与引用有效
+- [x] 改动未超出范围
+- [x] 未弱化仍存在的测试
+- [x] 评审无未清除阻塞项
+- [x] 记录不含密钥或本机绝对路径
+
+提示：
+- 165 条历史用例仍以 <任务>#AC-n 记录关联 AC；这是可迁移的历史债，不阻断当前覆盖。
+- 141 条用例的关联 AC 为无；覆盖以需求字段和 verify 的 AC→测试→CASE 记录为准。
+- 本次改动涉及模块 initialization：建议回归该模块 67 条用例；建议同时回归经过它的场景 CASE-055, CASE-001。
+- 本次改动涉及模块 standards：建议回归该模块 37 条用例；建议同时回归经过它的场景 CASE-055。
+- 本次改动涉及模块 verification：建议回归该模块 52 条用例；建议同时回归经过它的场景 CASE-055, CASE-001。
+- 本次改动涉及模块 workflow：建议回归该模块 181 条用例；建议同时回归经过它的场景 CASE-055, CASE-001。
+- 未检测到任务基线后的 `.tiller/specs/` 或 `.tiller/context/` 回写；如本次形成长期结论，建议回写：`.tiller/specs/modules/initialization/requirements.md`（“## <能力>” + 稳定行为/边界）；`.tiller/specs/modules/initialization/design.md`（“## <方案>” + 取舍与影响）；`.tiller/specs/modules/standards/requirements.md`（“## <能力>” + 稳定行为/边界）；`.tiller/specs/modules/standards/design.md`（“## <方案>” + 取舍与影响）。纯过程性变更可忽略。
