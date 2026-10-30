@@ -53,7 +53,113 @@
 
 ## 验证
 
-尚无验证。
+### run-1
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-234 README 面向最终用户的介绍与快速开始$' \u002d\u002dtest-reporter=./.tiller/local/verify-8rox5u/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-8rox5u/report.jsonl test/merge.test.mjs","exitCode":0,"tree":"3b71fd04662d34a59a80238614c09d8734a79141908ab429db2fdc9bc3239545","commit":"47e911a10fcc400177302b45d8c59cb5fdece45b"} -->
+- 条件：AC-1
+- 测试：test/merge.test.mjs::CASE-234 README 面向最终用户的介绍与快速开始
+- 用例：CASE-234
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/20261031-soften-snapshot-99/logs/run-1.log
+- 提交：47e911a10fcc
+- 时间：2026-10-30T16:07:01.506Z
+
+### run-2
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-242 README 以 AI 执行为主并使用 REST API 与 token$' \u002d\u002dtest-reporter=./.tiller/local/verify-fxqkRM/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-fxqkRM/report.jsonl test/merge.test.mjs","exitCode":0,"tree":"3b71fd04662d34a59a80238614c09d8734a79141908ab429db2fdc9bc3239545","commit":"47e911a10fcc400177302b45d8c59cb5fdece45b"} -->
+- 条件：AC-1
+- 测试：test/merge.test.mjs::CASE-242 README 以 AI 执行为主并使用 REST API 与 token
+- 用例：CASE-242
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/20261031-soften-snapshot-99/logs/run-2.log
+- 提交：47e911a10fcc
+- 时间：2026-10-30T16:07:02.318Z
+
+### run-3
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-109 README is a user-facing quick start without internal flow detail$' \u002d\u002dtest-reporter=./.tiller/local/verify-v8TT7b/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-v8TT7b/report.jsonl test/rules.test.mjs","exitCode":0,"tree":"3b71fd04662d34a59a80238614c09d8734a79141908ab429db2fdc9bc3239545","commit":"47e911a10fcc400177302b45d8c59cb5fdece45b"} -->
+- 条件：AC-1
+- 测试：test/rules.test.mjs::CASE-109 README is a user-facing quick start without internal flow detail
+- 用例：CASE-109
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/20261031-soften-snapshot-99/logs/run-3.log
+- 提交：47e911a10fcc
+- 时间：2026-10-30T16:07:03.610Z
+
+### run-4
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-109 repository docs and suite include review release and pinned checks$' \u002d\u002dtest-reporter=./.tiller/local/verify-7Tmetp/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-7Tmetp/report.jsonl test/review-release.test.mjs","exitCode":0,"tree":"3b71fd04662d34a59a80238614c09d8734a79141908ab429db2fdc9bc3239545","commit":"47e911a10fcc400177302b45d8c59cb5fdece45b"} -->
+- 条件：AC-1
+- 测试：test/review-release.test.mjs::CASE-109 repository docs and suite include review release and pinned checks
+- 用例：CASE-109
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/20261031-soften-snapshot-99/logs/run-4.log
+- 提交：47e911a10fcc
+- 时间：2026-10-30T16:07:04.559Z
+
+### run-5
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-167 README keeps the user quick start and removes maintainer detail$' \u002d\u002dtest-reporter=./.tiller/local/verify-q9vHpq/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-q9vHpq/report.jsonl test/rules.test.mjs","exitCode":0,"tree":"3b71fd04662d34a59a80238614c09d8734a79141908ab429db2fdc9bc3239545","commit":"47e911a10fcc400177302b45d8c59cb5fdece45b"} -->
+- 条件：AC-1
+- 测试：test/rules.test.mjs::CASE-167 README keeps the user quick start and removes maintainer detail
+- 用例：CASE-167
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/20261031-soften-snapshot-99/logs/run-5.log
+- 提交：47e911a10fcc
+- 时间：2026-10-30T16:07:05.521Z
+
+### run-6
+<!-- tiller-verify:v1 {"command":"gh release view v0.5.0-snapshot.1 \u002d\u002djson tagName,name,isPrerelease,body,assets; curl -fsSL https://github.com/ChukiChen/tiller/releases/download/v0.5.0-snapshot.1/tiller-0.5.0-snapshot.1.tgz | sha256sum","exitCode":null,"tree":"3b71fd04662d34a59a80238614c09d8734a79141908ab429db2fdc9bc3239545","commit":"47e911a10fcc400177302b45d8c59cb5fdece45b"} -->
+- 条件：AC-2
+- 测试：test/review-release.test.mjs::CASE-105 release checklist is executable and exposed by check
+- 用例：CASE-105
+- 结果：passed
+- 来源：reported
+- 核实：未执行
+- 理由：Release v0.5.0-snapshot.1 仍为 prerelease；正文只含新文件名安装示例；资产仅剩 tiller-0.5.0-snapshot.1.tgz，旧 tiller-0.5.0.tgz 已删除；直链下载 SHA-256 与本地包一致 d63305d0a886d259a3e50e22453cd3056355ff2eb6e36a9e0e4457eccb49e259。
+- 提交：47e911a10fcc
+- 时间：2026-10-30T16:07:16.611Z
+
+### run-7
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-162 repository keeps the 0\\.5\\.0 release contract and five full verification entries$' \u002d\u002dtest-reporter=./.tiller/local/verify-lKOmUT/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-lKOmUT/report.jsonl test/rules.test.mjs","exitCode":0,"tree":"3b71fd04662d34a59a80238614c09d8734a79141908ab429db2fdc9bc3239545","commit":"47e911a10fcc400177302b45d8c59cb5fdece45b"} -->
+- 条件：AC-3
+- 测试：test/rules.test.mjs::CASE-162 repository keeps the 0.5.0 release contract and five full verification entries
+- 用例：CASE-162
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/20261031-soften-snapshot-99/logs/run-7.log
+- 提交：47e911a10fcc
+- 时间：2026-10-30T16:07:16.871Z
+
+### run-8
+<!-- tiller-verify:v1 {"command":"npm run build && npm pack \u002d\u002dpack-destination <临时目录>; mv <临时目录>/tiller-0.5.0.tgz <临时目录>/tiller-0.5.0-snapshot.1.tgz; npm run test:package","exitCode":null,"tree":"3b71fd04662d34a59a80238614c09d8734a79141908ab429db2fdc9bc3239545","commit":"47e911a10fcc400177302b45d8c59cb5fdece45b"} -->
+- 条件：AC-3
+- 测试：test/rules.test.mjs::CASE-162 repository keeps the 0.5.0 release contract and five full verification entries
+- 用例：CASE-162
+- 结果：passed
+- 来源：reported
+- 核实：未执行
+- 理由：npm run build 与 npm pack 产出 tiller-0.5.0.tgz 后重命名为 tiller-0.5.0-snapshot.1.tgz；test:package 通过，42 个打包文件；package.json 版本保持 0.5.0；安装包只写入临时目录，未进入 Git。
+- 提交：47e911a10fcc
+- 时间：2026-10-30T16:07:17.605Z
+
+### run-9
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-220 delivery docs require committing task records before pr$' \u002d\u002dtest-reporter=./.tiller/local/verify-HV6NCt/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-HV6NCt/report.jsonl test/pr.test.mjs","exitCode":0,"tree":"3b71fd04662d34a59a80238614c09d8734a79141908ab429db2fdc9bc3239545","commit":"47e911a10fcc400177302b45d8c59cb5fdece45b"} -->
+- 条件：AC-4
+- 测试：test/pr.test.mjs::CASE-220 delivery docs require committing task records before pr
+- 用例：CASE-220
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/20261031-soften-snapshot-99/logs/run-9.log
+- 提交：47e911a10fcc
+- 时间：2026-10-30T16:07:17.863Z
 
 ## 自检
 
