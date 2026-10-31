@@ -51,7 +51,125 @@
 
 ## 验证
 
-尚无验证。
+### run-1
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-234 README 面向最终用户的介绍与快速开始$' \u002d\u002dtest-reporter=./.tiller/local/verify-WoRgV5/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-WoRgV5/report.jsonl test/merge.test.mjs","exitCode":0,"tree":"6e14189f5e11aee1b0109c2e0ae0998f6cd33a0620b674ecbccb27c8fcdf23e4","commit":"048fc2d6d3789fc2d73a7b4b9fc21f6ed77d0d1d"} -->
+- 条件：AC-1
+- 测试：test/merge.test.mjs::CASE-234 README 面向最终用户的介绍与快速开始
+- 用例：CASE-234
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/20261031-readme-lite-100b/logs/run-2.log
+- 提交：048fc2d6d378
+- 时间：2026-10-31T00:36:40.976Z
+
+### run-2
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-234 README 面向最终用户的介绍与快速开始$' \u002d\u002dtest-reporter=./.tiller/local/verify-WoRgV5/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-WoRgV5/report.jsonl test/merge.test.mjs","exitCode":0,"tree":"6e14189f5e11aee1b0109c2e0ae0998f6cd33a0620b674ecbccb27c8fcdf23e4","commit":"048fc2d6d3789fc2d73a7b4b9fc21f6ed77d0d1d"} -->
+- 条件：AC-3
+- 测试：test/merge.test.mjs::CASE-234 README 面向最终用户的介绍与快速开始
+- 用例：CASE-234
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/20261031-readme-lite-100b/logs/run-2.log
+- 提交：048fc2d6d378
+- 时间：2026-10-31T00:36:40.976Z
+
+### run-3
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-109 README is a user-facing quick start without internal flow detail$' \u002d\u002dtest-reporter=./.tiller/local/verify-ZbjIis/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-ZbjIis/report.jsonl test/rules.test.mjs","exitCode":0,"tree":"6e14189f5e11aee1b0109c2e0ae0998f6cd33a0620b674ecbccb27c8fcdf23e4","commit":"048fc2d6d3789fc2d73a7b4b9fc21f6ed77d0d1d"} -->
+- 条件：AC-1
+- 测试：test/rules.test.mjs::CASE-109 README is a user-facing quick start without internal flow detail
+- 用例：CASE-109
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/20261031-readme-lite-100b/logs/run-3.log
+- 提交：048fc2d6d378
+- 时间：2026-10-31T00:36:41.626Z
+
+### run-4
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-109 README is a user-facing quick start without internal flow detail$' \u002d\u002dtest-reporter=./.tiller/local/verify-ZbjIis/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-ZbjIis/report.jsonl test/rules.test.mjs","exitCode":0,"tree":"6e14189f5e11aee1b0109c2e0ae0998f6cd33a0620b674ecbccb27c8fcdf23e4","commit":"048fc2d6d3789fc2d73a7b4b9fc21f6ed77d0d1d"} -->
+- 条件：AC-3
+- 测试：test/rules.test.mjs::CASE-109 README is a user-facing quick start without internal flow detail
+- 用例：CASE-109
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/20261031-readme-lite-100b/logs/run-3.log
+- 提交：048fc2d6d378
+- 时间：2026-10-31T00:36:41.626Z
+
+### run-5
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-109 repository docs and suite include review release and pinned checks$' \u002d\u002dtest-reporter=./.tiller/local/verify-db4fsW/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-db4fsW/report.jsonl test/review-release.test.mjs","exitCode":0,"tree":"6e14189f5e11aee1b0109c2e0ae0998f6cd33a0620b674ecbccb27c8fcdf23e4","commit":"048fc2d6d3789fc2d73a7b4b9fc21f6ed77d0d1d"} -->
+- 条件：AC-2
+- 测试：test/review-release.test.mjs::CASE-109 repository docs and suite include review release and pinned checks
+- 用例：CASE-109
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/20261031-readme-lite-100b/logs/run-5.log
+- 提交：048fc2d6d378
+- 时间：2026-10-31T00:36:42.224Z
+
+### run-6
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-109 repository docs and suite include review release and pinned checks$' \u002d\u002dtest-reporter=./.tiller/local/verify-db4fsW/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-db4fsW/report.jsonl test/review-release.test.mjs","exitCode":0,"tree":"6e14189f5e11aee1b0109c2e0ae0998f6cd33a0620b674ecbccb27c8fcdf23e4","commit":"048fc2d6d3789fc2d73a7b4b9fc21f6ed77d0d1d"} -->
+- 条件：AC-3
+- 测试：test/review-release.test.mjs::CASE-109 repository docs and suite include review release and pinned checks
+- 用例：CASE-109
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/20261031-readme-lite-100b/logs/run-5.log
+- 提交：048fc2d6d378
+- 时间：2026-10-31T00:36:42.224Z
+
+### run-7
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-167 README keeps the user quick start and removes maintainer detail$' \u002d\u002dtest-reporter=./.tiller/local/verify-iPodzH/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-iPodzH/report.jsonl test/rules.test.mjs","exitCode":0,"tree":"6e14189f5e11aee1b0109c2e0ae0998f6cd33a0620b674ecbccb27c8fcdf23e4","commit":"048fc2d6d3789fc2d73a7b4b9fc21f6ed77d0d1d"} -->
+- 条件：AC-2
+- 测试：test/rules.test.mjs::CASE-167 README keeps the user quick start and removes maintainer detail
+- 用例：CASE-167
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/20261031-readme-lite-100b/logs/run-7.log
+- 提交：048fc2d6d378
+- 时间：2026-10-31T00:36:42.917Z
+
+### run-8
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-167 README keeps the user quick start and removes maintainer detail$' \u002d\u002dtest-reporter=./.tiller/local/verify-iPodzH/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-iPodzH/report.jsonl test/rules.test.mjs","exitCode":0,"tree":"6e14189f5e11aee1b0109c2e0ae0998f6cd33a0620b674ecbccb27c8fcdf23e4","commit":"048fc2d6d3789fc2d73a7b4b9fc21f6ed77d0d1d"} -->
+- 条件：AC-3
+- 测试：test/rules.test.mjs::CASE-167 README keeps the user quick start and removes maintainer detail
+- 用例：CASE-167
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/20261031-readme-lite-100b/logs/run-7.log
+- 提交：048fc2d6d378
+- 时间：2026-10-31T00:36:42.917Z
+
+### run-9
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-242 README 以 AI 执行为主并使用 REST API 与 token$' \u002d\u002dtest-reporter=./.tiller/local/verify-dYeJ5t/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-dYeJ5t/report.jsonl test/merge.test.mjs","exitCode":0,"tree":"6e14189f5e11aee1b0109c2e0ae0998f6cd33a0620b674ecbccb27c8fcdf23e4","commit":"048fc2d6d3789fc2d73a7b4b9fc21f6ed77d0d1d"} -->
+- 条件：AC-2
+- 测试：test/merge.test.mjs::CASE-242 README 以 AI 执行为主并使用 REST API 与 token
+- 用例：CASE-242
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/20261031-readme-lite-100b/logs/run-9.log
+- 提交：048fc2d6d378
+- 时间：2026-10-31T00:36:43.583Z
+
+### run-10
+<!-- tiller-verify:v1 {"command":"node '\u002d\u002dtest-name-pattern=^CASE-242 README 以 AI 执行为主并使用 REST API 与 token$' \u002d\u002dtest-reporter=./.tiller/local/verify-dYeJ5t/reporter.mjs \u002d\u002dtest-reporter-destination=.tiller/local/verify-dYeJ5t/report.jsonl test/merge.test.mjs","exitCode":0,"tree":"6e14189f5e11aee1b0109c2e0ae0998f6cd33a0620b674ecbccb27c8fcdf23e4","commit":"048fc2d6d3789fc2d73a7b4b9fc21f6ed77d0d1d"} -->
+- 条件：AC-3
+- 测试：test/merge.test.mjs::CASE-242 README 以 AI 执行为主并使用 REST API 与 token
+- 用例：CASE-242
+- 结果：passed
+- 来源：executed
+- 核实：已核实
+- 日志：.tiller/local/20261031-readme-lite-100b/logs/run-9.log
+- 提交：048fc2d6d378
+- 时间：2026-10-31T00:36:43.583Z
 
 ## 自检
 
